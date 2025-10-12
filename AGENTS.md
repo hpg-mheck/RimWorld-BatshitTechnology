@@ -14,6 +14,9 @@ superseded by a more specific `AGENTS.md` file in a subdirectory.
 - Write code that is production-ready: idiomatic C#, defensive, and
   pessimistic about failure states. Document public members with XML comments
   and inline remarks when behaviour is surprising.
+- Ensure every function, including private helpers and unit tests, is preceded
+  by an XML documentation block that explains purpose, parameters, and return
+  values.
 - Every code change must be paired with unit tests or, where not feasible, a
   written justification in the PR description and `docs/AI-TODO.txt`.
 - When editing documentation, favor the Chicago Manual of Style, apply
