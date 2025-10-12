@@ -4,3 +4,6 @@
   sandbox.
 - Solution intentionally links metadata XML and documentation assets for
   visibility in Visual Studio.
+- Added an xUnit-based regression project that validates XML defs without
+  needing RimWorld binaries so Codex can run automated checks in CI-friendly
+  environments.

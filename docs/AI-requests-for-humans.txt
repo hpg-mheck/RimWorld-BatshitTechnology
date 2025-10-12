@@ -4,3 +4,8 @@
    alignment.
 2. Confirm preferred distribution workflow for packaging the mod once
    assemblies are built.
+3. Run the new XML regression suite inside Visual Studio 2022 after restoring
+   NuGet packages, then report pass/fail so we can record the baseline.
+4. Execute an in-game smoke test: deploy the mod, spawn a Random Replicator,
+   verify queue behaviour, and confirm the self-destruct designation and work
+   giver still operate correctly. Capture any deviations in `docs/AI-KNOWN-ISSUES.txt`.
