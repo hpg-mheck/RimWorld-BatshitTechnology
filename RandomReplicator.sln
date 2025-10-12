@@ -6,6 +6,8 @@ MinimumVisualStudioVersion = 10.0.40219.1
 # to remain on single lines, so they exceed the usual 118-column ceiling.
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomReplicator", "Source\\RandomReplicator.csproj", "{8C6B9239-5E5E-4A47-8F40-2E58E4A7422E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomReplicator.Core", "Source\\RandomReplicator.Core\\RandomReplicator.Core.csproj", "{3A8DD9AF-8B25-44A8-A46A-0BA9F1A5A256}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomReplicator.Tests", "Tests\\RandomReplicator.Tests\\RandomReplicator.Tests.csproj", "{489FDE1E-05A6-4FAD-AD98-B863C4D19C2D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4A684270-E4BA-4B22-84A5-86ED6CD4CC75}"
@@ -49,6 +51,10 @@ Global
         {8C6B9239-5E5E-4A47-8F40-2E58E4A7422E}.Debug|Any CPU.Build.0 = Debug|Any CPU
         {8C6B9239-5E5E-4A47-8F40-2E58E4A7422E}.Release|Any CPU.ActiveCfg = Release|Any CPU
         {8C6B9239-5E5E-4A47-8F40-2E58E4A7422E}.Release|Any CPU.Build.0 = Release|Any CPU
+        {3A8DD9AF-8B25-44A8-A46A-0BA9F1A5A256}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {3A8DD9AF-8B25-44A8-A46A-0BA9F1A5A256}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {3A8DD9AF-8B25-44A8-A46A-0BA9F1A5A256}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {3A8DD9AF-8B25-44A8-A46A-0BA9F1A5A256}.Release|Any CPU.Build.0 = Release|Any CPU
         {489FDE1E-05A6-4FAD-AD98-B863C4D19C2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
         {489FDE1E-05A6-4FAD-AD98-B863C4D19C2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
         {489FDE1E-05A6-4FAD-AD98-B863C4D19C2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
