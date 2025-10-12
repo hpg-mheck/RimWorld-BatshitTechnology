@@ -1,4 +1,5 @@
 # Scratchpad
 
 - Mod notes, quick calculations, and RimWorld XML def experiments belong here.
-- Remember to cross-check each experiment with in-game behaviour before promoting it elsewhere.
+- Remember to cross-check each experiment with in-game behaviour before
+  promoting it elsewhere.
