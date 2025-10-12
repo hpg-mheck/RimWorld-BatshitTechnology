@@ -1,0 +1,4 @@
+# Architectural Decisions
+
+- Target framework remains .NET Framework 4.7.2 to match RimWorld's modding sandbox.
+- Solution intentionally links metadata XML and documentation assets for visibility in Visual Studio.
