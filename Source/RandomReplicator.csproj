@@ -61,6 +61,9 @@
     <Compile Include="SelfDestruct.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="RandomReplicator.Core\\RandomReplicator.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\About\**\*.*">
       <Link>About\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>

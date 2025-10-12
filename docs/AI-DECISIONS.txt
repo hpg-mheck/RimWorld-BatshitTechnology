@@ -7,3 +7,9 @@
 - Added an xUnit-based regression project that validates XML defs without
   needing RimWorld binaries so Codex can run automated checks in CI-friendly
   environments.
+2024-07-29 R. Talon: Rebuilt the Random Replicator comp and self-destruct
+logic to replace truncated placeholders. Added an internal ThingOwner-backed
+queue, power loss letters, weighted food selection, and self-destruct
+countdown telemetry while preserving the mod's intent. Introduced a
+netstandard core library so helper logic remains unit-testable from
+RandomReplicator.Tests.

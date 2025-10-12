@@ -28,4 +28,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Source\RandomReplicator.Core\RandomReplicator.Core.csproj" />
+  </ItemGroup>
 </Project>
