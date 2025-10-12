@@ -1,4 +1,6 @@
 # Recommendations
 
-- Establish automated build validation on Windows runners to mirror the target environment.
-- Adopt a documented release cadence with postmortems per Admiral Grace Hopper's standing orders.
+- Establish automated build validation on Windows runners to mirror the target
+  environment.
+- Adopt a documented release cadence with postmortems per Admiral Grace
+  Hopper's standing orders.

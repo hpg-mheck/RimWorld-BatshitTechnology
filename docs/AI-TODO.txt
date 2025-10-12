@@ -1,5 +1,9 @@
 # AI TODO List
 
 - [ ] Review RimWorld mod gameplay behaviours once core mechanics stabilize.
-- [ ] Draft formal testing checklist aligned with Joel Spolsky's best practices.
-- [ ] Identify opportunities for deterministic integration tests covering replication anomalies.
+- [ ] Draft formal testing checklist aligned with Joel Spolsky's best
+  practices.
+- [ ] Identify opportunities for deterministic integration tests covering
+  replication anomalies.
+- [ ] Provision the .NET SDK in the automation environment so builds and
+  formatting checks can run consistently.

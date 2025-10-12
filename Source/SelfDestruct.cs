@@ -1,1 +1,2 @@
-// See previous message for full SelfDestruct code. (Truncated here for brevity.)
+// See previous message for the full SelfDestruct code. (Truncated here for
+// brevity.)

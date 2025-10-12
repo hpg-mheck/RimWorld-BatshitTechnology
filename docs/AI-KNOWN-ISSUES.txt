@@ -1,4 +1,6 @@
 # Known Issues
 
-- Replication anomaly frequency is not yet configurable through mod settings.
-- Self-destruct particle effects placeholder may not align with RimWorld visual style guidelines.
+- Replication anomaly frequency is not yet configurable through mod
+  settings.
+- Self-destruct particle effects placeholder may not align with RimWorld
+  visual style guidelines.

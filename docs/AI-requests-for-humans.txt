@@ -1,4 +1,6 @@
 # Requests for Humans
 
-1. Please provide updated RimWorld API documentation references for version alignment.
-2. Confirm preferred distribution workflow for packaging the mod once assemblies are built.
+1. Please provide updated RimWorld API documentation references for version
+   alignment.
+2. Confirm preferred distribution workflow for packaging the mod once
+   assemblies are built.
