@@ -1,0 +1,63 @@
+# Random Replicator Testing Strategy
+
+This document explains how Codex should exercise the Random Replicator mod in
+its current state, notes future-ready improvements that fit within Codex's
+authority, and flags checks that still require Matt "Breakpoint" Heck or another
+human to perform.
+
+## Automated coverage available today
+
+1. **XML regression tests (xUnit).** The `RandomReplicator.Tests` project loads
+   the XML definitions that RimWorld consumes and verifies key invariants such
+   as package identity, replicator queue limits, and self-destruct work
+   priorities. This regression net guards against silent definition regressions
+   while staying free of RimWorld binaries so it can run inside CI.
+
+   - Run with `dotnet test Tests/RandomReplicator.Tests/RandomReplicator.Tests.csproj`
+     once the .NET SDK is available.
+   - Inside Visual Studio 2022, open `RandomReplicator.sln`, restore NuGet
+     packages, build the solution, then execute the tests from **Test > Run All**
+     or the Test Explorer window.
+   - Because the training container lacks the .NET SDK, Codex must report test
+     execution as "not run" and cite this limitation in status updates.
+
+2. **Static validation.** Before committing XML edits, run the XML regression
+   suite locally. The tests double as a fast smoke check for typographical
+   mistakes (for example, renaming the main ThingDef) and should become part of
+   the pre-commit ritual.
+
+## Manual verification required
+
+The following behaviours still need Matt "Breakpoint" Heck to exercise the mod
+inside RimWorld until Codex gains a game harness:
+
+- Deploy the built assembly plus `Defs` into a RimWorld test installation.
+- Spawn a Random Replicator, ensure it fills its internal queue, verify eject
+  gizmos, and confirm the self-destruct workflow (designation, job, and work
+  giver) remains functional.
+- Observe for letter notifications during power loss and confirm they match the
+  v0.4 design summary.
+
+Record the outcomes in `docs/AI-KNOWN-ISSUES.txt` or `docs/AI-DECISIONS.txt` as
+appropriate.
+
+## Future-facing automation opportunities
+
+The following action items are realistic for Codex to pursue in future passes
+without human-only tooling:
+
+1. **Extract testable core logic.** Relocate queue bookkeeping and food
+   selection algorithms into a RimWorld-agnostic class library. Doing so would
+   let us unit-test production cadence, storage limits, and edge conditions
+   without Unity dependencies.
+2. **Author data-driven scenario tests.** Define JSON fixtures that describe
+   expected spawn rotations, then assert against the extracted logic to lock in
+   probability tuning.
+3. **Schema linting.** Add a lightweight XML schema validation step (for example
+   using `System.Xml.Schema`) to guarantee that future defs stay well-formed.
+4. **Content snapshot testing.** Generate golden copies of gizmo labels and
+   descriptions in a dedicated resource file, then verify the defs match to
+   prevent accidental rewrites.
+
+Codex should log progress and design decisions in `docs/AI-DECISIONS.txt` so the
+team inherits a durable audit trail.
