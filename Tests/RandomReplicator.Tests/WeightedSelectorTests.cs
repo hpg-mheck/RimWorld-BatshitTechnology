@@ -10,6 +10,9 @@ namespace RandomReplicator.Tests;
 /// </summary>
 public sealed class WeightedSelectorTests
 {
+    /// <summary>
+    /// Verifies that a zero sample always returns the first option.
+    /// </summary>
     [Fact(DisplayName = "Selector chooses first option when sample is zero")]
     public void Pick_should_return_first_option_when_sample_is_zero()
     {
@@ -23,6 +26,10 @@ public sealed class WeightedSelectorTests
         Assert.Equal("First", selector.Pick(options));
     }
 
+    /// <summary>
+    /// Ensures that samples close to one return the final option when weights
+    /// allow.
+    /// </summary>
     [Fact(DisplayName = "Selector chooses final option near upper bound")]
     public void Pick_should_return_final_option_when_sample_is_nearly_one()
     {
@@ -36,6 +43,9 @@ public sealed class WeightedSelectorTests
         Assert.Equal("High", selector.Pick(options));
     }
 
+    /// <summary>
+    /// Confirms that selecting from an empty set fails fast.
+    /// </summary>
     [Fact(DisplayName = "Selector throws when provided empty options")]
     public void Pick_should_throw_for_empty_option_list()
     {
@@ -43,6 +53,9 @@ public sealed class WeightedSelectorTests
         Assert.Throws<ArgumentException>(() => selector.Pick(Array.Empty<WeightedOption<int>>()));
     }
 
+    /// <summary>
+    /// Validates that non-positive weights are rejected.
+    /// </summary>
     [Fact(DisplayName = "Selector rejects non-positive weights")]
     public void Pick_should_throw_when_option_weight_is_non_positive()
     {
@@ -56,6 +69,9 @@ public sealed class WeightedSelectorTests
         Assert.Throws<ArgumentException>(() => selector.Pick(options));
     }
 
+    /// <summary>
+    /// Verifies that out-of-range samples trigger a guard.
+    /// </summary>
     [Fact(DisplayName = "Selector rejects samples outside inclusive range")]
     public void Pick_should_throw_when_sample_is_out_of_range()
     {

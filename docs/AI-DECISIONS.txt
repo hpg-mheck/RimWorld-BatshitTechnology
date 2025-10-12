@@ -10,6 +10,9 @@
 2024-07-29 R. Talon: Rebuilt the Random Replicator comp and self-destruct
 logic to replace truncated placeholders. Added an internal ThingOwner-backed
 queue, power loss letters, weighted food selection, and self-destruct
-countdown telemetry while preserving the mod's intent. Introduced a
-netstandard core library so helper logic remains unit-testable from
-RandomReplicator.Tests.
+ countdown telemetry while preserving the mod's intent. Introduced a
+ netstandard core library so helper logic remains unit-testable from
+ RandomReplicator.Tests.
+2024-08-18 R. Talon: Raised the repository standard to require XML
+documentation for every function, codified in AGENTS.md, and updated the
+Random Replicator comp plus unit tests to comply.

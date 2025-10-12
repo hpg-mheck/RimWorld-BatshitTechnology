@@ -288,6 +288,14 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
             RRDefOf.RR_SelfDestruct) != null;
     }
 
+    /// <summary>
+    /// Appends a labelled value to the inspection string when the value is
+    /// non-empty.
+    /// </summary>
+    /// <param name="text">The existing inspection string.</param>
+    /// <param name="label">The label describing the value.</param>
+    /// <param name="value">The value to append when available.</param>
+    /// <returns>The composed inspection string.</returns>
     private static string AppendLine(string text, string label, string value)
     {
         if (string.IsNullOrEmpty(value))
@@ -304,6 +312,10 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         return text + "\n" + fragment;
     }
 
+    /// <summary>
+    /// Builds the gizmo that ejects a single stored item.
+    /// </summary>
+    /// <returns>The configured command.</returns>
     private Gizmo BuildEjectSingleGizmo()
     {
         var command = new Command_Action
@@ -322,6 +334,10 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         return command;
     }
 
+    /// <summary>
+    /// Builds the gizmo that ejects every stored item.
+    /// </summary>
+    /// <returns>The configured command.</returns>
     private Gizmo BuildEjectAllGizmo()
     {
         var command = new Command_Action
@@ -340,6 +356,10 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         return command;
     }
 
+    /// <summary>
+    /// Builds the gizmo that toggles the self-destruct designation.
+    /// </summary>
+    /// <returns>The configured command.</returns>
     private Gizmo BuildSelfDestructToggle()
     {
         var command = new Command_Action
@@ -359,6 +379,12 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         return command;
     }
 
+    /// <summary>
+    /// Ejects stored items, optionally constrained by a maximum count.
+    /// </summary>
+    /// <param name="limit">
+    /// The maximum number of items to eject; <see langword="null"/> ejects all.
+    /// </param>
     private void EjectItems(int? limit)
     {
         var ejected = 0;
@@ -386,6 +412,11 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         }
     }
 
+    /// <summary>
+    /// Drops a single item near the replicator while respecting the configured
+    /// search radius.
+    /// </summary>
+    /// <param name="thing">The item to drop.</param>
     private void DropThing(Thing thing)
     {
         var map = parent.Map;
@@ -399,6 +430,11 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
                 Props.searchRadius));
     }
 
+    /// <summary>
+    /// Attempts to fabricate a new item based on the weighted options.
+    /// </summary>
+    /// <param name="thing">When successful, receives the produced item.</param>
+    /// <returns><see langword="true"/> if a valid item was produced.</returns>
     private bool TryProduceFood(out Thing thing)
     {
         var options = BuildWeightedOptions();
@@ -414,6 +450,11 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         return true;
     }
 
+    /// <summary>
+    /// Builds the cached list of weighted options derived from allowed
+    /// definitions.
+    /// </summary>
+    /// <returns>The cached list of weighted options.</returns>
     private List<WeightedOption<ThingDef>> BuildWeightedOptions()
     {
         if (_cachedAllowedThings == null)
@@ -448,6 +489,11 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         return _cachedWeightedOptions;
     }
 
+    /// <summary>
+    /// Resolves the set of ingestible <see cref="ThingDef"/> instances matching
+    /// the configured categories.
+    /// </summary>
+    /// <returns>The resolved ingestible definitions.</returns>
     private List<ThingDef> ResolveAllowedThingDefs()
     {
         var categories = Props.allowedThingCategoryDefs
@@ -470,6 +516,13 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         return defs;
     }
 
+    /// <summary>
+    /// Determines whether the replicator meets all prerequisites to operate.
+    /// </summary>
+    /// <returns>
+    /// <see langword="true"/> when the replicator is powered, switched on, and
+    /// spawned.
+    /// </returns>
     private bool IsOperational()
     {
         if (!parent.Spawned)
@@ -490,6 +543,9 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         return flick == null || flick.SwitchIsOn;
     }
 
+    /// <summary>
+    /// Sends a letter the first time power is lost during the current outage.
+    /// </summary>
     private void MaybeNotifyPowerLoss()
     {
         if (_hasSentPowerLossLetter)
@@ -507,11 +563,18 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         }
     }
 
+    /// <summary>
+    /// Resets the fabrication countdown to the configured production interval.
+    /// </summary>
     private void ResetProductionTimer()
     {
         _ticksUntilNextSpawn = Props.ticksPerSpawn;
     }
 
+    /// <summary>
+    /// Advances the self-destruct countdown and triggers detonation when
+    /// completed.
+    /// </summary>
     private void TickSelfDestructCountdown()
     {
         _selfDestructTicksRemaining--;
@@ -525,6 +588,10 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         }
     }
 
+    /// <summary>
+    /// Destroys the replicator via an explosion and records the tale when
+    /// applicable.
+    /// </summary>
     private void Detonate()
     {
         var map = parent.MapHeld;
@@ -545,6 +612,9 @@ public sealed class CompRandomReplicator : ThingComp, IThingHolder
         parent.Destroy(DestroyMode.KillFinalize);
     }
 
+    /// <summary>
+    /// Removes the self-destruct designation if one is present.
+    /// </summary>
     private void RemoveDesignation()
     {
         var designation = parent.Map.designationManager.DesignationOn(parent,
