@@ -1,0 +1,63 @@
+# Graphic Asset Requests
+
+The following prompts are for Matt “Breakpoint” Heck to feed into his asset
+pipeline. Each request lists the gameplay purpose, destination path (relative
+to the mod root), preferred dimensions, encoding, and an AI-friendly rendering
+prompt. Deliverables should be exported at 300 ppi where practical so we can
+scale derivatives without quality loss. Target directories under `Textures/`
+and `Sounds/` now include placeholder files so completed assets can drop in
+without additional scaffolding.
+
+## Building Sprites
+
+- Purpose: Primary texture for the Random Replicator building, replacing the
+  placeholder gray box and telegraphing its high-tech fabrication role.
+  Location: Textures/Things/Building/RandomReplicator/RandomReplicator.png
+  Dimensions: 1024×1024 pixels (covers a 2×2 tile footprint).
+  Notes: Paint details with a 512 px per tile baseline to keep crisp edges.
+  Format: PNG with transparency preserved; avoid color banding via lossless
+  compression.
+  Prompt: “Isometric sci-fi fabrication pod with polished plasteel panels,
+  recessed vents, articulated conveyor arms, cyan status strips, and a soft
+  magenta core glow, sitting on a brushed metal floor plate. RimWorld-style
+  painterly shading, neutral rim lighting, and subtle wear. Transparent
+  background.”
+
+- Purpose: Powered-on emissive overlay for the Random Replicator that pulses
+  during active fabrication cycles.
+  Location: Textures/Effects/RandomReplicator/RandomReplicator_glow.png
+  Dimensions: 512×512 pixels.
+  Format: PNG with alpha, monochrome cyan glow so we can recolor in engine if
+  desired.
+  Prompt: “Soft radial energy bloom matching the outline of a compact
+  industrial pod, vivid cyan core fading to transparent edges, subtle scanline
+  texture, no background.”
+
+## User Interface
+
+- Purpose: Command button icon for toggling the Random Replicator’s auto-
+  fabricate behaviour in the inspector.
+  Location: Textures/UI/Commands/Command_RandomReplicatorToggle.png
+  Dimensions: 128×128 pixels.
+  Format: PNG with transparent background and crisp edges.
+  Prompt: “Flat RimWorld-style command icon: stylised replicator silhouette
+  with a power toggle symbol, cyan accent highlights, dark slate background
+  with rounded corners and a thin plasteel border.”
+
+## In-World Feedback
+
+- Purpose: Status mote that floats above the building when a meal is ready to
+  dispense.
+  Location: Textures/Effects/RandomReplicator/RandomReplicator_moteReady.png
+  Dimensions: 256×256 pixels.
+  Format: PNG with alpha.
+  Prompt: “Small holographic meal tray icon with a short cyan sparkle tail.
+  Semi-transparent, stylised to match RimWorld motes, isolated on transparent
+  background.”
+
+## Coordination with Audio
+
+Sound effect prompts will be curated separately in `docs/AI-AUDIO-ASSET-
+REQUESTS.txt` so that graphic and acoustic tasks remain orthogonal. Expect the
+soundscape plan will mirror the asset list above once gameplay tuning
+stabilises.
