@@ -295,6 +295,34 @@ public static class Footprint
     }
 
     /// <summary>
+    /// An offset turned to a facing, mirrored from Verse.IntVec3Utility
+    /// .RotatedBy(Rot4): north keeps (x, z), east gives (z, -x), south
+    /// (-x, -z) and west (-z, x).
+    /// </summary>
+    /// <param name="offset">The offset as seen facing north.</param>
+    /// <param name="rot">The facing.</param>
+    /// <returns>The turned offset.</returns>
+    public static Cell Rotated(Cell offset, Facing rot) => rot switch
+    {
+        Facing.East => new Cell(offset.Z, -offset.X),
+        Facing.South => new Cell(-offset.X, -offset.Z),
+        Facing.West => new Cell(-offset.Z, offset.X),
+        _ => offset,
+    };
+
+    /// <summary>
+    /// Where a thing's interaction cell lies, as RimWorld's
+    /// ThingUtility.InteractionCell computes it: the def's offset turned
+    /// to the facing, added to the anchor.
+    /// </summary>
+    /// <param name="anchor">The thing's Position.</param>
+    /// <param name="offset">The def's interactionCellOffset.</param>
+    /// <param name="rot">The thing's facing.</param>
+    /// <returns>The interaction cell.</returns>
+    public static Cell InteractionCell(Cell anchor, Cell offset, Facing rot) =>
+        anchor + Rotated(offset, rot);
+
+    /// <summary>
     /// Mirrors a placed thing across x = 0: the mirrored facing, and the
     /// anchor that covers the mirror image of the original cells.
     /// </summary>

@@ -56,6 +56,13 @@ public sealed record TerrainPlacement(Cell At, string Def, string? Paint = null)
 {
     /// <summary>The building whose floor this is, if any (see <see cref="TownPlan.Avoiding"/>).</summary>
     public string? BuildingKey { get; init; }
+
+    /// <summary>
+    /// A road-taper cell outside <see cref="TownPlan.Core"/>, which the game
+    /// does not level: where the ground is unsuitable (water, rock,
+    /// something indestructible) the road just stops there.
+    /// </summary>
+    public bool Taper { get; init; }
 }
 
 /// <summary>One cell of planned roof.</summary>
@@ -136,6 +143,18 @@ public sealed record Placement(PlacementKind Kind, string Def, Cell At)
 
     /// <summary>The cells it covers.</summary>
     public Box Occupied => Footprint.Occupied(At, SizeX, SizeZ, Rot);
+
+    /// <summary>
+    /// Its interaction cell, where a pawn stands to use it, if its def has
+    /// one (<see cref="DefInfo.InteractionCell"/>); null for crates and
+    /// for defs without one or outside the catalogue.
+    /// </summary>
+    public Cell? InteractionCell =>
+        Kind == PlacementKind.Building
+        && TownDefs.All.TryGetValue(Def, out DefInfo? info)
+        && info.InteractionCell is Cell offset
+            ? Footprint.InteractionCell(At, offset, Rot)
+            : null;
 }
 
 /// <summary>What a building is for.</summary>
@@ -299,14 +318,32 @@ public sealed class TownPlan
     public IReadOnlyList<StockpilePlan> Stockpiles { get; init; } = Array.Empty<StockpilePlan>();
 
     /// <summary>
+    /// Every cell the town touches (terrain, placements, buildings and
+    /// labels) as a few boxes, row runs merged where they line up. Unlike
+    /// <see cref="Bounds"/>, which is one rectangle and mostly empty land
+    /// around an L-shaped town, these hug the town, so keep-away rules can
+    /// be checked against what is really there (see the plan overload of
+    /// <see cref="TownSite"/>.Best).
+    /// </summary>
+    public IReadOnlyList<Box> Parts { get; init; } = Array.Empty<Box>();
+
+    /// <summary>
     /// Plans AnyRim, the showcase's test town, as docs/SHOWCASE.md
     /// describes it.
     /// </summary>
     /// <param name="seed">Seeds the taper wander and gaps; the same seed gives the same town.</param>
     /// <param name="palette">Street surfaces and furniture quality; AnyRim is Medium.</param>
     /// <returns>The plan.</returns>
-    public static TownPlan AnyRim(int seed, TownPalette palette) =>
-        throw new NotImplementedException("Filled in by the town plan implementation.");
+    /// <exception cref="ArgumentNullException">No palette.</exception>
+    public static TownPlan AnyRim(int seed, TownPalette palette)
+    {
+        if (palette == null)
+        {
+            throw new ArgumentNullException(nameof(palette));
+        }
+
+        return AnyRimBuilder.Build(seed, palette);
+    }
 
     /// <summary>
     /// A copy without anything an obstacle would overlap: every building or
@@ -315,8 +352,162 @@ public sealed class TownPlan
     /// and residents; any other placement or terrain cell on an obstacle is
     /// dropped on its own.
     /// </summary>
+    /// <remarks>
+    /// Also dropped: labels on an obstacle or inside a dropped building, and
+    /// stockpiles touching either. Beds and graves elsewhere that were
+    /// reserved for a dropped resident are kept, unreserved. The key point
+    /// <see cref="Reactor"/> becomes null if the reactor goes;
+    /// <see cref="Bounds"/> and <see cref="Core"/> are kept, since they
+    /// still contain everything left.
+    /// </remarks>
     /// <param name="obstacles">Boxes to keep clear, town-local.</param>
     /// <returns>The reduced plan.</returns>
-    public TownPlan Avoiding(IEnumerable<Box> obstacles) =>
-        throw new NotImplementedException("Filled in by the town plan implementation.");
+    /// <exception cref="ArgumentNullException">No obstacle list.</exception>
+    public TownPlan Avoiding(IEnumerable<Box> obstacles)
+    {
+        if (obstacles == null)
+        {
+            throw new ArgumentNullException(nameof(obstacles));
+        }
+
+        var blocks = new List<Box>();
+        foreach (Box box in obstacles)
+        {
+            if (box.IsValid)
+            {
+                blocks.Add(box);
+            }
+        }
+
+        var dropped = new HashSet<string>(StringComparer.Ordinal);
+        var droppedOuters = new List<Box>();
+        var buildings = new List<BuildingPlan>();
+        foreach (BuildingPlan building in Buildings)
+        {
+            if (AnyOverlaps(blocks, building.Outer.ExpandedBy(1)))
+            {
+                dropped.Add(building.Key);
+                droppedOuters.Add(building.Outer);
+            }
+            else
+            {
+                buildings.Add(building);
+            }
+        }
+
+        var residents = new List<ResidentPlan>();
+        var homeless = new HashSet<string>(StringComparer.Ordinal);
+        foreach (ResidentPlan resident in Residents)
+        {
+            if (dropped.Contains(resident.HomeKey))
+            {
+                homeless.Add(resident.Key);
+            }
+            else
+            {
+                residents.Add(resident);
+            }
+        }
+
+        var placements = new List<Placement>();
+        foreach (Placement p in Placements)
+        {
+            if (IsDropped(dropped, p.BuildingKey)
+                || AnyOverlaps(blocks, p.Occupied))
+            {
+                continue;
+            }
+
+            bool unreserve = p.ReservedFor != null
+                && homeless.Contains(p.ReservedFor);
+            placements.Add(unreserve ? p with { ReservedFor = null } : p);
+        }
+
+        var terrain = new List<TerrainPlacement>();
+        foreach (TerrainPlacement t in Terrain)
+        {
+            if (!IsDropped(dropped, t.BuildingKey)
+                && !AnyOverlaps(blocks, CellBox(t.At)))
+            {
+                terrain.Add(t);
+            }
+        }
+
+        var roofs = new List<RoofPlacement>();
+        foreach (RoofPlacement r in Roofs)
+        {
+            if (!IsDropped(dropped, r.BuildingKey)
+                && !AnyOverlaps(blocks, CellBox(r.At)))
+            {
+                roofs.Add(r);
+            }
+        }
+
+        var labels = new List<LabelPlan>();
+        foreach (LabelPlan label in Labels)
+        {
+            Box at = CellBox(label.At);
+            if (!AnyOverlaps(blocks, at) && !AnyOverlaps(droppedOuters, at))
+            {
+                labels.Add(label);
+            }
+        }
+
+        var stockpiles = new List<StockpilePlan>();
+        foreach (StockpilePlan pile in Stockpiles)
+        {
+            if (!AnyOverlaps(blocks, pile.Area)
+                && !AnyOverlaps(droppedOuters, pile.Area))
+            {
+                stockpiles.Add(pile);
+            }
+        }
+
+        Cell? reactor = null;
+        if (Reactor is Cell anchor && placements.Exists(
+            p => p.At == anchor && p.Def == AnyRimBuilder.ReactorDef))
+        {
+            reactor = anchor;
+        }
+
+        return new TownPlan
+        {
+            Name = Name,
+            Quality = Quality,
+            Seed = Seed,
+            Bounds = Bounds,
+            Core = Core,
+            FirebreakWidth = FirebreakWidth,
+            GroundZero = GroundZero,
+            Reactor = reactor,
+            WelcomeSign = WelcomeSign,
+            Terrain = terrain,
+            Roofs = roofs,
+            Placements = placements,
+            Buildings = buildings,
+            Residents = residents,
+            Labels = labels,
+            Stockpiles = stockpiles,
+            Parts = TownParts.From(terrain, placements, buildings, labels),
+        };
+    }
+
+    /// <summary>Whether any of some boxes overlaps an area.</summary>
+    /// <param name="boxes">The boxes.</param>
+    /// <param name="area">The area.</param>
+    /// <returns>True if at least one overlaps it.</returns>
+    private static bool AnyOverlaps(List<Box> boxes, Box area) =>
+        boxes.Exists(b => b.Overlaps(area));
+
+    /// <summary>Whether a building key names a dropped building.</summary>
+    /// <param name="dropped">The dropped buildings' keys.</param>
+    /// <param name="key">The key, or null for none.</param>
+    /// <returns>True if the key is set and dropped.</returns>
+    private static bool IsDropped(HashSet<string> dropped, string? key) =>
+        key != null && dropped.Contains(key);
+
+    /// <summary>A one-cell box.</summary>
+    /// <param name="c">The cell.</param>
+    /// <returns>The box holding just that cell.</returns>
+    private static Box CellBox(Cell c) => new(c.X, c.Z, c.X, c.Z);
 }

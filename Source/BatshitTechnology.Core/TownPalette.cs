@@ -48,11 +48,43 @@ public sealed record TownPalette(
     string? CentreLinePaint, string Sidewalk, string TaperNear, string TaperMid,
     string TaperFar, string FenceStuff, string FurnitureQuality)
 {
-    /// <summary>The palette for a tier.</summary>
+    /// <summary>
+    /// The palette for a tier. Medium is AnyRim as docs/SHOWCASE.md lays
+    /// it out; the others follow the quality table in docs/COLONY-BOMB.md
+    /// (roads from packed dirt up to gold tile), using only vanilla Core
+    /// defs. Roads always degrade as they leave town.
+    /// </summary>
     /// <param name="quality">The tier.</param>
     /// <returns>Its palette.</returns>
-    public static TownPalette For(TownQuality quality) =>
-        throw new NotImplementedException("Filled in by the town plan implementation.");
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// The tier is not one of the six.
+    /// </exception>
+    public static TownPalette For(TownQuality quality) => quality switch
+    {
+        TownQuality.Slum => new TownPalette(
+            quality, "PackedDirt", null, null, "Gravel",
+            "PackedDirt", "PackedDirt", "PackedDirt", "WoodLog", "Awful"),
+        TownQuality.Low => new TownPalette(
+            quality, "Gravel", null, null, "PackedDirt",
+            "Gravel", "PackedDirt", "PackedDirt", "WoodLog", "Poor"),
+        TownQuality.Medium => new TownPalette(
+            quality, "Concrete", "Structure_GreyDark",
+            "Structure_YellowPastel", "PavedTile",
+            "BrokenAsphalt", "Gravel", "PackedDirt", "WoodLog", "Normal"),
+        TownQuality.High => new TownPalette(
+            quality, "Concrete", "Structure_Black", "Structure_White",
+            "PavedTile", "Concrete", "BrokenAsphalt", "Gravel", "WoodLog",
+            "Good"),
+        TownQuality.Resort => new TownPalette(
+            quality, "PavedTile", null, "Structure_White",
+            "FlagstoneMarble", "Concrete", "BrokenAsphalt", "Gravel",
+            "BlocksMarble", "Excellent"),
+        TownQuality.Epic => new TownPalette(
+            quality, "GoldTile", null, "Structure_White", "SilverTile",
+            "PavedTile", "Concrete", "BrokenAsphalt", "Gold", "Masterwork"),
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(quality), quality, "Not a town quality tier."),
+    };
 }
 
 /// <summary>Where a def's things sit, for overlap rules.</summary>
@@ -85,7 +117,81 @@ public enum ThingLayer
 /// Items its cells may hold (0: none, 1: a table's surface, 3: a shelf).
 /// </param>
 /// <param name="StackLimit">Items: the stack limit; 1 for everything else.</param>
-public sealed record DefInfo(int SizeX, int SizeZ, ThingLayer Layer, int ItemCapacity, int StackLimit);
+public sealed record DefInfo(int SizeX, int SizeZ, ThingLayer Layer, int ItemCapacity, int StackLimit)
+{
+    /// <summary>
+    /// Whether pawns can walk through its cells: RimWorld's Standable and
+    /// PassThroughOnly count as walkable, Impassable does not.
+    /// </summary>
+    public bool Passable { get; init; } = true;
+
+    /// <summary>
+    /// The def's interactionCellOffset as seen facing north, or null if it
+    /// has no interaction cell. RimWorld rotates it with IntVec3.RotatedBy
+    /// and adds it to the thing's Position (ThingUtility.InteractionCell);
+    /// <see cref="Footprint.InteractionCell"/> does the same.
+    /// </summary>
+    public Cell? InteractionCell { get; init; }
+
+    /// <summary>
+    /// Whether it draws power through a connection (CompPowerTrader), and
+    /// so needs a transmitter within 6 cells (box) of its Position.
+    /// </summary>
+    public bool Powered { get; init; }
+
+    /// <summary>
+    /// Whether it carries the power net itself: conduits and plants with
+    /// transmitsPower, such as the Batshittium Reactor.
+    /// </summary>
+    public bool TransmitsPower { get; init; }
+
+    /// <summary>A door or fence gate: walkable, but a room boundary.</summary>
+    public bool IsDoor { get; init; }
+
+    /// <summary>A wall: impassable, a room boundary and a roof holder.</summary>
+    public bool IsWall { get; init; }
+
+    /// <summary>
+    /// A fence: people step over it, roaming animals do not. Town plans
+    /// treat fences as barriers, so pens and yards are entered by gates.
+    /// </summary>
+    public bool IsFence { get; init; }
+
+    /// <summary>Whether the def may face other than north.</summary>
+    public bool Rotatable { get; init; } = true;
+
+    /// <summary>
+    /// The stuff categories it can be made from ("Woody", "Metallic",
+    /// "Stony", "Fabric", "Leathery"); empty if it takes no stuff.
+    /// </summary>
+    public IReadOnlyList<string> AcceptsStuff { get; init; } =
+        Array.Empty<string>();
+
+    /// <summary>For stuff items: the stuff categories they belong to.</summary>
+    public IReadOnlyList<string> StuffCategories { get; init; } =
+        Array.Empty<string>();
+
+    /// <summary>Whether it has a quality (CompQuality).</summary>
+    public bool HasQuality { get; init; }
+
+    /// <summary>Whether it can be switched off (CompFlickable).</summary>
+    public bool Flickable { get; init; }
+
+    /// <summary>Whether it takes fuel (CompRefuelable).</summary>
+    public bool Refuelable { get; init; }
+
+    /// <summary>Whether it is a work table with bills.</summary>
+    public bool HasBills { get; init; }
+
+    /// <summary>Whether it can be minified (packed into a crate).</summary>
+    public bool Minifiable { get; init; }
+
+    /// <summary>
+    /// Ballista bolts it holds (the Ballista's own 16, a magazine's
+    /// 2,560); 0 for everything else.
+    /// </summary>
+    public int LoadCapacity { get; init; }
+}
 
 /// <summary>
 /// A catalogue of the vanilla and mod defs a town plan uses, with the sizes
@@ -95,8 +201,7 @@ public sealed record DefInfo(int SizeX, int SizeZ, ThingLayer Layer, int ItemCap
 public static class TownDefs
 {
     /// <summary>Every def the catalogue knows, by defName.</summary>
-    public static IReadOnlyDictionary<string, DefInfo> All =>
-        throw new NotImplementedException("Filled in by the town plan implementation.");
+    public static IReadOnlyDictionary<string, DefInfo> All => TownDefCatalogue.Entries;
 
     /// <summary>Looks a def up.</summary>
     /// <param name="defName">The defName.</param>
