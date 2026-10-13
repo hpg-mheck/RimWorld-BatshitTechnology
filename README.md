@@ -7,6 +7,10 @@ plugin architecture. Share and enjoy.
 
 **The Future: Sooner. Cheaper. Funnier. And ludicrously dangerous.**
 
+The premise: *could we have the future sooner, cheaper, or more
+entertainingly, if we were willing to accept truly unhinged levels of
+danger?* Every gadget here says yes, and then shows the bill.
+
 Everything lives in its own research tab, **Batshit Technology**:
 
 - **Batshittium**: an element made from ordinary rock chunks, ten to one, in
