@@ -203,10 +203,12 @@ internal sealed partial class AnyRimBuilder
         {
             Owner = Owner.Player, SuspendBills = true, BuildingKey = key,
         });
+        // Switched off: left running, it makes bolts that haulers would carry
+        // 100 tiles to the base's magazines.
         Add(Over("BT_BatshittiumArtificer", new Box(12, -9, 13, -8), Facing.North) with
         {
             Owner = Owner.Player, Refuel = true, AutoRefuelOff = true,
-            BuildingKey = key,
+            SwitchedOff = true, BuildingKey = key,
         });
         Add(Thing("StandingLamp", new Cell(8, -8)) with { BuildingKey = key });
         Add(Thing("StandingLamp", new Cell(8, -14)) with { BuildingKey = key });

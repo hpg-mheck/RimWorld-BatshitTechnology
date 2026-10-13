@@ -1,7 +1,9 @@
 // Batshit Technology - in-game smoke test.
 // Runs only when RimWorld starts with -btsmoketest (Tools/smoke-test.ps1
 // passes it with -quicktest). Builds each device on the quick-test map,
-// exercises it with real game ticks, logs "[BT-SMOKE] PASS/FAIL" lines and
+// exercises it with real game ticks (and builds, checks and demolishes
+// AnyRim, the test town, before the destructive tests), logs
+// "[BT-SMOKE] PASS/FAIL" lines and
 // a "[BT-SMOKE] DONE" summary, then quits (unless -btsmoketestkeep is also
 // passed). Without the flag it does nothing.
 
@@ -13,6 +15,7 @@ using BatshitTechnology.Core;
 using Verse;
 using RimWorld;
 using Verse.AI;
+using Verse.AI.Group;
 using UnityEngine;
 
 namespace BatshitTechnology
@@ -110,6 +113,7 @@ namespace BatshitTechnology
             TestReactorBurnCycle(reactor, fuel);
             TestSelfDestructAbort(replicator);
             TestMinifiedDevicesTick(map, center);
+            TestAnyRim(map); // builds the test town, checks it, takes it down
 
             // Destructive tests from here on. Remove the other devices
             // quietly first: a 5% damage roll on the reactor would otherwise
@@ -617,6 +621,9 @@ namespace BatshitTechnology
                 Tick(2);
                 MinifiedThing package = device.MakeMinified();
                 GenPlace.TryPlaceThing(package, spot, map, ThingPlaceMode.Near);
+                // Forbidden, so no hauler carries one off mid-test (a run
+                // saw 6 of 7 on the map: one was in a colonist's hands).
+                package.SetForbidden(true, warnOnFail: false);
                 packages.Add(package);
             }
 
@@ -625,11 +632,301 @@ namespace BatshitTechnology
             Check("uninstalled devices tick in their packages without errors",
                 !NewErrorSince(mark) && packages.All(t => t.Spawned),
                 $"error logged {NewErrorSince(mark)}, packages on the map "
-                    + $"{packages.Count(t => t.Spawned)}/{packages.Count}");
+                    + $"{packages.Count(t => t.Spawned)}/{packages.Count}; missing: "
+                    + string.Join(", ", packages.Where(t => !t.Spawned).Select(t =>
+                        $"{t.LabelCap} (destroyed {t.Destroyed}, held by "
+                        + $"{t.ParentHolder?.GetType().Name ?? "nothing"})")));
             foreach (Thing package in packages)
             {
                 package.Destroy(DestroyMode.Vanish);
             }
+        }
+
+        /// <summary>
+        /// AnyRim (docs/SHOWCASE.md, "Tests"): the town builds at a scored
+        /// site with a clean report, then is checked and taken down again
+        /// before the destructive tests, whose blasts would reach it.
+        /// Nothing in the whole test may log an error.
+        /// </summary>
+        /// <param name="map">The quick-test map.</param>
+        private void TestAnyRim(Map map)
+        {
+            var mark = ErrorMark();
+            TownPlan plan;
+            AnyRimBuildReport report;
+            try
+            {
+                plan = AnyRim.Plan(AnyRim.DefaultSeed);
+                report = AnyRim.BuildBest(
+                    map, AnyRim.DefaultSeed, Showcase.AnyRimWindow(map),
+                    Showcase.AnyRimPreferredSite(map), Showcase.AnyRimKeepAways(map.Center));
+            }
+            catch (Exception e)
+            {
+                Check("AnyRim builds", false, e.ToString());
+                return;
+            }
+
+            MapComponent_AnyRim record = map.GetComponent<MapComponent_AnyRim>();
+            bool built = report.Anchor.IsValid && record != null && record.Built;
+            Check("AnyRim builds at a scored site", built, "no site qualified");
+            if (!built)
+            {
+                return;
+            }
+
+            Log.Message(
+                $"[BT-SMOKE] AnyRim at ({report.Anchor.x},{report.Anchor.z}): {report.Summary()}");
+            Check("AnyRim build report is clean", report.Clean,
+                string.Join("; ", report.Failures.Take(5)));
+            var residents = record.Residents.ToList();
+            var animals = record.Animals.ToList();
+            try
+            {
+                CheckAnyRimBuilt(map, plan, report.Anchor, record);
+                CheckAnyRimLiving(map, plan, report.Anchor, record);
+            }
+            catch (Exception e)
+            {
+                Check("AnyRim checks ran without an exception", false, e.ToString());
+            }
+            finally
+            {
+                CheckAnyRimDemolished(map, record, residents.Concat(animals).ToList());
+            }
+
+            Check("AnyRim logged no errors", !NewErrorSince(mark), "an error was logged (see above)");
+        }
+
+        /// <summary>
+        /// The freshly built town: every placement where planned, enclosed
+        /// roofed rooms reachable from the street, no pending roof
+        /// collapse, a bare firebreak, powered devices (the town reactor
+        /// refuelled first), and no room in the reactor's heat ring.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="plan">The plan built.</param>
+        /// <param name="anchor">The crossroads' map cell.</param>
+        /// <param name="record">The town record.</param>
+        private void CheckAnyRimBuilt(Map map, TownPlan plan, IntVec3 anchor, MapComponent_AnyRim record)
+        {
+            bool cold = map.mapTemperature.OutdoorTemp < AnyRim.ColdBelowCelsius;
+            var missing = plan.Placements
+                .Where(p => cold || !p.OnlyIfCold)
+                .Where(p => !SpawnedAsPlanned(map, anchor, p, record))
+                .Select(p => $"{p.Def} at {p.At}")
+                .ToList();
+            Check("every AnyRim placement spawned where planned", missing.Count == 0,
+                $"{missing.Count} missing, e.g. {string.Join(", ", missing.Take(5))}");
+
+            map.regionAndRoomUpdater.TryRebuildDirtyRegionsAndRooms();
+            var badRooms = new List<string>();
+            foreach (BuildingPlan building in plan.Buildings.Where(b => b.Enclosed))
+            {
+                foreach (Box box in building.Rooms)
+                {
+                    string problem = RoomProblem(map, anchor, building, box);
+                    if (problem != null)
+                    {
+                        badRooms.Add($"{building.Key} {box}: {problem}");
+                    }
+                }
+            }
+
+            Check("AnyRim's rooms are enclosed, roofed and reachable from the street",
+                badRooms.Count == 0, string.Join("; ", badRooms.Take(5)));
+
+            Tick(2);
+            CellRect footprint = record.Bounds;
+            int collapsed = map.listerThings.ThingsOfDef(ThingDefOf.CollapsedRocks)
+                .Count(t => footprint.ExpandedBy(8).Contains(t.Position));
+            Check("no roof collapses around AnyRim",
+                map.roofCollapseBuffer.CellsMarkedToCollapse.Count == 0 && collapsed == 0,
+                $"{map.roofCollapseBuffer.CellsMarkedToCollapse.Count} marked, {collapsed} collapsed rocks");
+
+            int plantsInFirebreak = AnyRim.LevelledArea(plan).Cells()
+                .Where(c => !plan.Core.Contains(c))
+                .Select(c => AnyRim.ToMap(anchor, c))
+                .Where(c => c.InBounds(map))
+                .Count(c => c.GetPlant(map) != null);
+            Check("AnyRim's firebreak holds no plants", plantsInFirebreak == 0,
+                $"{plantsInFirebreak} plants");
+
+            Thing reactor = plan.Reactor.HasValue
+                ? AnyRim.ToMap(anchor, plan.Reactor.Value).GetThingList(map)
+                    .FirstOrDefault(t => t.def.defName == "BT_BatshittiumReactor")
+                : null;
+            CompRefuelable fuel = reactor?.TryGetComp<CompRefuelable>();
+            if (fuel != null && fuel.Fuel < fuel.Props.fuelCapacity)
+            {
+                fuel.Refuel(fuel.Props.fuelCapacity);
+            }
+
+            Thing[] consumers = map.listerBuildings.allBuildingsColonist
+                .Concat(map.listerBuildings.allBuildingsNonColonist)
+                .Where(b => footprint.Contains(b.Position) && FlickUtility.WantsToBeOn(b)
+                    && b.TryGetComp<CompPowerTrader>() != null
+                    && !(b.TryGetComp<CompPowerTrader>() is CompPowerPlant))
+                .Cast<Thing>()
+                .ToArray();
+            if (consumers.Length > 0)
+            {
+                WaitForPower(consumers);
+            }
+
+            var unpowered = consumers.Where(t => !t.TryGetComp<CompPowerTrader>().PowerOn).ToList();
+            Check("AnyRim's devices and lamps are powered", consumers.Length > 0 && unpowered.Count == 0,
+                $"{unpowered.Count} of {consumers.Length} unpowered, e.g. "
+                    + string.Join(", ", unpowered.Take(3).Select(t => $"{t.def.defName} ({PowerDetail(t)})")));
+
+            if (reactor != null)
+            {
+                var heated = GenRadial.RadialCellsAround(reactor.Position, 12f, true)
+                    .Where(c => c.InBounds(map))
+                    .Select(c => c.GetRoom(map))
+                    .Where(r => r != null && !r.UsesOutdoorTemperature)
+                    .Distinct()
+                    .Count();
+                Check("no room within the town reactor's heat ring", heated == 0, $"{heated} rooms");
+            }
+        }
+
+        /// <summary>
+        /// The residents: eight named non-colonists, each in a lord, still
+        /// in town after 600 ticks; then the census drops by one when one
+        /// is killed, and the incident clock restarts.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="plan">The plan built.</param>
+        /// <param name="anchor">The crossroads' map cell.</param>
+        /// <param name="record">The town record.</param>
+        private void CheckAnyRimLiving(Map map, TownPlan plan, IntVec3 anchor, MapComponent_AnyRim record)
+        {
+            List<Pawn> residents = record.Residents.ToList();
+            var nicks = plan.Residents.Select(r => r.Nick).ToList();
+            bool named = residents.Count == plan.Residents.Count
+                && residents.Select(p => (p.Name as NameTriple)?.Nick).SequenceEqual(nicks);
+            Check("AnyRim has its eight named residents",
+                plan.Residents.Count == 8 && named,
+                $"{residents.Count} residents: {string.Join(", ", residents.Select(p => p.LabelShort))}");
+            Check("AnyRim's residents are not colonists and each has a lord",
+                residents.All(p => !p.IsColonist && p.Faction != Faction.OfPlayer && p.GetLord() != null),
+                string.Join(", ", residents.Select(p => $"{p.LabelShort}: {p.Faction}, lord {p.GetLord() != null}")));
+
+            Tick(600);
+            CellRect town = AnyRim.ToMap(anchor, plan.Core).ExpandedBy(20);
+            var strays = residents.Where(p => p.Dead || !p.Spawned || !town.Contains(p.Position)).ToList();
+            Check("AnyRim's residents are still in town after 600 ticks", strays.Count == 0,
+                string.Join(", ", strays.Select(p => $"{p.LabelShort} at {p.PositionHeld}")));
+
+            Pawn victim = residents.FirstOrDefault(p => !p.Dead && p.Spawned);
+            if (victim == null)
+            {
+                Check("AnyRim's census counts a death", false, "no living resident to test with");
+                return;
+            }
+
+            int before = record.Population;
+            int killedAt = Find.TickManager.TicksGame;
+            victim.Kill(null);
+            Tick(31); // one census interval
+            Check("AnyRim's census drops by one when a resident dies",
+                record.Population == before - 1 && record.LastIncidentTick >= killedAt,
+                $"population {before} -> {record.Population}, last incident tick "
+                    + $"{record.LastIncidentTick} (killed at {killedAt})");
+        }
+
+        /// <summary>
+        /// Takes the town down and checks nothing is left: no town pawns or
+        /// corpses, no destroyable thing, zone or household lord on the
+        /// ground it levelled, and an empty record.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="record">The town record.</param>
+        /// <param name="townPawns">The residents and animals, captured before.</param>
+        private void CheckAnyRimDemolished(Map map, MapComponent_AnyRim record, List<Pawn> townPawns)
+        {
+            CellRect area = record.LevelledArea;
+            bool removed = AnyRim.Demolish(map);
+            var left = area.ClipInsideMap(map).Cells
+                .SelectMany(c => c.GetThingList(map))
+                .Where(t => t.def.destroyable && !(t is Pawn))
+                .Select(t => t.def.defName)
+                .Distinct()
+                .ToList();
+            bool pawnsGone = townPawns.All(p => !p.SpawnedOrAnyParentSpawned
+                && (p.Corpse == null || !p.Corpse.Spawned));
+            bool lordsGone = !map.lordManager.lords.Any(l => l.LordJob is LordJob_AnyRimResident);
+            bool zonesGone = !map.zoneManager.AllZones.Any(z => z.Cells.Any(area.Contains));
+            Check("AnyRim demolition leaves nothing behind",
+                removed && !record.Built && record.Population == 0 && left.Count == 0 && pawnsGone
+                    && lordsGone && zonesGone,
+                $"removed {removed}, built {record.Built}, population {record.Population}, "
+                    + $"pawns gone {pawnsGone}, lords gone {lordsGone}, zones gone {zonesGone}, "
+                    + $"left: {string.Join(", ", left.Take(8))}");
+        }
+
+        /// <summary>Whether a placement's thing is where the plan put it.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="anchor">The crossroads' map cell.</param>
+        /// <param name="placement">The placement.</param>
+        /// <param name="record">The town record, for animals.</param>
+        /// <returns>True if found.</returns>
+        private static bool SpawnedAsPlanned(
+            Map map, IntVec3 anchor, Placement placement, MapComponent_AnyRim record)
+        {
+            if (placement.Kind == PlacementKind.Animal)
+            {
+                return record.Animals.Any(a => a.Spawned && a.kindDef.defName == placement.Def
+                    && (placement.Name == null || a.Name?.ToStringShort == placement.Name));
+            }
+
+            IntVec3 cell = AnyRim.ToMap(anchor, placement.At);
+            return cell.InBounds(map) && cell.GetThingList(map).Any(t =>
+                placement.Kind == PlacementKind.Crate
+                    ? t is MinifiedThing crate && crate.InnerThing?.def.defName == placement.Def
+                    : t.def.defName == placement.Def && t.Position == cell);
+        }
+
+        /// <summary>
+        /// What is wrong with one planned room, or null: it must be a room
+        /// that does not use the outdoor temperature, roofed over its whole
+        /// interior, and reachable through doors from the building's street
+        /// cell.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="anchor">The crossroads' map cell.</param>
+        /// <param name="building">The building.</param>
+        /// <param name="interior">The room's interior, town-local.</param>
+        /// <returns>The problem, or null.</returns>
+        private static string RoomProblem(Map map, IntVec3 anchor, BuildingPlan building, Box interior)
+        {
+            CellRect rect = AnyRim.ToMap(anchor, interior);
+            IntVec3 inside = rect.Cells.FirstOrDefault(c => c.InBounds(map) && c.Standable(map));
+            if (!rect.Contains(inside) || !inside.Standable(map))
+            {
+                return "no standable cell";
+            }
+
+            Room room = inside.GetRoom(map);
+            if (room == null || room.UsesOutdoorTemperature || room.TouchesMapEdge)
+            {
+                return "not enclosed";
+            }
+
+            if (rect.Cells.Any(c => !c.Roofed(map)))
+            {
+                return "not fully roofed";
+            }
+
+            if (building.StreetCell.HasValue && !map.reachability.CanReach(
+                    AnyRim.ToMap(anchor, building.StreetCell.Value), inside, PathEndMode.OnCell,
+                    TraverseParms.For(TraverseMode.PassDoors)))
+            {
+                return "unreachable from the street";
+            }
+
+            return null;
         }
 
         /// <summary>The newest logged error, and how many times it has repeated.</summary>
@@ -701,6 +998,13 @@ namespace BatshitTechnology
             var bomb = (Detonation_Bomb)props.detonation;
             var aftermath = map.GetComponent<MapComponent_SelfDestructAftermath>();
             int firedBefore = aftermath.SecondariesFired;
+            // How much ground beyond half the radius can burn at all: on a
+            // barren or rain-soaked quick-test map there may be little, and
+            // the fire check scales to it (one map gave 35 fires in all).
+            float halfRadius = props.blastRadius / 2f;
+            int flammableOuter = GenRadial.RadialCellsAround(center, props.blastRadius, true)
+                .Count(c => c.InBounds(map) && !c.InHorDistOf(center, halfRadius)
+                    && FireUtility.ChanceToStartFireIn(c, map) > 0f);
             comp.Arm();
             var watch = Stopwatch.StartNew();
             Tick(Mathf.RoundToInt(props.countdownSeconds * 60f) + 10);
@@ -717,9 +1021,13 @@ namespace BatshitTechnology
                 .Where(f => f.Position.InHorDistOf(center, props.blastRadius))
                 .ToList();
             int outerFires = fires.Count(f => !f.Position.InHorDistOf(center, half));
+            // Fires are lit on 80% of burnable cells; ask for 100, or a fifth
+            // of the burnable ground where there is less than 500 cells of it.
+            int wanted = Mathf.Min(100, flammableOuter / 5);
             Check("fires survive the shockwave out to its edge",
-                outerFires >= 100,
-                $"fires in radius {fires.Count}, beyond half radius {outerFires}");
+                outerFires >= wanted && (flammableOuter < 25 || outerFires > 0),
+                $"fires in radius {fires.Count}, beyond half radius {outerFires} "
+                    + $"(wanted {wanted}; {flammableOuter} burnable cells out there)");
 
             int aftershockTicks = Mathf.RoundToInt(bomb.aftershockSeconds * 60f);
             Tick(aftershockTicks + 30);

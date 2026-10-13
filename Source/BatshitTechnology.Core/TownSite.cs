@@ -243,15 +243,17 @@ public static class TownSite
     public static Cell? Best(
         SiteGrid grid, Box bounds, Box core, int firebreak, IEnumerable<Cell> candidates,
         Cell preferred, int edgeMargin, IReadOnlyList<KeepAway> keepAways, int penaltyPerTile = 10) =>
-        Best(grid, bounds, core, firebreak, new[] { bounds }, candidates,
+        Best(grid, bounds, core, firebreak, new[] { bounds }, null, candidates,
             preferred, edgeMargin, keepAways, penaltyPerTile);
 
     /// <summary>
     /// The cheapest acceptable anchor for a plan, as the other overload
-    /// picks it, except that keep-aways are tested against the cells the
-    /// town really touches (<see cref="TownPlan.Parts"/>) rather than its
-    /// bounding rectangle. The map-edge test still uses
-    /// <see cref="TownPlan.Bounds"/>; the levelling cost and no-go test use
+    /// picks it, except that keep-aways and no-go cells are tested against
+    /// the cells the town really touches (<see cref="TownPlan.Parts"/>)
+    /// rather than rectangles around it. One steam geyser in an empty
+    /// corner of AnyRim's levelled area used to reject every candidate; it
+    /// only matters under a part. The map-edge test still uses
+    /// <see cref="TownPlan.Bounds"/>, and the levelling cost uses
     /// <see cref="TownPlan.Core"/> grown by
     /// <see cref="TownPlan.FirebreakWidth"/>.
     /// </summary>
@@ -281,7 +283,7 @@ public static class TownSite
         IReadOnlyList<Box> parts = plan.Parts.Count > 0
             ? plan.Parts
             : new[] { plan.Bounds };
-        return Best(grid, plan.Bounds, plan.Core, plan.FirebreakWidth, parts,
+        return Best(grid, plan.Bounds, plan.Core, plan.FirebreakWidth, parts, parts,
             candidates, preferred, edgeMargin, keepAways, penaltyPerTile);
     }
 
@@ -294,6 +296,10 @@ public static class TownSite
     /// <param name="core">The town's core, town-local.</param>
     /// <param name="firebreak">Width of the firebreak around the core.</param>
     /// <param name="parts">Boxes the keep-away gaps are measured from.</param>
+    /// <param name="noGoParts">
+    /// Boxes that must hold no no-go cell, or null to test the whole core
+    /// grown by the firebreak.
+    /// </param>
     /// <param name="candidates">Candidate anchors, map coordinates.</param>
     /// <param name="preferred">The preferred anchor.</param>
     /// <param name="edgeMargin">Cells to keep clear of the map edge.</param>
@@ -302,7 +308,7 @@ public static class TownSite
     /// <returns>The best anchor, or null if none is acceptable.</returns>
     private static Cell? Best(
         SiteGrid grid, Box bounds, Box core, int firebreak, IReadOnlyList<Box> parts,
-        IEnumerable<Cell> candidates, Cell preferred, int edgeMargin,
+        IReadOnlyList<Box>? noGoParts, IEnumerable<Cell> candidates, Cell preferred, int edgeMargin,
         IReadOnlyList<KeepAway> keepAways, int penaltyPerTile)
     {
         if (grid == null)
@@ -343,7 +349,7 @@ public static class TownSite
         foreach (Cell anchor in candidates)
         {
             if (!usable.IsValid || !usable.Contains(bounds.Offset(anchor))
-                || grid.AnyBlockedIn(levelled.Offset(anchor))
+                || NoGo(grid, levelled, noGoParts, anchor)
                 || TooClose(parts, anchor, keepAways))
             {
                 continue;
@@ -364,6 +370,109 @@ public static class TownSite
         }
 
         return best;
+    }
+
+    /// <summary>
+    /// Why candidates fail, for a log line when no site qualifies. Each
+    /// candidate is charged to the first rule it breaks, in the order the
+    /// plan overload of <see cref="Best(SiteGrid, TownPlan, IEnumerable{Cell}, Cell, int, IReadOnlyList{KeepAway}, int)"/>
+    /// tests them: the map edge, then no-go cells, then each keep-away in
+    /// turn.
+    /// </summary>
+    /// <param name="grid">The frozen site grid.</param>
+    /// <param name="plan">The town.</param>
+    /// <param name="candidates">Candidate anchors, map coordinates.</param>
+    /// <param name="edgeMargin">Cells to keep clear of the map edge.</param>
+    /// <param name="keepAways">Areas to keep away from.</param>
+    /// <returns>The tally.</returns>
+    /// <exception cref="ArgumentNullException">A null argument.</exception>
+    /// <exception cref="InvalidOperationException">The grid is not frozen.</exception>
+    public static SiteRejections Explain(
+        SiteGrid grid, TownPlan plan, IEnumerable<Cell> candidates, int edgeMargin,
+        IReadOnlyList<KeepAway> keepAways)
+    {
+        if (grid == null || plan == null || candidates == null || keepAways == null)
+        {
+            throw new ArgumentNullException(
+                grid == null ? nameof(grid)
+                : plan == null ? nameof(plan)
+                : candidates == null ? nameof(candidates)
+                : nameof(keepAways));
+        }
+
+        if (!grid.IsFrozen)
+        {
+            throw new InvalidOperationException("Freeze the site grid first.");
+        }
+
+        IReadOnlyList<Box> parts = plan.Parts.Count > 0 ? plan.Parts : new[] { plan.Bounds };
+        Box usable = new Box(0, 0, grid.Width - 1, grid.Height - 1).ExpandedBy(-edgeMargin);
+        Box levelled = plan.Core.ExpandedBy(plan.FirebreakWidth);
+        int total = 0, offMap = 0, blocked = 0, acceptable = 0;
+        var tooClose = new int[keepAways.Count];
+        foreach (Cell anchor in candidates)
+        {
+            total++;
+            if (!usable.IsValid || !usable.Contains(plan.Bounds.Offset(anchor)))
+            {
+                offMap++;
+                continue;
+            }
+
+            if (NoGo(grid, levelled, parts, anchor))
+            {
+                blocked++;
+                continue;
+            }
+
+            int broken = -1;
+            for (int i = 0; i < keepAways.Count && broken < 0; i++)
+            {
+                if (TooClose(parts, anchor, new[] { keepAways[i] }))
+                {
+                    broken = i;
+                }
+            }
+
+            if (broken >= 0)
+            {
+                tooClose[broken]++;
+            }
+            else
+            {
+                acceptable++;
+            }
+        }
+
+        return new SiteRejections(total, offMap, blocked, tooClose, acceptable);
+    }
+
+    /// <summary>
+    /// Whether a no-go cell lies under the town moved to an anchor: under
+    /// any of its parts, or, with no parts given, anywhere in its levelled
+    /// area.
+    /// </summary>
+    /// <param name="grid">The frozen site grid.</param>
+    /// <param name="levelled">The core grown by the firebreak, town-local.</param>
+    /// <param name="noGoParts">The parts to test, or null for the levelled area.</param>
+    /// <param name="anchor">The candidate anchor.</param>
+    /// <returns>True if the candidate stands on no-go ground.</returns>
+    private static bool NoGo(SiteGrid grid, Box levelled, IReadOnlyList<Box>? noGoParts, Cell anchor)
+    {
+        if (noGoParts == null)
+        {
+            return grid.AnyBlockedIn(levelled.Offset(anchor));
+        }
+
+        foreach (Box part in noGoParts)
+        {
+            if (grid.AnyBlockedIn(part.Offset(anchor)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -410,4 +519,23 @@ public static class TownSite
             }
         }
     }
+}
+
+/// <summary>
+/// How many site candidates failed each rule (see
+/// <see cref="TownSite.Explain"/>).
+/// </summary>
+/// <param name="Candidates">Candidates examined.</param>
+/// <param name="OffMap">Too close to the map edge.</param>
+/// <param name="Blocked">A no-go cell under a part of the town.</param>
+/// <param name="TooClose">Too close to each keep-away, by index.</param>
+/// <param name="Acceptable">Candidates that broke no rule.</param>
+public sealed record SiteRejections(
+    int Candidates, int OffMap, int Blocked, IReadOnlyList<int> TooClose, int Acceptable)
+{
+    /// <summary>One line for a log: "120 candidates: 0 off the map, ...".</summary>
+    /// <returns>The text.</returns>
+    public override string ToString() =>
+        $"{Candidates} candidates: {OffMap} too near the map edge, {Blocked} on no-go ground, "
+        + $"too close to keep-aways [{string.Join(", ", TooClose)}], {Acceptable} acceptable";
 }

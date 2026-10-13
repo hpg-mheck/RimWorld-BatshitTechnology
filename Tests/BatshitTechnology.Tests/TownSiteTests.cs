@@ -234,8 +234,9 @@ public sealed class TownSiteTests
 
     /// <summary>
     /// On the showcase's 250 by 250 quick-test map, with its base square
-    /// (10-tile keep-away) and grenade clearing (15), AnyRim finds a site
-    /// in its window when keep-aways are measured from the town's real
+    /// (10-tile keep-away), grenade clearing (15) and the north-east and
+    /// south-east demo pads (87.6, so both stay usable), AnyRim finds a
+    /// site in its window when keep-aways are measured from the town's real
     /// parts. Measured from its bounding rectangle, every candidate fails,
     /// which is why the plan overload exists.
     /// </summary>
@@ -249,6 +250,8 @@ public sealed class TownSiteTests
         {
             new KeepAway(new Box(109, 109, 141, 141), 10),
             new KeepAway(new Box(87, 112, 113, 138), 15),
+            new KeepAway(new Box(200, 200, 200, 200), 87.6),
+            new KeepAway(new Box(200, 50, 200, 50), 87.6),
         };
         var candidates = TownSite.Grid(new Box(45, 150, 60, 177), 2).ToList();
         var preferred = new Cell(55, 163);
@@ -269,8 +272,71 @@ public sealed class TownSiteTests
     }
 
     /// <summary>
-    /// The plan overload scores the core grown by the plan's firebreak,
-    /// like the box overload given the same core.
+    /// Explain charges each failing candidate to the first rule it breaks
+    /// (map edge, then no-go ground, then each keep-away in order) and
+    /// counts the rest as acceptable, so a log line can say why a town was
+    /// skipped.
+    /// </summary>
+    [Fact(DisplayName = "Explain tallies why candidates fail")]
+    public void Explain_should_tally_each_rule()
+    {
+        TownPlan plan = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
+        var grid = new SiteGrid(250, 250);
+        var blockedAnchor = new Cell(60, 170);
+        Box part = plan.Parts[0].Offset(blockedAnchor); // no-go under the town itself
+        grid.Block(part.MinX, part.MinZ);
+        grid.Freeze();
+        var keepAways = new[] { new KeepAway(new Box(185, 20, 185, 20), 30) };
+        var candidates = new[]
+        {
+            new Cell(10, 10),      // its bounds run off the map
+            blockedAnchor,         // no-go ground under one of its parts
+            new Cell(185, 80),     // a part within 30 of (185,20)
+            new Cell(125, 175),    // fine (far from the others' cells)
+        };
+
+        SiteRejections tally = TownSite.Explain(grid, plan, candidates, 6, keepAways);
+        Assert.Equal(4, tally.Candidates);
+        Assert.Equal(1, tally.OffMap);
+        Assert.Equal(1, tally.Blocked);
+        Assert.Equal(new[] { 1 }, tally.TooClose);
+        Assert.Equal(1, tally.Acceptable);
+        Assert.Contains("4 candidates", tally.ToString());
+    }
+
+    /// <summary>
+    /// The plan overload rejects a site only when a no-go cell lies under
+    /// one of the town's parts. A geyser in an empty corner of the levelled
+    /// area once rejected every candidate on two quick-test maps.
+    /// </summary>
+    [Fact(DisplayName = "No-go ground matters only under the town's parts")]
+    public void Best_with_a_plan_should_test_no_go_under_parts_only()
+    {
+        TownPlan plan = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
+        var anchor = new Cell(55, 163);
+        Box levelled = plan.Core.ExpandedBy(plan.FirebreakWidth);
+        Cell empty = levelled.Cells()
+            .First(c => !plan.Parts.Any(p => p.Contains(c)));
+        Cell underPart = plan.Parts[0].MinX == 0 && plan.Parts[0].MinZ == 0
+            ? new Cell(0, 0)
+            : new Cell(plan.Parts[0].MinX, plan.Parts[0].MinZ);
+
+        var open = new SiteGrid(250, 250);
+        open.Block(anchor.X + empty.X, anchor.Z + empty.Z);
+        open.Freeze();
+        Assert.Equal(anchor, TownSite.Best(open, plan, new[] { anchor }, anchor, 6, None));
+
+        var built = new SiteGrid(250, 250);
+        built.Block(anchor.X + underPart.X, anchor.Z + underPart.Z);
+        built.Freeze();
+        Assert.Null(TownSite.Best(built, plan, new[] { anchor }, anchor, 6, None));
+        Assert.Equal(1, TownSite.Explain(built, plan, new[] { anchor }, 6, None).Blocked);
+    }
+
+    /// <summary>
+    /// The plan overload scores the core grown by the plan's firebreak:
+    /// of two otherwise equal sites, the one whose levelled area holds
+    /// costly ground loses.
     /// </summary>
     [Fact(DisplayName = "The plan overload levels the core and firebreak")]
     public void Best_with_a_plan_should_level_core_and_firebreak()
@@ -278,7 +344,7 @@ public sealed class TownSiteTests
         TownPlan plan = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
         var grid = new SiteGrid(250, 250);
         Box levelled = plan.Core.ExpandedBy(plan.FirebreakWidth).Offset(new Cell(55, 163));
-        grid.Block(levelled.MaxX, levelled.MaxZ); // only (55,163) covers this corner
+        grid.AddCost(levelled.MaxX, levelled.MaxZ, 1000); // only (55,163) covers this corner
         grid.Freeze();
         var candidates = new[] { new Cell(55, 163), new Cell(54, 163) };
         Assert.Equal(new Cell(54, 163),

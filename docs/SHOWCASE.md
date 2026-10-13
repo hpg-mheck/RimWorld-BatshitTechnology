@@ -214,8 +214,8 @@ Each building, with its walls and floor:
   autodoor):
   - the Transmogrifier, its bill suspended, with granite chunks by its
     hopper;
-  - the Artificer, fuelled, with a small player stockpile beside it for
-    its output;
+  - the Artificer, fuelled and switched off, with a small critical-priority
+    player stockpile beside it for its output;
   - a 3 by 3 "employee wellness" room with the Brain Squeezer (switched
     off) and a potted plant;
   - the Random Replicator, still in its crate;

@@ -4,16 +4,22 @@
 // a working demo base: a fuelled reactor powering a stocked replicator, the
 // Transmogrifier with a bill and rock chunks, a colonist in the Brain
 // Squeezer, the Artificer making bolts, and a Ballista with chained,
-// loaded magazines firing explosive volleys at open ground. Then two lone
-// devices in the most open far corners self-destruct, well clear of the
-// base, with the camera on each as it arms: a Random Replicator five
-// seconds in (blast, fires, secondaries), then a Batshittium Reactor twenty
-// seconds later (core blast and a barrage of bolts). Last, a colonist
-// throws an Ergonomic Singularity Grenade at a junk pile (and a volunteer)
-// west of the base. Then it leaves the game running.
+// loaded magazines firing explosive volleys at open ground. It builds
+// AnyRim, the test town, on the best site in the north-west (or logs that
+// it skipped it). Then two lone devices in the most open far corners that
+// are out of reach of AnyRim self-destruct, well clear of the base, with
+// the camera on each as it arms: a Random Replicator five seconds in
+// (blast, fires, secondaries), then a Batshittium Reactor twenty seconds
+// later (core blast and a barrage of bolts). Next, a colonist throws an
+// Ergonomic Singularity Grenade at a junk pile (and a volunteer) west of
+// the base, and ten seconds after the throw the camera tours AnyRim from
+// its welcome sign. Then it leaves the game running. Log cues for capture
+// tooling: [BT-SHOWCASE] READY, ANYRIM (or AnyRim skipped), THROW, TOUR.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using BatshitTechnology.Core;
 using Verse;
 using Verse.AI;
 using RimWorld;
@@ -81,8 +87,12 @@ namespace BatshitTechnology
 
             map.powerNetManager.UpdatePowerNetsAndConnections_First();
             SendColonistToSqueezer(map, squeezer);
+
+            // AnyRim goes up before the self-destruct demo, which clears
+            // the fog and must pick corners out of the town's reach.
+            bool town = BuildAnyRim(map, center);
             Thing doomed = BuildSelfDestructDemo(map, center);
-            Find.CameraDriver.JumpToCurrentMapLoc(doomed.Position);
+            Find.CameraDriver.JumpToCurrentMapLoc(doomed?.Position ?? center);
             Find.CameraDriver.SetRootSize(MaxCameraSize);
             Find.TickManager.CurTimeSpeed = TimeSpeed.Normal;
             Messages.Message(
@@ -90,11 +100,164 @@ namespace BatshitTechnology
                     + "self-destruct in five seconds, a lone reactor follows it, "
                     + "then a colonist throws an Ergonomic Singularity Grenade. "
                     + "The demo base is at the map's centre; select things there "
-                    + "to see their buttons and status.",
+                    + "to see their buttons and status."
+                    + (town
+                        ? " AnyRim, a small test town, stands to the north-west; "
+                            + "the camera visits it after the grenade."
+                        : string.Empty),
                 MessageTypeDefOf.PositiveEvent, false);
             // Tools/smoke-test.ps1 waits for this line before maximizing.
             Log.Message("[BT-SHOWCASE] READY");
         }
+
+        /// <summary>
+        /// The tiles a demo corner's self-destruct can reach, counting the
+        /// fires and secondary blasts it starts (the replicator's 83.6, the
+        /// larger of the two), plus a 4-tile margin. docs/SHOWCASE.md,
+        /// "Safety Rules".
+        /// </summary>
+        internal const double DemoCornerReach = 87.6;
+
+        /// <summary>The quick-test map's size, which the doc's numbers assume.</summary>
+        private const float DocMapSize = 250f;
+
+        /// <summary>Game ticks from the grenade throw to the AnyRim tour.</summary>
+        private const int TourDelayTicks = 600;
+
+        /// <summary>
+        /// The camera's zoom on the tour: Middle (under 42), where the
+        /// signs show, and wide enough to take in the town's south half.
+        /// </summary>
+        private const float TourCameraSize = 30f;
+
+        /// <summary>
+        /// How far north of the welcome sign the tour's camera looks, so the
+        /// sign sits low in the frame with the town above it.
+        /// </summary>
+        private const int TourLookNorth = 20;
+
+        /// <summary>The map rectangle AnyRim stands in, or null if it was skipped.</summary>
+        private static CellRect? anyRimBounds;
+
+        /// <summary>The tick to tour AnyRim at, or -1.</summary>
+        private static int tourAtTick = -1;
+
+        /// <summary>
+        /// AnyRim's preferred crossroads, (55,163) on the 250-tile
+        /// quick-test map, scaled to the map's size.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <returns>The cell.</returns>
+        internal static IntVec3 AnyRimPreferredSite(Map map) =>
+            new IntVec3(ScaleX(map, 55), 0, ScaleZ(map, 163));
+
+        /// <summary>
+        /// Where AnyRim's crossroads may go: x 45..60 and z 150..177 on the
+        /// 250-tile quick-test map, scaled to the map's size.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <returns>The window.</returns>
+        internal static CellRect AnyRimWindow(Map map) =>
+            CellRect.FromLimits(ScaleX(map, 45), ScaleZ(map, 150), ScaleX(map, 60), ScaleZ(map, 177));
+
+        /// <summary>
+        /// What AnyRim keeps away from: 10 tiles from the base's cleared
+        /// square, 15 from the grenade clearing, and the demo-corner reach
+        /// from the north-east and south-east pads, so that those two stay
+        /// usable.
+        /// </summary>
+        /// <param name="baseCenter">The demo base's centre.</param>
+        /// <returns>The keep-aways, in map cells.</returns>
+        internal static List<KeepAway> AnyRimKeepAways(IntVec3 baseCenter) => new List<KeepAway>
+        {
+            new KeepAway(AnyRim.ToBox(CellRect.CenteredOn(baseCenter, 16)), 10),
+            new KeepAway(AnyRim.ToBox(CellRect.CenteredOn(baseCenter + new IntVec3(-25, 0, 0), 13)), 15),
+            new KeepAway(
+                AnyRim.ToBox(CellRect.SingleCell(baseCenter + new IntVec3(DemoOffset, 0, DemoOffset))),
+                DemoCornerReach),
+            new KeepAway(
+                AnyRim.ToBox(CellRect.SingleCell(baseCenter + new IntVec3(DemoOffset, 0, -DemoOffset))),
+                DemoCornerReach),
+        };
+
+        /// <summary>
+        /// Builds AnyRim on the best site in its window and logs a cue
+        /// either way: "[BT-SHOWCASE] ANYRIM at (x,z)" or "[BT-SHOWCASE]
+        /// AnyRim skipped". A failure never stops the showcase.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="baseCenter">The demo base's centre.</param>
+        /// <returns>True if the town was built.</returns>
+        private static bool BuildAnyRim(Map map, IntVec3 baseCenter)
+        {
+            anyRimBounds = null;
+            tourAtTick = -1;
+            try
+            {
+                AnyRimBuildReport report = AnyRim.BuildBest(
+                    map, AnyRim.DefaultSeed, AnyRimWindow(map), AnyRimPreferredSite(map),
+                    AnyRimKeepAways(baseCenter));
+                MapComponent_AnyRim record = map.GetComponent<MapComponent_AnyRim>();
+                if (report.Anchor.IsValid && record != null && record.Built)
+                {
+                    anyRimBounds = record.Bounds;
+                    Log.Message($"[BT-SHOWCASE] ANYRIM at ({report.Anchor.x},{report.Anchor.z})");
+                    return true;
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error($"[BT] Showcase could not build AnyRim: {e}");
+            }
+
+            Log.Message("[BT-SHOWCASE] AnyRim skipped");
+            return false;
+        }
+
+        /// <summary>
+        /// Points the camera at AnyRim's welcome sign with the town in
+        /// view, at a zoom where the signs show, and says what the town is
+        /// for.
+        /// </summary>
+        private static void TourAnyRim()
+        {
+            Map map = Find.CurrentMap;
+            MapComponent_AnyRim record = map?.GetComponent<MapComponent_AnyRim>();
+            if (record == null || !record.Built)
+            {
+                return;
+            }
+
+            IntVec3 sign = record.WelcomeSign.IsValid ? record.WelcomeSign : record.Anchor;
+            var look = new IntVec3(
+                record.Anchor.x, 0, Math.Min(sign.z + TourLookNorth, map.Size.z - 1));
+            Find.CameraDriver.JumpToCurrentMapLoc(look);
+            Find.CameraDriver.SetRootSize(TourCameraSize);
+            try
+            {
+                Messages.Message(
+                    AnyRimText.OpeningMessage, new LookTargets(sign, map),
+                    MessageTypeDefOf.PositiveEvent, false);
+            }
+            catch (Exception e)
+            {
+                Log.Error($"[BT] Showcase could not word AnyRim's opening message: {e}");
+            }
+
+            Log.Message("[BT-SHOWCASE] TOUR"); // a cue for screen-capture tooling
+        }
+
+        /// <summary>Scales an x from the 250-tile quick-test map to this map.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="x">The x on a 250-tile map.</param>
+        /// <returns>The x on this map.</returns>
+        private static int ScaleX(Map map, int x) => (int)Math.Round(x * map.Size.x / DocMapSize);
+
+        /// <summary>Scales a z from the 250-tile quick-test map to this map.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="z">The z on a 250-tile map.</param>
+        /// <returns>The z on this map.</returns>
+        private static int ScaleZ(Map map, int z) => (int)Math.Round(z * map.Size.z / DocMapSize);
 
         /// <summary>
         /// A Ballista with three chained magazines of explosive bolts, firing
@@ -182,6 +345,12 @@ namespace BatshitTechnology
                 ThrowGrenade();
             }
 
+            if (tourAtTick >= 0 && Find.TickManager.TicksGame >= tourAtTick)
+            {
+                tourAtTick = -1;
+                TourAnyRim();
+            }
+
             // Pull back to take in the whole blast when it goes off.
             if (watching != null && watching.Destroyed)
             {
@@ -216,15 +385,20 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Two lone devices on small pads in the far corners with the most
-        /// open ground: a Random Replicator, armed after
-        /// <see cref="ArmDelayTicks"/>, then a Batshittium Reactor, armed
-        /// after the replicator's blast has played out. The replicator is
-        /// selected first so its blast rings show. Fog is cleared so every
-        /// blast can be watched.
+        /// open ground, among the corners more than
+        /// <see cref="DemoCornerReach"/> tiles from AnyRim: a Random
+        /// Replicator, armed after <see cref="ArmDelayTicks"/>, then a
+        /// Batshittium Reactor, armed after the replicator's blast has
+        /// played out. The replicator is selected first so its blast rings
+        /// show. Fog is cleared so every blast can be watched. The grenade
+        /// demo and the AnyRim tour are scheduled after them.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="baseCenter">The demo base's centre.</param>
-        /// <returns>The replicator, which the camera starts on.</returns>
+        /// <returns>
+        /// The replicator, which the camera starts on, or null if no corner
+        /// was safe to use.
+        /// </returns>
         private static Thing BuildSelfDestructDemo(Map map, IntVec3 baseCenter)
         {
             List<IntVec3> corners = new[]
@@ -236,6 +410,8 @@ namespace BatshitTechnology
                 }
                 .Select(offset => baseCenter + offset)
                 .Where(c => CellRect.CenteredOn(c, 3).InBounds(map))
+                .Where(c => anyRimBounds == null
+                    || anyRimBounds.Value.ClosestDistSquaredTo(c) > DemoCornerReach * DemoCornerReach)
                 .OrderByDescending(c => OpenGround(map, c))
                 .ToList();
             map.fogGrid.ClearAllFog();
@@ -243,9 +419,20 @@ namespace BatshitTechnology
             pendingDemos.Clear();
             watching = null;
 
-            Clear(map, CellRect.CenteredOn(corners[0], 2));
-            Thing replicator = Spawn(map, "BT_RandomReplicator", corners[0]);
-            pendingDemos.Add((replicator, now + ArmDelayTicks));
+            Thing replicator = null;
+            if (corners.Count > 0)
+            {
+                Clear(map, CellRect.CenteredOn(corners[0], 2));
+                replicator = Spawn(map, "BT_RandomReplicator", corners[0]);
+                pendingDemos.Add((replicator, now + ArmDelayTicks));
+                Find.Selector.ClearSelection();
+                Find.Selector.Select(replicator, playSound: false);
+            }
+            else
+            {
+                Log.Warning("[BT] Showcase: no demo corner is clear of AnyRim; no self-destructs.");
+            }
+
             if (corners.Count > 1)
             {
                 Clear(map, CellRect.CenteredOn(corners[1], 2));
@@ -253,10 +440,9 @@ namespace BatshitTechnology
                 pendingDemos.Add((reactor, now + ArmDelayTicks + SecondDemoDelayTicks));
             }
 
-            Find.Selector.ClearSelection();
-            Find.Selector.Select(replicator, playSound: false);
-            BuildGrenadeDemo(
-                map, baseCenter, now + ArmDelayTicks + SecondDemoDelayTicks + GrenadeDemoDelayTicks);
+            int throwAt = now + ArmDelayTicks + SecondDemoDelayTicks + GrenadeDemoDelayTicks;
+            BuildGrenadeDemo(map, baseCenter, throwAt);
+            tourAtTick = anyRimBounds.HasValue ? throwAt + TourDelayTicks : -1;
             return replicator;
         }
 
@@ -460,11 +646,14 @@ namespace BatshitTechnology
             return GenSpawn.Spawn(thing, at, map, WipeMode.Vanish);
         }
 
-        /// <summary>Puts bolts straight into a bolt store.</summary>
+        /// <summary>
+        /// Puts bolts straight into a bolt store (the showcase's Ballista
+        /// and AnyRim's). Whatever does not fit is discarded.
+        /// </summary>
         /// <param name="storage">The store.</param>
         /// <param name="bolt">The bolt type.</param>
         /// <param name="count">How many; split into full stacks.</param>
-        private static void Fill(BoltStorage storage, ThingDef bolt, int count)
+        internal static void Fill(BoltStorage storage, ThingDef bolt, int count)
         {
             while (count > 0)
             {

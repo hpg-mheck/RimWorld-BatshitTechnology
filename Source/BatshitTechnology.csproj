@@ -46,11 +46,23 @@
       <HintPath>$(RimWorldManaged)\UnityEngine.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- GUI, Event and EventType, for AnyRim's sign text. -->
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(RimWorldManaged)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- TextAnchor, for AnyRim's sign text. -->
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(RimWorldManaged)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="System"/>
     <Reference Include="System.Core"/>
     <Reference Include="System.Xml"/>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AnyRim.cs" />
+    <Compile Include="AnyRimResidents.cs" />
     <Compile Include="Artificer.cs" />
     <Compile Include="Ballista.cs" />
     <Compile Include="BatshittiumReactor.cs" />
@@ -59,6 +71,7 @@
     <Compile Include="Building_RandomReplicator.cs" />
     <Compile Include="CompRandomReplicator.cs" />
     <Compile Include="Detonations.cs" />
+    <Compile Include="MapComponent_AnyRim.cs" />
     <Compile Include="SelfDestruct.cs" />
     <Compile Include="SelfDestructAftermath.cs" />
     <Compile Include="Showcase.cs" />

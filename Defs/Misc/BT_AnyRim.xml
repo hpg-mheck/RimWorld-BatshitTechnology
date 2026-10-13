@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- AnyRim, the showcase's test town (docs/SHOWCASE.md): the residents'
+       duty, their pawn kind and the hediff that keeps them calm. The code
+       is in Source/AnyRimResidents.cs. -->
+
+  <!-- Daily life with no combat in it. Eat, sleep and get out of
+       dangerous temperatures within 16 tiles of home (cells farther out
+       count as forbidden, so residents never raid the colony's food), and
+       otherwise wander near the front door. The lord sets the wander
+       radius per household; RimWorld warns above 12. -->
+  <DutyDef>
+    <defName>BT_AnyRimResident</defName>
+    <socialModeMax>Quiet</socialModeMax>
+    <thinkNode Class="ThinkNode_Priority">
+      <subNodes>
+        <li Class="ThinkNode_ForbidOutsideFlagRadius">
+          <maxDistToSquadFlag>16</maxDistToSquadFlag>
+          <subNodes>
+            <li Class="ThinkNode_Subtree">
+              <treeDef>SatisfyBasicNeeds</treeDef>
+            </li>
+            <li Class="JobGiver_SeekSafeTemperature">
+              <maxRadius>16</maxRadius>
+            </li>
+          </subNodes>
+        </li>
+        <li Class="JobGiver_WanderNearDutyLocation">
+          <wanderRadius>8</wanderRadius>
+        </li>
+      </subNodes>
+    </thinkNode>
+  </DutyDef>
+
+  <!-- Industrial clothes and no weapons; the code fixes names, genders,
+       ages, hats, the baseliner xenotype and the Ancients faction. The
+       backstory filter replaces the Ancients' offworld one, and the
+       faction's synthread-only apparel rule is ignored. -->
+  <PawnKindDef>
+    <defName>BT_AnyRimResident</defName>
+    <label>AnyRim resident</label>
+    <race>Human</race>
+    <defaultFactionDef>Ancients</defaultFactionDef>
+    <combatPower>20</combatPower>
+    <isFighter>false</isFighter>
+    <backstoryFiltersOverride>
+      <li>
+        <categoriesChildhood>
+          <li>Outlander</li>
+        </categoriesChildhood>
+        <categoriesAdulthood>
+          <li>Outlander</li>
+        </categoriesAdulthood>
+      </li>
+    </backstoryFiltersOverride>
+    <ignoreFactionApparelStuffRequirements>true</ignoreFactionApparelStuffRequirements>
+    <apparelTags>
+      <li>IndustrialBasic</li>
+    </apparelTags>
+    <apparelMoney>300~600</apparelMoney>
+    <apparelAllowHeadgearChance>0</apparelAllowHeadgearChance> <!-- hats come from the town plan -->
+    <techHediffsChance>0</techHediffsChance>
+    <chemicalAddictionChance>0</chemicalAddictionChance>
+    <humanPregnancyChance>0</humanPregnancyChance>
+    <invNutrition>1.8</invNutrition> <!-- two survival meals in every pocket -->
+    <invFoodDef>MealSurvivalPack</invFoodDef>
+    <fleeHealthThresholdRange>-1~-1</fleeHealthThresholdRange> <!-- never flees when hurt -->
+    <initialWillRange>0~1</initialWillRange>
+    <initialResistanceRange>10~17</initialResistanceRange>
+  </PawnKindDef>
+
+  <!-- Blocks mental breaks and holds mood steady, after vanilla's
+       mind-numb serum (Anomaly), so a test never sets a resident off on a
+       berserk or sends them wandering off the map. -->
+  <HediffDef>
+    <defName>BT_AnyRimComposure</defName>
+    <label>civic composure</label>
+    <description>A steady, community-minded outlook, issued with the house keys. Mental breaks: none. Mood: holds at 70 percent, whatever the neighbourhood is doing. Panic and flight: not observed. Residents still step aside from anything they can see coming. It is not a substitute for a shelter.</description>
+    <hediffClass>HediffWithComps</hediffClass>
+    <isBad>false</isBad>
+    <everCurableByItem>false</everCurableByItem>
+    <stages>
+      <li>
+        <blocksMentalBreaks>true</blocksMentalBreaks>
+        <pctAllThoughtNullification>1</pctAllThoughtNullification>
+        <overrideMoodBase>0.7</overrideMoodBase>
+      </li>
+    </stages>
+  </HediffDef>
+</Defs>

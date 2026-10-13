@@ -815,7 +815,8 @@ public sealed class TownPlanTests
         }
 
         Assert.True(Only("BT_BatshittiumReactor") is { Refuel: true, AutoRefuelOff: true });
-        Assert.True(Only("BT_BatshittiumArtificer") is { Refuel: true, AutoRefuelOff: true });
+        Assert.True(Only("BT_BatshittiumArtificer")
+            is { Refuel: true, AutoRefuelOff: true, SwitchedOff: true });
         Assert.True(Only("BT_BatshittiumTransmogrifier").SuspendBills);
         Assert.True(Only("BT_BrainSqueezer").SwitchedOff);
         Assert.Equal(PlacementKind.Crate, Only("BT_RandomReplicator").Kind);

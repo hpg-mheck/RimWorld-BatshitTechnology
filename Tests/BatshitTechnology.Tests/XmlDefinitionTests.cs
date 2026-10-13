@@ -454,6 +454,50 @@ public sealed class XmlDefinitionTests
         Assert.All(quips, q => Assert.InRange(q.Length, 1, 70));
     }
 
+    /// <summary>
+    /// AnyRim's residents (docs/SHOWCASE.md): a duty with no combat in it
+    /// whose wander radius stays within RimWorld's limit of 12, a pawn kind
+    /// that passes the humanlike config checks and never arms or frightens
+    /// its pawns, and a visible "civic composure" hediff that blocks mental
+    /// breaks.
+    /// </summary>
+    [Fact(DisplayName = "AnyRim residents are calm, unarmed and stay home")]
+    public void AnyRimResidents_should_match_spec()
+    {
+        var duty = SingleDef("DutyDef", "BT_AnyRimResident");
+        var givers = duty.Descendants("li")
+            .Select(e => e.Attribute("Class")?.Value ?? string.Empty)
+            .ToList();
+        Assert.DoesNotContain(givers, c => c.Contains("Fight") || c.Contains("Defend")
+            || c.Contains("Attack") || c.Contains("Work"));
+        Assert.Contains("JobGiver_WanderNearDutyLocation", givers);
+        // Needs only: SatisfyBasicNeedsAndWork would send residents to work.
+        Assert.Equal("SatisfyBasicNeeds", duty.Descendants("treeDef").Single().Value);
+        Assert.InRange(
+            float.Parse(duty.Descendants("wanderRadius").Single().Value, CultureInfo.InvariantCulture),
+            1f, 12f);
+        Assert.Equal("16", duty.Descendants("maxDistToSquadFlag").Single().Value);
+
+        var kind = SingleDef("PawnKindDef", "BT_AnyRimResident");
+        Assert.Equal("Human", kind.Element("race")?.Value);
+        Assert.Equal("false", kind.Element("isFighter")?.Value);
+        Assert.True(
+            float.Parse(kind.Element("combatPower")?.Value ?? "-1", CultureInfo.InvariantCulture) >= 0f,
+            "a pawn kind without combatPower is a config error");
+        // Humanlike kinds need both, or RimWorld reports a config error.
+        Assert.NotNull(kind.Element("initialWillRange"));
+        Assert.NotNull(kind.Element("initialResistanceRange"));
+        Assert.Null(kind.Element("weaponTags"));
+        Assert.Equal("-1~-1", kind.Element("fleeHealthThresholdRange")?.Value);
+        Assert.Equal("MealSurvivalPack", kind.Element("invFoodDef")?.Value);
+
+        var composure = SingleDef("HediffDef", "BT_AnyRimComposure");
+        Assert.Equal("civic composure", composure.Element("label")?.Value);
+        Assert.False(string.IsNullOrWhiteSpace(composure.Element("description")?.Value));
+        Assert.Equal("false", composure.Element("isBad")?.Value);
+        Assert.Equal("true", composure.Descendants("blocksMentalBreaks").Single().Value);
+    }
+
     /// <summary>A ThingDef's last comp.</summary>
     /// <param name="defName">The ThingDef.</param>
     /// <returns>The last li under comps.</returns>
