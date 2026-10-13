@@ -109,3 +109,25 @@ secondaries are XML entries (Flame bursts, BombSuper at 40 and 80 damage);
 BombSuper looks like Bomb but is not caught by the fire check. Timing and
 sampling live in Core.BlastSchedule with unit tests. The aftermath is saved
 with the map.
+2026-10-13 Claude: Self-destruct generalized and destruction made
+interesting, per Matt "Breakpoint" Heck. CompSelfDestruct (the last comp,
+because comps keep ticking after a mid-loop Kill) owns the order, arming
+job, countdown, alarm, flee, rings and a new warning band: a one-cell
+surround fading sinusoidally in yellow-orange (1 s period), red and 0.25 s
+in the final 3 s; alpha is quantized to 12 levels because RimWorld pools a
+material per colour (Core.CountdownPulse, unit tested). What happens at
+zero is a BatshitDetonation subclass chosen in XML with Class=. The
+replicator keeps its bomb, fires and secondaries; the reactor launches
+3 x 256 Really Painful bolts at once (a Ballista volley's look; flight time
+grows with distance, so impacts spread as a wave). Every damaging hit has a
+5% chance to trigger a self-destruct, half of those skipping the countdown
+(detonating on the next tick, after the hit finishes applying); an armed
+device destroyed by damage goes off, as vanilla explosives do. Devices
+without a self-destruct get a CompDeathBlast with their own blast on
+KillFinalize: hopper burst, psychic squeeze, bolt cook-off (bolts kept
+rather than spilled, up to a cap; the rest pulverized), molten spray.
+Non-weapon devices got their own 500-point projects after Lore (Lore now
+unlocks nothing directly). The Ballista's player-facing name is Batshit
+Ballista; its defName stays BT_BatshittiumBallista so the playtest save
+keeps working. The Def validator now honours Class= on plain fields, as
+the game's loader does.

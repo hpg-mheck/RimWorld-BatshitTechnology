@@ -59,7 +59,7 @@ public sealed class XmlDefinitionTests
 
     /// <summary>
     /// Verifies the replicator uses its storage building, has the
-    /// interaction cell its code needs, and is unlocked by Batshittium Lore.
+    /// interaction cell its code needs, and is unlocked by its own project.
     /// </summary>
     [Fact(DisplayName = "Replicator uses its building class, interaction cell and research")]
     public void Replicator_should_use_storage_building_and_lore_research()
@@ -71,7 +71,7 @@ public sealed class XmlDefinitionTests
             def.Element("thingClass")?.Value);
         Assert.Equal("true", def.Element("hasInteractionCell")?.Value);
         Assert.Equal(
-            new[] { "BT_BatshittiumLore" },
+            new[] { "BT_Research_RandomReplicator" },
             ListValues(def.Element("researchPrerequisites")));
     }
 
@@ -202,7 +202,7 @@ public sealed class XmlDefinitionTests
         var chair = ThingDef("BT_BrainSqueezer");
         Assert.Equal("true", chair.Element("building")?.Element("isSittable")?.Value);
         Assert.Equal(
-            new[] { "BT_BatshittiumLore" }, ListValues(chair.Element("researchPrerequisites")));
+            new[] { "BT_Research_BrainSqueezer" }, ListValues(chair.Element("researchPrerequisites")));
 
         var giver = SingleDef("JoyGiverDef", "BT_UseBrainSqueezer");
         Assert.Equal(new[] { "BT_BrainSqueezer" }, ListValues(giver.Element("thingDefs")));
@@ -240,6 +240,10 @@ public sealed class XmlDefinitionTests
             ThingDef("BT_Projectile_BoltReallyPainful").Element("thingClass")?.Value);
 
         var ballista = ThingDef("BT_BatshittiumBallista");
+        Assert.Equal("batshit ballista", ballista.Element("label")?.Value);
+        Assert.Equal(
+            "Batshit Ballista",
+            SingleDef("ResearchProjectDef", "BT_Research_Ballista").Element("label")?.Value);
         Assert.Equal("16", ballista.Descendants("capacity").Single().Value);
         Assert.Equal(
             "5", ballista.Element("building")?.Element("turretBurstCooldownTime")?.Value);
@@ -283,6 +287,118 @@ public sealed class XmlDefinitionTests
         Assert.Equal(
             new[] { "BT_Research_Magazine" }, ListValues(magazine.Element("researchPrerequisites")));
     }
+
+    /// <summary>
+    /// Every non-weapon device has its own research project, after
+    /// Batshittium Lore, and builds only once it is done.
+    /// </summary>
+    [Theory(DisplayName = "Each non-weapon device has its own project after Lore")]
+    [InlineData("BT_BatshittiumTransmogrifier", "BT_Research_Transmogrifier")]
+    [InlineData("BT_BatshittiumReactor", "BT_Research_Reactor")]
+    [InlineData("BT_RandomReplicator", "BT_Research_RandomReplicator")]
+    [InlineData("BT_BrainSqueezer", "BT_Research_BrainSqueezer")]
+    public void Devices_should_have_their_own_research(string device, string project)
+    {
+        Assert.Equal(new[] { project }, ListValues(ThingDef(device).Element("researchPrerequisites")));
+        var def = SingleDef("ResearchProjectDef", project);
+        Assert.Equal("500", def.Element("baseCost")?.Value);
+        Assert.Equal("BT_BatshitTechnology", def.Element("tab")?.Value);
+        Assert.Equal(new[] { "BT_BatshittiumLore" }, ListValues(def.Element("prerequisites")));
+    }
+
+    /// <summary>
+    /// No two projects in the tab share a spot in the research view, so the
+    /// tree draws without overlaps.
+    /// </summary>
+    [Fact(DisplayName = "Research projects don't overlap in the tree")]
+    public void Research_projects_should_not_overlap()
+    {
+        var spots = AllDefDocuments()
+            .SelectMany(d => d.Root?.Elements("ResearchProjectDef") ?? Enumerable.Empty<XElement>())
+            .Where(r => r.Element("tab")?.Value == "BT_BatshitTechnology")
+            .Select(r => $"{r.Element("researchViewX")?.Value},{r.Element("researchViewY")?.Value}")
+            .ToList();
+
+        Assert.Equal(11, spots.Count);
+        Assert.Equal(spots.Count, spots.Distinct().Count());
+    }
+
+    /// <summary>
+    /// The replicator and reactor self-destruct: the comp is their last
+    /// (they are destroyed mid-tick at zero), damage can trigger it 5% of
+    /// the time with half of those skipping the countdown, and each has its
+    /// own detonation: the replicator's bomb and the reactor's barrage of
+    /// three full Ballista volleys.
+    /// </summary>
+    [Fact(DisplayName = "Replicator and reactor self-destruct as agreed")]
+    public void SelfDestructs_should_match_spec()
+    {
+        var replicator = LastComp("BT_RandomReplicator");
+        Assert.Equal("BatshitTechnology.CompProperties_SelfDestruct",
+            replicator.Attribute("Class")?.Value);
+        Assert.Equal("75", replicator.Element("blastRadius")?.Value);
+        Assert.Equal("BatshitTechnology.Detonation_Bomb",
+            replicator.Element("detonation")?.Attribute("Class")?.Value);
+        Assert.Equal(3, replicator.Element("detonation")?.Element("secondaries")?.Elements("li").Count());
+
+        var reactor = LastComp("BT_BatshittiumReactor");
+        Assert.Equal("BatshitTechnology.CompProperties_SelfDestruct",
+            reactor.Attribute("Class")?.Value);
+        var barrage = reactor.Element("detonation");
+        Assert.Equal("BatshitTechnology.Detonation_BoltBarrage", barrage?.Attribute("Class")?.Value);
+        Assert.Equal("BT_Projectile_BoltReallyPainful", barrage?.Element("projectile")?.Value);
+        Assert.Equal("256", barrage?.Element("boltsPerVolley")?.Value);
+
+        foreach (var comp in new[] { replicator, reactor })
+        {
+            Assert.Equal("0.05", comp.Element("damageTriggerChance")?.Value);
+            Assert.Equal("0.5", comp.Element("damageSkipCountdownChance")?.Value);
+        }
+
+        Assert.DoesNotContain(ReplicatorComp().Elements(), e => e.Name.LocalName.StartsWith("selfDestruct"));
+    }
+
+    /// <summary>
+    /// Every buildable Batshit device either self-destructs or has its own
+    /// death blast, never both, and as its last comp; no two death blasts
+    /// share a kind except the Ballista and its magazine (both cook off).
+    /// </summary>
+    [Fact(DisplayName = "Every device self-destructs or has a unique death blast")]
+    public void Devices_should_each_blow_up_their_own_way()
+    {
+        var devices = AllThingDefs()
+            .Where(d => d.Element("designationCategory") != null)
+            .ToList();
+        Assert.Equal(7, devices.Count);
+
+        var blasts = new List<string>();
+        foreach (var device in devices)
+        {
+            var kinds = (device.Element("comps")?.Elements("li") ?? Enumerable.Empty<XElement>())
+                .Select(c => c.Attribute("Class")?.Value)
+                .Where(c => c is "BatshitTechnology.CompProperties_SelfDestruct"
+                    or "BatshitTechnology.CompProperties_DeathBlast")
+                .ToList();
+            Assert.True(kinds.Count == 1, $"{DefName(device)}: {kinds.Count} blast comps");
+            Assert.Equal(kinds[0], LastComp(DefName(device)).Attribute("Class")?.Value);
+
+            var blast = LastComp(DefName(device)).Element("blast");
+            if (blast != null)
+            {
+                blasts.Add(blast.Attribute("Class")?.Value ?? "");
+            }
+        }
+
+        Assert.Equal(5, blasts.Count);
+        Assert.Equal(4, blasts.Distinct().Count()); // Ballista and Magazine share the cook-off
+    }
+
+    /// <summary>A ThingDef's last comp.</summary>
+    /// <param name="defName">The ThingDef.</param>
+    /// <returns>The last li under comps.</returns>
+    private static XElement LastComp(string defName) =>
+        ThingDef(defName).Element("comps")?.Elements("li").Last()
+        ?? throw new InvalidOperationException($"{defName} has no comps.");
 
     /// <summary>Whether a research project requires another, directly or not.</summary>
     /// <param name="project">The project's defName.</param>

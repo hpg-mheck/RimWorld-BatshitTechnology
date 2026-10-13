@@ -4,11 +4,14 @@
 // a working demo base: a fuelled reactor powering a stocked replicator, the
 // Transmogrifier with a bill and rock chunks, a colonist in the Brain
 // Squeezer, the Artificer making bolts, and a Ballista with chained,
-// loaded magazines firing explosive volleys at open ground. A second
-// replicator, alone in the most open far corner, arms its self-destruct
-// five seconds later with the camera on it, so the blast and its aftermath
-// play out well clear of the base. Then it leaves the game running.
+// loaded magazines firing explosive volleys at open ground. Then two lone
+// devices in the most open far corners self-destruct, well clear of the
+// base, with the camera on each as it arms: a Random Replicator five
+// seconds in (blast, fires, secondaries), then a Batshittium Reactor twenty
+// seconds later (core blast and a barrage of bolts). Then it leaves the
+// game running.
 
+using System.Collections.Generic;
 using System.Linq;
 using Verse;
 using Verse.AI;
@@ -83,9 +86,9 @@ namespace BatshitTechnology
             Find.TickManager.CurTimeSpeed = TimeSpeed.Normal;
             Messages.Message(
                 "Batshit Technology showcase: this lone replicator arms its "
-                    + "self-destruct in five seconds. The demo base is at the "
-                    + "map's centre; select things there to see their buttons "
-                    + "and status.",
+                    + "self-destruct in five seconds, and a lone reactor follows "
+                    + "it. The demo base is at the map's centre; select things "
+                    + "there to see their buttons and status.",
                 MessageTypeDefOf.PositiveEvent, false);
             // Tools/smoke-test.ps1 waits for this line before maximizing.
             Log.Message("[BT-SHOWCASE] READY");
@@ -131,45 +134,62 @@ namespace BatshitTechnology
         private const float MaxCameraSize = 60f;
 
         /// <summary>
-        /// Game ticks between the base being ready and the demo arming: time
-        /// for the window to maximize and the viewer to find the rings.
+        /// Game ticks between the base being ready and the first demo arming:
+        /// time for the window to maximize and the viewer to find the rings.
         /// </summary>
         private const int ArmDelayTicks = 300;
 
-        private static Thing pendingDemo;
-        private static int armAtTick;
+        /// <summary>
+        /// Game ticks between the replicator demo arming and the reactor demo
+        /// arming: its 10 s countdown, the ~6 s aftermath, and a breath.
+        /// </summary>
+        private const int SecondDemoDelayTicks = 1200;
+
+        private static readonly List<(Thing Device, int ArmAt)> pendingDemos =
+            new List<(Thing Device, int ArmAt)>();
 
         /// <summary>
-        /// Called every game tick by the runner; arms the self-destruct demo
-        /// when its moment comes.
+        /// Called every game tick by the runner; arms each self-destruct demo
+        /// when its moment comes, with the camera on it.
         /// </summary>
         internal static void Tick()
         {
-            if (pendingDemo == null || Find.TickManager.TicksGame < armAtTick)
+            for (int i = pendingDemos.Count - 1; i >= 0; i--)
             {
-                return;
-            }
+                (Thing device, int armAt) = pendingDemos[i];
+                if (Find.TickManager.TicksGame < armAt)
+                {
+                    continue;
+                }
 
-            if (pendingDemo.Spawned)
-            {
-                pendingDemo.TryGetComp<CompRandomReplicator>().ArmSelfDestruct();
-            }
+                pendingDemos.RemoveAt(i);
+                if (!device.Spawned)
+                {
+                    continue;
+                }
 
-            pendingDemo = null;
+                Find.CameraDriver.JumpToCurrentMapLoc(device.Position);
+                Find.CameraDriver.SetRootSize(MaxCameraSize);
+                Find.Selector.ClearSelection();
+                Find.Selector.Select(device, playSound: false);
+                device.TryGetComp<CompSelfDestruct>().Arm();
+            }
         }
 
         /// <summary>
-        /// A replicator alone on a small pad in the far corner with the most
-        /// open ground, selected so its blast rings show, and due to arm its
-        /// self-destruct after <see cref="ArmDelayTicks"/>. Fog is cleared so
-        /// the whole blast can be watched.
+        /// Two lone devices on small pads in the far corners with the most
+        /// open ground: a Random Replicator, armed after
+        /// <see cref="ArmDelayTicks"/>, then a Batshittium Reactor, armed
+        /// after the replicator's blast has played out. The replicator is
+        /// selected first so its blast rings show. Fog is cleared so every
+        /// blast can be watched.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="baseCenter">The demo base's centre.</param>
-        /// <returns>The replicator.</returns>
+        /// <returns>The replicator, which the camera starts on.</returns>
         private static Thing BuildSelfDestructDemo(Map map, IntVec3 baseCenter)
         {
-            IntVec3 spot = new[]
+            List<IntVec3> corners = new[]
                 {
                     new IntVec3(-DemoOffset, 0, DemoOffset),
                     new IntVec3(DemoOffset, 0, DemoOffset),
@@ -179,14 +199,23 @@ namespace BatshitTechnology
                 .Select(offset => baseCenter + offset)
                 .Where(c => CellRect.CenteredOn(c, 3).InBounds(map))
                 .OrderByDescending(c => OpenGround(map, c))
-                .First();
+                .ToList();
             map.fogGrid.ClearAllFog();
-            Clear(map, CellRect.CenteredOn(spot, 2));
-            Thing replicator = Spawn(map, "BT_RandomReplicator", spot);
+            int now = Find.TickManager.TicksGame;
+            pendingDemos.Clear();
+
+            Clear(map, CellRect.CenteredOn(corners[0], 2));
+            Thing replicator = Spawn(map, "BT_RandomReplicator", corners[0]);
+            pendingDemos.Add((replicator, now + ArmDelayTicks));
+            if (corners.Count > 1)
+            {
+                Clear(map, CellRect.CenteredOn(corners[1], 2));
+                Thing reactor = Spawn(map, "BT_BatshittiumReactor", corners[1]);
+                pendingDemos.Add((reactor, now + ArmDelayTicks + SecondDemoDelayTicks));
+            }
+
             Find.Selector.ClearSelection();
             Find.Selector.Select(replicator, playSound: false);
-            pendingDemo = replicator;
-            armAtTick = Find.TickManager.TicksGame + ArmDelayTicks;
             return replicator;
         }
 

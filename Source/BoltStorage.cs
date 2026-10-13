@@ -1,4 +1,4 @@
-// Batshit Technology - bolt storage shared by the Batshittium Ballista's
+// Batshit Technology - bolt storage shared by the Batshit Ballista's
 // internal magazine and the Ballista Magazine. Both are haul destinations
 // that only take bolts (the vanilla bookcase pattern): haulers fill them up
 // to a capacity, nothing hauls bolts back out, and a storage tab sets the

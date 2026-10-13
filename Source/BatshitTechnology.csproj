@@ -58,6 +58,7 @@
     <Compile Include="BrainSqueezer.cs" />
     <Compile Include="Building_RandomReplicator.cs" />
     <Compile Include="CompRandomReplicator.cs" />
+    <Compile Include="Detonations.cs" />
     <Compile Include="SelfDestruct.cs" />
     <Compile Include="SelfDestructAftermath.cs" />
     <Compile Include="Showcase.cs" />

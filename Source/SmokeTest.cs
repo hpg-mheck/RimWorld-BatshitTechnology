@@ -109,7 +109,16 @@ namespace BatshitTechnology
             TestArtificer(map, center);
             TestReactorBurnCycle(reactor, fuel);
             TestSelfDestructAbort(replicator);
+
+            // Destructive tests from here on. Remove the other devices
+            // quietly first: a 5% damage roll on the reactor would otherwise
+            // set off its barrage in the middle of the replicator's blast.
+            ClearDevicesExcept(map, replicator);
             TestDetonation(replicator);
+            TestReactorBarrage(map, center);
+            TestDamageTrigger(map, center);
+            TestArmedDeviceDestroyed(map, center);
+            TestDeathBlasts(map, center);
         }
 
         /// <summary>The fuelled reactor produces 250 kW and is burning.</summary>
@@ -507,12 +516,30 @@ namespace BatshitTechnology
         /// <param name="replicator">The replicator.</param>
         private void TestSelfDestructAbort(Thing replicator)
         {
-            var comp = replicator.TryGetComp<CompRandomReplicator>();
-            comp.ArmSelfDestruct();
+            var comp = replicator.TryGetComp<CompSelfDestruct>();
+            comp.Arm();
             Tick(30);
-            Check("arming starts the countdown", comp.IsSelfDestructCountingDown);
-            comp.AbortSelfDestruct();
-            Check("aborting stops the countdown", !comp.IsSelfDestructCountingDown);
+            Check("arming starts the countdown", comp.IsCountingDown);
+            comp.Abort();
+            Check("aborting stops the countdown", !comp.IsCountingDown);
+        }
+
+        /// <summary>
+        /// Removes every Batshit device but one without triggering anything
+        /// (Vanish sets off no self-destruct or death blast).
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="keep">The device to leave.</param>
+        private static void ClearDevicesExcept(Map map, Thing keep)
+        {
+            foreach (Thing t in map.listerThings.AllThings
+                .Where(t => t != keep && t.Spawned
+                    && (t.TryGetComp<CompSelfDestruct>() != null
+                        || t.TryGetComp<CompDeathBlast>() != null))
+                .ToList())
+            {
+                t.Destroy(DestroyMode.Vanish);
+            }
         }
 
         /// <summary>
@@ -526,39 +553,40 @@ namespace BatshitTechnology
         {
             Map map = replicator.Map;
             IntVec3 center = replicator.Position;
-            var comp = replicator.TryGetComp<CompRandomReplicator>();
+            var comp = replicator.TryGetComp<CompSelfDestruct>();
             var props = comp.Props;
+            var bomb = (Detonation_Bomb)props.detonation;
             var aftermath = map.GetComponent<MapComponent_SelfDestructAftermath>();
             int firedBefore = aftermath.SecondariesFired;
-            comp.ArmSelfDestruct();
+            comp.Arm();
             var watch = Stopwatch.StartNew();
-            Tick(Mathf.RoundToInt(props.selfDestructSeconds * 60f) + 10);
+            Tick(Mathf.RoundToInt(props.countdownSeconds * 60f) + 10);
             long countdownMs = watch.ElapsedMilliseconds;
             Check("the countdown ends in detonation", replicator.Destroyed);
             Check("an aftermath follows the blast", aftermath.Active);
 
             // Before v0.8 the wave put out every fire lit at detonation.
             watch.Restart();
-            int waveTicks = BlastSchedule.WaveTicks(props.selfDestructRadius, 1d);
+            int waveTicks = BlastSchedule.WaveTicks(props.blastRadius, 1d);
             Tick(waveTicks);
-            float half = props.selfDestructRadius / 2f;
+            float half = props.blastRadius / 2f;
             var fires = map.listerThings.ThingsOfDef(ThingDefOf.Fire)
-                .Where(f => f.Position.InHorDistOf(center, props.selfDestructRadius))
+                .Where(f => f.Position.InHorDistOf(center, props.blastRadius))
                 .ToList();
             int outerFires = fires.Count(f => !f.Position.InHorDistOf(center, half));
             Check("fires survive the shockwave out to its edge",
                 outerFires >= 100,
                 $"fires in radius {fires.Count}, beyond half radius {outerFires}");
 
-            int aftershockTicks = Mathf.RoundToInt(props.selfDestructAftershockSeconds * 60f);
+            int aftershockTicks = Mathf.RoundToInt(bomb.aftershockSeconds * 60f);
             Tick(aftershockTicks + 30);
             long aftermathMs = watch.ElapsedMilliseconds;
             int fired = aftermath.SecondariesFired - firedBefore;
             int expected = Mathf.FloorToInt(
-                props.selfDestructSecondariesPerSecond * (waveTicks + aftershockTicks) / 60f);
+                bomb.secondariesPerSecond * (waveTicks + aftershockTicks) / 60f);
             Check("secondary explosions go off inside the blast circle",
                 fired >= expected * 0.8f
-                    && aftermath.MaxSecondaryDistance <= props.selfDestructRadius + 1f,
+                    && aftermath.MaxSecondaryDistance <= props.blastRadius + 1f,
                 $"fired {fired} of ~{expected}, farthest {aftermath.MaxSecondaryDistance:F1}");
             Check("the aftermath ends", !aftermath.Active);
 
@@ -569,6 +597,221 @@ namespace BatshitTechnology
                 + $"{aftermath.FiresStarted} fires); "
                 + $"next 600 ticks of fire {watch.ElapsedMilliseconds} ms");
         }
+
+        /// <summary>
+        /// The reactor's self-destruct: the countdown destroys it, every
+        /// volley of bolts is launched inside the blast radius, and the
+        /// barrage ends. Times it, as a performance check.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">Where to build the reactor.</param>
+        private void TestReactorBarrage(Map map, IntVec3 center)
+        {
+            PrepareGround(map, CellRect.CenteredOn(center, 3));
+            Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
+            var comp = reactor.TryGetComp<CompSelfDestruct>();
+            var barrage = (Detonation_BoltBarrage)comp.Props.detonation;
+            var aftermath = map.GetComponent<MapComponent_SelfDestructAftermath>();
+            int launchedBefore = aftermath.BoltsLaunched;
+            aftermath.MaxBoltDistance = 0f;
+
+            comp.Arm();
+            Tick(Mathf.RoundToInt(comp.Props.countdownSeconds * 60f) + 2);
+            Check("the reactor's countdown ends in detonation", reactor.Destroyed);
+
+            var watch = Stopwatch.StartNew();
+            Tick((barrage.volleys - 1) * barrage.volleyIntervalTicks + 1);
+            int launched = aftermath.BoltsLaunched - launchedBefore;
+            int expected = barrage.volleys * barrage.boltsPerVolley;
+            Check("the reactor launches every volley inside its blast radius",
+                launched == expected
+                    && aftermath.MaxBoltDistance <= comp.Props.blastRadius + 1f,
+                $"launched {launched} of {expected}, farthest {aftermath.MaxBoltDistance:F1}");
+            Tick(300); // let the last bolts land
+            Check("the barrage ends", !aftermath.Active);
+            Log.Message($"[BT-SMOKE] TIMING reactor barrage of {launched} bolts, "
+                + $"launch to landing {watch.ElapsedMilliseconds} ms");
+        }
+
+        /// <summary>
+        /// Damage can trigger a self-destruct: hits on a reactor (1 damage
+        /// each, so it survives) trigger it within a few hundred, and the
+        /// result can still be aborted.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">Where to build the reactor.</param>
+        private void TestDamageTrigger(Map map, IntVec3 center)
+        {
+            PrepareGround(map, CellRect.CenteredOn(center, 3));
+            Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
+            var comp = reactor.TryGetComp<CompSelfDestruct>();
+            int before = CompSelfDestruct.DamageTriggers;
+            int hits = 0;
+            while (CompSelfDestruct.DamageTriggers == before && hits < 400)
+            {
+                reactor.TakeDamage(new DamageInfo(DamageDefOf.Blunt, 1f));
+                hits++;
+            }
+
+            Check("damage triggers the self-destruct",
+                CompSelfDestruct.DamageTriggers > before && comp.IsCountingDown,
+                $"{hits} hits, counting down {comp.IsCountingDown}");
+            comp.Abort();
+            reactor.Destroy(DestroyMode.Vanish);
+        }
+
+        /// <summary>
+        /// An armed device destroyed by damage goes off instead of
+        /// fizzling: a reactor killed mid-countdown launches its barrage.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">Where to build the reactor.</param>
+        private void TestArmedDeviceDestroyed(Map map, IntVec3 center)
+        {
+            PrepareGround(map, CellRect.CenteredOn(center, 3));
+            Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
+            var comp = reactor.TryGetComp<CompSelfDestruct>();
+            var barrage = (Detonation_BoltBarrage)comp.Props.detonation;
+            var aftermath = map.GetComponent<MapComponent_SelfDestructAftermath>();
+            int launchedBefore = aftermath.BoltsLaunched;
+            comp.Arm();
+            Tick(60);
+            reactor.Kill();
+            Tick((barrage.volleys - 1) * barrage.volleyIntervalTicks + 1);
+            Check("an armed device destroyed by damage goes off",
+                aftermath.BoltsLaunched - launchedBefore == barrage.volleys * barrage.boltsPerVolley,
+                $"launched {aftermath.BoltsLaunched - launchedBefore}");
+            Tick(300);
+        }
+
+        /// <summary>
+        /// Devices without a self-destruct each set off their own blast when
+        /// destroyed: the Transmogrifier spews rock, the Brain Squeezer
+        /// stuns and squeezes a nearby colonist, a Ballista and a Magazine
+        /// cook off their bolts (none spilled), and the Artificer sprays
+        /// half-made bolts. Spaced well apart so nothing hits the next one.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestDeathBlasts(Map map, IntVec3 center)
+        {
+            var aftermath = map.GetComponent<MapComponent_SelfDestructAftermath>();
+            ThingDef explosive = BoltDef("BT_BoltReallyPainful");
+
+            // Transmogrifier: rock chunks thrown out.
+            IntVec3 at = Clamp(map, center + new IntVec3(-45, 0, 0));
+            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            int chunksBefore = Chunks(map, at);
+            KillAndCheck(map, aftermath, "BT_BatshittiumTransmogrifier", at,
+                "the transmogrifier spews rock when destroyed",
+                () => Chunks(map, at) - chunksBefore >= 3,
+                () => $"chunks +{Chunks(map, at) - chunksBefore}");
+
+            // Brain Squeezer: a colonist nearby is stunned.
+            at = Clamp(map, center + new IntVec3(45, 0, 0));
+            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            Pawn pawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(p => !p.Dead && !p.Downed);
+            if (pawn != null)
+            {
+                pawn.jobs.StopAll();
+                pawn.Position = at + new IntVec3(5, 0, 0);
+                pawn.Notify_Teleported();
+            }
+
+            KillAndCheck(map, aftermath, "BT_BrainSqueezer", at,
+                "the brain squeezer squeezes nearby brains when destroyed",
+                () => pawn == null || pawn.stances.stunner.Stunned,
+                () => pawn == null ? "no colonist" : $"stunned {pawn.stances.stunner.Stunned}");
+
+            // Ballista: its internal magazine cooks off.
+            at = Clamp(map, center + new IntVec3(0, 0, 45));
+            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            int launched = aftermath.BoltsLaunched;
+            int loose = LooseBolts(map); // earlier tests may have left some
+            KillAndCheck(map, aftermath, "BT_BatshittiumBallista", at,
+                "a destroyed ballista's bolts cook off",
+                () => aftermath.BoltsLaunched - launched == 16 && LooseBolts(map) <= loose,
+                () => $"launched {aftermath.BoltsLaunched - launched}, loose {loose}->{LooseBolts(map)}",
+                t => AddBolts(((Building_BatshittiumBallista)t).InternalMagazine, explosive, 16));
+
+            // Magazine: up to the cap cooks off, the rest are pulverized.
+            at = Clamp(map, center + new IntVec3(0, 0, -45));
+            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            launched = aftermath.BoltsLaunched;
+            loose = LooseBolts(map);
+            KillAndCheck(map, aftermath, "BT_BallistaMagazine", at,
+                "a destroyed magazine cooks off its cap and pulverizes the rest",
+                () => aftermath.BoltsLaunched - launched == 160 && LooseBolts(map) <= loose,
+                () => $"launched {aftermath.BoltsLaunched - launched}, loose {loose}->{LooseBolts(map)}",
+                t => AddBolts(((Building_BallistaMagazine)t).Storage, explosive, 300));
+
+            // Artificer: a few half-made bolts fly.
+            at = Clamp(map, center + new IntVec3(45, 0, 45));
+            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            launched = aftermath.BoltsLaunched;
+            KillAndCheck(map, aftermath, "BT_BatshittiumArtificer", at,
+                "a destroyed artificer sprays half-made bolts",
+                () => aftermath.BoltsLaunched - launched >= 3,
+                () => $"launched {aftermath.BoltsLaunched - launched}");
+            Tick(240); // let everything land
+        }
+
+        /// <summary>
+        /// Spawns a device, optionally loads it, kills it, and checks that
+        /// exactly one death blast went off plus the given condition.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="aftermath">The aftermath component, for its counters.</param>
+        /// <param name="defName">The device.</param>
+        /// <param name="at">Where to put it.</param>
+        /// <param name="name">The check's name.</param>
+        /// <param name="ok">The device-specific condition.</param>
+        /// <param name="detail">What was observed, for failures.</param>
+        /// <param name="load">Fills the device before it dies, or null.</param>
+        private void KillAndCheck(
+            Map map, MapComponent_SelfDestructAftermath aftermath, string defName,
+            IntVec3 at, string name, Func<bool> ok, Func<string> detail,
+            Action<Thing> load = null)
+        {
+            Thing device = Spawn(map, defName, at);
+            load?.Invoke(device);
+            int blasts = aftermath.DeathBlasts;
+            device.Kill();
+            Tick(2);
+            Check(name, aftermath.DeathBlasts == blasts + 1 && ok(),
+                $"death blasts +{aftermath.DeathBlasts - blasts}; {detail()}");
+        }
+
+        /// <summary>A bolt item def by name.</summary>
+        /// <param name="defName">The def name.</param>
+        /// <returns>The def.</returns>
+        private static ThingDef BoltDef(string defName) =>
+            DefDatabase<ThingDef>.GetNamed(defName);
+
+        /// <summary>Rock chunks within 12 tiles of a spot.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="at">The spot.</param>
+        /// <returns>How many.</returns>
+        private static int Chunks(Map map, IntVec3 at) =>
+            map.listerThings.ThingsInGroup(ThingRequestGroup.Chunk)
+                .Count(t => t.Position.InHorDistOf(at, 12f));
+
+        /// <summary>Bolt items lying loose on the map.</summary>
+        /// <param name="map">The map.</param>
+        /// <returns>How many bolts.</returns>
+        private static int LooseBolts(Map map) =>
+            map.listerThings.AllThings
+                .Where(t => t.def.GetModExtension<BoltExtension>() != null && t.Spawned)
+                .Sum(t => t.stackCount);
+
+        /// <summary>Keeps a cell 12 tiles inside the map's edges.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="c">The cell.</param>
+        /// <returns>The clamped cell.</returns>
+        private static IntVec3 Clamp(Map map, IntVec3 c) =>
+            new IntVec3(
+                Mathf.Clamp(c.x, 12, map.Size.x - 13), 0,
+                Mathf.Clamp(c.z, 12, map.Size.z - 13));
 
         /// <summary>Clears a square to concrete with nothing on it.</summary>
         /// <param name="map">The map.</param>

@@ -3,7 +3,7 @@ using System;
 namespace BatshitTechnology.Core;
 
 /// <summary>
-/// Power draw of the Batshittium Ballista. Range and projectile count
+/// Power draw of the Batshit Ballista. Range and projectile count
 /// multiply into "units" (count x range / 10); power rises in a straight
 /// line from the baseline (1 projectile at 10 tiles) to the maximum
 /// (256 projectiles at 325 tiles). At maximum, standby is a quarter of one

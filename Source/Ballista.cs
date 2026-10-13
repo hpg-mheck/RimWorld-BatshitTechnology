@@ -1,4 +1,4 @@
-// Batshit Technology - Batshittium Ballista.
+// Batshit Technology - Batshit Ballista.
 // A turret that fires a volley of insanely inaccurate bolts once every five
 // seconds. The player picks the range (10 to 325 tiles), the projectile count
 // (1 to 256) and the bolt type (Painful: kinetic; Really Painful: explosive).
@@ -82,7 +82,7 @@ namespace BatshitTechnology
     }
 
     /// <summary>
-    /// The Batshittium Ballista: a vanilla turret with a per-building range,
+    /// The Batshit Ballista: a vanilla turret with a per-building range,
     /// a bolt supply drawn from its own and chained magazines, and a
     /// range-and-count power draw.
     /// </summary>
@@ -204,11 +204,18 @@ namespace BatshitTechnology
             UpdatePowerDraw();
         }
 
-        /// <summary>Spills the internal magazine when removed.</summary>
+        /// <summary>Spills the internal magazine when removed, unless it cooks off.</summary>
         /// <param name="mode">How it is leaving.</param>
         public override void DeSpawn(DestroyMode mode = DestroyMode.Vanish)
         {
-            storage.Spill(mode);
+            // Destroyed by damage: the death blast cooks the bolts off
+            // instead of spilling them.
+            if (mode != DestroyMode.KillFinalize
+                || !(GetComp<CompDeathBlast>()?.ConsumesContents ?? false))
+            {
+                storage.Spill(mode);
+            }
+
             base.DeSpawn(mode);
         }
 
@@ -610,11 +617,18 @@ namespace BatshitTechnology
             UpdatePowerDraw();
         }
 
-        /// <summary>Spills the bolts when removed.</summary>
+        /// <summary>Spills the bolts when removed, unless they cook off.</summary>
         /// <param name="mode">How it is leaving.</param>
         public override void DeSpawn(DestroyMode mode = DestroyMode.Vanish)
         {
-            storage.Spill(mode);
+            // Destroyed by damage: the death blast cooks the bolts off
+            // instead of spilling them.
+            if (mode != DestroyMode.KillFinalize
+                || !(GetComp<CompDeathBlast>()?.ConsumesContents ?? false))
+            {
+                storage.Spill(mode);
+            }
+
             base.DeSpawn(mode);
         }
 

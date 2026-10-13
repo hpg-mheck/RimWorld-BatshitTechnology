@@ -11,17 +11,20 @@ Everything lives in its own research tab, **Batshit Technology**:
   the **Batshittium Transmogrifier**.
 - **Batshittium Reactor**: 250,000 W from one unit of batshittium for a
   random 0.1 to 36 hours. It sheds enough waste heat to cook any room within
-  12 tiles.
+  12 tiles, and its self-destruct flings three full Ballista volleys in
+  every direction.
 - **Random Replicator**: fabricates a random food item every six hours into
   a refrigerated compartment that haulers empty into your stockpiles. It
-  also has a pawn-armed self-destruct with a ~75-tile blast.
+  also has a self-destruct with a ~75-tile blast.
 - **Brain Squeezer**: a chair colonists sit in for moderate recreation. It
   leaves them calmer (a mood boost and a day of lower mental break risk)
   and slightly rearranged.
-- **Batshittium Ballista**: a turret throwing volleys of up to 256
+- **Batshit Ballista**: a turret throwing volleys of up to 256
   insanely inaccurate, terrifyingly destructive bolts up to 325 tiles,
   every five seconds, fed by chained magazines and an automated
   Artificer that makes the bolts.
+- **Everything blows up.** Damage can set off a self-destruct, and every
+  other device pulverizes itself in its own way when destroyed.
 
 ## Build
 
@@ -60,8 +63,8 @@ working demo base: reactor, stocked replicator, Transmogrifier with a bill,
 a colonist in the Brain Squeezer, the Artificer, and a Ballista firing
 explosive volleys from chained magazines. The camera starts on a lone
 replicator in the most open far corner, which arms its self-destruct five
-seconds in, well clear of the base. The window opens maximized at 2x UI
-scale.
+seconds in, well clear of the base; a lone reactor in the next corner
+follows twenty seconds later. The window opens maximized at 2x UI scale.
 
 ## Research
 
@@ -69,18 +72,19 @@ The **Batshit Technology** tab:
 
 | Project              | Cost | Requires             | Unlocks              |
 |----------------------|------|----------------------|----------------------|
-| Batshittium Lore     | 500  | nothing              | the early devices    |
-| Batshittium Arcana   | 750  | Batshittium Lore     | the projects below   |
+| Batshittium Lore     | 500  | nothing              | the projects below   |
+| Batshittium Transmogrifier | 500 | Lore            | the Transmogrifier   |
+| Batshittium Reactor  | 500  | Lore                 | the Reactor          |
+| Random Replicator    | 500  | Lore                 | the Replicator       |
+| Brain Squeezer       | 500  | Lore                 | the Brain Squeezer   |
+| Batshittium Arcana   | 750  | Lore                 | the Ballista system  |
 | Painful Bolts        | 1000 | Arcana               | kinetic bolts        |
 | Really Painful Bolts | 1000 | Painful Bolts        | explosive bolts      |
 | Batshittium Artificer| 1000 | Arcana               | the Artificer        |
 | Ballista Magazine    | 1000 | Arcana               | the magazine         |
-| Batshittium Ballista | 1000 | Arcana, Painful Bolts| the Ballista         |
+| Batshit Ballista     | 1000 | Arcana, Painful Bolts| the Ballista         |
 
-Batshittium Lore unlocks the Transmogrifier, Reactor, Random Replicator
-and Brain Squeezer.
-
-Both are tech level Neolithic, the lowest a player faction can be, so every
+All are tech level Neolithic, the lowest a player faction can be, so every
 colony pays the listed cost.
 
 ## Batshittium and the Transmogrifier
@@ -122,9 +126,9 @@ colony pays the listed cost.
 - The lines are in `Defs/Misc/BT_BrainSqueezer.xml`, under the
   `BT_BrainSqueezed` thought's `MonologueExtension`; add or edit freely.
 
-## Batshittium Ballista
+## Batshit Ballista
 
-- **Batshittium Ballista** (Security, 2×2): fires one volley every five
+- **Batshit Ballista** (Security, 2×2): fires one volley every five
   seconds at enemies in range, or at a target you pick. Its gizmos set the
   **range** (10 to 325 tiles, the largest normal map size), the
   **projectile count** (1 to 256) and the **ammunition**. Each bolt lands
@@ -183,27 +187,59 @@ colony pays the listed cost.
 - Deconstructing, uninstalling or destroying the device spills its stored
   food. A self-destruct destroys it.
 
+- **Self-destruct**: see below.
+
+## Self-destructs and pulverization
+
+The Random Replicator and the Batshittium Reactor can self-destruct. Every
+other device pulverizes itself in its own way when destroyed.
+
 ### Self-destruct
 
-- Select the replicator to see its blast radius (red ring) and flee radius
+- Select the device to see its blast radius (red ring) and flee radius
   (yellow ring).
 - **Arm self-destruct** orders a colonist with **Basic** work enabled to
-  walk to the interaction spot and arm it (about two seconds).
-- Once armed, a map-wide "Self-destruct armed" letter appears. The
-  ten-second countdown shows in the inspect pane, with a hissing alarm,
-  camera shake and a flashing blast ring visible even when the replicator is
-  not selected. Pawns within 25 tiles who are not drafted run away.
-- At zero: a Bomb explosion of radius 75. Fires follow its shockwave out,
-  with an 80 percent chance per cell of that radius, lit just behind the
+  arm it (two seconds of work for the replicator, at its interaction spot;
+  three for the reactor).
+- Once armed, a map-wide letter appears and the ten-second countdown shows
+  in the inspect pane, with a hissing alarm, camera shake and a flashing
+  blast ring. A **warning band** surrounds the device, fading in and out in
+  yellow-orange; in the last three seconds it turns red and pulses four
+  times as fast. Pawns within the flee radius who are not drafted run away.
+- **Cancel self-destruct order** withdraws the order before anyone arms it.
+  **Abort self-destruct** stops a running countdown.
+- **Damage sets it off.** Every damaging hit has a 5 percent chance of
+  triggering it; half of those skip the countdown and detonate at once.
+  This applies to a device already counting down, too. An armed device
+  destroyed by damage goes off instead of fizzling.
+- **Random Replicator** (radius 75): a Bomb explosion. Fires follow its
+  shockwave out, with an 80 percent chance per cell, lit just behind the
   wave (a vanilla Bomb wave puts out any fire it touches). Secondary
   explosions (incendiary bursts, small blasts and the occasional big one)
   go off at random inside the expanding circle, 15 per second, and keep
-  going for four seconds after the wave reaches the edge. The device and
-  its stored food are destroyed.
-- **Cancel self-destruct order** withdraws the order before anyone arms it.
-  **Abort self-destruct** stops a running countdown.
-- It never triggers on its own; it only arms after an explicit player
-  order.
+  going for four seconds after the wave reaches the edge. Its stored food
+  is destroyed.
+- **Batshittium Reactor** (radius 70): a core blast, then three full
+  Ballista volleys, 768 Really Painful bolts, flung in every direction half
+  a second apart. Farther targets take longer to reach, so the impacts
+  spread outward as a wave.
+
+### Pulverization
+
+Devices without a self-destruct blow up in their own way when destroyed
+(not when deconstructed or uninstalled):
+
+- **Transmogrifier**: a blast that spews its hopper, 6 to 10 rock chunks
+  and a few shards of batshittium, across the area.
+- **Brain Squeezer**: a psychic squeeze. Everyone within 10 tiles is
+  stunned for four seconds, blurts a line of the squeezer's monologue and
+  comes away squeezed; a small fireball takes the chair.
+- **Batshit Ballista**: a blast, and all 16 bolts in its internal magazine
+  cook off in every direction.
+- **Ballista Magazine**: a blast, and up to 160 of its bolts cook off; the
+  rest are pulverized. Chained magazines tend to take each other out.
+- **Batshittium Artificer**: an incendiary burst of molten batshittium, a
+  sharper blast, and 3 to 6 half-made bolts flung out of the jig.
 
 ## Tuning
 
@@ -220,17 +256,6 @@ All values are XML. The replicator's are in
 | requirePower                  | true      | unpowered: no output or chill |
 | refrigerationPowerConsumption | 50        | extra W while refrigerating   |
 | sendPowerCutLetters           | true      | letter if chilled food at risk|
-| selfDestructArmingTicks       | 120       | pawn work to arm (2 s)        |
-| selfDestructSeconds           | 10        | countdown length              |
-| selfDestructRadius            | 75        | blast radius (max ~79.8)      |
-| selfDestructDamage            | -1        | damage; -1 = Bomb default     |
-| selfDestructFireChance        | 0.8       | per-cell ignite chance        |
-| selfDestructFireSize          | 0.3       | size of each started fire     |
-| selfDestructFleeRadius        | 25        | pawns this close flee         |
-| selfDestructSecondariesPerSecond | 15     | secondary explosions per s    |
-| selfDestructAftershockSeconds | 4         | secondaries after the wave    |
-| selfDestructSecondaryInnerFraction | 0.2  | closest, as a share of wave r |
-| selfDestructSecondaries       | 3 kinds   | damage, radius, odds, fire    |
 
 The storage tab's default priority and filter are under
 `<building><defaultStorageSettings>` in the same file.
@@ -247,6 +272,36 @@ The reactor's are in `Defs/ThingDefs/Buildings_Batshittium.xml`, under
 | heatMaxTemperature | 200     | °C cap; things auto-ignite above 240      |
 
 The Transmogrifier's ratio and work are in `Defs/RecipeDefs/BT_Recipes.xml`.
+
+Each self-destruct is a `CompProperties_SelfDestruct`, the last comp of the
+replicator and the reactor (replicator / reactor values shown):
+
+| Field                     | Default     | Meaning                         |
+|---------------------------|-------------|---------------------------------|
+| armingTicks               | 120 / 180   | pawn work to arm                |
+| countdownSeconds          | 10          | countdown length                |
+| finalWarningSeconds       | 3           | warning turns red and fast      |
+| pulsePeriodSeconds        | 1           | warning pulse, then...          |
+| finalPulsePeriodSeconds   | 0.25        | ...in the final seconds         |
+| fleeRadius                | 25 / 30     | pawns this close flee           |
+| blastRadius               | 75 / 70     | blast radius (max ~79.8)        |
+| damageTriggerChance       | 0.05        | per damaging hit                |
+| damageSkipCountdownChance | 0.5         | of those, detonate at once      |
+| detonation                | (see below) | what happens at zero            |
+
+The replicator's `Detonation_Bomb`: `damage` (-1, Bomb's default),
+`fireChance` (0.8), `fireSize` (0.3), `secondariesPerSecond` (15),
+`aftershockSeconds` (4), `secondaryInnerFraction` (0.2) and `secondaries`
+(each a damage type, damage, radius range, weight and fire chance). Use
+BombSuper rather than Bomb for secondaries: Bomb puts out fires.
+
+The reactor's `Detonation_BoltBarrage`: `projectile`, `volleys` (3),
+`boltsPerVolley` (256), `volleyIntervalTicks` (30), `innerRadius` (4) and
+the core blast's `coreDamageDef`, `coreRadius` and `coreDamage`.
+
+Each pulverization blast is a `CompProperties_DeathBlast` (a `radius` and
+a `blast`), the last comp of its device; the fields of each blast are
+commented in the Defs.
 
 ## Textures
 
@@ -286,8 +341,13 @@ motif.
   automated Batshittium Artificer, and five research projects under
   Batshittium Arcana.
 - **v0.8**: the self-destruct's fires now survive its own shockwave and
-  follow it out, with secondary explosions inside the circle; the Random
-  Replicator has its own sprite; docs/ARTISTIC-MOTIF.md. Also renamed from
+  follow it out, with secondary explosions inside the circle. The Reactor
+  self-destructs too, as a barrage of bolts; self-destructs share one
+  component, show a pulsing warning band and can be set off by damage; the
+  other devices pulverize themselves when destroyed. The four non-weapon
+  devices have their own research projects, and the Ballista is now the
+  Batshit Ballista. The Random Replicator has its own sprite;
+  docs/ARTISTIC-MOTIF.md. Also renamed from
   Random Replicator to Batshit Technology and moved
   to its own repository, history included. New package ID
   `breakpoint8088.BatshitTechnology`; def names now start with `BT_`

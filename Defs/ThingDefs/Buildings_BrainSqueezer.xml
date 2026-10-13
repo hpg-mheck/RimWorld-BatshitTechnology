@@ -47,9 +47,17 @@
         <basePowerConsumption>150</basePowerConsumption>
       </li>
       <li Class="CompProperties_Flickable" />
+      <!-- Destroyed by damage: squeezes every brain nearby -->
+      <li Class="BatshitTechnology.CompProperties_DeathBlast">
+        <radius>9.9</radius> <!-- how far the squeeze reaches -->
+        <blast Class="BatshitTechnology.Detonation_PsychicSqueeze">
+          <stunTicks>240</stunTicks>
+          <fireballRadius>2.9</fireballRadius>
+        </blast>
+      </li>
     </comps>
     <researchPrerequisites>
-      <li>BT_BatshittiumLore</li>
+      <li>BT_Research_BrainSqueezer</li>
     </researchPrerequisites>
   </ThingDef>
 </Defs>

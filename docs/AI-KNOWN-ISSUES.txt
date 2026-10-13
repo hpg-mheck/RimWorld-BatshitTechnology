@@ -11,6 +11,11 @@
   thousand fires over six seconds on the smoke-test map) costs about 9 ms
   per tick while it runs; fine at normal speed, sluggish at speed 3. The
   fire afterwards costs about 1 ms per tick.
+- The reactor's barrage (768 explosive bolts) costs about 5 ms per tick
+  for the six seconds it takes to land.
+- Fire counts as damage, so a burning self-destruct device rolls its 5%
+  trigger on every fire tick and will almost certainly go off. That is
+  probably the most batshit outcome, but worth watching in play.
 - The smoke test fires the Ballista at a forced ground target only; its
   automatic targeting of real raiders is vanilla code but untested here.
 - The Ballista holds fire under a roof (its bolts arc overhead), as vanilla

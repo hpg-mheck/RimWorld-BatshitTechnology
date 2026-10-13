@@ -11,19 +11,77 @@
   <!-- techLevel Neolithic on both: the lowest level any player faction has, so every colony pays the
        listed cost (projects above the colony's tech level cost +50% per level) -->
 
-  <!-- Foundational project. For now it unlocks every Batshit device. -->
+  <!-- Foundational project: every other project in the tab follows it. -->
   <ResearchProjectDef>
     <defName>BT_BatshittiumLore</defName>
     <label>Batshittium Lore</label>
-    <description>Learn the basics of batshittium, an element that should not exist. A transmogrifier can coax it out of ordinary rock chunks, ten to one.\n\nUnlocks the Batshittium Transmogrifier, the Batshittium Reactor (250,000 W while a unit burns, for anywhere from minutes to a day and a half, with enough waste heat to cook nearby rooms) and the Random Replicator, which conjures a random meal or raw food every six hours into a refrigerated compartment.</description>
+    <description>Learn the basics of batshittium, an element that should not exist. A transmogrifier can coax it out of ordinary rock chunks, ten to one.\n\nOpens research into the first batshit devices, and into Batshittium Arcana.</description>
     <baseCost>500</baseCost>
     <techLevel>Neolithic</techLevel>
     <tab>BT_BatshitTechnology</tab>
     <researchViewX>0.00</researchViewX>
+    <researchViewY>2.00</researchViewY>
+  </ResearchProjectDef>
+
+  <!-- ===== Devices, each after Batshittium Lore ===== -->
+
+  <ResearchProjectDef>
+    <defName>BT_Research_Transmogrifier</defName>
+    <label>Batshittium Transmogrifier</label>
+    <description>Build the Batshittium Transmogrifier, a powered work table that coaxes batshittium out of ordinary rock chunks, ten to one. Every other batshit device runs on what it makes.</description>
+    <baseCost>500</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>BT_BatshittiumLore</li>
+    </prerequisites>
+    <tab>BT_BatshitTechnology</tab>
+    <researchViewX>1.00</researchViewX>
     <researchViewY>0.00</researchViewY>
   </ResearchProjectDef>
 
-  <!-- Advanced project; nothing requires it yet -->
+  <ResearchProjectDef>
+    <defName>BT_Research_Reactor</defName>
+    <label>Batshittium Reactor</label>
+    <description>Build the Batshittium Reactor: 250,000 W while a unit of batshittium burns, for anywhere from minutes to a day and a half, with enough waste heat to cook every room within 12 tiles. It has a self-destruct, and damage can set it off.</description>
+    <baseCost>500</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>BT_BatshittiumLore</li>
+    </prerequisites>
+    <tab>BT_BatshitTechnology</tab>
+    <researchViewX>1.00</researchViewX>
+    <researchViewY>1.00</researchViewY>
+  </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>BT_Research_RandomReplicator</defName>
+    <label>Random Replicator</label>
+    <description>Build the Random Replicator, which conjures a random meal or raw food every six hours into a refrigerated compartment for haulers to empty. It has a self-destruct, and damage can set it off.</description>
+    <baseCost>500</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>BT_BatshittiumLore</li>
+    </prerequisites>
+    <tab>BT_BatshitTechnology</tab>
+    <researchViewX>1.00</researchViewX>
+    <researchViewY>2.00</researchViewY>
+  </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>BT_Research_BrainSqueezer</defName>
+    <label>Brain Squeezer</label>
+    <description>Build the Brain Squeezer, a chair that squeezes a colonist's brain for moderate recreation and leaves them calmer for a day, if slightly rearranged.</description>
+    <baseCost>500</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>BT_BatshittiumLore</li>
+    </prerequisites>
+    <tab>BT_BatshitTechnology</tab>
+    <researchViewX>1.00</researchViewX>
+    <researchViewY>3.00</researchViewY>
+  </ResearchProjectDef>
+
+  <!-- Advanced project: the Ballista system follows it -->
   <ResearchProjectDef>
     <defName>BT_BatshittiumArcana</defName>
     <label>Batshittium Arcana</label>
@@ -35,7 +93,7 @@
     </prerequisites>
     <tab>BT_BatshitTechnology</tab>
     <researchViewX>1.00</researchViewX>
-    <researchViewY>0.00</researchViewY>
+    <researchViewY>4.00</researchViewY>
   </ResearchProjectDef>
 
   <!-- ===== Ballista system, all after Batshittium Arcana ===== -->
@@ -51,7 +109,7 @@
     </prerequisites>
     <tab>BT_BatshitTechnology</tab>
     <researchViewX>2.00</researchViewX>
-    <researchViewY>0.00</researchViewY>
+    <researchViewY>4.00</researchViewY>
   </ResearchProjectDef>
 
   <ResearchProjectDef>
@@ -65,7 +123,7 @@
     </prerequisites>
     <tab>BT_BatshitTechnology</tab>
     <researchViewX>3.00</researchViewX>
-    <researchViewY>0.00</researchViewY>
+    <researchViewY>4.00</researchViewY>
   </ResearchProjectDef>
 
   <ResearchProjectDef>
@@ -79,7 +137,7 @@
     </prerequisites>
     <tab>BT_BatshitTechnology</tab>
     <researchViewX>2.00</researchViewX>
-    <researchViewY>1.00</researchViewY>
+    <researchViewY>5.00</researchViewY>
   </ResearchProjectDef>
 
   <ResearchProjectDef>
@@ -93,13 +151,13 @@
     </prerequisites>
     <tab>BT_BatshitTechnology</tab>
     <researchViewX>2.00</researchViewX>
-    <researchViewY>2.00</researchViewY>
+    <researchViewY>6.00</researchViewY>
   </ResearchProjectDef>
 
   <ResearchProjectDef>
     <defName>BT_Research_Ballista</defName>
-    <label>Batshittium Ballista</label>
-    <description>Build the Batshittium Ballista: volleys of up to 256 bolts, up to 325 tiles away, once every five seconds. Insanely inaccurate, terrifyingly destructive, and hungry for power.</description>
+    <label>Batshit Ballista</label>
+    <description>Build the Batshit Ballista: volleys of up to 256 bolts, up to 325 tiles away, once every five seconds. Insanely inaccurate, terrifyingly destructive, and hungry for power.</description>
     <baseCost>1000</baseCost>
     <techLevel>Neolithic</techLevel>
     <prerequisites>
@@ -108,6 +166,6 @@
     </prerequisites>
     <tab>BT_BatshitTechnology</tab>
     <researchViewX>3.00</researchViewX>
-    <researchViewY>1.00</researchViewY>
+    <researchViewY>5.00</researchViewY>
   </ResearchProjectDef>
 </Defs>

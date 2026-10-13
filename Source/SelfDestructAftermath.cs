@@ -1,8 +1,14 @@
-// Batshit Technology - Random Replicator self-destruct aftermath.
-// The main blast is a vanilla Bomb explosion, whose wave destroys every fire
-// it touches (DamageWorker.ExplosionDamageThing in 1.6). So the fires are
-// lit just behind the wave as it travels out, and secondary explosions go
-// off inside the expanding circle and for a few seconds afterwards.
+// Batshit Technology - what keeps happening after a self-destruct.
+// MapComponent_SelfDestructAftermath ticks every running aftermath and saves
+// them with the map:
+// - Aftermath_FireAndSecondaries (the Random Replicator): a vanilla Bomb
+//   wave destroys every fire it touches (DamageWorker.ExplosionDamageThing
+//   in 1.6), so fires are lit just behind the wave as it travels out, and
+//   secondary explosions go off inside the expanding circle and for a few
+//   seconds afterwards.
+// - Aftermath_BoltBarrage (the Batshittium Reactor): volleys of bolts in
+//   every direction; farther targets take longer to reach, so the impacts
+//   spread outward as a wave.
 
 using System;
 using System.Collections.Generic;
@@ -14,204 +20,121 @@ using Verse;
 namespace BatshitTechnology
 {
     /// <summary>
-    /// One kind of secondary explosion in the self-destruct aftermath, from
-    /// CompProperties_RandomReplicator.selfDestructSecondaries.
+    /// One running aftermath. Subclasses are saved with the map; they read
+    /// their settings from the source device's def each tick.
     /// </summary>
-    public class SecondaryExplosion
+    public abstract class Aftermath : IExposable
     {
-        /// <summary>
-        /// Damage type. Avoid Bomb itself: its explosions put out every fire
-        /// they touch. BombSuper looks the same and leaves fires burning.
-        /// </summary>
-        public DamageDef damageDef;
+        /// <summary>Where the device stood.</summary>
+        public IntVec3 center;
 
-        /// <summary>Damage per hit; -1 uses the damage type's default.</summary>
-        public int damage = -1;
+        /// <summary>The tick the detonation happened.</summary>
+        public int startTick;
 
-        /// <summary>Explosion radius, in tiles, picked at random.</summary>
-        public FloatRange radius = new FloatRange(1.9f, 3.9f);
+        /// <summary>The device's def, whose detonation settings apply.</summary>
+        public ThingDef source;
 
-        /// <summary>Relative likelihood among the kinds.</summary>
-        public float weight = 1f;
+        /// <summary>The source def's self-destruct properties, or null.</summary>
+        protected CompProperties_SelfDestruct SelfDestruct =>
+            source?.GetCompProperties<CompProperties_SelfDestruct>();
 
-        /// <summary>Chance to start a fire in each cell it hits.</summary>
-        public float chanceToStartFire;
+        /// <summary>Advances this aftermath by one tick.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="owner">The map component, for its counters.</param>
+        /// <returns>False once it has finished.</returns>
+        public abstract bool Tick(Map map, MapComponent_SelfDestructAftermath owner);
 
-        /// <summary>Reports mistakes in one entry.</summary>
-        /// <returns>One message per problem.</returns>
-        public IEnumerable<string> ConfigErrors()
+        /// <summary>Saves and loads the shared state.</summary>
+        public virtual void ExposeData()
         {
-            if (damageDef == null)
-            {
-                yield return "a selfDestructSecondaries entry has no damageDef";
-            }
-
-            if (weight <= 0f)
-            {
-                yield return "selfDestructSecondaries weights must be positive";
-            }
-
-            if (radius.min <= 0f || radius.max > 15f || radius.min > radius.max)
-            {
-                yield return "selfDestructSecondaries radius must lie within "
-                    + "(0, 15] tiles, min first";
-            }
+            Scribe_Values.Look(ref center, "center");
+            Scribe_Values.Look(ref startTick, "startTick");
+            Scribe_Defs.Look(ref source, "source");
         }
     }
 
     /// <summary>
-    /// Runs every self-destruct aftermath on a map: fires that follow the
-    /// main blast wave out, and the secondary explosions. Saved with the
-    /// map, so a save made mid-blast resumes it.
+    /// Fires just behind a Bomb wave, and secondary explosions inside the
+    /// expanding circle: the Random Replicator's self-destruct.
     /// </summary>
-    public class MapComponent_SelfDestructAftermath : MapComponent
+    public class Aftermath_FireAndSecondaries : Aftermath
     {
         /// <summary>
-        /// Fires are lit this many ticks after the wave reaches a cell, so the
-        /// wave has already passed and cannot destroy them.
+        /// Fires are lit this many ticks after the wave reaches a cell, so
+        /// the wave has already passed and cannot destroy them.
         /// </summary>
         private const int FireLagTicks = 3;
 
         private const int TicksPerSecond = 60;
 
-        private List<Blast> blasts = new List<Blast>();
+        /// <summary>Index into GenRadial's pattern of the next cell to light.</summary>
+        public int nextFireCell;
 
-        /// <summary>Created by RimWorld for every map.</summary>
-        /// <param name="map">The map this component belongs to.</param>
-        public MapComponent_SelfDestructAftermath(Map map)
-            : base(map)
-        {
-        }
-
-        /// <summary>True while any aftermath is still running.</summary>
-        public bool Active => blasts.Count > 0;
-
-        /// <summary>Secondary explosions set off this session (diagnostics).</summary>
-        public int SecondariesFired { get; private set; }
-
-        /// <summary>Fires started behind the wave this session (diagnostics).</summary>
-        public int FiresStarted { get; private set; }
+        /// <summary>Fractional secondary explosions carried between ticks.</summary>
+        public double pending;
 
         /// <summary>
-        /// Farthest a secondary explosion has landed from its blast's centre
-        /// this session, in tiles (diagnostics).
+        /// Lights the cells the wave has passed, and sets off the secondaries
+        /// due this tick.
         /// </summary>
-        public float MaxSecondaryDistance { get; private set; }
-
-        /// <summary>
-        /// Starts the aftermath of a blast that began this tick.
-        /// </summary>
-        /// <param name="center">The blast's centre.</param>
-        /// <param name="source">
-        /// The replicator's ThingDef, whose comp properties set the radius,
-        /// fires and secondaries.
-        /// </param>
-        public void Begin(IntVec3 center, ThingDef source)
+        /// <param name="map">The map.</param>
+        /// <param name="owner">The map component, for its counters.</param>
+        /// <returns>False once the fires are all lit and the aftershocks over.</returns>
+        public override bool Tick(Map map, MapComponent_SelfDestructAftermath owner)
         {
-            if (source?.GetCompProperties<CompProperties_RandomReplicator>() == null)
+            CompProperties_SelfDestruct props = SelfDestruct;
+            if (!(props?.detonation is Detonation_Bomb bomb))
             {
-                Log.Error("[Batshit Technology] self-destruct aftermath needs a "
-                    + $"replicator def, got {source?.defName ?? "null"}");
-                return;
+                return false;
             }
 
-            blasts.Add(new Blast
-            {
-                center = center,
-                startTick = Find.TickManager.TicksGame,
-                source = source,
-            });
-        }
-
-        /// <summary>Advances every running aftermath by one tick.</summary>
-        public override void MapComponentTick()
-        {
-            for (int i = blasts.Count - 1; i >= 0; i--)
-            {
-                bool running;
-                try
-                {
-                    running = TickBlast(blasts[i]);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error($"[Batshit Technology] self-destruct aftermath failed: {ex}");
-                    running = false;
-                }
-
-                if (!running)
-                {
-                    blasts.RemoveAt(i);
-                }
-            }
-        }
-
-        /// <summary>Saves and loads the running aftermaths.</summary>
-        public override void ExposeData()
-        {
-            base.ExposeData();
-            Scribe_Collections.Look(ref blasts, "blasts", LookMode.Deep);
-            if (Scribe.mode == LoadSaveMode.PostLoadInit)
-            {
-                blasts ??= new List<Blast>();
-                blasts.RemoveAll(b => b?.source == null);
-            }
-        }
-
-        /// <summary>One tick of one aftermath.</summary>
-        /// <param name="blast">The aftermath.</param>
-        /// <returns>False once it has finished.</returns>
-        private bool TickBlast(Blast blast)
-        {
-            var props = blast.source.GetCompProperties<CompProperties_RandomReplicator>();
-            int ticks = Find.TickManager.TicksGame - blast.startTick;
-            float radius = props.selfDestructRadius;
+            int ticks = Find.TickManager.TicksGame - startTick;
+            float radius = props.blastRadius;
 
             // Fires, cell by cell in order of distance, just behind the wave.
             double fireFront = BlastSchedule.WaveFront(ticks - FireLagTicks, 1d);
             int cellCount = GenRadial.NumCellsInRadius(radius);
-            while (blast.nextFireCell < cellCount
-                && GenRadial.RadialPatternRadii[blast.nextFireCell] <= fireFront)
+            while (nextFireCell < cellCount
+                && GenRadial.RadialPatternRadii[nextFireCell] <= fireFront)
             {
-                IntVec3 c = blast.center + GenRadial.RadialPattern[blast.nextFireCell++];
-                if (c.InBounds(map) && Rand.Chance(props.selfDestructFireChance)
-                    && FireUtility.TryStartFireIn(c, map, props.selfDestructFireSize, null))
+                IntVec3 c = center + GenRadial.RadialPattern[nextFireCell++];
+                if (c.InBounds(map) && Rand.Chance(bomb.fireChance)
+                    && FireUtility.TryStartFireIn(c, map, bomb.fireSize, null))
                 {
-                    FiresStarted++;
+                    owner.FiresStarted++;
                 }
             }
 
             // Secondary explosions inside the expanding circle, then
             // anywhere in it until the aftershocks end.
             int endTick = BlastSchedule.WaveTicks(radius, 1d)
-                + Mathf.RoundToInt(props.selfDestructAftershockSeconds * TicksPerSecond);
-            if (ticks <= endTick && !props.selfDestructSecondaries.NullOrEmpty())
+                + Mathf.RoundToInt(bomb.aftershockSeconds * TicksPerSecond);
+            if (ticks <= endTick && !bomb.secondaries.NullOrEmpty())
             {
                 int due = BlastSchedule.DueThisTick(
-                    ref blast.pending, props.selfDestructSecondariesPerSecond, TicksPerSecond);
+                    ref pending, bomb.secondariesPerSecond, TicksPerSecond);
                 double outer = Math.Min(radius, BlastSchedule.WaveFront(ticks, 1d));
                 for (int i = 0; i < due; i++)
                 {
-                    SetOffSecondary(blast.center, outer, props);
+                    SetOffSecondary(map, owner, bomb, outer);
                 }
             }
 
-            return blast.nextFireCell < cellCount || ticks <= endTick;
+            return nextFireCell < cellCount || ticks <= endTick;
         }
 
         /// <summary>One secondary explosion at a random spot.</summary>
-        /// <param name="center">The blast's centre.</param>
+        /// <param name="map">The map.</param>
+        /// <param name="owner">The map component, for its counters.</param>
+        /// <param name="bomb">The detonation's settings.</param>
         /// <param name="outer">How far out it may land, in tiles.</param>
-        /// <param name="props">The replicator's properties.</param>
         private void SetOffSecondary(
-            IntVec3 center, double outer, CompProperties_RandomReplicator props)
+            Map map, MapComponent_SelfDestructAftermath owner, Detonation_Bomb bomb, double outer)
         {
-            SecondaryExplosion kind = props.selfDestructSecondaries
-                .RandomElementByWeight(k => k.weight);
+            SecondaryExplosion kind = bomb.secondaries.RandomElementByWeight(k => k.weight);
             var (x, z) = BlastSchedule.PointInAnnulus(
-                outer, props.selfDestructSecondaryInnerFraction, Rand.Value, Rand.Value);
-            IntVec3 cell = center + new IntVec3(
-                Mathf.RoundToInt((float)x), 0, Mathf.RoundToInt((float)z));
+                outer, bomb.secondaryInnerFraction, Rand.Value, Rand.Value);
+            IntVec3 cell = center + new IntVec3(Mathf.RoundToInt((float)x), 0, Mathf.RoundToInt((float)z));
             if (!cell.InBounds(map))
             {
                 return;
@@ -221,37 +144,150 @@ namespace BatshitTechnology
                 cell, map, kind.radius.RandomInRange, kind.damageDef, null,
                 kind.damage, chanceToStartFire: kind.chanceToStartFire,
                 screenShakeFactor: 0.25f);
-            SecondariesFired++;
-            MaxSecondaryDistance = Mathf.Max(
-                MaxSecondaryDistance, (cell - center).LengthHorizontal);
+            owner.SecondariesFired++;
+            owner.MaxSecondaryDistance = Mathf.Max(
+                owner.MaxSecondaryDistance, (cell - center).LengthHorizontal);
         }
 
-        /// <summary>The saved state of one running aftermath.</summary>
-        private class Blast : IExposable
+        /// <summary>Saves and loads this aftermath.</summary>
+        public override void ExposeData()
         {
-            /// <summary>The blast's centre.</summary>
-            public IntVec3 center;
+            base.ExposeData();
+            Scribe_Values.Look(ref nextFireCell, "nextFireCell");
+            Scribe_Values.Look(ref pending, "pending");
+        }
+    }
 
-            /// <summary>The tick the main explosion started.</summary>
-            public int startTick;
+    /// <summary>
+    /// Volleys of bolts launched in every direction at once: the Batshittium
+    /// Reactor's self-destruct.
+    /// </summary>
+    public class Aftermath_BoltBarrage : Aftermath
+    {
+        /// <summary>Where the bolts leave from (the device's true centre).</summary>
+        public Vector3 origin;
 
-            /// <summary>The replicator def whose properties apply.</summary>
-            public ThingDef source;
+        /// <summary>Volleys launched so far.</summary>
+        public int volleysFired;
 
-            /// <summary>Index into GenRadial's pattern of the next cell to light.</summary>
-            public int nextFireCell;
-
-            /// <summary>Fractional secondary explosions carried between ticks.</summary>
-            public double pending;
-
-            /// <summary>Saves and loads this aftermath.</summary>
-            public void ExposeData()
+        /// <summary>Launches each volley when its time comes.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="owner">The map component, for its counters.</param>
+        /// <returns>False once every volley is away.</returns>
+        public override bool Tick(Map map, MapComponent_SelfDestructAftermath owner)
+        {
+            CompProperties_SelfDestruct props = SelfDestruct;
+            if (!(props?.detonation is Detonation_BoltBarrage barrage) || barrage.projectile == null)
             {
-                Scribe_Values.Look(ref center, "center");
-                Scribe_Values.Look(ref startTick, "startTick");
-                Scribe_Defs.Look(ref source, "source");
-                Scribe_Values.Look(ref nextFireCell, "nextFireCell");
-                Scribe_Values.Look(ref pending, "pending");
+                return false;
+            }
+
+            int ticks = Find.TickManager.TicksGame - startTick;
+            while (volleysFired < barrage.volleys
+                && ticks >= volleysFired * barrage.volleyIntervalTicks)
+            {
+                volleysFired++;
+                float inner = Mathf.Clamp01(barrage.innerRadius / props.blastRadius);
+                for (int i = 0; i < barrage.boltsPerVolley; i++)
+                {
+                    if (BoltLauncher.TryLaunchInAnnulus(
+                        barrage.projectile, map, center, origin, props.blastRadius, inner,
+                        out float distance))
+                    {
+                        owner.BoltsLaunched++;
+                        owner.MaxBoltDistance = Mathf.Max(owner.MaxBoltDistance, distance);
+                    }
+                }
+            }
+
+            return volleysFired < barrage.volleys;
+        }
+
+        /// <summary>Saves and loads this aftermath.</summary>
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Values.Look(ref origin, "origin");
+            Scribe_Values.Look(ref volleysFired, "volleysFired");
+        }
+    }
+
+    /// <summary>
+    /// Runs every aftermath on a map, and keeps session counters the smoke
+    /// test reads. Saved with the map, so a save made mid-blast resumes it.
+    /// </summary>
+    public class MapComponent_SelfDestructAftermath : MapComponent
+    {
+        private List<Aftermath> running = new List<Aftermath>();
+
+        /// <summary>Created by RimWorld for every map.</summary>
+        /// <param name="map">The map this component belongs to.</param>
+        public MapComponent_SelfDestructAftermath(Map map)
+            : base(map)
+        {
+        }
+
+        /// <summary>True while any aftermath is still running.</summary>
+        public bool Active => running.Count > 0;
+
+        /// <summary>Secondary explosions set off this session.</summary>
+        public int SecondariesFired { get; set; }
+
+        /// <summary>Fires started behind a wave this session.</summary>
+        public int FiresStarted { get; set; }
+
+        /// <summary>Farthest a secondary has landed from its centre, in tiles.</summary>
+        public float MaxSecondaryDistance { get; set; }
+
+        /// <summary>Barrage and cook-off bolts launched this session.</summary>
+        public int BoltsLaunched { get; set; }
+
+        /// <summary>Farthest a launched bolt was aimed from its origin, in tiles.</summary>
+        public float MaxBoltDistance { get; set; }
+
+        /// <summary>Death blasts set off this session.</summary>
+        public int DeathBlasts { get; set; }
+
+        /// <summary>Starts an aftermath that began this tick.</summary>
+        /// <param name="aftermath">The aftermath, with its centre and source set.</param>
+        public void Begin(Aftermath aftermath)
+        {
+            aftermath.startTick = Find.TickManager.TicksGame;
+            running.Add(aftermath);
+        }
+
+        /// <summary>Advances every running aftermath by one tick.</summary>
+        public override void MapComponentTick()
+        {
+            for (int i = running.Count - 1; i >= 0; i--)
+            {
+                bool keep;
+                try
+                {
+                    keep = running[i].Tick(map, this);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"[Batshit Technology] aftermath failed: {ex}");
+                    keep = false;
+                }
+
+                if (!keep)
+                {
+                    running.RemoveAt(i);
+                }
+            }
+        }
+
+        /// <summary>Saves and loads the running aftermaths.</summary>
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Collections.Look(ref running, "aftermaths", LookMode.Deep);
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                running ??= new List<Aftermath>();
+                running.RemoveAll(a => a?.source == null);
             }
         }
     }

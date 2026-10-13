@@ -57,6 +57,7 @@ reuse them by name rather than inventing near-duplicates.
 | Danger red | `DANGER_RED` | 214, 52, 52 |
 | Refrigeration | `FROST_LIGHT`, `FROST`, `FROST_DEEP` | 214, 242, 255 to 70, 130, 170 |
 | Status screen | (panel green) | 70, 205, 145 |
+| Self-destruct warning | (`CompSelfDestruct`) | 255, 158, 26, then 255, 26, 15 |
 | Rock | `ROCK_LIGHT`, `ROCK` | 150, 142, 140; 116, 110, 110 |
 
 Colour rules:
@@ -70,6 +71,14 @@ Colour rules:
   (reactor, Ballista, the replicator's self-destruct). Red is a button or
   warning light. Frost blue is refrigeration. Panel green is a working
   screen. Never use these as decoration.
+- **Countdowns pulse.** A device counting down to its own destruction
+  wears a one-cell warning band that fades in and out in yellow-orange,
+  then turns red and pulses four times as fast in the final seconds. Any
+  new countdown should reuse it (CompSelfDestruct) rather than invent one.
+- **Every death is distinct.** Each device blows up in a way that echoes
+  its job: the Transmogrifier spews rock, the Brain Squeezer squeezes
+  brains, Ballista hardware cooks off its bolts. A new device needs its own
+  pulverization, not a generic explosion.
 - **Steel stays neutral grey.** Do not tint housings; the glow does the
   talking.
 

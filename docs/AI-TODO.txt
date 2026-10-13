@@ -6,6 +6,15 @@
 - [ ] Review RimWorld mod gameplay behaviours once core mechanics stabilize.
 - [ ] Identify opportunities for deterministic integration tests covering
   replication behaviour.
+- [ ] Next project: the Ergonomic Singularity Grenade, a thrown weapon any
+  pawn can use, made at the Batshittium Artificer. On detonation it drags
+  everything within 10 tiles toward its impact point for five seconds, at
+  an accelerating rate: pawns and animals are dragged; fixed objects such
+  as walls and furniture are ripped loose (uninstalled or destroyed). Then
+  it explodes for considerable damage. Surviving pawns get a huge mood
+  buff labelled with one of 25 quips ("I can't believe how comfortable
+  that was!", "Wow, that was so ergonomic!"). Requested by Matt
+  "Breakpoint" Heck on 2026-10-13.
 - [ ] Try the RimWorld 1.7 beta (new engine, "Waylith"; reported to be
   faster). Build against it, run the Def validator and the smoke test, and
   note what breaks. Stay on 1.6 until 1.7 is released, then move to it

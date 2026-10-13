@@ -133,7 +133,19 @@ function Check-Value([Type]$ft, [Xml.XmlNode]$node, [string]$path) {
   }
   elseif (-not $ft.IsPrimitive -and $ft -ne [string] -and -not $ft.IsValueType -and
       $node.SelectSingleNode('*')) {
-    Check-Object $ft $node $path   # nested object such as <building> or <filter>
+    # Nested object such as <building> or <filter>. Like the game's loader
+    # (DirectXmlToObject), a Class attribute picks a subclass of the field's
+    # type, e.g. <detonation Class="BatshitTechnology.Detonation_Bomb">.
+    $cls = $node.GetAttribute('Class')
+    if ($cls) {
+      $ct = Resolve-Type $cls
+      if (-not $ct) { Fail "$path Class '$cls' not found"; return }
+      if (-not $ft.IsAssignableFrom($ct)) {
+        Fail "$path Class '$cls' is not a $($ft.Name)"; return
+      }
+      Check-Object $ct $node "$path[$cls]"
+    }
+    else { Check-Object $ft $node $path }
   }
 }
 

@@ -41,12 +41,23 @@
         <basePowerConsumption>300</basePowerConsumption>
       </li>
       <li Class="CompProperties_Flickable" />
+      <!-- Destroyed by damage: spews its hopper across the area -->
+      <li Class="BatshitTechnology.CompProperties_DeathBlast">
+        <radius>4.9</radius>
+        <blast Class="BatshitTechnology.Detonation_HopperBurst">
+          <damageDef>BombSuper</damageDef>
+          <damage>35</damage>
+          <chunks>6~10</chunks>
+          <batshittium>1~3</batshittium>
+          <throwRadius>8</throwRadius>
+        </blast>
+      </li>
     </comps>
     <recipes>
       <li>BT_TransmogrifyRockChunks</li>
     </recipes>
     <researchPrerequisites>
-      <li>BT_BatshittiumLore</li>
+      <li>BT_Research_Transmogrifier</li>
     </researchPrerequisites>
     <placeWorkers>
       <li>PlaceWorker_PreventInteractionSpotOverlap</li>
@@ -58,7 +69,7 @@
   <ThingDef ParentName="BuildingBase">
     <defName>BT_BatshittiumReactor</defName>
     <label>batshittium reactor</label>
-    <description>Burns one unit of batshittium at a time to produce 250,000 W. Each unit lasts anywhere from a few minutes to a day and a half, and nobody can predict which. Haulers keep it loaded.\n\nIt sheds an enormous amount of waste heat into every room within 12 tiles, inside or out. Build it well away from anywhere people live.</description>
+    <description>Burns one unit of batshittium at a time to produce 250,000 W. Each unit lasts anywhere from a few minutes to a day and a half, and nobody can predict which. Haulers keep it loaded.\n\nIt sheds an enormous amount of waste heat into every room within 12 tiles, inside or out. Build it well away from anywhere people live.\n\nIt can self-destruct: a core blast, then three full Ballista volleys flung in every direction. Damage can set it off.</description>
     <thingClass>Building</thingClass>
     <graphicData>
       <texPath>Things/Building/Power/BT_BatshittiumReactor</texPath>
@@ -126,12 +137,35 @@
         <heatRadius>12</heatRadius>
         <heatMaxTemperature>200</heatMaxTemperature> <!-- °C; things auto-ignite above 240 -->
       </li>
+      <!-- Self-destruct: last comp, so nothing ticks after it blows -->
+      <li Class="BatshitTechnology.CompProperties_SelfDestruct">
+        <armingTicks>180</armingTicks> <!-- 3 seconds of pawn work -->
+        <countdownSeconds>10</countdownSeconds>
+        <finalWarningSeconds>3</finalWarningSeconds> <!-- warning turns red and fast -->
+        <fleeRadius>30</fleeRadius>
+        <blastRadius>70</blastRadius> <!-- how far the bolts reach -->
+        <damageTriggerChance>0.05</damageTriggerChance> <!-- per damaging hit -->
+        <damageSkipCountdownChance>0.5</damageSkipCountdownChance>
+        <!-- A core blast, then three full Ballista volleys at once in every
+             direction. Farther targets take longer to reach, so the impacts
+             spread outward as a wave. -->
+        <detonation Class="BatshitTechnology.Detonation_BoltBarrage">
+          <projectile>BT_Projectile_BoltReallyPainful</projectile>
+          <volleys>3</volleys>
+          <boltsPerVolley>256</boltsPerVolley>
+          <volleyIntervalTicks>30</volleyIntervalTicks>
+          <innerRadius>4</innerRadius>
+          <coreDamageDef>BombSuper</coreDamageDef>
+          <coreRadius>7.9</coreRadius>
+          <coreDamage>150</coreDamage>
+        </detonation>
+      </li>
     </comps>
     <placeWorkers>
       <li>BatshitTechnology.PlaceWorker_ShowReactorHeatRadius</li>
     </placeWorkers>
     <researchPrerequisites>
-      <li>BT_BatshittiumLore</li>
+      <li>BT_Research_Reactor</li>
     </researchPrerequisites>
   </ThingDef>
 </Defs>

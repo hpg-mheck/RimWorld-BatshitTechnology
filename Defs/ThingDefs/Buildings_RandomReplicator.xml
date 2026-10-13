@@ -5,7 +5,7 @@
   <ThingDef ParentName="BuildingBase">
     <defName>BT_RandomReplicator</defName>
     <label>random replicator</label>
-    <description>A compact fabricator that conjures a random food item every six hours into a refrigerated compartment. Haulers carry the food out to better storage; production pauses when the compartment holds ten items.\n\nRefrigeration keeps stored food fresh for an extra 50 W, and can be switched off. Its self-destruct can be armed by a colonist. After a short countdown it detonates with a massive, fiery blast.</description>
+    <description>A compact fabricator that conjures a random food item every six hours into a refrigerated compartment. Haulers carry the food out to better storage; production pauses when the compartment holds ten items.\n\nRefrigeration keeps stored food fresh for an extra 50 W, and can be switched off. Its self-destruct can be armed by a colonist, and damage can set it off. After a short countdown it detonates with a massive, fiery blast.</description>
     <thingClass>BatshitTechnology.Building_RandomReplicator</thingClass>
     <category>Building</category>
     <designationCategory>Production</designationCategory>
@@ -82,48 +82,55 @@
         <!-- W while refrigeration is on; a vanilla cooler is 200 W -->
         <refrigerationPowerConsumption>50</refrigerationPowerConsumption>
         <sendPowerCutLetters>true</sendPowerCutLetters> <!-- only when refrigerated food is at risk -->
-        <selfDestructArmingTicks>120</selfDestructArmingTicks> <!-- 2 seconds of pawn work -->
-        <selfDestructSeconds>10</selfDestructSeconds>
-        <selfDestructRadius>75</selfDestructRadius> <!-- engine max is ~79.8 -->
-        <selfDestructDamage>-1</selfDestructDamage> <!-- -1 = Bomb's default -->
-        <selfDestructFireChance>0.8</selfDestructFireChance>
-        <selfDestructFireSize>0.3</selfDestructFireSize>
-        <selfDestructFleeRadius>25</selfDestructFleeRadius>
-        <!-- Aftermath: fires follow the blast wave out, and secondary
-             explosions go off inside the expanding circle, then keep
-             going for a few seconds. Avoid plain Bomb damage here: its
-             explosions put out every fire they touch. BombSuper looks
-             the same and leaves fires burning. -->
-        <selfDestructSecondariesPerSecond>15</selfDestructSecondariesPerSecond>
-        <selfDestructAftershockSeconds>4</selfDestructAftershockSeconds>
-        <selfDestructSecondaryInnerFraction>0.2</selfDestructSecondaryInnerFraction>
-        <selfDestructSecondaries>
-          <li> <!-- incendiary bursts -->
-            <damageDef>Flame</damageDef>
-            <radius>2.9~4.9</radius>
-            <weight>5</weight>
-            <chanceToStartFire>0.8</chanceToStartFire>
-          </li>
-          <li> <!-- small blasts -->
-            <damageDef>BombSuper</damageDef>
-            <damage>40</damage>
-            <radius>1.9~3.9</radius>
-            <weight>4</weight>
-            <chanceToStartFire>0.5</chanceToStartFire>
-          </li>
-          <li> <!-- the occasional big one -->
-            <damageDef>BombSuper</damageDef>
-            <damage>80</damage>
-            <radius>5.9~7.9</radius>
-            <weight>1</weight>
-            <chanceToStartFire>0.5</chanceToStartFire>
-          </li>
-        </selfDestructSecondaries>
+      </li>
+      <!-- Self-destruct: last comp, so nothing ticks after it blows -->
+      <li Class="BatshitTechnology.CompProperties_SelfDestruct">
+        <armingTicks>120</armingTicks> <!-- 2 seconds of pawn work -->
+        <countdownSeconds>10</countdownSeconds>
+        <finalWarningSeconds>3</finalWarningSeconds> <!-- warning turns red and fast -->
+        <fleeRadius>25</fleeRadius>
+        <blastRadius>75</blastRadius> <!-- engine max is ~79.8 -->
+        <damageTriggerChance>0.05</damageTriggerChance> <!-- per damaging hit -->
+        <damageSkipCountdownChance>0.5</damageSkipCountdownChance>
+        <!-- A Bomb blast, then fires that follow its wave out and secondary
+             explosions inside the expanding circle for a few seconds more.
+             Avoid plain Bomb damage for secondaries: its explosions put out
+             every fire they touch. BombSuper looks the same and doesn't. -->
+        <detonation Class="BatshitTechnology.Detonation_Bomb">
+          <damage>-1</damage> <!-- -1 = Bomb's default -->
+          <fireChance>0.8</fireChance>
+          <fireSize>0.3</fireSize>
+          <secondariesPerSecond>15</secondariesPerSecond>
+          <aftershockSeconds>4</aftershockSeconds>
+          <secondaryInnerFraction>0.2</secondaryInnerFraction>
+          <secondaries>
+            <li> <!-- incendiary bursts -->
+              <damageDef>Flame</damageDef>
+              <radius>2.9~4.9</radius>
+              <weight>5</weight>
+              <chanceToStartFire>0.8</chanceToStartFire>
+            </li>
+            <li> <!-- small blasts -->
+              <damageDef>BombSuper</damageDef>
+              <damage>40</damage>
+              <radius>1.9~3.9</radius>
+              <weight>4</weight>
+              <chanceToStartFire>0.5</chanceToStartFire>
+            </li>
+            <li> <!-- the occasional big one -->
+              <damageDef>BombSuper</damageDef>
+              <damage>80</damage>
+              <radius>5.9~7.9</radius>
+              <weight>1</weight>
+              <chanceToStartFire>0.5</chanceToStartFire>
+            </li>
+          </secondaries>
+        </detonation>
       </li>
     </comps>
     <tickerType>Normal</tickerType>
     <researchPrerequisites>
-      <li>BT_BatshittiumLore</li>
+      <li>BT_Research_RandomReplicator</li>
     </researchPrerequisites>
   </ThingDef>
 </Defs>

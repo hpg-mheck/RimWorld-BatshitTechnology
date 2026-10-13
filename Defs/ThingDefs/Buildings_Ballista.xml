@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Defs>
-  <!-- Batshittium Ballista system: bolts (Painful: kinetic; Really Painful:
+  <!-- Batshit Ballista system: bolts (Painful: kinetic; Really Painful:
        explosive), the automated Artificer that makes them, the Ballista
        Magazine that feeds Ballistas it touches (directly or through a chain
        of magazines), and the Ballista itself. -->
@@ -119,7 +119,7 @@
   <ThingDef ParentName="BaseWeaponTurret">
     <defName>BT_BallistaLauncher</defName>
     <label>ballista launcher</label>
-    <description>The Batshittium Ballista's launching arm.</description>
+    <description>The Batshit Ballista's launching arm.</description>
     <graphicData>
       <texPath>Things/Building/Security/BT_BatshittiumBallista_Top</texPath>
       <graphicClass>Graphic_Single</graphicClass>
@@ -150,7 +150,7 @@
 
   <ThingDef ParentName="BuildingBase">
     <defName>BT_BatshittiumBallista</defName>
-    <label>batshittium ballista</label>
+    <label>batshit ballista</label>
     <description>A turret that throws volleys of batshittium bolts once every five seconds, up to 256 at a time and up to 325 tiles away. Insanely inaccurate, terrifyingly destructive. Pick its range, projectile count and bolt type; both range and count multiply its power draw, from 50 W standby and 1,000 W per volley at the smallest settings to 62.5 kW standby and 990 kW per volley at the largest. Without enough power for a volley it holds fire.\n\nIt holds 16 bolts itself and draws from any Ballista Magazine it touches, or touches through a chain of magazines. Its bolts arc overhead, so it must stand under open sky.</description>
     <thingClass>BatshitTechnology.Building_BatshittiumBallista</thingClass>
     <drawerType>MapMeshAndRealTime</drawerType>
@@ -221,6 +221,16 @@
         <basePowerConsumption>50</basePowerConsumption> <!-- replaced at runtime by range x count -->
       </li>
       <li Class="CompProperties_Flickable" />
+      <!-- Destroyed by damage: its bolts cook off -->
+      <li Class="BatshitTechnology.CompProperties_DeathBlast">
+        <radius>4.9</radius>
+        <blast Class="BatshitTechnology.Detonation_BoltCookOff">
+          <damageDef>BombSuper</damageDef>
+          <damage>50</damage>
+          <maxBolts>16</maxBolts> <!-- its whole internal magazine -->
+          <throwRadius>30</throwRadius>
+        </blast>
+      </li>
     </comps>
     <modExtensions>
       <li Class="BatshitTechnology.BoltStoreExtension">
@@ -275,7 +285,7 @@
   <ThingDef ParentName="BuildingBase">
     <defName>BT_BallistaMagazine</defName>
     <label>ballista magazine</label>
-    <description>Holds up to 2,560 Ballista bolts and feeds any Batshittium Ballista it touches, or touches through a chain of other magazines. One magazine can serve several Ballistas. Draws 5 W, or 500 W while feeding a volley.</description>
+    <description>Holds up to 2,560 Ballista bolts and feeds any Batshit Ballista it touches, or touches through a chain of other magazines. One magazine can serve several Ballistas. Draws 5 W, or 500 W while feeding a volley.</description>
     <thingClass>BatshitTechnology.Building_BallistaMagazine</thingClass>
     <graphicData>
       <texPath>Things/Building/Security/BT_BallistaMagazine</texPath>
@@ -330,6 +340,16 @@
         <basePowerConsumption>5</basePowerConsumption>
       </li>
       <li Class="CompProperties_Flickable" />
+      <!-- Destroyed by damage: its bolts cook off; the rest are pulverized -->
+      <li Class="BatshitTechnology.CompProperties_DeathBlast">
+        <radius>3.9</radius>
+        <blast Class="BatshitTechnology.Detonation_BoltCookOff">
+          <damageDef>BombSuper</damageDef>
+          <damage>40</damage>
+          <maxBolts>160</maxBolts>
+          <throwRadius>25</throwRadius>
+        </blast>
+      </li>
     </comps>
     <modExtensions>
       <li Class="BatshitTechnology.BoltStoreExtension">
@@ -419,6 +439,19 @@
             <research>BT_Research_ReallyPainfulBolts</research>
           </li>
         </outputs>
+      </li>
+      <!-- Destroyed by damage: sprays molten batshittium and half-made bolts -->
+      <li Class="BatshitTechnology.CompProperties_DeathBlast">
+        <radius>5.9</radius> <!-- the incendiary burst -->
+        <blast Class="BatshitTechnology.Detonation_MoltenSpray">
+          <chanceToStartFire>0.7</chanceToStartFire>
+          <blastDamageDef>BombSuper</blastDamageDef>
+          <blastRadius>2.9</blastRadius>
+          <blastDamage>40</blastDamage>
+          <boltProjectile>BT_Projectile_BoltPainful</boltProjectile>
+          <bolts>3~6</bolts>
+          <throwRadius>15</throwRadius>
+        </blast>
       </li>
     </comps>
     <researchPrerequisites>
