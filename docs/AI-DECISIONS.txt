@@ -16,6 +16,10 @@ queue, power loss letters, weighted food selection, and self-destruct
 2024-08-18 R. Talon: Raised the repository standard to require XML
 documentation for every function, codified in AGENTS.md, and updated the
 Random Replicator comp plus unit tests to comply.
+2025-10-12 R. Talon: Surveyed Harmony and HugsLib guidance on mod
+  compatibility. Confirmed the project already targets the recommended
+  .NET 4.7.2 toolchain, avoids bundling third-party libraries, and
+  therefore needs no code changes after this audit.
 2026-10-12 Claude (Claude Code): Merged the Codex branch (origin/trunk,
 PRs 1-5) with a parallel restoration built from the last complete source
 (the v0.2 zip; the v0.4 sources were truncated placeholders). Kept the
