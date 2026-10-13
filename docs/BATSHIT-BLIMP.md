@@ -145,7 +145,9 @@ These are risks to settle first:
 - **Control and pathing:** drafting non-humanlikes and flying over
   impassable cells both fight vanilla's assumptions. That is why the
   proposal splits a landed pawn from an in-flight thing driven by
-  buttons. Harmony patches may still be needed (the mod uses none yet).
+  buttons. Harmony is acceptable if necessary but not preferable (Matt
+  "Breakpoint" Heck, 2026-10-13): prefer subclasses, comps and the mod's
+  own checks, and patch only what cannot be reached any other way.
 - **Being targeted in the air:** the in-flight thing must register as an
   attack target so that raiders shoot at it.
 - **Shooting from inside:** a proxy verb fires each passenger's own

@@ -212,3 +212,7 @@ up. An armed bomb may be disarmed: 50% nothing, 25% it crumbles to parts,
 25% it misfires into a water-filled crater that sinks any shelter in it.
 He also asked to backlog Antiparticle Board, a shoddy antimatter
 material; it is in AI-TODO with proposed properties.
+2026-10-13 Matt "Breakpoint" Heck: Harmony is acceptable if necessary but
+not preferable. The mod has used none so far. Prefer subclasses, comps,
+defs and the mod's own checks; reach for a Harmony patch only when an
+engine behaviour cannot be changed any other way, and record why here.
