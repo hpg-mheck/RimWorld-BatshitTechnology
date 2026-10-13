@@ -40,3 +40,7 @@ Matt "Breakpoint" Heck:
    research prerequisite; a safety interlock near colonists or not;
    Dial-A-Yield ranges; the barn's bills-based autonomy; costs; and
    whether patrols stay inside the home area.
+9. Mirror Mirror (docs/MIRROR-MIRROR.md, "Open Questions"): is the
+   duplicate hostile, a colonist or a visitor; is the trait-inversion
+   table right in spirit; Agonizer numbers; research and cost; and
+   should the duplicate's name be marked?

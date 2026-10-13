@@ -109,6 +109,14 @@
   (proposed). Shares the generalized implosion with the Colony Bomb.
   Pawns and animals flee an armed bomb (a mod flee job giver, added to
   the think trees by XML patch), unless too close or in a mental state.
+- [ ] Mirror Mirror (docs/MIRROR-MIRROR.md), requested by Matt
+  "Breakpoint" Heck on 2026-10-13: a recreation mirror ("Allows pawns to
+  pause and reflect on the possibility of alternate dimensions and/or
+  facial hair.") with a 5% chance per session of releasing the gazer's
+  mirror-universe duplicate: inverse morality and psychology, inverse
+  facial hair regardless of gender, melee weapon swapped for a Mirror
+  Sword, ranged for an Agonizer (short range, low damage, psychic
+  distress), to an original 1960s-style orchestral sci-fi sting.
 
 ## Test justifications
 
