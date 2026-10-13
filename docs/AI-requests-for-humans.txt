@@ -10,18 +10,20 @@ Matt "Breakpoint" Heck:
    deviations in docs/AI-KNOWN-ISSUES.txt.
 4. Confirm preferred distribution workflow for packaging the mod once
    assemblies are built.
-5. Colony Bomb and Colony Deployment Shelter (docs/COLONY-BOMB.md, "Open
-   Questions"); each has a proposed answer in the document:
-   a. Quality: rolled from the crafter's skill (vanilla's seven levels
-      mapped onto the six tiers), or chosen per recipe?
-   b. Radii of 9, 15 and 35 tiles, and 45% of the map's shorter side for
+5. Colony Bomb and Colony Deployment Shelter: the first round was
+   answered on 2026-10-13. Still open, each with a proposed answer in
+   docs/COLONY-BOMB.md ("Open Questions"):
+   a. Radii of 9, 15 and 35 tiles, and 45% of the map's shorter side for
       the Valu-Siz(TM); 15 s countdown for every size?
-   c. "Triangle pitch-rising DTMF": a triangle-wave tone climbing beep by
+   b. "Triangle pitch-rising DTMF": a triangle-wave tone climbing beep by
       beep, or a glide within each beep?
-   d. Forcefield: a deploy button only, or also automatic at a nearby
-      bomb's T 0?
-   e. Does the active forcefield also stop ordinary damage?
-   f. Can an armed Colony Bomb be disarmed during its countdown?
-   g. Is the new town the player's, empty, and stocked by quality?
-   h. Are pulled-in pawns killed outright at ground zero, and are their
+   c. Is the new town the player's, empty, and stocked by quality?
+   d. Are pulled-in pawns killed outright at ground zero, and are their
       corpses left or vaporized?
+   e. Artificer auto mode: roll quality as a middling crafter up to the
+      bench's quality, or always exactly the bench's quality?
+   f. Misfire crater: does everything in it sink, and how deep is it?
+   g. Disarming: about ten seconds of work per attempt?
+6. Antiparticle Board (backlogged in docs/AI-TODO.txt): how is it made,
+   what is it for, and how dangerous should it be? The backlog entry
+   proposes answers.

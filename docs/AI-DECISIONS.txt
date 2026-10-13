@@ -201,3 +201,14 @@ there:
 - AnyRim's town generator, being built now for the showcase, takes an
   area, quality tier, seed and obstacles from the start, so the bomb's
   town reveal can reuse it.
+2026-10-13 Claude: Matt "Breakpoint" Heck answered the first Colony Bomb
+questions; docs/COLONY-BOMB.md now specifies them. Quality is rolled from
+the crafter's skill (random bombs get random quality), so the Artificer
+gains a Manual/Auto toggle, with auto quality capped at the bench's own
+quality. The shelter's forcefield is deployed by hand only, stops all
+ordinary, displacement, thermal and environmental harm (illness and
+bleeding carry on), and annihilates anyone who tries to enter while it is
+up. An armed bomb may be disarmed: 50% nothing, 25% it crumbles to parts,
+25% it misfires into a water-filled crater that sinks any shelter in it.
+He also asked to backlog Antiparticle Board, a shoddy antimatter
+material; it is in AI-TODO with proposed properties.

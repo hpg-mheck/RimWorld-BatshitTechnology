@@ -1,7 +1,8 @@
 # Colony Bomb and Colony Deployment Shelter
 
 Status: designed and backlogged, not yet implemented. Specified by Matt
-"Breakpoint" Heck on 2026-10-13. Where his specification was silent or
+"Breakpoint" Heck on 2026-10-13, who answered the first round of
+questions the same day. Where the specification is still silent or
 ambiguous, this document proposes an answer and marks it *(proposal)*;
 those points are also listed under "Open Questions" and in
 `docs/AI-requests-for-humans.txt`.
@@ -47,9 +48,10 @@ map size. Every size counts down for 15 seconds *(proposal)*.
 ### Quality
 
 Quality sets the town's materials, roads, furniture, stock and extras.
-*(Proposal:)* quality is rolled when the bomb is crafted, from the
-crafter's skill, through the vanilla quality comp, and shown under these
-names:
+It is rolled when the bomb is crafted, from the crafter's skill, through
+the vanilla quality comp. Bombs that turn up at random rather than being
+crafted (from traders, quests or raiders, for example) get a random
+quality. Vanilla's seven quality levels map onto six tiers:
 
 | Tier | Vanilla | Walls | Roads | Furniture and stock |
 |------|---------|-------|-------|---------------------|
@@ -61,6 +63,19 @@ names:
 | Epic | Masterwork+ | Gold, jade | Gold tile | Masterwork+, silver |
 
 "Masterwork+" means Masterwork or Legendary.
+
+**The Artificer gets a Manual/Auto toggle.** It currently makes its
+output automatically, with no crafter, so there is no skill to roll
+quality from:
+- **Manual:** a pawn works the bench, and the bomb's quality is rolled
+  from that pawn's Crafting skill.
+- **Auto:** the bench works alone, as now, and quality tops out at the
+  quality of the Artificer itself. The Artificer therefore gains a
+  quality of its own, rolled from its builder's Construction skill.
+  Below that cap, auto quality is rolled as for a crafter of middling
+  skill (level 8) *(proposal)*.
+- Existing Artificer output (bolts, singularity grenades) has no quality
+  and is unaffected by the toggle *(proposal)*.
 
 Labels follow the motif: lowercase, as in vanilla ("resort-quality
 megacolony bomb"), except the trademark, which keeps its capitals
@@ -81,6 +96,30 @@ megacolony bomb"), except the trademark, which keeps its capitals
   (`CompSelfDestruct`, with `armingTicks` 600).
 - As a Batshit device it inherits the house rule: any hit has a 5% chance
   to start the countdown, and half of those skip it.
+
+### Disarming
+
+An armed bomb can be *attempted* to be disarmed, by order, during its
+countdown. A pawn works at it for about ten seconds *(proposal)*; then
+the attempt resolves:
+
+| Chance | Outcome |
+|--------|---------|
+| 50% | Nothing happens; the countdown carries on; try again |
+| 25% | Success: the bomb crumbles into its component parts |
+| 25% | Misfire: see below |
+
+**Misfire.** The bomb leaves a water-filled crater the size of its blast
+radius, with no implosion, shockwave or town *(proposal: deep water in
+the middle, shallow water toward the rim, so the edge can be waded)*.
+Everything in the crater sinks and is lost *(proposal)*; pawns caught in
+it must swim to shore, if they can. A Colony Deployment Shelter inside
+the crater shorts out and sinks, whether or not its forcefield is up. Its
+pawns are left in the water to swim to shore, if they can, and then the
+shelter disintegrates. Vanilla pawns cannot enter deep water, so swimming
+needs its own mechanic *(proposal: a swim job that moves a pawn one cell
+at a time toward the nearest shore, slowly; downed or immobile pawns
+drown)*.
 
 ### Timeline
 
@@ -221,25 +260,38 @@ scale raids with colony wealth. That is the catch, and it is intended.
   through an "Evacuate" button that ejects everyone. Pawns inside are off
   the map, as in a cryptosleep casket, so blasts cannot reach them
   directly.
+- **Entering while the forcefield is deployed** incinerates and
+  annihilates the pawn and everything they carry and wear, with a
+  disturbing =\*FOOMPF!\*= effect: no corpse, no gear, nothing left.
+  Pawns already inside are safe. The float-menu order stays available,
+  with a warning in its label *(proposal)*.
 - Pawns inside cannot shoot. Shooting from inside is future work. Vanilla
   has no garrison mechanic, so it is not easy. It would never be allowed
   while the forcefield is up.
 
 ### The Forcefield
 
-- **Single use.** It is deployed with a button *(proposal; see Open
-  Questions for an automatic option)*.
+- **Single use, deployed by hand.** It is deployed only by a button;
+  there is no automatic deployment.
 - **Looks unreliable.** A magenta overlay cloud, asymmetric, its shape
   forever shifting (several overlapping blob sprites driven by noise), its
   alpha fading at random.
 - **Immunity.** While, and only while, the field is active, the bunker and
-  everyone in it are immune to every Colony Bomb and Batshit Technology
-  effect. That covers the bomb's implosion and shockwave, self-destruct
-  blasts and aftermaths, reactor barrages, death blasts, singularity pulls
-  and rips, and bolts. Every such effect must ask one shared check (for
-  example `BatshitImmunity.Protects(thing)`), and the bunker's damage
-  handler absorbs damage from those sources. Whether ordinary damage
-  (raiders' bullets) also bounces off is an open question.
+  everyone in it are immune to:
+  - every Colony Bomb and Batshit Technology effect: the bomb's implosion
+    and shockwave, self-destruct blasts and aftermaths, reactor barrages,
+    death blasts, singularity pulls and rips, and bolts;
+  - all ordinary damage (raiders' bullets, mortars, fire);
+  - gravity and displacement effects (anything that pulls, pushes or
+    teleports);
+  - thermal effects (heat and cold);
+  - environmental effects such as acid rain and toxic fallout.
+
+  What is already inside a pawn carries on: sick or diseased pawns still
+  suffer their illnesses, and bleeding continues. Every Batshit effect
+  asks one shared check (for example `BatshitImmunity.Protects(thing)`),
+  the bunker's damage handler absorbs everything while the field is up,
+  and pawns inside are held at a comfortable temperature.
 - **Duration.** It lasts 15 seconds, plus or minus five, of "lowest
   bidder" government contracting. That is a uniform 10 to 20 s, rolled
   when deployed and never shown. The inspect pane says only "Rated for
@@ -313,18 +365,23 @@ run.
 
 ## Open Questions
 
-1. Quality: rolled from the crafter's skill (recommended; vanilla's seven
-   levels map onto the six tiers, with Masterwork and Legendary both
-   Epic), or chosen per recipe, with costs rising by tier?
-2. Sizes: are radii of 9, 15 and 35, and 45% of the map's shorter side,
+Answered on 2026-10-13 (now part of the specification above): quality
+comes from the crafter's skill, with a Manual/Auto toggle on the
+Artificer; the forcefield is deployed by hand only; it stops all
+ordinary, displacement, thermal and environmental harm; and an armed bomb
+can be disarmed at 50/25/25 odds.
+
+Still open:
+
+1. Sizes: are radii of 9, 15 and 35, and 45% of the map's shorter side,
    about right? Does every size count down for 15 s?
-3. "Triangle pitch-rising DTMF": a triangle-wave tone whose pitch climbs
+2. "Triangle pitch-rising DTMF": a triangle-wave tone whose pitch climbs
    beep by beep (proposed), or a pitch glide within each beep?
-4. Forcefield deployment: a button only, or also an automatic option that
-   deploys when a nearby bomb reaches T 0?
-5. Immunity: does the active field also stop ordinary damage, or only
-   Batshit effects, as specified?
-6. Can an armed Colony Bomb be disarmed during its countdown?
-7. The new town: owned by the player, empty, and stocked by quality?
-8. Ground zero: are the pulled-in pawns killed outright, and are their
+3. The new town: owned by the player, empty, and stocked by quality?
+4. Ground zero: are the pulled-in pawns killed outright, and are their
    corpses left or vaporized?
+5. Auto quality: below the bench's cap, roll as for a middling crafter
+   (proposed), or always produce exactly the bench's quality?
+6. Misfire crater: does everything in it sink and vanish, and how deep is
+   it (proposed: deep in the middle, wadeable at the rim)?
+7. Disarming: about ten seconds of work per attempt, like arming?
