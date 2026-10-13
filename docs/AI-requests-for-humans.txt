@@ -29,3 +29,9 @@ Matt "Breakpoint" Heck:
    the Universe. Still open: how is the board made, what is it for, how
    dangerous should it be, and what does Awkward Secrets of the Universe
    unlock? The backlog entry proposes answers for the first three.
+7. The Batshit Blimp and its Whoops Drive (backlogged in
+   docs/AI-TODO.txt): the blimp does not exist yet. What is it (a
+   vehicle, a building, a world-map transport like shuttles or transport
+   pods), what does it carry, and how is it built? Does the Whoops Drive
+   warp across the world map, the local map, or both, and how often
+   should "somewhat frequently" land on target?

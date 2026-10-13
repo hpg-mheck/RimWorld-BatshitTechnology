@@ -69,10 +69,26 @@
     roughly as given: "So, it turns out that, at obscenely high levels of
     energy -- which, it turns out, ah... that term turns out to be, um,
     disturbingly, uh... you know what, let's talk about this later."
-    What Awkward Secrets unlocks is not yet specified. Both go on the
+    Awkward Secrets unlocks the Whoops Drive (below). Both go on the
     Batshit Technology tab without overlapping existing projects (the XML
     tests check this); proposed prerequisite for Substandard Advanced
     Materials: Batshittium Transmogrifier.
+- [ ] The Batshit Blimp: referenced by Matt "Breakpoint" Heck on
+  2026-10-13 as the vehicle the Whoops Drive upgrades, but not yet
+  specified or built. Needs a design (see docs/AI-requests-for-humans.txt).
+- [ ] The Whoops Drive: an optional upgrade to the Batshit Blimp,
+  unlocked by Awkward Secrets of the Universe, that lets the blimp warp
+  across the map, somewhat frequently to its intended destination.
+  Requested by Matt "Breakpoint" Heck on 2026-10-13. Proposals, pending
+  the blimp's design:
+  - A warp jumps straight to the destination instead of flying there,
+    but lands somewhere else a good part of the time (somewhere between
+    "somewhat frequently" and not: say 60% on target), scattered around
+    the target, further the longer the jump.
+  - "The map" is read as the world map (travel between tiles); a
+    within-map version would follow the same rule.
+  - A failed warp is a separate gag worth designing: arriving upside down,
+    inside a mountain, or over the wrong faction's base.
 
 ## Test justifications
 
