@@ -142,6 +142,27 @@ far from home."). Labels are lowercase nouns, as in vanilla. Inner
 monologue and flavour lines (the Brain Squeezer) may be openly disturbing
 but stay funny, never cruel, and never break the fourth wall.
 
+### Places and People
+
+AnyRim, the showcase's test town (`docs/SHOWCASE.md`), adds signs and
+named people. The same deadpan applies, in the voice of a 1950s civic
+notice: earnest, reassuring, and quietly aware of what the town is for.
+
+- **Signs.** A capitalised heading, as real signage has, then plain
+  sub-lines that undercut it: "WELCOME TO ANYRIM / A Typical Rim
+  Community / Pop. 8, subject to change". One undercut per sign.
+- **Names that read as fates.** A resident's full name says how this
+  ends without anyone saying it: Wendy "Any Minute" Now, Morty "Two
+  Weeks" Tallis. Surnames and nicknames carry the joke; first names stay
+  ordinary. Nicknames show above pawns, so they are 16 characters or
+  fewer and land on their own.
+- **Affectionate, not cruel.** The residents are doomed, not mocked.
+  Their notes are small and human: keeping dinner warm, a lawn chair, two
+  weeks to retirement.
+- **Colours.** Town labels use vanilla's label style, light text on its
+  grey background. Magenta stays reserved for batshittium, and town
+  furnishings avoid magenta and purple paint and carpet.
+
 ## Adding New Material
 
 1. Read this document and look at the existing sprites side by side.

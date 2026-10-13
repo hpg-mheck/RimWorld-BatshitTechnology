@@ -63,6 +63,16 @@
     speckled chips where vanilla particle board would be brown. This
     gives antimatter its own colour without borrowing batshittium's
     magenta, and the motif gains an antimatter entry when it is built.
+  - Research (specified 2026-10-13): a new project, Substandard Advanced
+    Materials, unlocks Antiparticle Board and is the prerequisite for a
+    second project, Awkward Secrets of the Universe. Its description,
+    roughly as given: "So, it turns out that, at obscenely high levels of
+    energy -- which, it turns out, ah... that term turns out to be, um,
+    disturbingly, uh... you know what, let's talk about this later."
+    What Awkward Secrets unlocks is not yet specified. Both go on the
+    Batshit Technology tab without overlapping existing projects (the XML
+    tests check this); proposed prerequisite for Substandard Advanced
+    Materials: Batshittium Transmogrifier.
 
 ## Test justifications
 

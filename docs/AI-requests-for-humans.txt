@@ -24,6 +24,8 @@ Matt "Breakpoint" Heck:
       bench's quality, or always exactly the bench's quality?
    f. Misfire crater: does everything in it sink, and how deep is it?
    g. Disarming: about ten seconds of work per attempt?
-6. Antiparticle Board (backlogged in docs/AI-TODO.txt): how is it made,
-   what is it for, and how dangerous should it be? The backlog entry
-   proposes answers.
+6. Antiparticle Board (backlogged in docs/AI-TODO.txt): it is unlocked
+   by Substandard Advanced Materials, which leads to Awkward Secrets of
+   the Universe. Still open: how is the board made, what is it for, how
+   dangerous should it be, and what does Awkward Secrets of the Universe
+   unlock? The backlog entry proposes answers for the first three.
