@@ -9,9 +9,11 @@ Batshittium: an element transmogrified from ordinary rock chunks, ten to one, in
 
 Batshittium Reactor: 250,000 W from one unit of batshittium for anywhere between 0.1 and 36 hours, with enough waste heat to cook every room within 12 tiles. Build it far from home.
 
-Random Replicator: fabricates a random food item every 6 in-game hours into a refrigerated compartment (10 items) that haulers empty into your stockpiles. It draws 50W, plus 50W while refrigeration is on. Player-ordered, pawn-armed self-destruct: 10-second countdown with a blast-radius ring, then a massive blast and widespread fires.</description>
+Random Replicator: fabricates a random food item every 6 in-game hours into a refrigerated compartment (10 items) that haulers empty into your stockpiles. It draws 50W, plus 50W while refrigeration is on. Player-ordered, pawn-armed self-destruct: 10-second countdown with a blast-radius ring, then a massive blast and widespread fires.
+
+Brain Squeezer: a chair colonists sit in for moderate recreation, muttering disturbing inner monologue. They come away calmer, with fewer breakdowns, riots and arguments for a day.</description>
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
-  <modVersion IgnoreIfNoMatchingField="True">0.5.0</modVersion>
+  <modVersion IgnoreIfNoMatchingField="True">0.6.0</modVersion>
 </ModMetaData>

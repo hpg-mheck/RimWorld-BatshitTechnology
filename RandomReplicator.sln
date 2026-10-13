@@ -35,15 +35,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "About", "About", "{B2ACAA2E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Defs", "Defs", "{C6C11387-D8E4-4A41-9C8E-EC8405B2B1FF}"
     ProjectSection(SolutionItems) = preProject
-        Defs\DesignationDefs\RR_SelfDestructDesignation.xml = Defs\DesignationDefs\RR_SelfDestructDesignation.xml
-        Defs\JobDefs\RR_SelfDestruct_Jobs.xml = Defs\JobDefs\RR_SelfDestruct_Jobs.xml
-        Defs\RecipeDefs\RR_Recipes.xml = Defs\RecipeDefs\RR_Recipes.xml
-        Defs\ResearchProjectDefs\RR_Research.xml = Defs\ResearchProjectDefs\RR_Research.xml
-        Defs\ThingDefs\Buildings_Batshittium.xml = Defs\ThingDefs\Buildings_Batshittium.xml
-        Defs\ThingDefs\Buildings_RandomReplicator.xml = Defs\ThingDefs\Buildings_RandomReplicator.xml
-        Defs\ThingDefs\Items_Batshittium.xml = Defs\ThingDefs\Items_Batshittium.xml
-        Defs\WorkGiverDefs\RR_SelfDestruct_WorkGiver.xml = Defs\WorkGiverDefs\RR_SelfDestruct_WorkGiver.xml
-        Defs\WorkGiverDefs\RR_Transmogrify_WorkGiver.xml = Defs\WorkGiverDefs\RR_Transmogrify_WorkGiver.xml
+        Defs\\DesignationDefs\\RR_SelfDestructDesignation.xml = Defs\\DesignationDefs\\RR_SelfDestructDesignation.xml
+        Defs\\JobDefs\\RR_SelfDestruct_Jobs.xml = Defs\\JobDefs\\RR_SelfDestruct_Jobs.xml
+        Defs\\Misc\\RR_BrainSqueezer.xml = Defs\\Misc\\RR_BrainSqueezer.xml
+        Defs\\RecipeDefs\\RR_Recipes.xml = Defs\\RecipeDefs\\RR_Recipes.xml
+        Defs\\ResearchProjectDefs\\RR_Research.xml = Defs\\ResearchProjectDefs\\RR_Research.xml
+        Defs\\ThingDefs\\Buildings_Batshittium.xml = Defs\\ThingDefs\\Buildings_Batshittium.xml
+        Defs\\ThingDefs\\Buildings_BrainSqueezer.xml = Defs\\ThingDefs\\Buildings_BrainSqueezer.xml
+        Defs\\ThingDefs\\Buildings_RandomReplicator.xml = Defs\\ThingDefs\\Buildings_RandomReplicator.xml
+        Defs\\ThingDefs\\Items_Batshittium.xml = Defs\\ThingDefs\\Items_Batshittium.xml
+        Defs\\WorkGiverDefs\\RR_SelfDestruct_WorkGiver.xml = Defs\\WorkGiverDefs\\RR_SelfDestruct_WorkGiver.xml
+        Defs\\WorkGiverDefs\\RR_Transmogrify_WorkGiver.xml = Defs\\WorkGiverDefs\\RR_Transmogrify_WorkGiver.xml
     EndProjectSection
 EndProject
 Global

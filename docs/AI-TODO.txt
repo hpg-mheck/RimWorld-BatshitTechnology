@@ -1,8 +1,5 @@
 # AI TODO List
 
-- [ ] Brain Squeezer: furniture or device pawns use for moderate recreation
-  that lowers mental-break risk, with 20 to 30 humorously disturbing inner
-  monologue lines picked at random. Gate on Batshittium Lore.
 - [ ] Batshittium Ballista system (spec agreed 2026-10-12): volley turret
   every 5 s, range 10 to 325 and 1 to 256 projectiles, power linear from
   50 W standby / 1000 W per-volley burst to 62.5 kW / 990 kW at max;
@@ -24,4 +21,4 @@ power nets, Unity), so they are not unit-testable in this project. They are
 covered instead by: Def validation against the real game assembly
 (Tools/validate-defs.ps1), the XML regression tests, and the in-game smoke
 test (Tools/smoke-test.ps1). Pure logic lives in RandomReplicator.Core with
-unit tests (WeightedSelector, ReactorHeat).
+unit tests (WeightedSelector, ReactorHeat, MonologuePicker).

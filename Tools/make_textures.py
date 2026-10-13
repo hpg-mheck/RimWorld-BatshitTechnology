@@ -239,7 +239,44 @@ def reactor():
     save(img, size, 'Things/Building/Power/RR_BatshittiumReactor.png')
 
 
+def brain_squeezer():
+    """A padded chair seen from above, facing north (backrest at the bottom),
+    under a glowing headpiece with clamp arms."""
+    size = 128
+    img = new_canvas(size)
+    d = draw(img)
+    cushion = (118, 96, 138, 255)
+    cushion_dark = (88, 68, 106, 255)
+    for x0 in (16, 98):  # armrests
+        d.rounded_rectangle(s(x0, 30, x0 + 14, 104), radius=5 * SS, fill=STEEL_DARK,
+                            outline=OUTLINE, width=3 * SS)
+    d.rounded_rectangle(s(28, 26, 100, 100), radius=12 * SS, fill=cushion,
+                        outline=OUTLINE, width=3 * SS)
+    d.rounded_rectangle(s(36, 34, 92, 74), radius=8 * SS, fill=cushion_dark)  # seat dent
+    d.rounded_rectangle(s(22, 92, 106, 118), radius=8 * SS, fill=STEEL_DARK,
+                        outline=OUTLINE, width=3 * SS)  # backrest
+    for x in (44, 84):  # cables from backrest to headpiece
+        d.line(s(x, 110, 64 + (x - 64) * 0.4, 96), fill=OUTLINE, width=5 * SS)
+        d.line(s(x, 110, 64 + (x - 64) * 0.4, 96), fill=BS_DARK, width=2 * SS)
+
+    # the headpiece, over where the sitter's head goes
+    glow(img, lambda g, c: g.ellipse(s(36, 62, 92, 118), fill=c), BS_GLOW, blur=6, alpha=170)
+    d = draw(img)
+    for angle in (35, 145, 215, 325):  # clamp arms with pads
+        a = math.radians(angle)
+        x1, y1 = 64 + 30 * math.cos(a), 90 + 30 * math.sin(a)
+        d.line(s(64 + 18 * math.cos(a), 90 + 18 * math.sin(a), x1, y1), fill=OUTLINE, width=6 * SS)
+        d.line(s(64 + 18 * math.cos(a), 90 + 18 * math.sin(a), x1, y1), fill=STEEL_LIGHT, width=3 * SS)
+        circle(d, x1, y1, 4.5, fill=cushion_dark, outline=OUTLINE, width=2)
+    circle(d, 64, 90, 21, fill=STEEL, outline=OUTLINE, width=3)
+    circle(d, 64, 90, 16, outline=(*BS_LIGHT[:3], 230), width=3)  # glowing band
+    orb(d, 64, 90, 9, BS_DARK, BS_CORE)
+    d.ellipse(s(55, 80, 63, 85), fill=(255, 255, 255, 140))  # glint
+    save(img, size, 'Things/Building/Joy/RR_BrainSqueezer.png')
+
+
 if __name__ == '__main__':
     batshittium_item()
     transmogrifier()
     reactor()
+    brain_squeezer()

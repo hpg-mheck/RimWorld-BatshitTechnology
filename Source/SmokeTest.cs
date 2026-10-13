@@ -6,10 +6,12 @@
 // passed). Without the flag it does nothing.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Verse;
 using RimWorld;
+using Verse.AI;
 using UnityEngine;
 
 namespace RandomReplicator
@@ -91,6 +93,7 @@ namespace RandomReplicator
             TestTransmogrifier(bench);
             TestReplicatorStorage(map, replicator);
             TestReactorHeat(map, center);
+            TestBrainSqueezer(map, center); // while the reactor still has fuel
             TestReactorBurnCycle(reactor, fuel);
             TestSelfDestructAbort(replicator);
             TestDetonation(replicator);
@@ -245,6 +248,61 @@ namespace RandomReplicator
             Check("reactor heats a nearby room",
                 target != null && !target.UsesOutdoorTemperature && after > before + 5f,
                 $"room {(target == null ? "missing" : "ok")}, {before:F1} C -> {after:F1} C");
+        }
+
+        /// <summary>
+        /// A colonist sits in the squeezer, mutters, and comes away with the
+        /// mood memory (labelled with a monologue line), the calm hediff and
+        /// more joy.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The reactor's position.</param>
+        private void TestBrainSqueezer(Map map, IntVec3 center)
+        {
+            Thing squeezer =
+                Spawn(map, "RR_BrainSqueezer", center + new IntVec3(0, 0, -5));
+            WaitForPower(squeezer);
+            Check("brain squeezer is powered",
+                squeezer.TryGetComp<CompPowerTrader>().PowerOn, PowerDetail(squeezer));
+
+            Pawn pawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(
+                p => !p.Downed && !p.InMentalState && p.needs?.joy != null);
+            if (pawn == null)
+            {
+                Check("a colonist is free to be squeezed", false, "no free colonist");
+                return;
+            }
+
+            pawn.needs.joy.CurLevel = 0.2f;
+            int mutteredBefore = JobDriver_UseBrainSqueezer.MonologuesShown;
+            JobDef useSqueezer = RR_BrainSqueezerDefOf.RR_UseBrainSqueezer;
+            pawn.jobs.StartJob(
+                JobMaker.MakeJob(useSqueezer, squeezer, squeezer.Position),
+                JobCondition.InterruptForced);
+            bool sat = false;
+            for (int t = 0; t < 4000 && pawn.CurJobDef == useSqueezer; t += 10)
+            {
+                Tick(10);
+                sat |= pawn.Position == squeezer.Position;
+            }
+
+            Check("the colonist sat in the squeezer", sat,
+                $"colonist at {pawn.Position}, squeezer at {squeezer.Position}");
+            Check("the colonist muttered monologue lines",
+                JobDriver_UseBrainSqueezer.MonologuesShown > mutteredBefore,
+                "no lines shown");
+            var thought = pawn.needs.mood.thoughts.memories
+                .GetFirstMemoryOfDef(RR_BrainSqueezerDefOf.RR_BrainSqueezed)
+                as Thought_BrainSqueezed;
+            List<string> lines = RR_BrainSqueezerDefOf.RR_BrainSqueezed
+                .GetModExtension<MonologueExtension>().lines;
+            Check("the colonist got the memory, labelled with a monologue line",
+                thought != null && lines.Contains(thought.Line),
+                thought == null ? "no memory" : $"line '{thought.Line}'");
+            Check("the colonist got a day of calm",
+                pawn.health.hediffSet.HasHediff(RR_BrainSqueezerDefOf.RR_BrainSqueezedCalm));
+            Check("the colonist gained joy", pawn.needs.joy.CurLevel > 0.2f,
+                $"joy {pawn.needs.joy.CurLevel:F2}");
         }
 
         /// <summary>

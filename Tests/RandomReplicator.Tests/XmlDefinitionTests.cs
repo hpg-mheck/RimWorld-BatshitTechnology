@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
@@ -33,7 +34,7 @@ public sealed class XmlDefinitionTests
 
         Assert.Equal("Matt.RandomReplicator", root.Element("packageId")?.Value);
         Assert.Equal("Random Replicator", root.Element("name")?.Value);
-        Assert.Equal("0.5.0", root.Element("modVersion")?.Value);
+        Assert.Equal("0.6.0", root.Element("modVersion")?.Value);
         Assert.Equal(new[] { "1.6" }, ListValues(root.Element("supportedVersions")));
     }
 
@@ -186,6 +187,39 @@ public sealed class XmlDefinitionTests
         var reactor = comps.Single(c => c.Attribute("Class")?.Value
             == "RandomReplicator.CompProperties_BatshittiumReactor");
         Assert.Equal("0.1~36", reactor.Element("burnHoursRange")?.Value);
+    }
+
+    /// <summary>
+    /// Verifies the Brain Squeezer: a Lore-gated seat whose joy giver and
+    /// job are wired up, a positive memory with 20 to 30 short, unique
+    /// monologue lines, and a calm hediff that lowers the break threshold.
+    /// </summary>
+    [Fact(DisplayName = "Brain Squeezer is wired up with 20-30 short monologue lines")]
+    public void BrainSqueezer_should_be_wired_up_with_monologue()
+    {
+        var chair = ThingDef("RR_BrainSqueezer");
+        Assert.Equal("true", chair.Element("building")?.Element("isSittable")?.Value);
+        Assert.Equal(
+            new[] { "RR_BatshittiumLore" }, ListValues(chair.Element("researchPrerequisites")));
+
+        var giver = SingleDef("JoyGiverDef", "RR_UseBrainSqueezer");
+        Assert.Equal(new[] { "RR_BrainSqueezer" }, ListValues(giver.Element("thingDefs")));
+        Assert.Equal("RR_UseBrainSqueezer", giver.Element("jobDef")?.Value);
+
+        var thought = SingleDef("ThoughtDef", "RR_BrainSqueezed");
+        string mood = thought.Element("stages")?.Element("li")?.Element("baseMoodEffect")?.Value
+            ?? "0";
+        Assert.True(double.Parse(mood, CultureInfo.InvariantCulture) > 0, "mood effect");
+        var lines = ListValues(
+            thought.Element("modExtensions")?.Element("li")?.Element("lines"));
+        Assert.InRange(lines.Length, 20, 30);
+        Assert.Equal(lines.Length, lines.Distinct().Count());
+        Assert.All(lines, line => Assert.True(
+            line.Length <= 45, $"too long for the mood panel: {line}"));
+
+        var calm = SingleDef("HediffDef", "RR_BrainSqueezedCalm");
+        string offset = calm.Descendants("MentalBreakThreshold").Single().Value;
+        Assert.True(double.Parse(offset, CultureInfo.InvariantCulture) < 0, "break threshold");
     }
 
     /// <summary>

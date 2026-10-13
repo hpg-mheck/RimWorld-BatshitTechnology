@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Brain Squeezer: recreation kind, joy giver, job, mood memory (with the
+       monologue lines) and the day of calm. The building is in
+       ThingDefs/Buildings_BrainSqueezer.xml. -->
+
+  <JoyKindDef>
+    <defName>RR_BrainSqueezing</defName>
+    <label>brain squeezing</label>
+  </JoyKindDef>
+
+  <JoyGiverDef>
+    <defName>RR_UseBrainSqueezer</defName>
+    <giverClass>RandomReplicator.JoyGiver_BrainSqueezer</giverClass>
+    <baseChance>2.5</baseChance> <!-- telescope 2, television 3.5 -->
+    <thingDefs>
+      <li>RR_BrainSqueezer</li>
+    </thingDefs>
+    <jobDef>RR_UseBrainSqueezer</jobDef>
+    <joyKind>RR_BrainSqueezing</joyKind>
+  </JoyGiverDef>
+
+  <JobDef>
+    <defName>RR_UseBrainSqueezer</defName>
+    <driverClass>RandomReplicator.JobDriver_UseBrainSqueezer</driverClass>
+    <reportString>getting brain squeezed.</reportString>
+    <joyDuration>2500</joyDuration> <!-- one in-game hour -->
+    <joyMaxParticipants>1</joyMaxParticipants>
+    <joyKind>RR_BrainSqueezing</joyKind>
+    <allowOpportunisticPrefix>true</allowOpportunisticPrefix>
+  </JobDef>
+
+  <!-- The memory's label in the mood panel is the last line said. -->
+  <ThoughtDef>
+    <defName>RR_BrainSqueezed</defName>
+    <thoughtClass>RandomReplicator.Thought_BrainSqueezed</thoughtClass>
+    <durationDays>1</durationDays>
+    <stackLimit>1</stackLimit>
+    <stages>
+      <li>
+        <label>brain squeezed</label>
+        <description>I sat in the brain squeezer. Something got rearranged, and now everything is... fine? Everything is fine.</description>
+        <baseMoodEffect>6</baseMoodEffect>
+      </li>
+    </stages>
+    <modExtensions>
+      <li Class="RandomReplicator.MonologueExtension">
+        <lines>
+          <li>That... that feels pretty weird...</li>
+          <li>Is that supposed to feel like... that...</li>
+          <li>I can taste purple.</li>
+          <li>My thoughts are being alphabetized.</li>
+          <li>Why is it humming my childhood?</li>
+          <li>Okay. Okay. Okay. Okay. Okay.</li>
+          <li>Did it just... fold something?</li>
+          <li>There goes the anxiety. And a vowel.</li>
+          <li>Ooh. That's a lobe.</li>
+          <li>I feel smooth. Like a worried pebble.</li>
+          <li>My opinion on taxes is gone now.</li>
+          <li>I can hear my own eyebrows.</li>
+          <li>Every regret, gently cubed.</li>
+          <li>Who's driving? Is anyone driving?</li>
+          <li>Wow. Wow. Hm. Wow.</li>
+          <li>My politics just left the building.</li>
+          <li>It found the part of me that riots.</li>
+          <li>So this is quiet. On the inside.</li>
+          <li>Relaxation or a stroke. Relaxation.</li>
+          <li>Can a thought have a dent?</li>
+          <li>Don't stop. Please stop. Don't stop.</li>
+          <li>I used to feel strongly about... something.</li>
+          <li>Warm, damp sponge. In a good way?</li>
+          <li>Like a hug, if a hug had teeth.</li>
+          <li>It's squeezing out the bad. And Tuesday.</li>
+          <li>My skull feels roomier.</li>
+          <li>Somewhere, a memory just clicked off.</li>
+          <li>Is it... reading me? It's reading me.</li>
+        </lines>
+      </li>
+    </modExtensions>
+  </ThoughtDef>
+
+  <!-- A day of lower mental break threshold: fewer breaks, riots and
+       arguments. -->
+  <HediffDef>
+    <defName>RR_BrainSqueezedCalm</defName>
+    <label>brain-squeezed</label>
+    <description>Recently squeezed. Everything feels slightly further away, including the urge to snap.</description>
+    <hediffClass>HediffWithComps</hediffClass>
+    <defaultLabelColor>(0.8, 0.6, 1)</defaultLabelColor>
+    <isBad>false</isBad>
+    <comps>
+      <li Class="HediffCompProperties_Disappears">
+        <disappearsAfterTicks>60000~60000</disappearsAfterTicks> <!-- one day -->
+        <showRemainingTime>true</showRemainingTime>
+      </li>
+    </comps>
+    <stages>
+      <li>
+        <statOffsets>
+          <MentalBreakThreshold>-0.05</MentalBreakThreshold>
+        </statOffsets>
+      </li>
+    </stages>
+  </HediffDef>
+</Defs>
