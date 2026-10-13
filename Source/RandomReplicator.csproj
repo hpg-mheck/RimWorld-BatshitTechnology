@@ -59,6 +59,7 @@
     <Compile Include="Building_RandomReplicator.cs" />
     <Compile Include="CompRandomReplicator.cs" />
     <Compile Include="SelfDestruct.cs" />
+    <Compile Include="Showcase.cs" />
     <Compile Include="SmokeTest.cs" />
   </ItemGroup>
   <ItemGroup>

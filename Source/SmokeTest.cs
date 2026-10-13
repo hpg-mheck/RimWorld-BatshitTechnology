@@ -42,9 +42,10 @@ namespace RandomReplicator
         /// </summary>
         public override void GameComponentUpdate()
         {
+            bool showcase = GenCommandLine.CommandLineArgPassed(Showcase.Flag);
             if (done || Current.ProgramState != ProgramState.Playing
                 || Find.CurrentMap == null
-                || !GenCommandLine.CommandLineArgPassed(Flag))
+                || !(showcase || GenCommandLine.CommandLineArgPassed(Flag)))
             {
                 return;
             }
@@ -55,6 +56,12 @@ namespace RandomReplicator
             }
 
             done = true;
+            if (showcase)
+            {
+                Showcase.Build(Find.CurrentMap); // and leave the game running
+                return;
+            }
+
             try
             {
                 Run(Find.CurrentMap);

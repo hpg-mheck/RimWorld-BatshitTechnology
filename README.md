@@ -48,6 +48,13 @@ Put this folder in RimWorld's `Mods` folder (a directory junction works for
 development), then enable **Random Replicator** in the mod list. It needs no
 other mods.
 
+To see everything at once without touching your own saves or mod list, run
+`.\Tools\smoke-test.ps1 -Showcase` (PowerShell, after building). It starts
+RimWorld on a quick-test map with an isolated data folder and builds a
+working demo base: reactor, stocked replicator, Transmogrifier with a bill,
+a colonist in the Brain Squeezer, the Artificer, and a Ballista firing
+explosive volleys from chained magazines.
+
 ## Research
 
 The **Batshit Technology** tab:

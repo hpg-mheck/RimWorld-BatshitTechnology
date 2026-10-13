@@ -7,6 +7,8 @@
 # Build the mod first. Usage (PowerShell):
 #   .\Tools\smoke-test.ps1                # run, wait, quit, report
 #   .\Tools\smoke-test.ps1 -KeepOpen      # leave the game running after
+#   .\Tools\smoke-test.ps1 -Showcase      # build a demo base instead, with
+#                                         # sound, and leave it running
 # Defaults: the repository this script sits in, $env:RIMWORLD_DIR, and a
 # data folder under %TEMP%. The first run links the repository into
 # RimWorld's Mods folder (a directory junction).
@@ -15,7 +17,8 @@ param(
   [string]$RimWorld = $env:RIMWORLD_DIR,
   [string]$DataFolder = (Join-Path $env:TEMP 'RandomReplicator-smoke'),
   [int]$TimeoutSeconds = 600,
-  [switch]$KeepOpen
+  [switch]$KeepOpen,
+  [switch]$Showcase
 )
 $ErrorActionPreference = 'Stop'
 if (-not $RimWorld -or -not (Test-Path (Join-Path $RimWorld 'RimWorldWin64.exe'))) {
@@ -67,30 +70,37 @@ $(& $li $expansions)
   </knownExpansions>
 </ModsConfigData>
 "@ | Set-Content -Encoding UTF8 (Join-Path $config 'ModsConfig.xml')
-@'
+$volume = if ($Showcase) { '0.6' } else { '0' }
+$width, $height = if ($Showcase) { 1600, 900 } else { 1280, 720 }
+@"
 <?xml version="1.0" encoding="utf-8"?>
 <PrefsData>
-  <volumeMaster>0</volumeMaster>
+  <volumeMaster>$volume</volumeMaster>
   <fullscreen>False</fullscreen>
-  <screenWidth>1280</screenWidth>
-  <screenHeight>720</screenHeight>
+  <screenWidth>$width</screenWidth>
+  <screenHeight>$height</screenHeight>
   <runInBackground>True</runInBackground>
   <devMode>True</devMode>
   <pauseOnError>False</pauseOnError>
   <langFolderName>English</langFolderName>
 </PrefsData>
-'@ | Set-Content -Encoding UTF8 (Join-Path $config 'Prefs.xml')
+"@ | Set-Content -Encoding UTF8 (Join-Path $config 'Prefs.xml')
 
 # 3. Launch and wait for the runner's DONE line.
 $log = Join-Path $DataFolder 'Player.log'
 Remove-Item $log -ErrorAction SilentlyContinue
-$gameArgs = @("-savedatafolder=`"$DataFolder`"", '-quicktest', '-rrsmoketest',
+$runnerFlag = if ($Showcase) { '-rrshowcase' } else { '-rrsmoketest' }
+$gameArgs = @("-savedatafolder=`"$DataFolder`"", '-quicktest', $runnerFlag,
   '-logFile', "`"$log`"", '-screen-fullscreen', '0',
-  '-screen-width', '1280', '-screen-height', '720')
+  '-screen-width', "$width", '-screen-height', "$height")
 if ($KeepOpen) { $gameArgs += '-rrsmoketestkeep' }
 $exe = Join-Path $RimWorld 'RimWorldWin64.exe'
 $proc = Start-Process $exe -ArgumentList $gameArgs -WorkingDirectory $RimWorld -PassThru
 "Started RimWorld (pid $($proc.Id)); log: $log"
+if ($Showcase) {
+  'Showcase: the demo base builds once the map loads. Close the game when done.'
+  exit 0
+}
 $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 $done = $false
 while ((Get-Date) -lt $deadline -and -not $proc.HasExited) {

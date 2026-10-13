@@ -38,7 +38,8 @@ connection, Transmogrifier bills, replication, refrigeration and its power
 draw, hauling, ejection, room heating, and the self-destruct countdown,
 abort and detonation (with timing). The script reports those lines plus
 every error in the game log and exits 1 on any failure or mod error. Use
--KeepOpen to look around afterwards.
+-KeepOpen to look around afterwards, or -Showcase to skip the tests and
+build a running demo base instead (Source/Showcase.cs), with sound on.
 
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
