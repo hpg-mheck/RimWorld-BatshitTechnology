@@ -185,3 +185,19 @@ Player.log writes errors as plain lines without level or stack trace, so
 the runner's last check now reads RimWorld's own log queue (Log.Messages)
 and fails on any error, or any warning about the mod or about static
 assets, listing each one.
+2026-10-13 Claude: Matt "Breakpoint" Heck specified the Colony Bomb family
+and the Colony Deployment Shelter. They are documented in
+docs/COLONY-BOMB.md and backlogged, not built. Interpretations recorded
+there:
+- The warning triangle's "triangle-wave" brightness is described as a
+  fade to black and a snap back, which is a falling sawtooth; the
+  described shape wins.
+- "TTMF" extends DTMF with a third frequency group continuing its ratios
+  (2098, 2319, 2562 and 2831 Hz); a symbol is one tone from each group.
+- The bomb's red ring and triangle depart from the motif's shared
+  countdown band, because the operator specified them; the motif gains an
+  exception when the bomb is built. The shelter's failure countdown
+  reuses the band.
+- AnyRim's town generator, being built now for the showcase, takes an
+  area, quality tier, seed and obstacles from the start, so the bomb's
+  town reveal can reuse it.

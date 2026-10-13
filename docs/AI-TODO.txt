@@ -15,6 +15,26 @@
   note what breaks. Stay on 1.6 until 1.7 is released, then move to it
   outright (no multi-version support). Requested by Matt "Breakpoint"
   Heck on 2026-10-13.
+- [ ] Colony Bomb family (Slum- to Epic-Quality; Mini, standard, Mega
+  and Valu-Siz(TM)) and the Colony Deployment Shelter, as specified in
+  docs/COLONY-BOMB.md. Requested by Matt "Breakpoint" Heck on 2026-10-13;
+  open questions are in docs/AI-requests-for-humans.txt. Build in this
+  order:
+  - [ ] Groundwork: the AnyRim town generator with size and quality
+    tiers; a reusable implosion extracted from SingularityField; a shared
+    BatshitImmunity check honoured by every effect; the audio pipeline
+    (Tools/make_sounds.py, SoundDefs, an audio section in the motif).
+  - [ ] Colony Bomb: variant defs, recipe and research; install, arm
+    (10 s) and the 15 s countdown (red ring, sawtooth warning triangle,
+    bass, rising DTMF and TTMF tones); the post-T 0 sequence (echo,
+    lull and wind, implosion, THPPPT, pause, rolling-blast shockwave,
+    mushroom cloud, fires, smoke) and the town reveal.
+  - [ ] Colony Deployment Shelter: 2x2 bunker for six pawns, single-use
+    forcefield (10 to 20 s, immune to Batshit effects), failure warnings
+    and its 3-tile blast.
+  - [ ] Tests (Core, XML, smoke) and a showcase demo.
+- [ ] Later: let pawns shoot from inside the Colony Deployment Shelter
+  (never while its forcefield is up). Vanilla has no garrison mechanic.
 
 ## Test justifications
 

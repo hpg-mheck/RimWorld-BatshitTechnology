@@ -2,8 +2,7 @@
 
 Matt "Breakpoint" Heck:
 
-1. Push the local trunk. The Claude Code sandbox has no GitHub credentials,
-   so its commits are local only (fetch and push fail authentication).
+1. (Resolved 2026-10-13: the sandbox now pushes over SSH.)
 2. Set RIMWORLD_DIR as a user environment variable (for example
    C:\Program Files (x86)\Steam\steamapps\common\RimWorld) so Visual Studio
    builds work; the project no longer guesses the path.
@@ -11,3 +10,18 @@ Matt "Breakpoint" Heck:
    deviations in docs/AI-KNOWN-ISSUES.txt.
 4. Confirm preferred distribution workflow for packaging the mod once
    assemblies are built.
+5. Colony Bomb and Colony Deployment Shelter (docs/COLONY-BOMB.md, "Open
+   Questions"); each has a proposed answer in the document:
+   a. Quality: rolled from the crafter's skill (vanilla's seven levels
+      mapped onto the six tiers), or chosen per recipe?
+   b. Radii of 9, 15 and 35 tiles, and 45% of the map's shorter side for
+      the Valu-Siz(TM); 15 s countdown for every size?
+   c. "Triangle pitch-rising DTMF": a triangle-wave tone climbing beep by
+      beep, or a glide within each beep?
+   d. Forcefield: a deploy button only, or also automatic at a nearby
+      bomb's T 0?
+   e. Does the active forcefield also stop ordinary damage?
+   f. Can an armed Colony Bomb be disarmed during its countdown?
+   g. Is the new town the player's, empty, and stocked by quality?
+   h. Are pulled-in pawns killed outright at ground zero, and are their
+      corpses left or vaporized?
