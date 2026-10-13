@@ -342,6 +342,7 @@ namespace BatshitTechnology
             Job job = JobMaker.MakeJob(JobDefOf.AttackStatic, grenadeTarget);
             job.maxNumStaticAttacks = 1;
             grenadier.jobs.TryTakeOrderedJob(job, JobTag.Misc);
+            Log.Message("[BT-SHOWCASE] THROW"); // a cue for screen-capture tooling
         }
 
         /// <summary>Moves a pawn, interrupting whatever it was doing.</summary>
