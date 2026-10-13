@@ -118,7 +118,9 @@
   Sword, ranged for an Agonizer (short range, low damage, psychic
   distress), to an original 1960s-style orchestral sci-fi sting. The
   duplicate belongs to an enemy faction, and must be capturable and,
-  eventually, recruitable like any other pawn.
+  eventually, recruitable like any other pawn. Allegiance is mirrored:
+  an enemy prisoner gazing into a mirror in its cell produces a free,
+  friendly duplicate, and the two fight at once.
 
 ## Test justifications
 

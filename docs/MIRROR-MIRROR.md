@@ -66,6 +66,26 @@ Each session has a 5% chance of going wrong. When it does:
   nothing about its faction blocks imprisonment, and once recruited it
   is a colonist like any other, inverse traits, goatee and all.
 
+### Mirrors in Prison Cells
+
+Added by Matt "Breakpoint" Heck on 2026-10-13: a mirror in a prison cell.
+
+- **Allegiance is mirrored too.** A prisoner from an enemy faction who
+  gazes into the mirror produces a duplicate on the player's side. It is
+  a free colonist, not a prisoner, standing inside the cell.
+- **They fight at once.** The prisoner and its duplicate start brawling
+  the moment it appears *(proposal: vanilla's social fight, started
+  between the two, so it ends when one is down)*.
+- **The general rule:** the duplicate takes the opposite side to the
+  gazer. A colonist, slave or ally's duplicate joins an enemy faction; an
+  enemy prisoner's duplicate joins the player. Other pawns (neutral
+  visitors, for instance) produce enemy duplicates *(proposal)*.
+- **Prisoners need a way in.** RimWorld gives prisoners no recreation
+  need, so they would never choose the mirror for fun. *(Proposal:)* an
+  XML patch (no Harmony) adds a small think-tree node to prisoners that
+  occasionally sends one to gaze into a mirror in its own cell. The 5%
+  roll is the same.
+
 ### Inverse Morality and Psychology (first draft)
 
 Top-level only, as specified. Each trait of the original maps to its
@@ -137,6 +157,8 @@ check confirms it renders on women.
       weapon;
     - the duplicate can be downed, taken prisoner and recruited, and
       joins the colony;
+    - an enemy prisoner's duplicate spawns free, on the player's side,
+      and the two start fighting;
     - the Agonizer's hit applies its hediff;
     - nothing logs an error.
 
