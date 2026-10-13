@@ -7,6 +7,18 @@ out of the same slightly unhinged workshop. When something new does not fit
 the rules below, extend this document in the same change rather than
 improvising.
 
+## The Premise
+
+Batshit Technology starts from one question, posed by Matt "Breakpoint"
+Heck: *could we have the future sooner if we were willing to accept truly
+unhinged levels of danger?* Every device answers yes, and then shows the
+bill. Each one delivers something genuinely futuristic (limitless power,
+instant towns, matter from rock, comfort at gunpoint) years early, by
+skipping the boring parts: the safety margins, the containment, the
+second prototype. New material should come from the same question: what
+would arrive sooner if nobody minded the risk, and what does the risk
+look like when it lands?
+
 ## The Idea in One Line
 
 Sensible industrial steel, barely containing something magenta and wrong.
