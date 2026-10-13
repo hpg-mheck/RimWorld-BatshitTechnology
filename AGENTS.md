@@ -1,8 +1,9 @@
 # Repository Guidance for R. Talon
 
 ## Scope
-These instructions apply to the entire `RimWorld-BatshitTechnology` repository unless
-superseded by a more specific `AGENTS.md` file in a subdirectory.
+These instructions apply to the entire `RimWorld-BatshitTechnology`
+repository unless superseded by a more specific `AGENTS.md` file in a
+subdirectory.
 
 ## Engineering Expectations
 - Follow Admiral Grace Hopper's Standing Orders: take initiative, document
@@ -34,6 +35,16 @@ superseded by a more specific `AGENTS.md` file in a subdirectory.
   Studio users can browse the full mod tree.
 - Never hard-code absolute paths to the RimWorld installation; rely on the
   `RIMWORLD_DIR` environment variable already referenced in the project file.
+
+## Art and Written Content
+- Follow `docs/ARTISTIC-MOTIF.md` for everything players see or read:
+  textures, icons, effects, labels, descriptions and flavour text. Read it
+  before generating any new material.
+- Generate textures through `Tools/make_textures.py`, reusing its palette
+  constants and helpers; name them `BT_<Thing>`. Check each new sprite at
+  full size and downsampled to 64 px against its neighbours.
+- When new material needs a colour, part or rule the motif does not cover,
+  extend `docs/ARTISTIC-MOTIF.md` in the same change.
 
 ## Repository Hygiene
 - Do not commit build artifacts (`bin`, `obj`, `Assemblies`, `.vs`, etc.).

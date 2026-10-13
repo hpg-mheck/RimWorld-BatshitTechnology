@@ -6,6 +6,11 @@
 - [ ] Review RimWorld mod gameplay behaviours once core mechanics stabilize.
 - [ ] Identify opportunities for deterministic integration tests covering
   replication behaviour.
+- [ ] Try the RimWorld 1.7 beta (new engine, "Waylith"; reported to be
+  faster). Build against it, run the Def validator and the smoke test, and
+  note what breaks. Stay on 1.6 until 1.7 is released, then move to it
+  outright (no multi-version support). Requested by Matt "Breakpoint"
+  Heck on 2026-10-13.
 
 ## Test justifications
 

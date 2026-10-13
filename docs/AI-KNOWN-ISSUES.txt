@@ -2,8 +2,8 @@
 
 - Reactor waste heat (1,000 per second over 12 tiles, capped at 200 C) is
   estimated from vanilla heater numbers and needs tuning in play.
-- The Random Replicator borrows the vanilla Infinite Chemreactor sprite;
-  the Batshittium textures are procedural placeholders.
+- All textures are procedural placeholders (Tools/make_textures.py,
+  following docs/ARTISTIC-MOTIF.md); hand-drawn art may replace them.
 - A replicator storing food at a priority above every stockpile keeps it
   inside, where nobody eats it. The default priority is Low and the
   auto-eject toggle covers colonies without a food stockpile.

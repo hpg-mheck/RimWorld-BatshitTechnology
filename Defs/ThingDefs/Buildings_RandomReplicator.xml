@@ -48,7 +48,7 @@
       </defaultStorageSettings>
     </building>
     <graphicData>
-      <texPath>Things/Building/Special/InfiniteChemreactor</texPath>
+      <texPath>Things/Building/Production/BT_RandomReplicator</texPath>
       <graphicClass>Graphic_Single</graphicClass>
       <drawSize>(2, 2)</drawSize>
     </graphicData>

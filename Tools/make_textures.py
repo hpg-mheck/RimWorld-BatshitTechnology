@@ -9,7 +9,7 @@ Requires Pillow (pip install pillow). Run from anywhere:  python Tools/make_text
 import math
 import os
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 TEXTURES = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'Textures'))
 SS = 4  # draw at 4x and downsample, for anti-aliased edges
@@ -445,6 +445,154 @@ def artificer():
     save(img, size, 'Things/Building/Production/BT_BatshittiumArtificer.png')
 
 
+FROST_LIGHT = (214, 242, 255, 255)
+FROST = (128, 196, 232, 255)
+FROST_DEEP = (70, 130, 170, 255)
+DANGER_RED = (214, 52, 52, 255)
+
+
+def hazard_patch(img, box, radius):
+    """Yellow-and-black hazard stripes clipped to a rounded rectangle."""
+    stripes = Image.new('RGBA', img.size, HAZARD)
+    sd = draw(stripes)
+    for x in range(-256, 512, 10):
+        sd.line(s(x, 0, x - 256, 256), fill=(34, 32, 30, 255), width=4 * SS)
+    mask = Image.new('L', img.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle(s(*box), radius=radius * SS, fill=255)
+    img.paste(stripes, (0, 0), mask)
+
+
+def question_mark(d, x, y, scale, color):
+    """A '?' glyph whose top-left is at (x, y), about 14 * scale tall."""
+    hook = [(0, 3), (1, 0.8), (3.5, 0), (6, 0.8), (7, 3), (5.6, 5.2), (3.5, 6.4), (3.5, 9.4)]
+    d.line(pts([(x + px * scale, y + py * scale) for px, py in hook]), fill=color,
+           width=int(2 * scale) * SS, joint='curve')
+    circle(d, x + 3.5 * scale, y + 12.6 * scale, 1.2 * scale, fill=color)
+
+
+def snowflake(d, cx, cy, r):
+    """Six-armed refrigeration emblem, outlined to read on steel."""
+    for color, width in ((OUTLINE, 5), (FROST_LIGHT, 2)):
+        for i in range(3):
+            a = math.radians(i * 60 + 90)
+            dx, dy = r * math.cos(a), r * math.sin(a)
+            d.line(s(cx - dx, cy - dy, cx + dx, cy + dy), fill=color, width=width * SS)
+
+
+def materializing_meal(img, cx, cy, r):
+    """A meal on a plate, solid at the bottom and dissolving into magenta
+    scanlines toward the top: food being replicated."""
+    layer = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    d = draw(layer)
+    circle(d, cx, cy, r, fill=(232, 228, 220, 255), outline=OUTLINE, width=3)  # plate
+    circle(d, cx, cy, r * 0.72, outline=(196, 190, 182, 255), width=2)          # rim
+    for fx, fy, fr, color in ((-7, 4, 9, (176, 108, 58, 255)),   # roast
+                              (8, 7, 7, (232, 150, 60, 255)),    # squash
+                              (5, -8, 7, (110, 172, 72, 255)),   # greens
+                              (-9, -7, 5, (226, 210, 150, 255))):  # bread
+        circle(d, cx + fx, cy + fy, fr, fill=color, outline=OUTLINE, width=2)
+    mask = Image.new('L', img.size, 0)
+    md = ImageDraw.Draw(mask)
+    top, bottom = cy - r - 2, cy + r + 2
+    for y in range(int(top), int(bottom) + 1):
+        t = (y - top) / (bottom - top)           # 0 at the top, 1 at the bottom
+        solid = min(1.0, max(0.0, (t - 0.25) / 0.45))
+        band = 1.0 if (y // 3) % 2 else 0.35       # scanline banding
+        alpha = int(255 * (solid + (1 - solid) * 0.55 * band))
+        md.rectangle(s(cx - r - 2, y, cx + r + 2, y + 1), fill=alpha)
+    layer.putalpha(ImageChops.multiply(layer.getchannel('A'), mask))
+    img.alpha_composite(layer)
+    d = draw(img)
+    for y in range(int(top) + 2, int(cy), 6):     # the replication beam's scanlines
+        half = math.sqrt(max(0.0, (r + 6) ** 2 - (y - cy) ** 2))
+        d.line(s(cx - half, y, cx + half, y), fill=(*BS_LIGHT[:3], 150), width=1 * SS)
+
+
+def random_replicator():
+    """2x2 food fabricator: a replication chamber with a meal half
+    materialized, a frosted refrigerated compartment, a dispensing hatch and
+    control panel on the front, and a guarded self-destruct button."""
+    size = 256
+    img = new_canvas(size)
+    gradient_fill(img, lambda m: m.rounded_rectangle(s(12, 20, 244, 240), radius=26 * SS, fill=255),
+                  STEEL_LIGHT, STEEL_DARK)
+    d = draw(img)
+    d.rounded_rectangle(s(12, 196, 244, 240), radius=26 * SS, fill=STEEL_DARK)  # front face
+    d.rounded_rectangle(s(12, 20, 244, 240), radius=26 * SS, outline=OUTLINE, width=4 * SS)
+    d.rounded_rectangle(s(26, 32, 230, 194), radius=18 * SS, fill=STEEL, outline=STEEL_DEEP,
+                        width=2 * SS)
+    for x, y in ((34, 40), (222, 40), (34, 186), (222, 186)):
+        circle(d, x, y, 3.5, fill=STEEL_LIGHT, outline=OUTLINE, width=1)
+
+    # feed pipe from the chamber to the compartment, drawn first so the
+    # chamber and compartment cover its ends
+    d.line(s(150, 112, 172, 112), fill=OUTLINE, width=15 * SS)
+    d.line(s(150, 112, 172, 112), fill=BS_DARK, width=9 * SS)
+
+    # replication chamber
+    cx, cy = 96, 112
+    circle(d, cx, cy, 62, fill=STEEL_DEEP, outline=OUTLINE, width=4)
+    for i in range(10):
+        a = math.radians(i * 36 + 18)
+        circle(d, cx + 57 * math.cos(a), cy + 57 * math.sin(a), 3, fill=STEEL_LIGHT,
+               outline=OUTLINE, width=1)
+    glow(img, lambda g, c: g.ellipse(s(cx - 50, cy - 50, cx + 50, cy + 50), fill=c), BS_GLOW,
+         blur=7, alpha=200)
+    d = draw(img)
+    orb(d, cx, cy, 49, BS_DEEP, BS_MID)
+    materializing_meal(img, cx, cy + 6, 27)
+    d = draw(img)
+    sparkle(d, cx - 30, cy - 26, 6)
+    sparkle(d, cx + 27, cy - 31, 4)
+    circle(d, cx, cy, 49, outline=OUTLINE, width=3)
+
+    # refrigerated compartment: frosted window, shelves of stored food
+    d.rounded_rectangle(s(164, 40, 218, 150), radius=8 * SS, fill=STEEL_DEEP, outline=OUTLINE,
+                        width=3 * SS)
+    gradient_fill(img, lambda m: m.rounded_rectangle(s(171, 47, 211, 143), radius=5 * SS, fill=255),
+                  FROST_LIGHT, FROST)
+    d = draw(img)
+    for y in (78, 110):
+        d.line(s(171, y, 211, y), fill=FROST_DEEP, width=3 * SS)
+    circle(d, 182, 68, 6, fill=(200, 60, 52, 255), outline=OUTLINE, width=2)        # apple
+    circle(d, 198, 69, 5, fill=(236, 196, 70, 255), outline=OUTLINE, width=2)       # corn
+    d.rounded_rectangle(s(177, 88, 189, 106), radius=2 * SS, fill=STEEL_LIGHT,
+                        outline=OUTLINE, width=2 * SS)                                # tin
+    circle(d, 200, 99, 6, fill=(232, 228, 220, 255), outline=OUTLINE, width=2)      # meal
+    circle(d, 200, 99, 3, fill=(176, 108, 58, 255))
+    d.ellipse(s(176, 118, 206, 136), fill=(150, 104, 70, 255), outline=OUTLINE, width=2 * SS)  # meat
+    for fx, fy in ((173, 49), (209, 49), (173, 141), (209, 141)):    # frost in the corners
+        d.polygon(pts([(fx, fy), (fx + (6 if fx < 190 else -6), fy),
+                       (fx, fy + (6 if fy < 100 else -6))]), fill=(255, 255, 255, 190))
+    d.rounded_rectangle(s(171, 47, 211, 143), radius=5 * SS, outline=OUTLINE, width=2 * SS)
+    d.line(s(175, 52, 175, 72), fill=(255, 255, 255, 160), width=2 * SS)  # glass glint
+    snowflake(d, 191, 170, 9)
+
+    # front face: dispensing hatch, control panel, self-destruct
+    d.rounded_rectangle(s(30, 204, 84, 232), radius=5 * SS, fill=(40, 38, 44, 255),
+                        outline=OUTLINE, width=2 * SS)
+    glow(img, lambda g, c: g.rectangle(s(36, 207, 78, 213), fill=c), BS_GLOW, blur=3, alpha=200)
+    d = draw(img)
+    d.line(s(37, 210, 77, 210), fill=BS_LIGHT, width=2 * SS)
+    d.rounded_rectangle(s(96, 204, 168, 234), radius=4 * SS, fill=(36, 40, 46, 255),
+                        outline=OUTLINE, width=2 * SS)
+    glow(img, lambda g, c: g.rectangle(s(101, 209, 135, 229), fill=c), (80, 230, 160), blur=3,
+         alpha=180)
+    d = draw(img)
+    d.rectangle(s(102, 210, 134, 228), fill=(70, 205, 145, 255), outline=OUTLINE, width=1 * SS)
+    question_mark(d, 114, 211, 1.15, (20, 90, 60, 255))
+    for x, y, c in ((146, 214, DANGER_RED), (158, 214, (235, 200, 60, 255)),
+                    (146, 225, FROST), (158, 225, BS_MID)):
+        circle(d, x, y, 3.5, fill=c, outline=OUTLINE, width=1)
+    hazard_patch(img, (184, 202, 226, 236), 6)
+    d = draw(img)
+    d.rounded_rectangle(s(184, 202, 226, 236), radius=6 * SS, outline=OUTLINE, width=2 * SS)
+    circle(d, 205, 219, 10, fill=DANGER_RED, outline=OUTLINE, width=2)
+    d.ellipse(s(199, 212, 206, 217), fill=(255, 190, 190, 200))  # button glint
+    circle(d, 205, 219, 14, outline=(220, 235, 245, 150), width=2)  # clear safety cover
+    save(img, size, 'Things/Building/Production/BT_RandomReplicator.png')
+
+
 if __name__ == '__main__':
     batshittium_item()
     transmogrifier()
@@ -457,3 +605,4 @@ if __name__ == '__main__':
     ballista_top()
     ballista_magazine()
     artificer()
+    random_replicator()

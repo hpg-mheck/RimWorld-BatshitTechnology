@@ -92,3 +92,6 @@ Thumbs.db
 
 # RimWorld specific build output
 Assemblies/
+
+# Python bytecode (Tools/make_textures.py imports)
+__pycache__/

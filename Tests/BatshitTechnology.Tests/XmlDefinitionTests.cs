@@ -348,6 +348,24 @@ public sealed class XmlDefinitionTests
     }
 
     /// <summary>
+    /// Every mod thing draws the mod's own art (docs/ARTISTIC-MOTIF.md), not
+    /// a borrowed vanilla sprite, so the suite keeps one look. The Random
+    /// Replicator borrowed the Infinite Chemreactor until v0.8.
+    /// </summary>
+    [Fact(DisplayName = "Every mod thing draws a mod texture")]
+    public void ThingDefs_should_draw_mod_textures()
+    {
+        var borrowed = AllThingDefs()
+            .Select(d => (Def: DefName(d),
+                Path: d.Element("graphicData")?.Element("texPath")?.Value.Trim()))
+            .Where(t => t.Path != null
+                && !Path.GetFileName(t.Path).StartsWith("BT_", StringComparison.Ordinal))
+            .Select(t => $"{t.Def}: {t.Path}");
+
+        Assert.Empty(borrowed);
+    }
+
+    /// <summary>
     /// Verifies every texture path that names a mod asset (a BT_ file) has
     /// a PNG in Textures/. Vanilla paths cannot be checked without the game.
     /// </summary>

@@ -85,3 +85,15 @@ release, def names and the package ID are frozen. The Random Replicator
 keeps its name as a device (Building_RandomReplicator,
 CompRandomReplicator, Buildings_RandomReplicator.xml). Smoke runner flags
 are -btsmoketest, -btsmoketestkeep and -btshowcase. Version 0.8.0.
+2026-10-13 Claude: Wrote docs/ARTISTIC-MOTIF.md ("sensible industrial
+steel, barely containing something magenta and wrong"), codifying the look
+the procedural art already had: palette constants, outline and shading
+rules, one batshittium focal glow per device, functional-only accent
+colours, the shared parts (chassis, front band, porthole, shards, bat,
+hazard), composition and the deadpan voice for text. AGENTS.md now
+requires following it. The Random Replicator got its own sprite in that
+style (replication chamber with a half-materialized meal, frosted
+refrigerated compartment, dispensing hatch, "?" screen, guarded
+self-destruct button), replacing the borrowed vanilla Infinite
+Chemreactor; a new XML test keeps every mod thing on mod art. New palette
+entries: FROST_* for refrigeration and DANGER_RED.
