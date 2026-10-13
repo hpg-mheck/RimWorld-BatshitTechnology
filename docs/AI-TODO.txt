@@ -73,22 +73,20 @@
     Batshit Technology tab without overlapping existing projects (the XML
     tests check this); proposed prerequisite for Substandard Advanced
     Materials: Batshittium Transmogrifier.
-- [ ] The Batshit Blimp: referenced by Matt "Breakpoint" Heck on
-  2026-10-13 as the vehicle the Whoops Drive upgrades, but not yet
-  specified or built. Needs a design (see docs/AI-requests-for-humans.txt).
-- [ ] The Whoops Drive: an optional upgrade to the Batshit Blimp,
-  unlocked by Awkward Secrets of the Universe, that lets the blimp warp
-  across the map, somewhat frequently to its intended destination.
-  Requested by Matt "Breakpoint" Heck on 2026-10-13. Proposals, pending
-  the blimp's design:
-  - A warp jumps straight to the destination instead of flying there,
-    but lands somewhere else a good part of the time (somewhere between
-    "somewhat frequently" and not: say 60% on target), scattered around
-    the target, further the longer the jump.
-  - "The map" is read as the world map (travel between tiles); a
-    within-map version would follow the same rule.
-  - A failed warp is a separate gag worth designing: arriving upside down,
-    inside a mountain, or over the wrong faction's base.
+- [ ] The Batshit Blimp, specified by Matt "Breakpoint" Heck on
+  2026-10-13 in docs/BATSHIT-BLIMP.md: a flying vehicle that works like a
+  pack animal or truck; 50 items and two passengers who can shoot from
+  it; weatherproof but vulnerable to small arms; forced landing below 75%
+  health, violent explosion at 0; repairable; four altitude levels; a
+  bobbing idle; a sun-driven shadow; displaced by strong wind, with a
+  "Forced landing!" near the map edge; landing redirected away from
+  impassable terrain, crashing if there is nowhere within 15 tiles.
+- [ ] The Whoops Drive (docs/BATSHIT-BLIMP.md): an optional blimp upgrade,
+  unlocked by Awkward Secrets of the Universe, that warps across the map,
+  somewhat frequently to its intended destination. A miss into
+  impassable terrain first blasts a radius-3 hole (no harm to the blimp
+  or occupants), leaves fitting rubble, and sets pawns and animals in
+  range on fire, moderately injured.
 
 ## Test justifications
 
