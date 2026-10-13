@@ -1,0 +1,75 @@
+# Architectural Decisions
+
+- Target framework remains .NET Framework 4.7.2 to match RimWorld's modding
+  sandbox.
+- Solution intentionally links metadata XML and documentation assets for
+  visibility in Visual Studio.
+- Added an xUnit-based regression project that validates XML defs without
+  needing RimWorld binaries so Codex can run automated checks in CI-friendly
+  environments.
+2024-07-29 R. Talon: Rebuilt the Random Replicator comp and self-destruct
+logic to replace truncated placeholders. Added an internal ThingOwner-backed
+queue, power loss letters, weighted food selection, and self-destruct
+ countdown telemetry while preserving the mod's intent. Introduced a
+ netstandard core library so helper logic remains unit-testable from
+ RandomReplicator.Tests.
+2024-08-18 R. Talon: Raised the repository standard to require XML
+documentation for every function, codified in AGENTS.md, and updated the
+Random Replicator comp plus unit tests to comply.
+2025-10-12 R. Talon: Surveyed Harmony and HugsLib guidance on mod
+  compatibility. Confirmed the project already targets the recommended
+  .NET 4.7.2 toolchain, avoids bundling third-party libraries, and
+  therefore needs no code changes after this audit.
+2026-10-12 Claude (Claude Code): Merged the Codex branch (origin/trunk,
+PRs 1-5) with a parallel restoration built from the last complete source
+(the v0.2 zip; the v0.4 sources were truncated placeholders). Kept the
+Claude implementation of Source/, Defs/, About and README because the Codex
+rebuild had never compiled (the Core project failed on C# 7.3, a missing
+IsExternalInit shim and System.Index under netstandard2.0, before reaching
+the RimWorld code) and its Defs and tests carried v0.2's invalid values
+(workType Flick, DesignationDef icon/saveKey/removeOnDeath, JobDef
+checkOverrideOnDamage false). Kept the Codex infrastructure: AGENTS.md,
+docs/, the Core library and the test project, project-linked assets.
+2026-10-12 Claude: Fixed Core so it builds (LangVersion latest,
+IsExternalInit shim, no System.Index) and made the replicator use
+WeightedSelector for food. Rand.Value can return exactly 1.0, which
+WeightedSelector rejects, so the sample source clamps below 1. Added
+Microsoft.NET.Test.Sdk so dotnet test discovers tests; baseline is 28
+passing. Rewrote XmlDefinitionTests to pin the corrected Defs.
+2026-10-12 Claude: Removed the hard-coded RimWorld path from the project
+(AGENTS.md); builds require RIMWORLD_DIR.
+2026-10-12 Claude: Line-length exception: in-game text in Defs and About
+(description, generalDescription) stays on one line, because RimWorld shows
+embedded line breaks and indentation literally. Solution-file entries are
+also unwrappable.
+2026-10-12 Claude: Design choices made with the user this session, in
+order: target RimWorld 1.6 only; refrigerated storage exposed to haulers via
+the vanilla haul-source pattern (bookcase); refrigeration toggle at +50 W;
+auto-eject toggle; Batshit Technology research tab with Batshittium Lore
+gating every device and Batshittium Arcana gating nothing yet, both at tech
+level Neolithic so every colony pays the listed cost; Batshittium,
+Transmogrifier (10 chunks to 1), Reactor (250 kW, random 0.1-36 h per unit,
+radius waste heat capped at 200 C, below the 240 C auto-ignition point).
+2026-10-12 Claude: Brain Squeezer (v0.6): a sittable joy building using a
+JobDriver_WatchBuilding subclass; 28 monologue lines live in XML on the
+thought (MonologueExtension); after-effects are a +6 memory labelled with
+the last line and a day of MentalBreakThreshold -0.05.
+2026-10-12 Claude: Batshittium Ballista (v0.7), spec agreed with Matt
+"Breakpoint" Heck: power is linear in units = count x range / 10, from
+50 W standby / 1,000 W per volley at the baseline to 62.5 kW / 990 kW at
+256 bolts and 325 tiles (a quarter of one reactor at standby; four reactors
+less 10 kW of magazine feeding at full fire). Implementation choices:
+- Subclass Building_TurretGun; give each Ballista its own clone of the
+  gun's VerbProperties so range is per building (vanilla shares one per
+  Def). Range presets skip 80-89 because vanilla draws cell rings below 90
+  tiles and the engine caps them at ~79.8; at 90+ a circle outline is drawn.
+- The firing draw is a one-second PowerOutput spike per volley. Before a
+  volley the grid must cover it from surplus or stored battery energy, or
+  the Ballista holds fire with a message.
+- Bolt stores (16 internal, 2,560 per magazine) are bookcase-style haul
+  destinations. ThingOwner accepts any amount, so CappedThingOwner caps
+  GetCountCanAccept and TryAdd; haul jobs size themselves from it.
+- Magazines connect by shared edges, chained (Core.MagazineNetwork); a
+  volley drains magazines nearest-first, then the internal reserve.
+- The Artificer is a comp on a plain building fed by CompRefuelable;
+  outputs are gated per bolt research.

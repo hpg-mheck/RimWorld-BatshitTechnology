@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Batshittium: an element made from rock chunks in the Batshittium Transmogrifier (10:1). Reactor fuel. -->
+  <ThingDef ParentName="ResourceBase">
+    <defName>RR_Batshittium</defName>
+    <label>batshittium</label>
+    <description>An element that should not exist, coaxed out of ordinary rock by a transmogrifier. It hums faintly and glows a color that is hard to name. One unit will power a batshittium reactor for an unpredictable stretch of time.</description>
+    <graphicData>
+      <texPath>Things/Item/Resource/RR_Batshittium</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+    </graphicData>
+    <resourceReadoutPriority>Middle</resourceReadoutPriority>
+    <useHitPoints>false</useHitPoints>
+    <healthAffectsPrice>false</healthAffectsPrice>
+    <soundInteract>Metal_Drop</soundInteract>
+    <soundDrop>Metal_Drop</soundDrop>
+    <statBases>
+      <!-- Below the ~180 silver of stone blocks the same 10 chunks would
+           make, so transmogrifying isn't a money printer -->
+      <MarketValue>40</MarketValue>
+      <Mass>1</Mass>
+    </statBases>
+    <thingCategories>
+      <li>ResourcesRaw</li>
+    </thingCategories>
+    <stackLimit>75</stackLimit>
+    <burnableByRecipe>false</burnableByRecipe>
+    <smeltable>false</smeltable>
+  </ThingDef>
+</Defs>

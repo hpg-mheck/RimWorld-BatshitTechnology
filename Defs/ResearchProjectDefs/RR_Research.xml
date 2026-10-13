@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Research tab for this mod's devices -->
+  <ResearchTabDef>
+    <defName>RR_BatshitTechnology</defName>
+    <label>Batshit Technology</label>
+    <generalTitle>Batshit technology</generalTitle>
+    <generalDescription>Devices nobody can fully explain and nobody should probably build. Research them at a research bench like anything else.</generalDescription>
+  </ResearchTabDef>
+
+  <!-- techLevel Neolithic on both: the lowest level any player faction has, so every colony pays the
+       listed cost (projects above the colony's tech level cost +50% per level) -->
+
+  <!-- Foundational project. For now it unlocks every Batshit device. -->
+  <ResearchProjectDef>
+    <defName>RR_BatshittiumLore</defName>
+    <label>Batshittium Lore</label>
+    <description>Learn the basics of batshittium, an element that should not exist. A transmogrifier can coax it out of ordinary rock chunks, ten to one.\n\nUnlocks the Batshittium Transmogrifier, the Batshittium Reactor (250,000 W while a unit burns, for anywhere from minutes to a day and a half, with enough waste heat to cook nearby rooms) and the Random Replicator, which conjures a random meal or raw food every six hours into a refrigerated compartment.</description>
+    <baseCost>500</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <tab>RR_BatshitTechnology</tab>
+    <researchViewX>0.00</researchViewX>
+    <researchViewY>0.00</researchViewY>
+  </ResearchProjectDef>
+
+  <!-- Advanced project; nothing requires it yet -->
+  <ResearchProjectDef>
+    <defName>RR_BatshittiumArcana</defName>
+    <label>Batshittium Arcana</label>
+    <description>Delve past the lore into the arcana of batshittium: the deeper, less advisable applications of an element that should not exist.</description>
+    <baseCost>750</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>RR_BatshittiumLore</li>
+    </prerequisites>
+    <tab>RR_BatshitTechnology</tab>
+    <researchViewX>1.00</researchViewX>
+    <researchViewY>0.00</researchViewY>
+  </ResearchProjectDef>
+
+  <!-- ===== Ballista system, all after Batshittium Arcana ===== -->
+
+  <ResearchProjectDef>
+    <defName>RR_Research_PainfulBolts</defName>
+    <label>Painful Bolts</label>
+    <description>Teach the Batshittium Artificer to make Painful bolts: kinetic Ballista ammunition, ten from each unit of batshittium.</description>
+    <baseCost>1000</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>RR_BatshittiumArcana</li>
+    </prerequisites>
+    <tab>RR_BatshitTechnology</tab>
+    <researchViewX>2.00</researchViewX>
+    <researchViewY>0.00</researchViewY>
+  </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>RR_Research_ReallyPainfulBolts</defName>
+    <label>Really Painful Bolts</label>
+    <description>Teach the Batshittium Artificer to make Really Painful bolts: explosive Ballista ammunition, five from each unit of batshittium.</description>
+    <baseCost>1000</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>RR_Research_PainfulBolts</li>
+    </prerequisites>
+    <tab>RR_BatshitTechnology</tab>
+    <researchViewX>3.00</researchViewX>
+    <researchViewY>0.00</researchViewY>
+  </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>RR_Research_Artificer</defName>
+    <label>Batshittium Artificer</label>
+    <description>Build the Batshittium Artificer, an automated workshop that turns batshittium into Ballista bolts with no one at the controls.</description>
+    <baseCost>1000</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>RR_BatshittiumArcana</li>
+    </prerequisites>
+    <tab>RR_BatshitTechnology</tab>
+    <researchViewX>2.00</researchViewX>
+    <researchViewY>1.00</researchViewY>
+  </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>RR_Research_Magazine</defName>
+    <label>Ballista Magazine</label>
+    <description>Build Ballista Magazines: 2,560 bolts each, feeding any Ballista they touch, directly or through a chain of other magazines.</description>
+    <baseCost>1000</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>RR_BatshittiumArcana</li>
+    </prerequisites>
+    <tab>RR_BatshitTechnology</tab>
+    <researchViewX>2.00</researchViewX>
+    <researchViewY>2.00</researchViewY>
+  </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>RR_Research_Ballista</defName>
+    <label>Batshittium Ballista</label>
+    <description>Build the Batshittium Ballista: volleys of up to 256 bolts, up to 325 tiles away, once every five seconds. Insanely inaccurate, terrifyingly destructive, and hungry for power.</description>
+    <baseCost>1000</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>RR_BatshittiumArcana</li>
+      <li>RR_Research_PainfulBolts</li>
+    </prerequisites>
+    <tab>RR_BatshitTechnology</tab>
+    <researchViewX>3.00</researchViewX>
+    <researchViewY>1.00</researchViewY>
+  </ResearchProjectDef>
+</Defs>

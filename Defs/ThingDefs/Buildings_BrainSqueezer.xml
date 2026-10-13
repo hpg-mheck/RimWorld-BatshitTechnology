@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Brain Squeezer: a powered chair colonists sit in for recreation. Its
+       joy giver, job, memory and hediff are in Misc/RR_BrainSqueezer.xml. -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>RR_BrainSqueezer</defName>
+    <label>brain squeezer</label>
+    <description>A padded chair under a humming, articulated headpiece that gently squeezes the brain of whoever sits in it. A session gives moderate recreation, a day of calm (a lower mental break threshold, so fewer breakdowns, riots and arguments) and a lingering sense that something was rearranged.</description>
+    <thingClass>Building</thingClass>
+    <graphicData>
+      <texPath>Things/Building/Joy/RR_BrainSqueezer</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(1.3,1.3)</drawSize>
+    </graphicData>
+    <size>(1,1)</size>
+    <rotatable>true</rotatable>
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>PassThroughOnly</passability>
+    <pathCost>30</pathCost>
+    <fillPercent>0.4</fillPercent>
+    <designationCategory>Joy</designationCategory>
+    <minifiedDef>MinifiedThing</minifiedDef>
+    <thingCategories>
+      <li>BuildingsJoy</li>
+    </thingCategories>
+    <costList>
+      <Steel>80</Steel>
+      <ComponentIndustrial>2</ComponentIndustrial>
+      <RR_Batshittium>1</RR_Batshittium>
+    </costList>
+    <statBases>
+      <MaxHitPoints>120</MaxHitPoints>
+      <WorkToBuild>2500</WorkToBuild>
+      <Mass>20</Mass>
+      <Flammability>0.6</Flammability>
+      <Beauty>-1</Beauty>
+      <Comfort>0.6</Comfort>
+      <JoyGainFactor>1</JoyGainFactor> <!-- moderate, like a tube television -->
+    </statBases>
+    <building>
+      <isSittable>true</isSittable>
+      <joyKind>RR_BrainSqueezing</joyKind>
+    </building>
+    <comps>
+      <li Class="CompProperties_Power">
+        <compClass>CompPowerTrader</compClass>
+        <basePowerConsumption>150</basePowerConsumption>
+      </li>
+      <li Class="CompProperties_Flickable" />
+    </comps>
+    <researchPrerequisites>
+      <li>RR_BatshittiumLore</li>
+    </researchPrerequisites>
+  </ThingDef>
+</Defs>

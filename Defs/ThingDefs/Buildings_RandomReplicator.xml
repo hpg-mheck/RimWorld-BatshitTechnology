@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Random Replicator: player-buildable device that fabricates a random
+       food item every 6h into refrigerated storage (10 items) -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>RandomReplicator</defName>
+    <label>random replicator</label>
+    <description>A compact fabricator that conjures a random food item every six hours into a refrigerated compartment. Haulers carry the food out to better storage; production pauses when the compartment holds ten items.\n\nRefrigeration keeps stored food fresh for an extra 50 W, and can be switched off. Its self-destruct can be armed by a colonist. After a short countdown it detonates with a massive, fiery blast.</description>
+    <thingClass>RandomReplicator.Building_RandomReplicator</thingClass>
+    <category>Building</category>
+    <designationCategory>Production</designationCategory>
+    <minifiedDef>MinifiedThing</minifiedDef>
+    <thingCategories> <!-- minifiable buildings need one -->
+      <li>BuildingsProduction</li>
+    </thingCategories>
+    <size>(2, 2)</size>
+    <passability>Impassable</passability>
+    <!-- Impassable player buildings must block shots and sight fully -->
+    <fillPercent>1</fillPercent>
+    <terrainAffordanceNeeded>Medium</terrainAffordanceNeeded>
+    <!-- Ejected food drops here, and pawns stand here to arm the self-destruct -->
+    <hasInteractionCell>true</hasInteractionCell>
+    <interactionCellOffset>(0,0,-1)</interactionCellOffset>
+    <placeWorkers>
+      <li>PlaceWorker_PreventInteractionSpotOverlap</li>
+    </placeWorkers>
+    <inspectorTabs>
+      <li>ITab_Storage</li>
+    </inspectorTabs>
+    <building>
+      <!-- The storage tab only offers food -->
+      <fixedStorageSettings>
+        <filter>
+          <categories>
+            <li>Foods</li>
+          </categories>
+        </filter>
+      </fixedStorageSettings>
+      <!-- Low priority: haulers move stored food to any normal stockpile that takes it.
+           Raise it to keep food here as a refrigerated buffer. -->
+      <defaultStorageSettings>
+        <priority>Low</priority>
+        <filter>
+          <categories>
+            <li>Foods</li>
+          </categories>
+        </filter>
+      </defaultStorageSettings>
+    </building>
+    <graphicData>
+      <texPath>Things/Building/Special/InfiniteChemreactor</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(2, 2)</drawSize>
+    </graphicData>
+    <costList>
+      <Steel>120</Steel>
+      <ComponentIndustrial>4</ComponentIndustrial>
+    </costList>
+    <statBases>
+      <WorkToBuild>2200</WorkToBuild>
+      <MaxHitPoints>180</MaxHitPoints>
+      <Flammability>0.7</Flammability>
+      <Beauty>-2</Beauty>
+      <Mass>25</Mass>
+    </statBases>
+    <comps>
+      <li Class="CompProperties_Power">
+        <compClass>CompPowerTrader</compClass>
+        <basePowerConsumption>50</basePowerConsumption> <!-- fabricator; refrigeration adds its own draw below -->
+      </li>
+      <li Class="CompProperties_Flickable" />
+      <li Class="RandomReplicator.CompProperties_RandomReplicator">
+        <ticksPerSpawn>15000</ticksPerSpawn> <!-- 6 hours (60,000 ticks/day) -->
+        <storageCapacity>10</storageCapacity> <!-- items; production pauses when full -->
+        <allowedThingCategoryDefs>
+          <li>FoodMeals</li>
+          <li>FoodRaw</li>
+        </allowedThingCategoryDefs>
+        <mealWeight>5</mealWeight> <!-- meals are 5x likelier than any one raw food -->
+        <requirePower>true</requirePower> <!-- unpowered: no production, and no refrigeration -->
+        <writeTimeLeftToSpawn>true</writeTimeLeftToSpawn>
+        <!-- W while refrigeration is on; a vanilla cooler is 200 W -->
+        <refrigerationPowerConsumption>50</refrigerationPowerConsumption>
+        <sendPowerCutLetters>true</sendPowerCutLetters> <!-- only when refrigerated food is at risk -->
+        <selfDestructArmingTicks>120</selfDestructArmingTicks> <!-- 2 seconds of pawn work -->
+        <selfDestructSeconds>10</selfDestructSeconds>
+        <selfDestructRadius>75</selfDestructRadius> <!-- engine max is ~79.8 -->
+        <selfDestructDamage>-1</selfDestructDamage> <!-- -1 = Bomb's default -->
+        <selfDestructFireChance>0.8</selfDestructFireChance>
+        <selfDestructFireSize>0.3</selfDestructFireSize>
+        <selfDestructFleeRadius>25</selfDestructFleeRadius>
+      </li>
+    </comps>
+    <tickerType>Normal</tickerType>
+    <researchPrerequisites>
+      <li>RR_BatshittiumLore</li>
+    </researchPrerequisites>
+  </ThingDef>
+</Defs>

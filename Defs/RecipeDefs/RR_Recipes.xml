@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Batshittium Transmogrifier: 10 rock chunks of any kind -> 1 batshittium -->
+  <RecipeDef>
+    <defName>RR_TransmogrifyRockChunks</defName>
+    <label>transmogrify rock chunks</label>
+    <description>Transmogrify ten rock chunks of any kind into one unit of batshittium.</description>
+    <jobString>Transmogrifying rock chunks.</jobString>
+    <workAmount>2500</workAmount>
+    <workSpeedStat>GeneralLaborSpeed</workSpeedStat>
+    <effectWorking>Smelt</effectWorking>
+    <soundWorking>Recipe_Smelt</soundWorking>
+    <workSkill>Crafting</workSkill>
+    <workSkillLearnFactor>0</workSkillLearnFactor>
+    <ingredients>
+      <li>
+        <filter>
+          <categories>
+            <li>StoneChunks</li>
+          </categories>
+        </filter>
+        <count>10</count> <!-- chunks are one volume unit each, so this means ten chunks -->
+      </li>
+    </ingredients>
+    <fixedIngredientFilter>
+      <categories>
+        <li>StoneChunks</li>
+      </categories>
+    </fixedIngredientFilter>
+    <products>
+      <RR_Batshittium>1</RR_Batshittium>
+    </products>
+  </RecipeDef>
+</Defs>

@@ -1,0 +1,54 @@
+# Random Replicator Testing Strategy
+
+How to exercise the mod, from fastest to most thorough. All three layers
+run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
+
+## 1. Unit and XML regression tests (seconds, no game needed)
+
+    dotnet test Tests/RandomReplicator.Tests/RandomReplicator.Tests.csproj
+
+- Core library logic: WeightedSelector, ReactorHeat, and whatever else
+  moves into RandomReplicator.Core.
+- XML regression tests over Defs/, About and Textures/: the corrected v0.2
+  values (so those bugs cannot return), research, recipes, the reactor,
+  every RR_ cross-reference, every mod texture path, and two RimWorld
+  config rules found by the smoke test (impassable buildable buildings need
+  fillPercent 1; minifiable buildings need a thing category).
+
+## 2. Def validation against the game assembly (under a minute)
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools\validate-defs.ps1
+
+A static stand-in for RimWorld's XML loader. Every element must map to a
+real field of the 1.6 game types (nested objects and [LoadAlias] included),
+enum values must parse, classes must resolve, Def references must exist in
+vanilla or the mod, and texture paths must resolve. Exits 1 on problems.
+It cannot run RimWorld's own ConfigErrors logic; layer 3 covers that.
+
+## 3. In-game smoke test (about three minutes)
+
+    .\Tools\smoke-test.ps1
+
+Launches RimWorld in a window with an isolated save-data folder (the
+player's config, saves and mod list are untouched), links the repository
+into Mods, and starts a quick-test map. The -rrsmoketest runner
+(Source/SmokeTest.cs) then builds each device, drives real game ticks and
+logs [RR-SMOKE] PASS/FAIL lines: reactor output and burn cycle, power
+connection, Transmogrifier bills, replication, refrigeration and its power
+draw, hauling, ejection, room heating, and the self-destruct countdown,
+abort and detonation (with timing). The script reports those lines plus
+every error in the game log and exits 1 on any failure or mod error. Use
+-KeepOpen to look around afterwards, or -Showcase to skip the tests and
+build a running demo base instead (Source/Showcase.cs), with sound on.
+
+Notes for extending the runner: it ticks inside a single frame, so
+per-frame engine work must be triggered by hand (power-net wiring:
+PowerNetManager.UpdatePowerNetsAndConnections_First). Destructive
+scenarios go last.
+
+## Manual checks still worth doing
+
+Matt "Breakpoint" Heck, in a real colony: the UI (gizmos, inspect pane,
+storage tab, rings), hauling by real colonists over a few days, the
+reactor's heat in a typical base layout, and balance. Record deviations in
+docs/AI-KNOWN-ISSUES.txt.

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <WorkGiverDef>
+    <defName>RR_WorkGiverArmSelfDestruct</defName>
+    <label>arm self-destruct</label>
+    <giverClass>RandomReplicator.WorkGiver_ArmSelfDestruct</giverClass>
+    <workType>BasicWorker</workType> <!-- same work type as vanilla switch flicking -->
+    <priorityInType>999</priorityInType>
+    <verb>arm</verb>
+    <gerund>arming</gerund>
+    <requiredCapacities>
+      <li>Manipulation</li>
+    </requiredCapacities>
+  </WorkGiverDef>
+</Defs>

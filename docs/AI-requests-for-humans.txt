@@ -1,0 +1,13 @@
+# Requests for Humans
+
+Matt "Breakpoint" Heck:
+
+1. Push the local trunk. The Claude Code sandbox has no GitHub credentials,
+   so its commits are local only (fetch and push fail authentication).
+2. Set RIMWORLD_DIR as a user environment variable (for example
+   C:\Program Files (x86)\Steam\steamapps\common\RimWorld) so Visual Studio
+   builds work; the project no longer guesses the path.
+3. Run the in-game checks in docs/AI-TESTING-STRATEGY.txt and record
+   deviations in docs/AI-KNOWN-ISSUES.txt.
+4. Confirm preferred distribution workflow for packaging the mod once
+   assemblies are built.
