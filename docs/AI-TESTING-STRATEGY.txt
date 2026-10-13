@@ -1,17 +1,17 @@
-# Random Replicator Testing Strategy
+# Batshit Technology Testing Strategy
 
 How to exercise the mod, from fastest to most thorough. All three layers
 run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
 
 ## 1. Unit and XML regression tests (seconds, no game needed)
 
-    dotnet test Tests/RandomReplicator.Tests/RandomReplicator.Tests.csproj
+    dotnet test Tests/BatshitTechnology.Tests/BatshitTechnology.Tests.csproj
 
 - Core library logic: WeightedSelector, ReactorHeat, and whatever else
-  moves into RandomReplicator.Core.
+  moves into BatshitTechnology.Core.
 - XML regression tests over Defs/, About and Textures/: the corrected v0.2
   values (so those bugs cannot return), research, recipes, the reactor,
-  every RR_ cross-reference, every mod texture path, and two RimWorld
+  every BT_ cross-reference, every mod texture path, and two RimWorld
   config rules found by the smoke test (impassable buildable buildings need
   fillPercent 1; minifiable buildings need a thing category).
 
@@ -31,15 +31,18 @@ It cannot run RimWorld's own ConfigErrors logic; layer 3 covers that.
 
 Launches RimWorld in a window with an isolated save-data folder (the
 player's config, saves and mod list are untouched), links the repository
-into Mods, and starts a quick-test map. The -rrsmoketest runner
+into Mods, and starts a quick-test map. The -btsmoketest runner
 (Source/SmokeTest.cs) then builds each device, drives real game ticks and
-logs [RR-SMOKE] PASS/FAIL lines: reactor output and burn cycle, power
+logs [BT-SMOKE] PASS/FAIL lines: reactor output and burn cycle, power
 connection, Transmogrifier bills, replication, refrigeration and its power
 draw, hauling, ejection, room heating, and the self-destruct countdown,
 abort and detonation (with timing). The script reports those lines plus
 every error in the game log and exits 1 on any failure or mod error. Use
 -KeepOpen to look around afterwards, or -Showcase to skip the tests and
 build a running demo base instead (Source/Showcase.cs), with sound on.
+Both are for a person to watch, so the game window is maximized (once the
+runner reports DONE or the showcase logs [BT-SHOWCASE] READY) and the UI
+is scaled 2x; plain test runs stay small and muted.
 
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:

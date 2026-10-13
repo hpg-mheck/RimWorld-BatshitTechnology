@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using Verse;
 using RimWorld;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>
     /// The Random Replicator's building: owns the refrigerated food storage

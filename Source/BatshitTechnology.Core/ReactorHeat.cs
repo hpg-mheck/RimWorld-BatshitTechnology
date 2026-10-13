@@ -1,6 +1,6 @@
 using System;
 
-namespace RandomReplicator.Core;
+namespace BatshitTechnology.Core;
 
 /// <summary>
 /// Waste-heat arithmetic for the Batshittium Reactor. The reactor spreads

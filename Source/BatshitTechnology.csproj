@@ -6,8 +6,8 @@
     <Platform>AnyCPU</Platform>
     <ProjectGuid>{8C6B9239-5E5E-4A47-8F40-2E58E4A7422E}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>RandomReplicator</RootNamespace>
-    <AssemblyName>RandomReplicator</AssemblyName>
+    <RootNamespace>BatshitTechnology</RootNamespace>
+    <AssemblyName>BatshitTechnology</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
@@ -64,7 +64,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference
-        Include="RandomReplicator.Core\RandomReplicator.Core.csproj" />
+        Include="BatshitTechnology.Core\BatshitTechnology.Core.csproj" />
   </ItemGroup>
   <!-- Mod assets linked in so Visual Studio shows the whole mod tree. -->
   <ItemGroup>

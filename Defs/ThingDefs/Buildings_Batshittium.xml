@@ -2,12 +2,12 @@
 <Defs>
   <!-- Batshittium Transmogrifier: powered work table; one bill turns 10 rock chunks into 1 batshittium -->
   <ThingDef ParentName="BenchBase">
-    <defName>RR_BatshittiumTransmogrifier</defName>
+    <defName>BT_BatshittiumTransmogrifier</defName>
     <label>batshittium transmogrifier</label>
     <description>A humming machine that transmogrifies ordinary rock chunks into batshittium, ten chunks to one unit. Nobody is entirely sure where the rest goes.</description>
     <thingClass>Building_WorkTable</thingClass>
     <graphicData>
-      <texPath>Things/Building/Production/RR_BatshittiumTransmogrifier</texPath>
+      <texPath>Things/Building/Production/BT_BatshittiumTransmogrifier</texPath>
       <graphicClass>Graphic_Single</graphicClass>
       <drawSize>(2,2)</drawSize>
     </graphicData>
@@ -43,10 +43,10 @@
       <li Class="CompProperties_Flickable" />
     </comps>
     <recipes>
-      <li>RR_TransmogrifyRockChunks</li>
+      <li>BT_TransmogrifyRockChunks</li>
     </recipes>
     <researchPrerequisites>
-      <li>RR_BatshittiumLore</li>
+      <li>BT_BatshittiumLore</li>
     </researchPrerequisites>
     <placeWorkers>
       <li>PlaceWorker_PreventInteractionSpotOverlap</li>
@@ -56,12 +56,12 @@
   <!-- Batshittium Reactor: 250,000 W while one unit of batshittium burns (0.1-36 in-game hours, at random).
        Dumps a huge amount of waste heat into every room within 12 tiles, so build it away from housing. -->
   <ThingDef ParentName="BuildingBase">
-    <defName>RR_BatshittiumReactor</defName>
+    <defName>BT_BatshittiumReactor</defName>
     <label>batshittium reactor</label>
     <description>Burns one unit of batshittium at a time to produce 250,000 W. Each unit lasts anywhere from a few minutes to a day and a half, and nobody can predict which. Haulers keep it loaded.\n\nIt sheds an enormous amount of waste heat into every room within 12 tiles, inside or out. Build it well away from anywhere people live.</description>
     <thingClass>Building</thingClass>
     <graphicData>
-      <texPath>Things/Building/Power/RR_BatshittiumReactor</texPath>
+      <texPath>Things/Building/Power/BT_BatshittiumReactor</texPath>
       <graphicClass>Graphic_Single</graphicClass>
       <drawSize>(2,2)</drawSize>
     </graphicData>
@@ -106,13 +106,13 @@
         <autoRefuelPercent>0.5</autoRefuelPercent>
         <fuelFilter>
           <thingDefs>
-            <li>RR_Batshittium</li>
+            <li>BT_Batshittium</li>
           </thingDefs>
         </fuelFilter>
         <fuelLabel>Batshittium</fuelLabel>
         <fuelGizmoLabel>Batshittium</fuelGizmoLabel>
         <outOfFuelMessage>Needs batshittium</outOfFuelMessage>
-        <fuelIconPath>Things/Item/Resource/RR_Batshittium</fuelIconPath>
+        <fuelIconPath>Things/Item/Resource/BT_Batshittium</fuelIconPath>
         <showFuelGizmo>true</showFuelGizmo>
         <showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
       </li>
@@ -120,7 +120,7 @@
         <glowRadius>8</glowRadius>
         <glowColor>(217,64,255,0)</glowColor>
       </li>
-      <li Class="RandomReplicator.CompProperties_BatshittiumReactor">
+      <li Class="BatshitTechnology.CompProperties_BatshittiumReactor">
         <burnHoursRange>0.1~36</burnHoursRange> <!-- in-game hours per unit -->
         <heatPerSecond>1000</heatPerSecond> <!-- a vanilla heater pushes 21 -->
         <heatRadius>12</heatRadius>
@@ -128,10 +128,10 @@
       </li>
     </comps>
     <placeWorkers>
-      <li>RandomReplicator.PlaceWorker_ShowReactorHeatRadius</li>
+      <li>BatshitTechnology.PlaceWorker_ShowReactorHeatRadius</li>
     </placeWorkers>
     <researchPrerequisites>
-      <li>RR_BatshittiumLore</li>
+      <li>BT_BatshittiumLore</li>
     </researchPrerequisites>
   </ThingDef>
 </Defs>

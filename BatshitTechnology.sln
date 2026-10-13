@@ -4,11 +4,11 @@ VisualStudioVersion = 17.14.36518.9
 MinimumVisualStudioVersion = 10.0.40219.1
 # Format constraint: Visual Studio requires the following Project declarations
 # to remain on single lines, so they exceed the usual 118-column ceiling.
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomReplicator", "Source\\RandomReplicator.csproj", "{8C6B9239-5E5E-4A47-8F40-2E58E4A7422E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatshitTechnology", "Source\\BatshitTechnology.csproj", "{8C6B9239-5E5E-4A47-8F40-2E58E4A7422E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomReplicator.Core", "Source\\RandomReplicator.Core\\RandomReplicator.Core.csproj", "{3A8DD9AF-8B25-44A8-A46A-0BA9F1A5A256}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatshitTechnology.Core", "Source\\BatshitTechnology.Core\\BatshitTechnology.Core.csproj", "{3A8DD9AF-8B25-44A8-A46A-0BA9F1A5A256}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RandomReplicator.Tests", "Tests\\RandomReplicator.Tests\\RandomReplicator.Tests.csproj", "{489FDE1E-05A6-4FAD-AD98-B863C4D19C2D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BatshitTechnology.Tests", "Tests\\BatshitTechnology.Tests\\BatshitTechnology.Tests.csproj", "{489FDE1E-05A6-4FAD-AD98-B863C4D19C2D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4A684270-E4BA-4B22-84A5-86ED6CD4CC75}"
     ProjectSection(SolutionItems) = preProject
@@ -35,18 +35,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "About", "About", "{B2ACAA2E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Defs", "Defs", "{C6C11387-D8E4-4A41-9C8E-EC8405B2B1FF}"
     ProjectSection(SolutionItems) = preProject
-        Defs\\DesignationDefs\\RR_SelfDestructDesignation.xml = Defs\\DesignationDefs\\RR_SelfDestructDesignation.xml
-        Defs\\JobDefs\\RR_SelfDestruct_Jobs.xml = Defs\\JobDefs\\RR_SelfDestruct_Jobs.xml
-        Defs\\Misc\\RR_BrainSqueezer.xml = Defs\\Misc\\RR_BrainSqueezer.xml
-        Defs\\RecipeDefs\\RR_Recipes.xml = Defs\\RecipeDefs\\RR_Recipes.xml
-        Defs\\ResearchProjectDefs\\RR_Research.xml = Defs\\ResearchProjectDefs\\RR_Research.xml
+        Defs\\DesignationDefs\\BT_SelfDestructDesignation.xml = Defs\\DesignationDefs\\BT_SelfDestructDesignation.xml
+        Defs\\JobDefs\\BT_SelfDestruct_Jobs.xml = Defs\\JobDefs\\BT_SelfDestruct_Jobs.xml
+        Defs\\Misc\\BT_BrainSqueezer.xml = Defs\\Misc\\BT_BrainSqueezer.xml
+        Defs\\RecipeDefs\\BT_Recipes.xml = Defs\\RecipeDefs\\BT_Recipes.xml
+        Defs\\ResearchProjectDefs\\BT_Research.xml = Defs\\ResearchProjectDefs\\BT_Research.xml
         Defs\\ThingDefs\\Buildings_Ballista.xml = Defs\\ThingDefs\\Buildings_Ballista.xml
         Defs\\ThingDefs\\Buildings_Batshittium.xml = Defs\\ThingDefs\\Buildings_Batshittium.xml
         Defs\\ThingDefs\\Buildings_BrainSqueezer.xml = Defs\\ThingDefs\\Buildings_BrainSqueezer.xml
         Defs\\ThingDefs\\Buildings_RandomReplicator.xml = Defs\\ThingDefs\\Buildings_RandomReplicator.xml
         Defs\\ThingDefs\\Items_Batshittium.xml = Defs\\ThingDefs\\Items_Batshittium.xml
-        Defs\\WorkGiverDefs\\RR_SelfDestruct_WorkGiver.xml = Defs\\WorkGiverDefs\\RR_SelfDestruct_WorkGiver.xml
-        Defs\\WorkGiverDefs\\RR_Transmogrify_WorkGiver.xml = Defs\\WorkGiverDefs\\RR_Transmogrify_WorkGiver.xml
+        Defs\\WorkGiverDefs\\BT_SelfDestruct_WorkGiver.xml = Defs\\WorkGiverDefs\\BT_SelfDestruct_WorkGiver.xml
+        Defs\\WorkGiverDefs\\BT_Transmogrify_WorkGiver.xml = Defs\\WorkGiverDefs\\BT_Transmogrify_WorkGiver.xml
     EndProjectSection
 EndProject
 Global

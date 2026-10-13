@@ -1,4 +1,4 @@
-// RandomReplicator - Batshittium Artificer.
+// Batshit Technology - Batshittium Artificer.
 // An automated workbench: haulers keep it loaded with batshittium (vanilla
 // CompRefuelable), and while powered it turns one unit at a time into
 // Ballista bolts, dropped at its interaction spot for haulers to carry to
@@ -9,7 +9,7 @@ using System.Linq;
 using Verse;
 using RimWorld;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>One bolt type the Artificer can make.</summary>
     public class ArtificerOutput

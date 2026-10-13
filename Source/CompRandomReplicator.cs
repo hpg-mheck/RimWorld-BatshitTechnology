@@ -1,4 +1,4 @@
-// RandomReplicator - C# assembly
+// Batshit Technology - C# assembly
 // RimWorld 1.6. Comp that periodically fabricates a random food item into
 // the building's chilled storage (Building_RandomReplicator), runs its
 // refrigeration, sends power-cut letters, and drives a pawn-armed
@@ -6,26 +6,26 @@
 // SelfDestruct.cs).
 //
 // Compile: .NET Framework 4.7.2; refs: Assembly-CSharp.dll,
-// UnityEngine.CoreModule.dll, UnityEngine.dll, RandomReplicator.Core.
+// UnityEngine.CoreModule.dll, UnityEngine.dll, BatshitTechnology.Core.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using RandomReplicator.Core;
+using BatshitTechnology.Core;
 using Verse;
 using Verse.AI;
 using Verse.Sound;
 using RimWorld;
 using UnityEngine;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>
     /// Vanilla categories that 1.6 no longer exposes through
     /// ThingCategoryDefOf.
     /// </summary>
     [DefOf]
-    public static class RR_ThingCategoryDefOf
+    public static class BT_ThingCategoryDefOf
     {
         /// <summary>Cooked meals.</summary>
         public static ThingCategoryDef FoodMeals;
@@ -34,9 +34,9 @@ namespace RandomReplicator
         public static ThingCategoryDef FoodRaw;
 
         /// <summary>Lets RimWorld bind the fields above at load.</summary>
-        static RR_ThingCategoryDefOf()
+        static BT_ThingCategoryDefOf()
         {
-            DefOfHelper.EnsureInitializedInCtor(typeof(RR_ThingCategoryDefOf));
+            DefOfHelper.EnsureInitializedInCtor(typeof(BT_ThingCategoryDefOf));
         }
     }
 
@@ -130,7 +130,7 @@ namespace RandomReplicator
         /// <param name="def">The food.</param>
         /// <returns><see cref="mealWeight"/> for meals, otherwise 1.</returns>
         private double FoodWeight(ThingDef def) =>
-            def.IsWithinCategory(RR_ThingCategoryDefOf.FoodMeals)
+            def.IsWithinCategory(BT_ThingCategoryDefOf.FoodMeals)
                 ? mealWeight
                 : 1d;
 
@@ -162,8 +162,8 @@ namespace RandomReplicator
                 return allowedThingCategoryDefs.Any(def.IsWithinCategory);
             }
 
-            return def.IsWithinCategory(RR_ThingCategoryDefOf.FoodMeals)
-                || def.IsWithinCategory(RR_ThingCategoryDefOf.FoodRaw);
+            return def.IsWithinCategory(BT_ThingCategoryDefOf.FoodMeals)
+                || def.IsWithinCategory(BT_ThingCategoryDefOf.FoodRaw);
         }
 
         /// <summary>Reports Def mistakes at load.</summary>
@@ -180,7 +180,7 @@ namespace RandomReplicator
                 .IsAssignableFrom(parentDef.thingClass))
             {
                 yield return "thingClass must be "
-                    + "RandomReplicator.Building_RandomReplicator, which holds "
+                    + "BatshitTechnology.Building_RandomReplicator, which holds "
                     + "the storage";
             }
 
@@ -266,7 +266,7 @@ namespace RandomReplicator
         /// <summary>The pending self-destruct order, if any.</summary>
         private Designation SelfDestructDesignation =>
             parent.Map?.designationManager.DesignationOn(
-                parent, RR_DesignationDefOf.RR_SelfDestruct);
+                parent, BT_DesignationDefOf.BT_SelfDestruct);
 
         // ===== Test and dev hooks (the smoke test and DEV gizmos) =====
 
@@ -805,7 +805,7 @@ namespace RandomReplicator
             {
                 defaultLabel = "Eject all",
                 defaultDesc = "Drop all stored food at the interaction spot.",
-                icon = RR_Textures.Eject,
+                icon = BT_Textures.Eject,
                 action = EjectAll
             };
             var ejectOne = new Command_Action
@@ -813,7 +813,7 @@ namespace RandomReplicator
                 defaultLabel = "Eject item...",
                 defaultDesc =
                     "Choose one stored stack to drop at the interaction spot.",
-                icon = RR_Textures.Eject,
+                icon = BT_Textures.Eject,
                 action = () => Find.WindowStack.Add(new FloatMenu(Storage
                     .Select(t => new FloatMenuOption(t.LabelCap, () => Eject(t), t.def))
                     .ToList()))
@@ -834,7 +834,7 @@ namespace RandomReplicator
                     + "pull stored food out to better storage, and nobody eats "
                     + "straight from the device, so turn this on if no "
                     + "stockpile takes the food.",
-                icon = RR_Textures.Eject,
+                icon = BT_Textures.Eject,
                 isActive = () => autoEject,
                 toggleAction = () => autoEject = !autoEject
             };
@@ -845,7 +845,7 @@ namespace RandomReplicator
                     + $"extra {Props.refrigerationPowerConsumption:0} W while "
                     + "on.\n\nWhen off, or without power, stored food spoils "
                     + "at the temperature of the room around the device.",
-                icon = RR_Textures.Refrigeration,
+                icon = BT_Textures.Refrigeration,
                 isActive = () => refrigeration,
                 toggleAction = () => refrigeration = !refrigeration
             };
@@ -864,7 +864,7 @@ namespace RandomReplicator
                 {
                     defaultLabel = "Abort self-destruct",
                     defaultDesc = "Stop the countdown.",
-                    icon = RR_Textures.Cancel,
+                    icon = BT_Textures.Cancel,
                     action = AbortSelfDestruct
                 };
             }
@@ -876,7 +876,7 @@ namespace RandomReplicator
                     defaultLabel = "Cancel self-destruct order",
                     defaultDesc =
                         "Withdraw the order to arm this device's self-destruct.",
-                    icon = RR_Textures.Cancel,
+                    icon = BT_Textures.Cancel,
                     action = () =>
                         parent.Map.designationManager.RemoveDesignation(designation)
                 };
@@ -892,7 +892,7 @@ namespace RandomReplicator
                     + "blast with widespread fires. Pawns within "
                     + $"{Props.selfDestructFleeRadius:0} tiles flee during the "
                     + "countdown. Stored food is destroyed.",
-                icon = RR_Textures.ArmSelfDestruct,
+                icon = BT_Textures.ArmSelfDestruct,
                 action = OrderSelfDestruct
             };
         }
@@ -903,7 +903,7 @@ namespace RandomReplicator
         private void OrderSelfDestruct()
         {
             parent.Map.designationManager.AddDesignation(
-                new Designation(parent, RR_DesignationDefOf.RR_SelfDestruct));
+                new Designation(parent, BT_DesignationDefOf.BT_SelfDestruct));
             Messages.Message(
                 "Self-destruct ordered. A colonist with Basic work enabled "
                     + "will arm it.",

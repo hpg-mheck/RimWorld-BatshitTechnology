@@ -21,7 +21,7 @@ if (-not $RimWorld -or -not (Test-Path (Join-Path $RimWorld 'RimWorldWin64_Data'
 $managed = Join-Path $RimWorld 'RimWorldWin64_Data\Managed'
 $game = [Reflection.Assembly]::LoadFrom("$managed\Assembly-CSharp.dll")
 $mod = [Reflection.Assembly]::LoadFrom(
-  (Join-Path $ModRoot 'Assemblies\RandomReplicator.dll'))
+  (Join-Path $ModRoot 'Assemblies\BatshitTechnology.dll'))
 $gameTypes = try { $game.GetTypes() }
   catch [Reflection.ReflectionTypeLoadException] { $_.Exception.Types | ? { $_ } }
 $modTypes = $mod.GetTypes()

@@ -35,6 +35,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Source\RandomReplicator.Core\RandomReplicator.Core.csproj" />
+    <ProjectReference Include="..\..\Source\BatshitTechnology.Core\BatshitTechnology.Core.csproj" />
   </ItemGroup>
 </Project>

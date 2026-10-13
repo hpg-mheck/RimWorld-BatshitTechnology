@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
-using RandomReplicator.Core;
+using BatshitTechnology.Core;
 using Xunit;
 
-namespace RandomReplicator.Tests;
+namespace BatshitTechnology.Tests;
 
 /// <summary>
 /// Verifies the Ballista's power formula (<see cref="BallistaPower"/>) and

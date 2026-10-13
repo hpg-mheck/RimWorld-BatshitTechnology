@@ -1,8 +1,8 @@
 using System;
-using RandomReplicator.Core;
+using BatshitTechnology.Core;
 using Xunit;
 
-namespace RandomReplicator.Tests;
+namespace BatshitTechnology.Tests;
 
 /// <summary>
 /// Verifies the Batshittium Reactor's waste-heat arithmetic in

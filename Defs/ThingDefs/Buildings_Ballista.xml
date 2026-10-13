@@ -6,7 +6,7 @@
        of magazines), and the Ballista itself. -->
 
   <ThingCategoryDef>
-    <defName>RR_BatshittiumBolts</defName>
+    <defName>BT_BatshittiumBolts</defName>
     <label>batshittium bolts</label>
     <parent>Manufactured</parent>
   </ThingCategoryDef>
@@ -16,11 +16,11 @@
   <!-- Market values match the batshittium they are made from (40 silver per
        unit: 10 Painful or 5 Really Painful). -->
   <ThingDef ParentName="ResourceBase">
-    <defName>RR_BoltPainful</defName>
+    <defName>BT_BoltPainful</defName>
     <label>painful bolt</label>
     <description>A batshittium-tipped Ballista bolt. Kinetic: it lands like a dropped anvil on whatever happens to be under it.</description>
     <graphicData>
-      <texPath>Things/Item/Resource/RR_BoltPainful</texPath>
+      <texPath>Things/Item/Resource/BT_BoltPainful</texPath>
       <graphicClass>Graphic_Single</graphicClass>
     </graphicData>
     <stackLimit>256</stackLimit>
@@ -34,22 +34,22 @@
       <Mass>0.2</Mass>
     </statBases>
     <thingCategories>
-      <li>RR_BatshittiumBolts</li>
+      <li>BT_BatshittiumBolts</li>
     </thingCategories>
     <burnableByRecipe>false</burnableByRecipe>
     <modExtensions>
-      <li Class="RandomReplicator.BoltExtension">
-        <projectile>RR_Projectile_BoltPainful</projectile>
+      <li Class="BatshitTechnology.BoltExtension">
+        <projectile>BT_Projectile_BoltPainful</projectile>
       </li>
     </modExtensions>
   </ThingDef>
 
   <ThingDef ParentName="ResourceBase">
-    <defName>RR_BoltReallyPainful</defName>
+    <defName>BT_BoltReallyPainful</defName>
     <label>really painful bolt</label>
     <description>A Ballista bolt with an unstable batshittium core. Explosive: it detonates wherever it lands, which is rarely where it was aimed.</description>
     <graphicData>
-      <texPath>Things/Item/Resource/RR_BoltReallyPainful</texPath>
+      <texPath>Things/Item/Resource/BT_BoltReallyPainful</texPath>
       <graphicClass>Graphic_Single</graphicClass>
     </graphicData>
     <stackLimit>256</stackLimit>
@@ -63,12 +63,12 @@
       <Mass>0.3</Mass>
     </statBases>
     <thingCategories>
-      <li>RR_BatshittiumBolts</li>
+      <li>BT_BatshittiumBolts</li>
     </thingCategories>
     <burnableByRecipe>false</burnableByRecipe>
     <modExtensions>
-      <li Class="RandomReplicator.BoltExtension">
-        <projectile>RR_Projectile_BoltReallyPainful</projectile>
+      <li Class="BatshitTechnology.BoltExtension">
+        <projectile>BT_Projectile_BoltReallyPainful</projectile>
       </li>
     </modExtensions>
   </ThingDef>
@@ -76,10 +76,10 @@
   <!-- ===== Projectiles (both arc overhead, like artillery) ===== -->
 
   <ThingDef ParentName="BaseBullet">
-    <defName>RR_Projectile_BoltPainful</defName>
+    <defName>BT_Projectile_BoltPainful</defName>
     <label>painful bolt</label>
     <graphicData>
-      <texPath>Things/Projectile/RR_BoltPainful</texPath>
+      <texPath>Things/Projectile/BT_BoltPainful</texPath>
       <graphicClass>Graphic_Single</graphicClass>
     </graphicData>
     <projectile>
@@ -93,11 +93,11 @@
   </ThingDef>
 
   <ThingDef ParentName="BaseBullet">
-    <defName>RR_Projectile_BoltReallyPainful</defName>
+    <defName>BT_Projectile_BoltReallyPainful</defName>
     <label>really painful bolt</label>
     <thingClass>Projectile_Explosive</thingClass>
     <graphicData>
-      <texPath>Things/Projectile/RR_BoltReallyPainful</texPath>
+      <texPath>Things/Projectile/BT_BoltReallyPainful</texPath>
       <graphicClass>Graphic_Single</graphicClass>
       <shaderType>TransparentPostLight</shaderType>
     </graphicData>
@@ -117,11 +117,11 @@
   <!-- Its gun: one cast of Verb_BallistaVolley fires a whole volley. The
        range here is the maximum; each Ballista applies its own selection. -->
   <ThingDef ParentName="BaseWeaponTurret">
-    <defName>RR_BallistaLauncher</defName>
+    <defName>BT_BallistaLauncher</defName>
     <label>ballista launcher</label>
     <description>The Batshittium Ballista's launching arm.</description>
     <graphicData>
-      <texPath>Things/Building/Security/RR_BatshittiumBallista_Top</texPath>
+      <texPath>Things/Building/Security/BT_BatshittiumBallista_Top</texPath>
       <graphicClass>Graphic_Single</graphicClass>
     </graphicData>
     <statBases>
@@ -132,8 +132,8 @@
     </statBases>
     <verbs>
       <li>
-        <verbClass>RandomReplicator.Verb_BallistaVolley</verbClass>
-        <defaultProjectile>RR_Projectile_BoltPainful</defaultProjectile>
+        <verbClass>BatshitTechnology.Verb_BallistaVolley</verbClass>
+        <defaultProjectile>BT_Projectile_BoltPainful</defaultProjectile>
         <warmupTime>0</warmupTime>
         <minRange>5.9</minRange>
         <range>325</range>
@@ -149,15 +149,15 @@
   </ThingDef>
 
   <ThingDef ParentName="BuildingBase">
-    <defName>RR_BatshittiumBallista</defName>
+    <defName>BT_BatshittiumBallista</defName>
     <label>batshittium ballista</label>
     <description>A turret that throws volleys of batshittium bolts once every five seconds, up to 256 at a time and up to 325 tiles away. Insanely inaccurate, terrifyingly destructive. Pick its range, projectile count and bolt type; both range and count multiply its power draw, from 50 W standby and 1,000 W per volley at the smallest settings to 62.5 kW standby and 990 kW per volley at the largest. Without enough power for a volley it holds fire.\n\nIt holds 16 bolts itself and draws from any Ballista Magazine it touches, or touches through a chain of magazines. Its bolts arc overhead, so it must stand under open sky.</description>
-    <thingClass>RandomReplicator.Building_BatshittiumBallista</thingClass>
+    <thingClass>BatshitTechnology.Building_BatshittiumBallista</thingClass>
     <drawerType>MapMeshAndRealTime</drawerType>
     <drawHighlight>true</drawHighlight>
     <drawHighlightOnlyForHostile>true</drawHighlightOnlyForHostile>
     <graphicData>
-      <texPath>Things/Building/Security/RR_BatshittiumBallista_Base</texPath>
+      <texPath>Things/Building/Security/BT_BatshittiumBallista_Base</texPath>
       <graphicClass>Graphic_Single</graphicClass>
       <drawSize>(2,2)</drawSize>
     </graphicData>
@@ -180,7 +180,7 @@
       <Steel>300</Steel>
       <Plasteel>60</Plasteel>
       <ComponentIndustrial>10</ComponentIndustrial>
-      <RR_Batshittium>10</RR_Batshittium>
+      <BT_Batshittium>10</BT_Batshittium>
     </costList>
     <statBases>
       <MaxHitPoints>500</MaxHitPoints>
@@ -193,7 +193,7 @@
       <li>ITab_Storage</li>
     </inspectorTabs>
     <building>
-      <turretGunDef>RR_BallistaLauncher</turretGunDef>
+      <turretGunDef>BT_BallistaLauncher</turretGunDef>
       <turretBurstCooldownTime>5</turretBurstCooldownTime> <!-- one volley every 5 s -->
       <turretBurstWarmupTime>0~0</turretBurstWarmupTime>
       <turretTopDrawSize>2.6</turretTopDrawSize>
@@ -202,7 +202,7 @@
       <fixedStorageSettings>
         <filter>
           <categories>
-            <li>RR_BatshittiumBolts</li>
+            <li>BT_BatshittiumBolts</li>
           </categories>
         </filter>
       </fixedStorageSettings>
@@ -210,7 +210,7 @@
         <priority>Critical</priority>
         <filter>
           <categories>
-            <li>RR_BatshittiumBolts</li>
+            <li>BT_BatshittiumBolts</li>
           </categories>
         </filter>
       </defaultStorageSettings>
@@ -223,10 +223,10 @@
       <li Class="CompProperties_Flickable" />
     </comps>
     <modExtensions>
-      <li Class="RandomReplicator.BoltStoreExtension">
+      <li Class="BatshitTechnology.BoltStoreExtension">
         <capacity>16</capacity>
       </li>
-      <li Class="RandomReplicator.BallistaExtension">
+      <li Class="BatshitTechnology.BallistaExtension">
         <!-- 80-89 skipped: vanilla draws cell rings below 90 tiles, which
              the engine caps at ~79.8 -->
         <rangePresets>
@@ -263,7 +263,7 @@
       </li>
     </modExtensions>
     <researchPrerequisites>
-      <li>RR_Research_Ballista</li>
+      <li>BT_Research_Ballista</li>
     </researchPrerequisites>
     <placeWorkers>
       <li>PlaceWorker_TurretTop</li>
@@ -273,12 +273,12 @@
   <!-- ===== Ballista Magazine ===== -->
 
   <ThingDef ParentName="BuildingBase">
-    <defName>RR_BallistaMagazine</defName>
+    <defName>BT_BallistaMagazine</defName>
     <label>ballista magazine</label>
     <description>Holds up to 2,560 Ballista bolts and feeds any Batshittium Ballista it touches, or touches through a chain of other magazines. One magazine can serve several Ballistas. Draws 5 W, or 500 W while feeding a volley.</description>
-    <thingClass>RandomReplicator.Building_BallistaMagazine</thingClass>
+    <thingClass>BatshitTechnology.Building_BallistaMagazine</thingClass>
     <graphicData>
-      <texPath>Things/Building/Security/RR_BallistaMagazine</texPath>
+      <texPath>Things/Building/Security/BT_BallistaMagazine</texPath>
       <graphicClass>Graphic_Single</graphicClass>
       <drawSize>(1,1)</drawSize>
     </graphicData>
@@ -311,7 +311,7 @@
       <fixedStorageSettings>
         <filter>
           <categories>
-            <li>RR_BatshittiumBolts</li>
+            <li>BT_BatshittiumBolts</li>
           </categories>
         </filter>
       </fixedStorageSettings>
@@ -319,7 +319,7 @@
         <priority>Important</priority>
         <filter>
           <categories>
-            <li>RR_BatshittiumBolts</li>
+            <li>BT_BatshittiumBolts</li>
           </categories>
         </filter>
       </defaultStorageSettings>
@@ -332,28 +332,28 @@
       <li Class="CompProperties_Flickable" />
     </comps>
     <modExtensions>
-      <li Class="RandomReplicator.BoltStoreExtension">
+      <li Class="BatshitTechnology.BoltStoreExtension">
         <capacity>2560</capacity>
       </li>
-      <li Class="RandomReplicator.MagazinePowerExtension">
+      <li Class="BatshitTechnology.MagazinePowerExtension">
         <standbyWatts>5</standbyWatts>
         <feedingWatts>500</feedingWatts>
       </li>
     </modExtensions>
     <researchPrerequisites>
-      <li>RR_Research_Magazine</li>
+      <li>BT_Research_Magazine</li>
     </researchPrerequisites>
   </ThingDef>
 
   <!-- ===== Batshittium Artificer ===== -->
 
   <ThingDef ParentName="BuildingBase">
-    <defName>RR_BatshittiumArtificer</defName>
+    <defName>BT_BatshittiumArtificer</defName>
     <label>batshittium artificer</label>
     <description>An automated workshop that turns batshittium into Ballista bolts with no one at the controls: 10 Painful bolts or 5 Really Painful bolts per unit, one unit an hour while powered. Haulers keep it loaded with batshittium and carry its bolts to your magazines.</description>
     <thingClass>Building</thingClass>
     <graphicData>
-      <texPath>Things/Building/Production/RR_BatshittiumArtificer</texPath>
+      <texPath>Things/Building/Production/BT_BatshittiumArtificer</texPath>
       <graphicClass>Graphic_Single</graphicClass>
       <drawSize>(2,2)</drawSize>
     </graphicData>
@@ -373,7 +373,7 @@
     <costList>
       <Steel>200</Steel>
       <ComponentIndustrial>6</ComponentIndustrial>
-      <RR_Batshittium>5</RR_Batshittium>
+      <BT_Batshittium>5</BT_Batshittium>
     </costList>
     <statBases>
       <MaxHitPoints>250</MaxHitPoints>
@@ -395,34 +395,34 @@
         <autoRefuelPercent>0.5</autoRefuelPercent>
         <fuelFilter>
           <thingDefs>
-            <li>RR_Batshittium</li>
+            <li>BT_Batshittium</li>
           </thingDefs>
         </fuelFilter>
         <fuelLabel>Batshittium</fuelLabel>
         <fuelGizmoLabel>Batshittium</fuelGizmoLabel>
         <outOfFuelMessage>Needs batshittium</outOfFuelMessage>
-        <fuelIconPath>Things/Item/Resource/RR_Batshittium</fuelIconPath>
+        <fuelIconPath>Things/Item/Resource/BT_Batshittium</fuelIconPath>
         <showFuelGizmo>true</showFuelGizmo>
         <showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
       </li>
-      <li Class="RandomReplicator.CompProperties_BatshittiumArtificer">
+      <li Class="BatshitTechnology.CompProperties_BatshittiumArtificer">
         <ticksPerUnit>2500</ticksPerUnit> <!-- one in-game hour per unit -->
         <outputs>
           <li>
-            <bolt>RR_BoltPainful</bolt>
+            <bolt>BT_BoltPainful</bolt>
             <countPerUnit>10</countPerUnit>
-            <research>RR_Research_PainfulBolts</research>
+            <research>BT_Research_PainfulBolts</research>
           </li>
           <li>
-            <bolt>RR_BoltReallyPainful</bolt>
+            <bolt>BT_BoltReallyPainful</bolt>
             <countPerUnit>5</countPerUnit>
-            <research>RR_Research_ReallyPainfulBolts</research>
+            <research>BT_Research_ReallyPainfulBolts</research>
           </li>
         </outputs>
       </li>
     </comps>
     <researchPrerequisites>
-      <li>RR_Research_Artificer</li>
+      <li>BT_Research_Artificer</li>
     </researchPrerequisites>
     <placeWorkers>
       <li>PlaceWorker_PreventInteractionSpotOverlap</li>

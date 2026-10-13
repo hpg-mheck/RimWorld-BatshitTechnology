@@ -1,4 +1,4 @@
-// RandomReplicator - bolt storage shared by the Batshittium Ballista's
+// Batshit Technology - bolt storage shared by the Batshittium Ballista's
 // internal magazine and the Ballista Magazine. Both are haul destinations
 // that only take bolts (the vanilla bookcase pattern): haulers fill them up
 // to a capacity, nothing hauls bolts back out, and a storage tab sets the
@@ -9,11 +9,11 @@ using System.Collections.Generic;
 using Verse;
 using RimWorld;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>
     /// XML: how many bolts a building holds.
-    /// <c>&lt;li Class="RandomReplicator.BoltStoreExtension"&gt;&lt;capacity&gt;16...</c>
+    /// <c>&lt;li Class="BatshitTechnology.BoltStoreExtension"&gt;&lt;capacity&gt;16...</c>
     /// </summary>
     public class BoltStoreExtension : DefModExtension
     {

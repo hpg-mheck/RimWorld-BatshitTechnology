@@ -2,7 +2,7 @@
 <Defs>
   <!-- Batshittium Transmogrifier: 10 rock chunks of any kind -> 1 batshittium -->
   <RecipeDef>
-    <defName>RR_TransmogrifyRockChunks</defName>
+    <defName>BT_TransmogrifyRockChunks</defName>
     <label>transmogrify rock chunks</label>
     <description>Transmogrify ten rock chunks of any kind into one unit of batshittium.</description>
     <jobString>Transmogrifying rock chunks.</jobString>
@@ -28,7 +28,7 @@
       </categories>
     </fixedIngredientFilter>
     <products>
-      <RR_Batshittium>1</RR_Batshittium>
+      <BT_Batshittium>1</BT_Batshittium>
     </products>
   </RecipeDef>
 </Defs>

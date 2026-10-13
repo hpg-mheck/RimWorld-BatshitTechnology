@@ -73,3 +73,15 @@ less 10 kW of magazine feeding at full fire). Implementation choices:
   volley drains magazines nearest-first, then the internal reserve.
 - The Artificer is a comp on a plain building fed by CompRefuelable;
   outputs are gated per bolt research.
+2026-10-13 Claude: Moved the mod to hpg-mheck/RimWorld-BatshitTechnology
+(full history merged in) and renamed it, as agreed with Matt "Breakpoint"
+Heck. Name "Batshit Technology", packageId
+breakpoint8088.BatshitTechnology (his Steam name; RimWorld package IDs
+allow only letters, digits and periods, so the GitHub name hpg-mheck would
+not do). Namespace, assemblies, solution and projects are
+BatshitTechnology; every def prefix RR_ is now BT_, and the replicator's
+defName is BT_RandomReplicator. Done now because no saves exist yet; after
+release, def names and the package ID are frozen. The Random Replicator
+keeps its name as a device (Building_RandomReplicator,
+CompRandomReplicator, Buildings_RandomReplicator.xml). Smoke runner flags
+are -btsmoketest, -btsmoketestkeep and -btshowcase. Version 0.8.0.

@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
-  <packageId>Matt.RandomReplicator</packageId>
-  <name>Random Replicator</name>
-  <author>Matt + ChatGPT (build helper)</author>
-  <description>Batshit technology, in its own research tab (Batshittium Lore, Batshittium Arcana).
+  <packageId>breakpoint8088.BatshitTechnology</packageId>
+  <name>Batshit Technology</name>
+  <author>Matt "Breakpoint" Heck</author>
+  <url>https://github.com/hpg-mheck/RimWorld-BatshitTechnology</url>
+  <description>Ridiculous, misguided and insanely overpowered gadgets, in their own research tab (Batshittium Lore, Batshittium Arcana).
 
 Batshittium: an element transmogrified from ordinary rock chunks, ten to one, in the Batshittium Transmogrifier.
 
@@ -17,5 +18,5 @@ Batshittium Ballista: volleys of up to 256 insanely inaccurate, terrifyingly des
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
-  <modVersion IgnoreIfNoMatchingField="True">0.7.0</modVersion>
+  <modVersion IgnoreIfNoMatchingField="True">0.8.0</modVersion>
 </ModMetaData>

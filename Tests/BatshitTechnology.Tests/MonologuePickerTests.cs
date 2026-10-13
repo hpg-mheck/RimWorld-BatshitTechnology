@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using RandomReplicator.Core;
+using BatshitTechnology.Core;
 using Xunit;
 
-namespace RandomReplicator.Tests;
+namespace BatshitTechnology.Tests;
 
 /// <summary>
 /// Verifies <see cref="MonologuePicker"/>: random lines, never the same

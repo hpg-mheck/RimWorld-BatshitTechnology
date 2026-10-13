@@ -1,45 +1,45 @@
-// RandomReplicator - Brain Squeezer
+// Batshit Technology - Brain Squeezer
 // A chair under a squeezing headpiece. A colonist sits in it for moderate
 // recreation, muttering disturbing inner-monologue lines while it works.
 // Afterwards they get a mood boost labelled with the last thing they said
 // (less anxiety) and, for a day, a lower mental break threshold (fewer
-// breaks, riots and arguments). The lines live in the RR_BrainSqueezed
+// breaks, riots and arguments). The lines live in the BT_BrainSqueezed
 // ThoughtDef's MonologueExtension, so they can be edited in XML.
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using RandomReplicator.Core;
+using BatshitTechnology.Core;
 using Verse;
 using Verse.AI;
 using RimWorld;
 using UnityEngine;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>The Brain Squeezer's defs.</summary>
     [DefOf]
-    public static class RR_BrainSqueezerDefOf
+    public static class BT_BrainSqueezerDefOf
     {
         /// <summary>The mood memory left by a squeezing.</summary>
-        public static ThoughtDef RR_BrainSqueezed;
+        public static ThoughtDef BT_BrainSqueezed;
 
         /// <summary>The day-long lower mental break threshold.</summary>
-        public static HediffDef RR_BrainSqueezedCalm;
+        public static HediffDef BT_BrainSqueezedCalm;
 
         /// <summary>Sitting in the squeezer.</summary>
-        public static JobDef RR_UseBrainSqueezer;
+        public static JobDef BT_UseBrainSqueezer;
 
         /// <summary>Lets RimWorld bind the fields above at load.</summary>
-        static RR_BrainSqueezerDefOf()
+        static BT_BrainSqueezerDefOf()
         {
-            DefOfHelper.EnsureInitializedInCtor(typeof(RR_BrainSqueezerDefOf));
+            DefOfHelper.EnsureInitializedInCtor(typeof(BT_BrainSqueezerDefOf));
         }
     }
 
     /// <summary>
     /// Monologue lines attached to a Def in XML:
-    /// <c>&lt;li Class="RandomReplicator.MonologueExtension"&gt;&lt;lines&gt;...</c>
+    /// <c>&lt;li Class="BatshitTechnology.MonologueExtension"&gt;&lt;lines&gt;...</c>
     /// </summary>
     public class MonologueExtension : DefModExtension
     {
@@ -107,7 +107,7 @@ namespace RandomReplicator
 
         /// <summary>The monologue lines, from the thought's extension.</summary>
         private static MonologueExtension Monologue =>
-            RR_BrainSqueezerDefOf.RR_BrainSqueezed.GetModExtension<MonologueExtension>();
+            BT_BrainSqueezerDefOf.BT_BrainSqueezed.GetModExtension<MonologueExtension>();
 
         /// <summary>
         /// Reserves the squeezer. Its seat is its own cell, so one
@@ -184,9 +184,9 @@ namespace RandomReplicator
             MemoryThoughtHandler memories = pawn.needs?.mood?.thoughts?.memories;
             if (memories != null)
             {
-                memories.RemoveMemoriesOfDef(RR_BrainSqueezerDefOf.RR_BrainSqueezed);
+                memories.RemoveMemoriesOfDef(BT_BrainSqueezerDefOf.BT_BrainSqueezed);
                 var thought = (Thought_BrainSqueezed)ThoughtMaker.MakeThought(
-                    RR_BrainSqueezerDefOf.RR_BrainSqueezed, null);
+                    BT_BrainSqueezerDefOf.BT_BrainSqueezed, null);
                 MonologueExtension monologue = Monologue;
                 if (monologue != null && !monologue.lines.NullOrEmpty())
                 {
@@ -198,13 +198,13 @@ namespace RandomReplicator
             }
 
             Hediff existing = pawn.health.hediffSet.GetFirstHediffOfDef(
-                RR_BrainSqueezerDefOf.RR_BrainSqueezedCalm);
+                BT_BrainSqueezerDefOf.BT_BrainSqueezedCalm);
             if (existing != null)
             {
                 pawn.health.RemoveHediff(existing); // restart the day
             }
 
-            pawn.health.AddHediff(RR_BrainSqueezerDefOf.RR_BrainSqueezedCalm);
+            pawn.health.AddHediff(BT_BrainSqueezerDefOf.BT_BrainSqueezedCalm);
         }
 
         /// <summary>Saves and loads the session's progress.</summary>

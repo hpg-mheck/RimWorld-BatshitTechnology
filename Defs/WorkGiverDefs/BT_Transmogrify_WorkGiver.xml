@@ -2,13 +2,13 @@
 <Defs>
   <!-- Lets crafters work bills at the Batshittium Transmogrifier (same shape as vanilla's DoBillsStonecut) -->
   <WorkGiverDef>
-    <defName>RR_DoBillsTransmogrify</defName>
+    <defName>BT_DoBillsTransmogrify</defName>
     <label>transmogrify rock chunks</label>
     <giverClass>WorkGiver_DoBill</giverClass>
     <workType>Crafting</workType>
     <priorityInType>85</priorityInType>
     <fixedBillGiverDefs>
-      <li>RR_BatshittiumTransmogrifier</li>
+      <li>BT_BatshittiumTransmogrifier</li>
     </fixedBillGiverDefs>
     <verb>transmogrify rock at</verb>
     <gerund>transmogrifying rock at</gerund>

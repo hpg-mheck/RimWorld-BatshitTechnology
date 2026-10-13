@@ -1,8 +1,8 @@
-// RandomReplicator - in-game smoke test.
-// Runs only when RimWorld starts with -rrsmoketest (Tools/smoke-test.ps1
+// Batshit Technology - in-game smoke test.
+// Runs only when RimWorld starts with -btsmoketest (Tools/smoke-test.ps1
 // passes it with -quicktest). Builds each device on the quick-test map,
-// exercises it with real game ticks, logs "[RR-SMOKE] PASS/FAIL" lines and
-// a "[RR-SMOKE] DONE" summary, then quits (unless -rrsmoketestkeep is also
+// exercises it with real game ticks, logs "[BT-SMOKE] PASS/FAIL" lines and
+// a "[BT-SMOKE] DONE" summary, then quits (unless -btsmoketestkeep is also
 // passed). Without the flag it does nothing.
 
 using System;
@@ -14,15 +14,15 @@ using RimWorld;
 using Verse.AI;
 using UnityEngine;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>
     /// Drives the in-game smoke test once the quick-test map is up.
     /// </summary>
     public class GameComponent_SmokeTest : GameComponent
     {
-        private const string Flag = "rrsmoketest";
-        private const string KeepOpenFlag = "rrsmoketestkeep";
+        private const string Flag = "btsmoketest";
+        private const string KeepOpenFlag = "btsmoketestkeep";
         private const int SettleFrames = 120;
 
         private bool done;
@@ -71,7 +71,7 @@ namespace RandomReplicator
                 Check("runner completed without an exception", false, e.ToString());
             }
 
-            Log.Message($"[RR-SMOKE] DONE passed={passed} failed={failed}");
+            Log.Message($"[BT-SMOKE] DONE passed={passed} failed={failed}");
             if (!GenCommandLine.CommandLineArgPassed(KeepOpenFlag))
             {
                 Root.Shutdown();
@@ -85,13 +85,13 @@ namespace RandomReplicator
             IntVec3 center = map.Center;
             PrepareGround(map, CellRect.CenteredOn(center, 14));
 
-            Thing reactor = Spawn(map, "RR_BatshittiumReactor", center);
+            Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
             var fuel = reactor.TryGetComp<CompRefuelable>();
             fuel.Refuel(2f);
             Thing replicator =
-                Spawn(map, "RandomReplicator", center + new IntVec3(-5, 0, 0));
+                Spawn(map, "BT_RandomReplicator", center + new IntVec3(-5, 0, 0));
             Thing bench = Spawn(
-                map, "RR_BatshittiumTransmogrifier", center + new IntVec3(5, 0, 0));
+                map, "BT_BatshittiumTransmogrifier", center + new IntVec3(5, 0, 0));
             // A power net switches waiting consumers on one at a time, every
             // 200 / (number waiting) ticks, so give it a while.
             WaitForPower(replicator, bench);
@@ -164,7 +164,7 @@ namespace RandomReplicator
                 bench.TryGetComp<CompPowerTrader>().PowerOn, PowerDetail(bench));
             Check("transmogrifier can take bills", table.CurrentlyUsableForBills());
             Check("transmogrifier offers its recipe",
-                bench.def.AllRecipes.Any(r => r.defName == "RR_TransmogrifyRockChunks"));
+                bench.def.AllRecipes.Any(r => r.defName == "BT_TransmogrifyRockChunks"));
         }
 
         /// <summary>
@@ -269,7 +269,7 @@ namespace RandomReplicator
         private void TestBrainSqueezer(Map map, IntVec3 center)
         {
             Thing squeezer =
-                Spawn(map, "RR_BrainSqueezer", center + new IntVec3(0, 0, -5));
+                Spawn(map, "BT_BrainSqueezer", center + new IntVec3(0, 0, -5));
             WaitForPower(squeezer);
             Check("brain squeezer is powered",
                 squeezer.TryGetComp<CompPowerTrader>().PowerOn, PowerDetail(squeezer));
@@ -284,7 +284,7 @@ namespace RandomReplicator
 
             pawn.needs.joy.CurLevel = 0.2f;
             int mutteredBefore = JobDriver_UseBrainSqueezer.MonologuesShown;
-            JobDef useSqueezer = RR_BrainSqueezerDefOf.RR_UseBrainSqueezer;
+            JobDef useSqueezer = BT_BrainSqueezerDefOf.BT_UseBrainSqueezer;
             pawn.jobs.StartJob(
                 JobMaker.MakeJob(useSqueezer, squeezer, squeezer.Position),
                 JobCondition.InterruptForced);
@@ -301,15 +301,15 @@ namespace RandomReplicator
                 JobDriver_UseBrainSqueezer.MonologuesShown > mutteredBefore,
                 "no lines shown");
             var thought = pawn.needs.mood.thoughts.memories
-                .GetFirstMemoryOfDef(RR_BrainSqueezerDefOf.RR_BrainSqueezed)
+                .GetFirstMemoryOfDef(BT_BrainSqueezerDefOf.BT_BrainSqueezed)
                 as Thought_BrainSqueezed;
-            List<string> lines = RR_BrainSqueezerDefOf.RR_BrainSqueezed
+            List<string> lines = BT_BrainSqueezerDefOf.BT_BrainSqueezed
                 .GetModExtension<MonologueExtension>().lines;
             Check("the colonist got the memory, labelled with a monologue line",
                 thought != null && lines.Contains(thought.Line),
                 thought == null ? "no memory" : $"line '{thought.Line}'");
             Check("the colonist got a day of calm",
-                pawn.health.hediffSet.HasHediff(RR_BrainSqueezerDefOf.RR_BrainSqueezedCalm));
+                pawn.health.hediffSet.HasHediff(BT_BrainSqueezerDefOf.BT_BrainSqueezedCalm));
             Check("the colonist gained joy", pawn.needs.joy.CurLevel > 0.2f,
                 $"joy {pawn.needs.joy.CurLevel:F2}");
         }
@@ -324,13 +324,13 @@ namespace RandomReplicator
         private void TestBallista(Map map, IntVec3 center)
         {
             var ballista = (Building_BatshittiumBallista)Spawn(
-                map, "RR_BatshittiumBallista", center + new IntVec3(4, 0, -5));
+                map, "BT_BatshittiumBallista", center + new IntVec3(4, 0, -5));
             var chained1 = (Building_BallistaMagazine)Spawn(
-                map, "RR_BallistaMagazine", center + new IntVec3(6, 0, -5));
+                map, "BT_BallistaMagazine", center + new IntVec3(6, 0, -5));
             var chained2 = (Building_BallistaMagazine)Spawn(
-                map, "RR_BallistaMagazine", center + new IntVec3(7, 0, -5));
+                map, "BT_BallistaMagazine", center + new IntVec3(7, 0, -5));
             var detached = (Building_BallistaMagazine)Spawn(
-                map, "RR_BallistaMagazine", center + new IntVec3(-3, 0, -3));
+                map, "BT_BallistaMagazine", center + new IntVec3(-3, 0, -3));
             WaitForPower(ballista, chained1, chained2, detached);
             Check("ballista and magazines are powered",
                 ballista.GetComp<CompPowerTrader>().PowerOn && chained2.CanFeed && detached.CanFeed,
@@ -350,7 +350,7 @@ namespace RandomReplicator
                 Mathf.Abs(-power.PowerOutput - ballista.StandbyWatts) < 0.5f,
                 $"draw {-power.PowerOutput:F1} W, expected {ballista.StandbyWatts:F1} W");
 
-            ThingDef painful = RR_BallistaDefOf.RR_BoltPainful;
+            ThingDef painful = BT_BallistaDefOf.BT_BoltPainful;
             AddBolts(ballista.InternalMagazine, painful, 16);
             AddBolts(chained2.Storage, painful, 100);
             int volleysBefore = Building_BatshittiumBallista.VolleysFired;
@@ -380,7 +380,7 @@ namespace RandomReplicator
                 $"peak {peakDraw:F0} W, expected {ballista.FiringWatts:F0} W");
             Check("a feeding magazine draws feeding power", magazineFed);
 
-            ThingDef reallyPainful = RR_BallistaDefOf.RR_BoltReallyPainful;
+            ThingDef reallyPainful = BT_BallistaDefOf.BT_BoltReallyPainful;
             ballista.SetAmmo(reallyPainful);
             AddBolts(chained1.Storage, reallyPainful, 20);
             Tick(700);
@@ -414,7 +414,7 @@ namespace RandomReplicator
         /// <param name="center">The reactor's position.</param>
         private void TestArtificer(Map map, IntVec3 center)
         {
-            Thing artificer = Spawn(map, "RR_BatshittiumArtificer", center + new IntVec3(3, 0, 3));
+            Thing artificer = Spawn(map, "BT_BatshittiumArtificer", center + new IntVec3(3, 0, 3));
             var comp = artificer.TryGetComp<CompBatshittiumArtificer>();
             var fuel = artificer.TryGetComp<CompRefuelable>();
             WaitForPower(artificer);
@@ -430,7 +430,7 @@ namespace RandomReplicator
                 }
             }
 
-            ThingDef painful = RR_BallistaDefOf.RR_BoltPainful;
+            ThingDef painful = BT_BallistaDefOf.BT_BoltPainful;
             fuel.Refuel(2f);
             comp.Select(painful);
             int before = TotalBolts(map, painful);
@@ -526,7 +526,7 @@ namespace RandomReplicator
             Check("the countdown ends in detonation", replicator.Destroyed);
             watch.Restart();
             Tick(600);
-            Log.Message($"[RR-SMOKE] TIMING countdown+blast {countdownMs} ms; "
+            Log.Message($"[BT-SMOKE] TIMING countdown+blast {countdownMs} ms; "
                 + $"next 600 ticks of fire {watch.ElapsedMilliseconds} ms");
         }
 
@@ -586,12 +586,12 @@ namespace RandomReplicator
             if (ok)
             {
                 passed++;
-                Log.Message($"[RR-SMOKE] PASS {name}");
+                Log.Message($"[BT-SMOKE] PASS {name}");
             }
             else
             {
                 failed++;
-                Log.Warning($"[RR-SMOKE] FAIL {name}: {detail}");
+                Log.Warning($"[BT-SMOKE] FAIL {name}: {detail}");
             }
         }
     }

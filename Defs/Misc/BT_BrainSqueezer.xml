@@ -5,35 +5,35 @@
        ThingDefs/Buildings_BrainSqueezer.xml. -->
 
   <JoyKindDef>
-    <defName>RR_BrainSqueezing</defName>
+    <defName>BT_BrainSqueezing</defName>
     <label>brain squeezing</label>
   </JoyKindDef>
 
   <JoyGiverDef>
-    <defName>RR_UseBrainSqueezer</defName>
-    <giverClass>RandomReplicator.JoyGiver_BrainSqueezer</giverClass>
+    <defName>BT_UseBrainSqueezer</defName>
+    <giverClass>BatshitTechnology.JoyGiver_BrainSqueezer</giverClass>
     <baseChance>2.5</baseChance> <!-- telescope 2, television 3.5 -->
     <thingDefs>
-      <li>RR_BrainSqueezer</li>
+      <li>BT_BrainSqueezer</li>
     </thingDefs>
-    <jobDef>RR_UseBrainSqueezer</jobDef>
-    <joyKind>RR_BrainSqueezing</joyKind>
+    <jobDef>BT_UseBrainSqueezer</jobDef>
+    <joyKind>BT_BrainSqueezing</joyKind>
   </JoyGiverDef>
 
   <JobDef>
-    <defName>RR_UseBrainSqueezer</defName>
-    <driverClass>RandomReplicator.JobDriver_UseBrainSqueezer</driverClass>
+    <defName>BT_UseBrainSqueezer</defName>
+    <driverClass>BatshitTechnology.JobDriver_UseBrainSqueezer</driverClass>
     <reportString>getting brain squeezed.</reportString>
     <joyDuration>2500</joyDuration> <!-- one in-game hour -->
     <joyMaxParticipants>1</joyMaxParticipants>
-    <joyKind>RR_BrainSqueezing</joyKind>
+    <joyKind>BT_BrainSqueezing</joyKind>
     <allowOpportunisticPrefix>true</allowOpportunisticPrefix>
   </JobDef>
 
   <!-- The memory's label in the mood panel is the last line said. -->
   <ThoughtDef>
-    <defName>RR_BrainSqueezed</defName>
-    <thoughtClass>RandomReplicator.Thought_BrainSqueezed</thoughtClass>
+    <defName>BT_BrainSqueezed</defName>
+    <thoughtClass>BatshitTechnology.Thought_BrainSqueezed</thoughtClass>
     <durationDays>1</durationDays>
     <stackLimit>1</stackLimit>
     <stages>
@@ -44,7 +44,7 @@
       </li>
     </stages>
     <modExtensions>
-      <li Class="RandomReplicator.MonologueExtension">
+      <li Class="BatshitTechnology.MonologueExtension">
         <lines>
           <li>That... that feels pretty weird...</li>
           <li>Is that supposed to feel like... that...</li>
@@ -82,7 +82,7 @@
   <!-- A day of lower mental break threshold: fewer breaks, riots and
        arguments. -->
   <HediffDef>
-    <defName>RR_BrainSqueezedCalm</defName>
+    <defName>BT_BrainSqueezedCalm</defName>
     <label>brain-squeezed</label>
     <description>Recently squeezed. Everything feels slightly further away, including the urge to snap.</description>
     <hediffClass>HediffWithComps</hediffClass>

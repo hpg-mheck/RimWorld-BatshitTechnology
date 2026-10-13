@@ -1,4 +1,4 @@
-// RandomReplicator Self-Destruct system
+// Batshit Technology - Random Replicator self-destruct system.
 // Pawn job + workgiver + DefOfs + textures + countdown overlay. Countdown and
 // detonation live in CompRandomReplicator.
 
@@ -8,39 +8,39 @@ using Verse.AI;
 using RimWorld;
 using UnityEngine;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>The self-destruct order's designation.</summary>
     [DefOf]
-    public static class RR_DesignationDefOf
+    public static class BT_DesignationDefOf
     {
         /// <summary>Marks a replicator for a colonist to arm.</summary>
-        public static DesignationDef RR_SelfDestruct;
+        public static DesignationDef BT_SelfDestruct;
 
         /// <summary>Lets RimWorld bind the field above at load.</summary>
-        static RR_DesignationDefOf()
+        static BT_DesignationDefOf()
         {
-            DefOfHelper.EnsureInitializedInCtor(typeof(RR_DesignationDefOf));
+            DefOfHelper.EnsureInitializedInCtor(typeof(BT_DesignationDefOf));
         }
     }
 
     /// <summary>The self-destruct arming job.</summary>
     [DefOf]
-    public static class RR_JobDefOf
+    public static class BT_JobDefOf
     {
         /// <summary>A colonist arming a replicator's self-destruct.</summary>
-        public static JobDef RR_ArmSelfDestruct;
+        public static JobDef BT_ArmSelfDestruct;
 
         /// <summary>Lets RimWorld bind the field above at load.</summary>
-        static RR_JobDefOf()
+        static BT_JobDefOf()
         {
-            DefOfHelper.EnsureInitializedInCtor(typeof(RR_JobDefOf));
+            DefOfHelper.EnsureInitializedInCtor(typeof(BT_JobDefOf));
         }
     }
 
     /// <summary>Vanilla textures, loaded on the main thread at startup.</summary>
     [StaticConstructorOnStartup]
-    public static class RR_Textures
+    public static class BT_Textures
     {
         /// <summary>Arm self-destruct.</summary>
         public static readonly Texture2D ArmSelfDestruct =
@@ -134,7 +134,7 @@ namespace RandomReplicator
         public override bool ShouldSkip(Pawn pawn, bool forced = false)
         {
             return !pawn.Map.designationManager.AnySpawnedDesignationOfDef(
-                RR_DesignationDefOf.RR_SelfDestruct);
+                BT_DesignationDefOf.BT_SelfDestruct);
         }
 
         /// <summary>Only the designated replicators.</summary>
@@ -144,7 +144,7 @@ namespace RandomReplicator
         {
             IEnumerable<Designation> designations =
                 pawn.Map.designationManager.SpawnedDesignationsOfDef(
-                    RR_DesignationDefOf.RR_SelfDestruct);
+                    BT_DesignationDefOf.BT_SelfDestruct);
             foreach (var des in designations)
             {
                 var t = des.target.Thing;
@@ -171,7 +171,7 @@ namespace RandomReplicator
             }
 
             var designation = t.Map.designationManager.DesignationOn(
-                t, RR_DesignationDefOf.RR_SelfDestruct);
+                t, BT_DesignationDefOf.BT_SelfDestruct);
             if (designation == null || !pawn.CanReserve(t, 1, -1, null, forced))
             {
                 return false;
@@ -188,7 +188,7 @@ namespace RandomReplicator
         /// <returns>The job.</returns>
         public override Job JobOnThing(Pawn pawn, Thing t, bool forced = false)
         {
-            return JobMaker.MakeJob(RR_JobDefOf.RR_ArmSelfDestruct, t);
+            return JobMaker.MakeJob(BT_JobDefOf.BT_ArmSelfDestruct, t);
         }
     }
 
@@ -215,7 +215,7 @@ namespace RandomReplicator
         {
             this.FailOnDespawnedNullOrForbidden(TargetIndex.A);
             this.FailOnThingMissingDesignation(
-                TargetIndex.A, RR_DesignationDefOf.RR_SelfDestruct);
+                TargetIndex.A, BT_DesignationDefOf.BT_SelfDestruct);
 
             int armingTicks = TargetThing.TryGetComp<CompRandomReplicator>()?
                 .Props.selfDestructArmingTicks ?? 120;
@@ -229,7 +229,7 @@ namespace RandomReplicator
             arm.initAction = () =>
             {
                 TargetThing.Map.designationManager.TryRemoveDesignationOn(
-                    TargetThing, RR_DesignationDefOf.RR_SelfDestruct);
+                    TargetThing, BT_DesignationDefOf.BT_SelfDestruct);
                 TargetThing.TryGetComp<CompRandomReplicator>()?.ArmSelfDestruct();
             };
             arm.defaultCompleteMode = ToilCompleteMode.Instant;

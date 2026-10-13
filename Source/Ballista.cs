@@ -1,4 +1,4 @@
-// RandomReplicator - Batshittium Ballista.
+// Batshit Technology - Batshittium Ballista.
 // A turret that fires a volley of insanely inaccurate bolts once every five
 // seconds. The player picks the range (10 to 325 tiles), the projectile count
 // (1 to 256) and the bolt type (Painful: kinetic; Really Painful: explosive).
@@ -11,31 +11,31 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using RandomReplicator.Core;
+using BatshitTechnology.Core;
 using Verse;
 using Verse.AI;
 using RimWorld;
 using UnityEngine;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>Ballista defs used from code.</summary>
     [DefOf]
-    public static class RR_BallistaDefOf
+    public static class BT_BallistaDefOf
     {
         /// <summary>Kinetic bolts.</summary>
-        public static ThingDef RR_BoltPainful;
+        public static ThingDef BT_BoltPainful;
 
         /// <summary>Explosive bolts.</summary>
-        public static ThingDef RR_BoltReallyPainful;
+        public static ThingDef BT_BoltReallyPainful;
 
         /// <summary>The magazine building.</summary>
-        public static ThingDef RR_BallistaMagazine;
+        public static ThingDef BT_BallistaMagazine;
 
         /// <summary>Lets RimWorld bind the fields above at load.</summary>
-        static RR_BallistaDefOf()
+        static BT_BallistaDefOf()
         {
-            DefOfHelper.EnsureInitializedInCtor(typeof(RR_BallistaDefOf));
+            DefOfHelper.EnsureInitializedInCtor(typeof(BT_BallistaDefOf));
         }
     }
 
@@ -127,7 +127,7 @@ namespace RandomReplicator
             BallistaPower.MinCount, BallistaPower.MaxCount);
 
         /// <summary>The bolt type fired.</summary>
-        public ThingDef AmmoDef => ammoDef ?? RR_BallistaDefOf.RR_BoltPainful;
+        public ThingDef AmmoDef => ammoDef ?? BT_BallistaDefOf.BT_BoltPainful;
 
         /// <summary>Standby draw at the current settings.</summary>
         public float StandbyWatts => (float)BallistaPower.StandbyWatts(Count, Range);
@@ -374,7 +374,7 @@ namespace RandomReplicator
         internal List<Building_BallistaMagazine> ConnectedMagazines()
         {
             var byCell = new Dictionary<(int x, int z), Building_BallistaMagazine>();
-            foreach (Thing t in Map.listerThings.ThingsOfDef(RR_BallistaDefOf.RR_BallistaMagazine))
+            foreach (Thing t in Map.listerThings.ThingsOfDef(BT_BallistaDefOf.BT_BallistaMagazine))
             {
                 if (t is Building_BallistaMagazine magazine && magazine.CanFeed
                     && magazine.Faction == Faction)
@@ -454,7 +454,7 @@ namespace RandomReplicator
                 defaultLabel = $"Range: {Range}",
                 defaultDesc = "Pick how far the Ballista reaches. Range multiplies "
                     + "its standby and firing power.",
-                icon = RR_Textures.BallistaRange,
+                icon = BT_Textures.BallistaRange,
                 action = () => Find.WindowStack.Add(new FloatMenu(Settings.rangePresets
                     .Select(r => new FloatMenuOption(
                         $"{r} tiles: {BallistaPower.StandbyWatts(Count, r):N0} W standby, "
@@ -467,7 +467,7 @@ namespace RandomReplicator
                 defaultLabel = $"Projectiles: {Count}",
                 defaultDesc = "Pick how many bolts each volley fires. The count "
                     + "multiplies its standby and firing power.",
-                icon = RR_Textures.BallistaCount,
+                icon = BT_Textures.BallistaCount,
                 action = () => Find.WindowStack.Add(new FloatMenu(Settings.countPresets
                     .Select(c => new FloatMenuOption(
                         $"{c}: {BallistaPower.StandbyWatts(c, Range):N0} W standby, "
@@ -481,9 +481,9 @@ namespace RandomReplicator
                 defaultDesc = "Switch between Painful (kinetic) and Really Painful "
                     + "(explosive) bolts.",
                 icon = AmmoDef.uiIcon,
-                action = () => SetAmmo(AmmoDef == RR_BallistaDefOf.RR_BoltPainful
-                    ? RR_BallistaDefOf.RR_BoltReallyPainful
-                    : RR_BallistaDefOf.RR_BoltPainful)
+                action = () => SetAmmo(AmmoDef == BT_BallistaDefOf.BT_BoltPainful
+                    ? BT_BallistaDefOf.BT_BoltReallyPainful
+                    : BT_BallistaDefOf.BT_BoltPainful)
             };
             foreach (Gizmo g in StorageSettingsClipboard.CopyPasteGizmosFor(storage.Settings))
             {

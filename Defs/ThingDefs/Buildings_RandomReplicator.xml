@@ -3,10 +3,10 @@
   <!-- Random Replicator: player-buildable device that fabricates a random
        food item every 6h into refrigerated storage (10 items) -->
   <ThingDef ParentName="BuildingBase">
-    <defName>RandomReplicator</defName>
+    <defName>BT_RandomReplicator</defName>
     <label>random replicator</label>
     <description>A compact fabricator that conjures a random food item every six hours into a refrigerated compartment. Haulers carry the food out to better storage; production pauses when the compartment holds ten items.\n\nRefrigeration keeps stored food fresh for an extra 50 W, and can be switched off. Its self-destruct can be armed by a colonist. After a short countdown it detonates with a massive, fiery blast.</description>
-    <thingClass>RandomReplicator.Building_RandomReplicator</thingClass>
+    <thingClass>BatshitTechnology.Building_RandomReplicator</thingClass>
     <category>Building</category>
     <designationCategory>Production</designationCategory>
     <minifiedDef>MinifiedThing</minifiedDef>
@@ -69,7 +69,7 @@
         <basePowerConsumption>50</basePowerConsumption> <!-- fabricator; refrigeration adds its own draw below -->
       </li>
       <li Class="CompProperties_Flickable" />
-      <li Class="RandomReplicator.CompProperties_RandomReplicator">
+      <li Class="BatshitTechnology.CompProperties_RandomReplicator">
         <ticksPerSpawn>15000</ticksPerSpawn> <!-- 6 hours (60,000 ticks/day) -->
         <storageCapacity>10</storageCapacity> <!-- items; production pauses when full -->
         <allowedThingCategoryDefs>
@@ -93,7 +93,7 @@
     </comps>
     <tickerType>Normal</tickerType>
     <researchPrerequisites>
-      <li>RR_BatshittiumLore</li>
+      <li>BT_BatshittiumLore</li>
     </researchPrerequisites>
   </ThingDef>
 </Defs>

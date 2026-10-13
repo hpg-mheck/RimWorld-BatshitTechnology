@@ -1,6 +1,6 @@
 using System;
 
-namespace RandomReplicator.Core;
+namespace BatshitTechnology.Core;
 
 /// <summary>
 /// Power draw of the Batshittium Ballista. Range and projectile count

@@ -1,7 +1,7 @@
 # Repository Guidance for R. Talon
 
 ## Scope
-These instructions apply to the entire `RandomReplicator` repository unless
+These instructions apply to the entire `RimWorld-BatshitTechnology` repository unless
 superseded by a more specific `AGENTS.md` file in a subdirectory.
 
 ## Engineering Expectations

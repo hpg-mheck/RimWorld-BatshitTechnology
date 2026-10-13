@@ -1,9 +1,11 @@
-# RimWorld-BatshitTechnology
-A collection of ridiculous, misguided, and insanely overpowered RimWorld gadgets and mods, done as a very entertaining exercise to see how well Claude could be taught to do rapid-prototyping on Windows for a complex plugin architecture.  Share and enjoy.
+# Batshit Technology (RimWorld 1.6) — v0.8
 
-# Random Replicator (RimWorld 1.6) — v0.7
+A collection of ridiculous, misguided, and insanely overpowered RimWorld
+gadgets and mods, done as a very entertaining exercise to see how well
+Claude could be taught to do rapid-prototyping on Windows for a complex
+plugin architecture. Share and enjoy.
 
-Batshit technology for RimWorld, in its own research tab:
+Everything lives in its own research tab, **Batshit Technology**:
 
 - **Batshittium**: an element made from ordinary rock chunks, ten to one, in
   the **Batshittium Transmogrifier**.
@@ -29,27 +31,27 @@ Batshit technology for RimWorld, in its own research tab:
    folder, for example
    `C:\Program Files (x86)\Steam\steamapps\common\RimWorld`. The build stops
    with a clear error if it is missing.
-3. Build `RandomReplicator.sln` (Release). The output in `Assemblies/` is
-   `RandomReplicator.dll` plus `RandomReplicator.Core.dll`, the game-free
+3. Build `BatshitTechnology.sln` (Release). The output in `Assemblies/` is
+   `BatshitTechnology.dll` plus `BatshitTechnology.Core.dll`, the game-free
    helper library; RimWorld needs both.
 
 From a terminal:
 
-    MSBuild.exe Source\RandomReplicator.csproj -restore -p:Configuration=Release
+    MSBuild.exe Source\BatshitTechnology.csproj -restore -p:Configuration=Release
 
 ## Tests
 
-`Tests/RandomReplicator.Tests` holds xUnit tests for the Core library and
+`Tests/BatshitTechnology.Tests` holds xUnit tests for the Core library and
 XML regression tests for the Defs (including the corrected v0.2 values, so
 those bugs cannot quietly return). Run them with:
 
-    dotnet test Tests/RandomReplicator.Tests/RandomReplicator.Tests.csproj
+    dotnet test Tests/BatshitTechnology.Tests/BatshitTechnology.Tests.csproj
 
 ## Install
 
 Put this folder in RimWorld's `Mods` folder (a directory junction works for
-development), then enable **Random Replicator** in the mod list. It needs no
-other mods.
+development), then enable **Batshit Technology** in the mod list. It needs
+no other mods.
 
 To see everything at once without touching your own saves or mod list, run
 `.\Tools\smoke-test.ps1 -Showcase` (PowerShell, after building). It starts
@@ -114,8 +116,8 @@ colony pays the listed cost.
   the last thing they said, and a day of calm (mental break threshold -5
   percent), so fewer breakdowns, riots and arguments. Another session
   restarts both.
-- The lines are in `Defs/Misc/RR_BrainSqueezer.xml`, under the
-  `RR_BrainSqueezed` thought's `MonologueExtension`; add or edit freely.
+- The lines are in `Defs/Misc/BT_BrainSqueezer.xml`, under the
+  `BT_BrainSqueezed` thought's `MonologueExtension`; add or edit freely.
 
 ## Batshittium Ballista
 
@@ -233,7 +235,7 @@ The reactor's are in `Defs/ThingDefs/Buildings_Batshittium.xml`, under
 | heatRadius         | 12      | rooms within this many tiles get a share  |
 | heatMaxTemperature | 200     | °C cap; things auto-ignite above 240      |
 
-The Transmogrifier's ratio and work are in `Defs/RecipeDefs/RR_Recipes.xml`.
+The Transmogrifier's ratio and work are in `Defs/RecipeDefs/BT_Recipes.xml`.
 
 ## Textures
 
@@ -273,6 +275,12 @@ Infinite Chemreactor sprite.
   Really Painful bolts, the Ballista Magazine (edge-chained feeding), the
   automated Batshittium Artificer, and five research projects under
   Batshittium Arcana.
+- **v0.8**: renamed from Random Replicator to Batshit Technology and moved
+  to its own repository, history included. New package ID
+  `breakpoint8088.BatshitTechnology`; def names now start with `BT_`
+  (the replicator itself is `BT_RandomReplicator`), and the code namespace
+  and assemblies are `BatshitTechnology`. Saves from v0.7 and earlier do not
+  carry over.
 
-MIT-style license for code. RimWorld © Ludeon Studios. Uses vanilla
+MIT license for code (see `LICENSE`). RimWorld © Ludeon Studios. Uses vanilla
 textures and sounds by reference (not redistributed).

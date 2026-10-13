@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RandomReplicator.Core;
+namespace BatshitTechnology.Core;
 
 /// <summary>
 /// Provides deterministic weighted random selection for replicator outputs

@@ -1,4 +1,4 @@
-// RandomReplicator - Batshittium Reactor
+// Batshit Technology - Batshittium Reactor
 // Burns one unit of batshittium at a time for a random 0.1-36 in-game hours.
 // Vanilla CompPowerPlant supplies the power (250,000 W in the Def) whenever
 // a unit is loaded and the reactor is switched on, and CompRefuelable has
@@ -7,12 +7,12 @@
 // range, so the reactor has to be sited away from housing.
 
 using System.Collections.Generic;
-using RandomReplicator.Core;
+using BatshitTechnology.Core;
 using Verse;
 using RimWorld;
 using UnityEngine;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>
     /// XML-facing properties for <see cref="CompBatshittiumReactor"/>. See

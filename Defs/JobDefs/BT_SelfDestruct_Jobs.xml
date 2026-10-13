@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Defs>
   <JobDef>
-    <defName>RR_ArmSelfDestruct</defName>
-    <driverClass>RandomReplicator.JobDriver_ArmSelfDestruct</driverClass>
+    <defName>BT_ArmSelfDestruct</defName>
+    <driverClass>BatshitTechnology.JobDriver_ArmSelfDestruct</driverClass>
     <reportString>arming self-destruct on TargetA.</reportString>
     <casualInterruptible>false</casualInterruptible>
     <checkOverrideOnDamage>Never</checkOverrideOnDamage>

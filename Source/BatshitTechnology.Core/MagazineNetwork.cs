@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace RandomReplicator.Core;
+namespace BatshitTechnology.Core;
 
 /// <summary>
 /// Which Ballista Magazines feed a Ballista. A magazine is connected if it

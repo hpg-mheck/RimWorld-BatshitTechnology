@@ -1,6 +1,6 @@
 using System;
 
-namespace RandomReplicator.Core;
+namespace BatshitTechnology.Core;
 
 /// <summary>
 /// Picks Brain Squeezer monologue lines at random, never saying the same

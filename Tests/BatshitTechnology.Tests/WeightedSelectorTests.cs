@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using RandomReplicator.Core;
+using BatshitTechnology.Core;
 using Xunit;
 
-namespace RandomReplicator.Tests;
+namespace BatshitTechnology.Tests;
 
 /// <summary>
 /// Verifies the deterministic behaviour of <see cref="WeightedSelector{T}"/>.

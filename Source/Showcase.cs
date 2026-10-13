@@ -1,5 +1,5 @@
-// RandomReplicator - in-game showcase.
-// Runs only when RimWorld starts with -rrshowcase (Tools/smoke-test.ps1
+// Batshit Technology - in-game showcase.
+// Runs only when RimWorld starts with -btshowcase (Tools/smoke-test.ps1
 // -Showcase). On the quick-test map it finishes the mod's research and builds
 // a working demo base: a fuelled reactor powering a stocked replicator, the
 // Transmogrifier with a bill and rock chunks, a colonist in the Brain
@@ -12,13 +12,13 @@ using Verse;
 using Verse.AI;
 using RimWorld;
 
-namespace RandomReplicator
+namespace BatshitTechnology
 {
     /// <summary>Builds the showcase base.</summary>
     internal static class Showcase
     {
         /// <summary>The command-line flag that requests the showcase.</summary>
-        internal const string Flag = "rrshowcase";
+        internal const string Flag = "btshowcase";
 
         /// <summary>Builds the demo base around the map's center.</summary>
         /// <param name="map">The quick-test map.</param>
@@ -29,11 +29,11 @@ namespace RandomReplicator
             IntVec3 center = map.Center;
             Clear(map, CellRect.CenteredOn(center, 16));
 
-            Thing reactor = Spawn(map, "RR_BatshittiumReactor", center);
+            Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
             reactor.TryGetComp<CompRefuelable>().Refuel(2f);
 
             var replicator = (Building_RandomReplicator)Spawn(
-                map, "RandomReplicator", center + new IntVec3(-5, 0, 0));
+                map, "BT_RandomReplicator", center + new IntVec3(-5, 0, 0));
             var replicatorComp = replicator.GetComp<CompRandomReplicator>();
             for (int i = 0; i < 6; i++)
             {
@@ -41,9 +41,9 @@ namespace RandomReplicator
             }
 
             var bench = (Building_WorkTable)Spawn(
-                map, "RR_BatshittiumTransmogrifier", center + new IntVec3(5, 0, 0));
+                map, "BT_BatshittiumTransmogrifier", center + new IntVec3(5, 0, 0));
             bench.billStack.AddBill(
-                DefDatabase<RecipeDef>.GetNamed("RR_TransmogrifyRockChunks").MakeNewBill());
+                DefDatabase<RecipeDef>.GetNamed("BT_TransmogrifyRockChunks").MakeNewBill());
             ThingDef chunk = DefDatabase<ThingDef>.GetNamed("ChunkGranite");
             for (int i = 0; i < 20; i++)
             {
@@ -52,9 +52,9 @@ namespace RandomReplicator
                     map, ThingPlaceMode.Near);
             }
 
-            Thing squeezer = Spawn(map, "RR_BrainSqueezer", center + new IntVec3(0, 0, -5));
+            Thing squeezer = Spawn(map, "BT_BrainSqueezer", center + new IntVec3(0, 0, -5));
 
-            Thing artificer = Spawn(map, "RR_BatshittiumArtificer", center + new IntVec3(3, 0, 3));
+            Thing artificer = Spawn(map, "BT_BatshittiumArtificer", center + new IntVec3(3, 0, 3));
             artificer.TryGetComp<CompRefuelable>().Refuel(10f);
 
             BuildBallista(map, center);
@@ -62,7 +62,7 @@ namespace RandomReplicator
             // Stock for haulers: batshittium to refuel the reactor and
             // Artificer, and a stockpile for replicated food.
             Thing batshittium = ThingMaker.MakeThing(
-                DefDatabase<ThingDef>.GetNamed("RR_Batshittium"));
+                DefDatabase<ThingDef>.GetNamed("BT_Batshittium"));
             batshittium.stackCount = 30;
             GenPlace.TryPlaceThing(batshittium, center + new IntVec3(-3, 0, 4), map,
                 ThingPlaceMode.Near);
@@ -78,9 +78,11 @@ namespace RandomReplicator
             Find.CameraDriver.JumpToCurrentMapLoc(center);
             Find.TickManager.CurTimeSpeed = TimeSpeed.Normal;
             Messages.Message(
-                "Random Replicator showcase: everything is built and running. "
+                "Batshit Technology showcase: everything is built and running. "
                     + "Select things to see their buttons and status.",
                 MessageTypeDefOf.PositiveEvent, false);
+            // Tools/smoke-test.ps1 waits for this line before maximizing.
+            Log.Message("[BT-SHOWCASE] READY");
         }
 
         /// <summary>
@@ -92,16 +94,16 @@ namespace RandomReplicator
         private static void BuildBallista(Map map, IntVec3 center)
         {
             var ballista = (Building_BatshittiumBallista)Spawn(
-                map, "RR_BatshittiumBallista", center + new IntVec3(4, 0, -5));
-            ThingDef explosive = RR_BallistaDefOf.RR_BoltReallyPainful;
+                map, "BT_BatshittiumBallista", center + new IntVec3(4, 0, -5));
+            ThingDef explosive = BT_BallistaDefOf.BT_BoltReallyPainful;
             Fill(ballista.InternalMagazine, explosive, 16);
             foreach (IntVec3 offset in new[] { new IntVec3(6, 0, -5), new IntVec3(7, 0, -5),
                 new IntVec3(7, 0, -6) })
             {
                 var magazine = (Building_BallistaMagazine)Spawn(
-                    map, "RR_BallistaMagazine", center + offset);
+                    map, "BT_BallistaMagazine", center + offset);
                 Fill(magazine.Storage, explosive, 400);
-                Fill(magazine.Storage, RR_BallistaDefOf.RR_BoltPainful, 200);
+                Fill(magazine.Storage, BT_BallistaDefOf.BT_BoltPainful, 200);
             }
 
             ballista.SetAmmo(explosive);
@@ -126,7 +128,7 @@ namespace RandomReplicator
 
             pawn.needs.joy.CurLevel = 0.2f;
             pawn.jobs.StartJob(
-                JobMaker.MakeJob(RR_BrainSqueezerDefOf.RR_UseBrainSqueezer, squeezer,
+                JobMaker.MakeJob(BT_BrainSqueezerDefOf.BT_UseBrainSqueezer, squeezer,
                     squeezer.Position),
                 JobCondition.InterruptForced);
         }
@@ -135,7 +137,7 @@ namespace RandomReplicator
         private static void FinishResearch()
         {
             foreach (ResearchProjectDef project in DefDatabase<ResearchProjectDef>.AllDefs
-                .Where(p => p.tab?.defName == "RR_BatshitTechnology" && !p.IsFinished)
+                .Where(p => p.tab?.defName == "BT_BatshitTechnology" && !p.IsFinished)
                 .OrderBy(p => p.researchViewX))
             {
                 Find.ResearchManager.FinishProject(

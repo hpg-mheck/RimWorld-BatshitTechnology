@@ -136,7 +136,7 @@ def batshittium_item():
     shard(d, (63, 101), 74, 28, -3)
     sparkle(d, 95, 38, 7)
     sparkle(d, 34, 52, 5)
-    save(img, size, 'Things/Item/Resource/RR_Batshittium.png')
+    save(img, size, 'Things/Item/Resource/BT_Batshittium.png')
 
 
 def transmogrifier():
@@ -193,7 +193,7 @@ def transmogrifier():
     for x, y, c in ((150, 214, (220, 60, 60, 255)), (162, 214, (235, 200, 60, 255)),
                     (150, 225, (70, 200, 90, 255)), (162, 225, BS_MID)):
         circle(d, x, y, 3.5, fill=c, outline=OUTLINE, width=1)
-    save(img, size, 'Things/Building/Production/RR_BatshittiumTransmogrifier.png')
+    save(img, size, 'Things/Building/Production/BT_BatshittiumTransmogrifier.png')
 
 
 def reactor():
@@ -236,7 +236,7 @@ def reactor():
     bat(d, 128, 132, 1.25, (70, 14, 100, 215))
     d.ellipse(s(102, 98, 122, 110), fill=(255, 255, 255, 150))  # specular highlight
     circle(d, 128, 128, 50, outline=BS_DEEP, width=2)
-    save(img, size, 'Things/Building/Power/RR_BatshittiumReactor.png')
+    save(img, size, 'Things/Building/Power/BT_BatshittiumReactor.png')
 
 
 def brain_squeezer():
@@ -272,7 +272,7 @@ def brain_squeezer():
     circle(d, 64, 90, 16, outline=(*BS_LIGHT[:3], 230), width=3)  # glowing band
     orb(d, 64, 90, 9, BS_DARK, BS_CORE)
     d.ellipse(s(55, 80, 63, 85), fill=(255, 255, 255, 140))  # glint
-    save(img, size, 'Things/Building/Joy/RR_BrainSqueezer.png')
+    save(img, size, 'Things/Building/Joy/BT_BrainSqueezer.png')
 
 
 HAZARD = (232, 190, 40, 255)
@@ -317,7 +317,7 @@ def bolt_item(explosive):
         bolt(d, x, y, 84, ang, explosive)
     d.rounded_rectangle(s(36, 84, 70, 96), radius=4 * SS, fill=(120, 92, 60, 255),
                         outline=OUTLINE, width=2 * SS)  # binding strap
-    name = 'RR_BoltReallyPainful' if explosive else 'RR_BoltPainful'
+    name = 'BT_BoltReallyPainful' if explosive else 'BT_BoltPainful'
     save(img, size, f'Things/Item/Resource/{name}.png')
 
 
@@ -328,7 +328,7 @@ def bolt_projectile(explosive):
     if explosive:
         glow(img, lambda g, c: g.ellipse(s(18, 2, 46, 30), fill=c), BS_GLOW, blur=4, alpha=200)
     bolt(draw(img), 32, 60, 42, 0, explosive)
-    name = 'RR_BoltReallyPainful' if explosive else 'RR_BoltPainful'
+    name = 'BT_BoltReallyPainful' if explosive else 'BT_BoltPainful'
     save(img, size, f'Things/Projectile/{name}.png')
 
 
@@ -351,7 +351,7 @@ def ballista_base():
         circle(d, 128 + 86 * math.cos(a), 128 + 86 * math.sin(a), 3, fill=STEEL_LIGHT,
                outline=OUTLINE, width=1)
     circle(d, 128, 128, 56, fill=STEEL_DEEP, outline=OUTLINE, width=3)
-    save(img, size, 'Things/Building/Security/RR_BatshittiumBallista_Base.png')
+    save(img, size, 'Things/Building/Security/BT_BatshittiumBallista_Base.png')
 
 
 def ballista_top():
@@ -375,7 +375,7 @@ def ballista_top():
                   width=2 * SS)
     circle(d, 128, 148, 24, fill=STEEL, outline=OUTLINE, width=4)
     orb(d, 128, 148, 15, BS_DARK, BS_CORE)
-    save(img, size, 'Things/Building/Security/RR_BatshittiumBallista_Top.png')
+    save(img, size, 'Things/Building/Security/BT_BatshittiumBallista_Top.png')
 
 
 def ballista_magazine():
@@ -397,7 +397,7 @@ def ballista_magazine():
     glow(img, lambda g, c: g.ellipse(s(56, 98, 72, 114), fill=c), (80, 230, 160), blur=3, alpha=220)
     d = draw(img)
     circle(d, 64, 106, 5, fill=(80, 220, 150, 255), outline=OUTLINE, width=1)
-    save(img, size, 'Things/Building/Security/RR_BallistaMagazine.png')
+    save(img, size, 'Things/Building/Security/BT_BallistaMagazine.png')
 
 
 def artificer():
@@ -442,7 +442,7 @@ def artificer():
     d.rectangle(s(99, 210, 139, 228), fill=(70, 205, 145, 255), outline=OUTLINE, width=1 * SS)
     for x, c in ((150, (220, 60, 60, 255)), (162, BS_MID)):
         circle(d, x, 219, 3.5, fill=c, outline=OUTLINE, width=1)
-    save(img, size, 'Things/Building/Production/RR_BatshittiumArtificer.png')
+    save(img, size, 'Things/Building/Production/BT_BatshittiumArtificer.png')
 
 
 if __name__ == '__main__':

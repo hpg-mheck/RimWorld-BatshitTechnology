@@ -6,7 +6,7 @@ using System.Linq;
 using System.Xml.Linq;
 using Xunit;
 
-namespace RandomReplicator.Tests;
+namespace BatshitTechnology.Tests;
 
 /// <summary>
 /// Provides regression coverage for XML definitions that RimWorld consumes.
@@ -17,7 +17,7 @@ namespace RandomReplicator.Tests;
 public sealed class XmlDefinitionTests
 {
     private const string ReplicatorCompClass =
-        "RandomReplicator.CompProperties_RandomReplicator";
+        "BatshitTechnology.CompProperties_RandomReplicator";
 
     /// <summary>Gets the directory the Defs, About and Textures are copied to.</summary>
     private static string FixturesDirectory =>
@@ -32,9 +32,11 @@ public sealed class XmlDefinitionTests
         var root = LoadFixture("About.xml").Root
             ?? throw new InvalidOperationException("About.xml has no root.");
 
-        Assert.Equal("Matt.RandomReplicator", root.Element("packageId")?.Value);
-        Assert.Equal("Random Replicator", root.Element("name")?.Value);
-        Assert.Equal("0.7.0", root.Element("modVersion")?.Value);
+        Assert.Equal(
+            "breakpoint8088.BatshitTechnology",
+            root.Element("packageId")?.Value);
+        Assert.Equal("Batshit Technology", root.Element("name")?.Value);
+        Assert.Equal("0.8.0", root.Element("modVersion")?.Value);
         Assert.Equal(new[] { "1.6" }, ListValues(root.Element("supportedVersions")));
     }
 
@@ -62,14 +64,14 @@ public sealed class XmlDefinitionTests
     [Fact(DisplayName = "Replicator uses its building class, interaction cell and research")]
     public void Replicator_should_use_storage_building_and_lore_research()
     {
-        var def = ThingDef("RandomReplicator");
+        var def = ThingDef("BT_RandomReplicator");
 
         Assert.Equal(
-            "RandomReplicator.Building_RandomReplicator",
+            "BatshitTechnology.Building_RandomReplicator",
             def.Element("thingClass")?.Value);
         Assert.Equal("true", def.Element("hasInteractionCell")?.Value);
         Assert.Equal(
-            new[] { "RR_BatshittiumLore" },
+            new[] { "BT_BatshittiumLore" },
             ListValues(def.Element("researchPrerequisites")));
     }
 
@@ -81,7 +83,7 @@ public sealed class XmlDefinitionTests
     [Fact(DisplayName = "Self-destruct designation uses only real DesignationDef fields")]
     public void SelfDestructDesignation_should_use_valid_fields()
     {
-        var designation = SingleDef("DesignationDef", "RR_SelfDestruct");
+        var designation = SingleDef("DesignationDef", "BT_SelfDestruct");
 
         Assert.Equal("arm self-destruct", designation.Element("label")?.Value);
         Assert.Equal("Thing", designation.Element("targetType")?.Value);
@@ -100,7 +102,7 @@ public sealed class XmlDefinitionTests
     [Fact(DisplayName = "Self-destruct work giver uses a work type that exists")]
     public void SelfDestructWorkGiver_should_use_basic_worker()
     {
-        var workGiver = SingleDef("WorkGiverDef", "RR_WorkGiverArmSelfDestruct");
+        var workGiver = SingleDef("WorkGiverDef", "BT_WorkGiverArmSelfDestruct");
 
         Assert.Equal("BasicWorker", workGiver.Element("workType")?.Value);
         Assert.Equal("999", workGiver.Element("priorityInType")?.Value);
@@ -116,7 +118,7 @@ public sealed class XmlDefinitionTests
     [Fact(DisplayName = "Arming job uses an enum value for checkOverrideOnDamage")]
     public void ArmingJob_should_use_enum_damage_override()
     {
-        var job = SingleDef("JobDef", "RR_ArmSelfDestruct");
+        var job = SingleDef("JobDef", "BT_ArmSelfDestruct");
 
         Assert.Equal("Never", job.Element("checkOverrideOnDamage")?.Value);
     }
@@ -129,17 +131,17 @@ public sealed class XmlDefinitionTests
     {
         Assert.Equal(
             "Batshit Technology",
-            SingleDef("ResearchTabDef", "RR_BatshitTechnology").Element("label")?.Value);
+            SingleDef("ResearchTabDef", "BT_BatshitTechnology").Element("label")?.Value);
 
-        var lore = SingleDef("ResearchProjectDef", "RR_BatshittiumLore");
+        var lore = SingleDef("ResearchProjectDef", "BT_BatshittiumLore");
         Assert.Equal("500", lore.Element("baseCost")?.Value);
         Assert.Equal("Neolithic", lore.Element("techLevel")?.Value);
         Assert.Null(lore.Element("prerequisites"));
 
-        var arcana = SingleDef("ResearchProjectDef", "RR_BatshittiumArcana");
+        var arcana = SingleDef("ResearchProjectDef", "BT_BatshittiumArcana");
         Assert.Equal("750", arcana.Element("baseCost")?.Value);
         Assert.Equal(
-            new[] { "RR_BatshittiumLore" }, ListValues(arcana.Element("prerequisites")));
+            new[] { "BT_BatshittiumLore" }, ListValues(arcana.Element("prerequisites")));
     }
 
     /// <summary>
@@ -149,19 +151,19 @@ public sealed class XmlDefinitionTests
     [Fact(DisplayName = "Transmogrifier makes 1 batshittium from 10 stone chunks")]
     public void Transmogrifier_should_convert_ten_chunks_to_one_batshittium()
     {
-        var recipe = SingleDef("RecipeDef", "RR_TransmogrifyRockChunks");
+        var recipe = SingleDef("RecipeDef", "BT_TransmogrifyRockChunks");
         var ingredient = recipe.Element("ingredients")?.Element("li");
         Assert.Equal("10", ingredient?.Element("count")?.Value);
         Assert.Equal(
             new[] { "StoneChunks" },
             ListValues(ingredient?.Element("filter")?.Element("categories")));
-        Assert.Equal("1", recipe.Element("products")?.Element("RR_Batshittium")?.Value);
+        Assert.Equal("1", recipe.Element("products")?.Element("BT_Batshittium")?.Value);
 
-        var bench = ThingDef("RR_BatshittiumTransmogrifier");
-        Assert.Contains("RR_TransmogrifyRockChunks", ListValues(bench.Element("recipes")));
-        var workGiver = SingleDef("WorkGiverDef", "RR_DoBillsTransmogrify");
+        var bench = ThingDef("BT_BatshittiumTransmogrifier");
+        Assert.Contains("BT_TransmogrifyRockChunks", ListValues(bench.Element("recipes")));
+        var workGiver = SingleDef("WorkGiverDef", "BT_DoBillsTransmogrify");
         Assert.Contains(
-            "RR_BatshittiumTransmogrifier",
+            "BT_BatshittiumTransmogrifier",
             ListValues(workGiver.Element("fixedBillGiverDefs")));
     }
 
@@ -171,7 +173,7 @@ public sealed class XmlDefinitionTests
     [Fact(DisplayName = "Reactor burns batshittium for 250 kW")]
     public void Reactor_should_burn_batshittium_for_250_kilowatts()
     {
-        var comps = ThingDef("RR_BatshittiumReactor").Element("comps")?.Elements("li")
+        var comps = ThingDef("BT_BatshittiumReactor").Element("comps")?.Elements("li")
             .ToList() ?? new List<XElement>();
 
         var power = comps.Single(c => c.Attribute("Class")?.Value == "CompProperties_Power");
@@ -181,11 +183,11 @@ public sealed class XmlDefinitionTests
         var fuel = comps.Single(c => c.Attribute("Class")?.Value == "CompProperties_Refuelable");
         Assert.Equal("true", fuel.Element("consumeFuelOnlyWhenUsed")?.Value);
         Assert.Equal(
-            new[] { "RR_Batshittium" },
+            new[] { "BT_Batshittium" },
             ListValues(fuel.Element("fuelFilter")?.Element("thingDefs")));
 
         var reactor = comps.Single(c => c.Attribute("Class")?.Value
-            == "RandomReplicator.CompProperties_BatshittiumReactor");
+            == "BatshitTechnology.CompProperties_BatshittiumReactor");
         Assert.Equal("0.1~36", reactor.Element("burnHoursRange")?.Value);
     }
 
@@ -197,16 +199,16 @@ public sealed class XmlDefinitionTests
     [Fact(DisplayName = "Brain Squeezer is wired up with 20-30 short monologue lines")]
     public void BrainSqueezer_should_be_wired_up_with_monologue()
     {
-        var chair = ThingDef("RR_BrainSqueezer");
+        var chair = ThingDef("BT_BrainSqueezer");
         Assert.Equal("true", chair.Element("building")?.Element("isSittable")?.Value);
         Assert.Equal(
-            new[] { "RR_BatshittiumLore" }, ListValues(chair.Element("researchPrerequisites")));
+            new[] { "BT_BatshittiumLore" }, ListValues(chair.Element("researchPrerequisites")));
 
-        var giver = SingleDef("JoyGiverDef", "RR_UseBrainSqueezer");
-        Assert.Equal(new[] { "RR_BrainSqueezer" }, ListValues(giver.Element("thingDefs")));
-        Assert.Equal("RR_UseBrainSqueezer", giver.Element("jobDef")?.Value);
+        var giver = SingleDef("JoyGiverDef", "BT_UseBrainSqueezer");
+        Assert.Equal(new[] { "BT_BrainSqueezer" }, ListValues(giver.Element("thingDefs")));
+        Assert.Equal("BT_UseBrainSqueezer", giver.Element("jobDef")?.Value);
 
-        var thought = SingleDef("ThoughtDef", "RR_BrainSqueezed");
+        var thought = SingleDef("ThoughtDef", "BT_BrainSqueezed");
         string mood = thought.Element("stages")?.Element("li")?.Element("baseMoodEffect")?.Value
             ?? "0";
         Assert.True(double.Parse(mood, CultureInfo.InvariantCulture) > 0, "mood effect");
@@ -217,7 +219,7 @@ public sealed class XmlDefinitionTests
         Assert.All(lines, line => Assert.True(
             line.Length <= 45, $"too long for the mood panel: {line}"));
 
-        var calm = SingleDef("HediffDef", "RR_BrainSqueezedCalm");
+        var calm = SingleDef("HediffDef", "BT_BrainSqueezedCalm");
         string offset = calm.Descendants("MentalBreakThreshold").Single().Value;
         Assert.True(double.Parse(offset, CultureInfo.InvariantCulture) < 0, "break threshold");
     }
@@ -230,14 +232,14 @@ public sealed class XmlDefinitionTests
     [Fact(DisplayName = "Ballista system is wired up to the agreed spec")]
     public void Ballista_system_should_match_spec()
     {
-        Assert.Equal("RR_Projectile_BoltPainful",
-            ThingDef("RR_BoltPainful").Descendants("projectile").Single().Value);
-        Assert.Equal("RR_Projectile_BoltReallyPainful",
-            ThingDef("RR_BoltReallyPainful").Descendants("projectile").Single().Value);
+        Assert.Equal("BT_Projectile_BoltPainful",
+            ThingDef("BT_BoltPainful").Descendants("projectile").Single().Value);
+        Assert.Equal("BT_Projectile_BoltReallyPainful",
+            ThingDef("BT_BoltReallyPainful").Descendants("projectile").Single().Value);
         Assert.Equal("Projectile_Explosive",
-            ThingDef("RR_Projectile_BoltReallyPainful").Element("thingClass")?.Value);
+            ThingDef("BT_Projectile_BoltReallyPainful").Element("thingClass")?.Value);
 
-        var ballista = ThingDef("RR_BatshittiumBallista");
+        var ballista = ThingDef("BT_BatshittiumBallista");
         Assert.Equal("16", ballista.Descendants("capacity").Single().Value);
         Assert.Equal(
             "5", ballista.Element("building")?.Element("turretBurstCooldownTime")?.Value);
@@ -248,38 +250,38 @@ public sealed class XmlDefinitionTests
         Assert.Equal(256, ListValues(ballista.Descendants("countPresets").Single())
             .Select(int.Parse).Max());
 
-        var magazine = ThingDef("RR_BallistaMagazine");
+        var magazine = ThingDef("BT_BallistaMagazine");
         Assert.Equal("2560", magazine.Descendants("capacity").Single().Value);
         Assert.Equal("5", magazine.Descendants("standbyWatts").Single().Value);
         Assert.Equal("500", magazine.Descendants("feedingWatts").Single().Value);
 
-        var outputs = ThingDef("RR_BatshittiumArtificer").Descendants("outputs").Single()
+        var outputs = ThingDef("BT_BatshittiumArtificer").Descendants("outputs").Single()
             .Elements("li")
             .Select(o => $"{o.Element("bolt")?.Value}:{o.Element("countPerUnit")?.Value}:"
                 + o.Element("research")?.Value);
         Assert.Equal(
             new[]
             {
-                "RR_BoltPainful:10:RR_Research_PainfulBolts",
-                "RR_BoltReallyPainful:5:RR_Research_ReallyPainfulBolts",
+                "BT_BoltPainful:10:BT_Research_PainfulBolts",
+                "BT_BoltReallyPainful:5:BT_Research_ReallyPainfulBolts",
             },
             outputs);
 
         var projects = new[]
         {
-            "RR_Research_PainfulBolts", "RR_Research_ReallyPainfulBolts",
-            "RR_Research_Artificer", "RR_Research_Magazine", "RR_Research_Ballista",
+            "BT_Research_PainfulBolts", "BT_Research_ReallyPainfulBolts",
+            "BT_Research_Artificer", "BT_Research_Magazine", "BT_Research_Ballista",
         };
         foreach (string name in projects)
         {
             Assert.Equal("1000", SingleDef("ResearchProjectDef", name).Element("baseCost")?.Value);
-            Assert.True(Requires(name, "RR_BatshittiumArcana"), $"{name} must follow Arcana");
+            Assert.True(Requires(name, "BT_BatshittiumArcana"), $"{name} must follow Arcana");
         }
 
         Assert.Equal(
-            new[] { "RR_Research_Ballista" }, ListValues(ballista.Element("researchPrerequisites")));
+            new[] { "BT_Research_Ballista" }, ListValues(ballista.Element("researchPrerequisites")));
         Assert.Equal(
-            new[] { "RR_Research_Magazine" }, ListValues(magazine.Element("researchPrerequisites")));
+            new[] { "BT_Research_Magazine" }, ListValues(magazine.Element("researchPrerequisites")));
     }
 
     /// <summary>Whether a research project requires another, directly or not.</summary>
@@ -294,10 +296,10 @@ public sealed class XmlDefinitionTests
     }
 
     /// <summary>
-    /// Verifies every RR_-prefixed name the Defs reference is declared as a
+    /// Verifies every BT_-prefixed name the Defs reference is declared as a
     /// defName somewhere in the mod, catching typos in cross-references.
     /// </summary>
-    [Fact(DisplayName = "Every RR_ reference resolves to a declared def")]
+    [Fact(DisplayName = "Every BT_ reference resolves to a declared def")]
     public void Defs_should_only_reference_declared_mod_defs()
     {
         var documents = AllDefDocuments().ToList();
@@ -311,13 +313,42 @@ public sealed class XmlDefinitionTests
             .Where(e => e.Name.LocalName != "defName")
             .SelectMany(e => new[] { e.Name.LocalName }
                 .Concat(e.HasElements ? Array.Empty<string>() : new[] { e.Value.Trim() }))
-            .Where(name => name.StartsWith("RR_", StringComparison.Ordinal));
+            .Where(name => name.StartsWith("BT_", StringComparison.Ordinal));
 
         Assert.Empty(referenced.Where(name => !declared.Contains(name)).Distinct());
     }
 
     /// <summary>
-    /// Verifies every texture path that names a mod asset (an RR_ file) has
+    /// Regression for the v0.8 rename: every def the mod declares, and every
+    /// mod texture, carries the BT_ prefix, and the old RR_ prefix appears
+    /// nowhere in the Defs (it would name a def that no longer exists).
+    /// </summary>
+    [Fact(DisplayName = "Defs and textures use the BT_ prefix, never RR_")]
+    public void Defs_should_use_the_BT_prefix()
+    {
+        var documents = AllDefDocuments().ToList();
+        var unprefixed = documents
+            .SelectMany(d => d.Descendants("defName"))
+            .Select(e => e.Value.Trim())
+            .Where(name => !name.StartsWith("BT_", StringComparison.Ordinal));
+        var oldPrefix = documents
+            .SelectMany(d => d.Descendants())
+            .SelectMany(e => e.Attributes().Select(a => a.Value)
+                .Concat(e.HasElements ? Array.Empty<string>() : new[] { e.Value }))
+            .Where(text => text.Contains("RR_", StringComparison.Ordinal));
+        var textures = Directory.EnumerateFiles(
+                Path.Combine(FixturesDirectory, "Textures"), "*.png",
+                SearchOption.AllDirectories)
+            .Select(Path.GetFileName)
+            .Where(name => !name!.StartsWith("BT_", StringComparison.Ordinal));
+
+        Assert.Empty(unprefixed);
+        Assert.Empty(oldPrefix);
+        Assert.Empty(textures);
+    }
+
+    /// <summary>
+    /// Verifies every texture path that names a mod asset (a BT_ file) has
     /// a PNG in Textures/. Vanilla paths cannot be checked without the game.
     /// </summary>
     [Fact(DisplayName = "Every mod texture path has a PNG")]
@@ -327,7 +358,7 @@ public sealed class XmlDefinitionTests
             .SelectMany(d => d.Descendants())
             .Where(e => e.Name.LocalName is "texPath" or "fuelIconPath" or "texturePath")
             .Select(e => e.Value.Trim())
-            .Where(path => Path.GetFileName(path).StartsWith("RR_", StringComparison.Ordinal))
+            .Where(path => Path.GetFileName(path).StartsWith("BT_", StringComparison.Ordinal))
             .Distinct()
             .ToList();
 
@@ -385,7 +416,7 @@ public sealed class XmlDefinitionTests
     /// <summary>Finds the replicator's CompProperties_RandomReplicator node.</summary>
     /// <returns>The comp element.</returns>
     private static XElement ReplicatorComp() =>
-        ThingDef("RandomReplicator").Element("comps")?.Elements("li")
+        ThingDef("BT_RandomReplicator").Element("comps")?.Elements("li")
             .Single(e => e.Attribute("Class")?.Value == ReplicatorCompClass)
         ?? throw new InvalidOperationException("Replicator comp not found.");
 
