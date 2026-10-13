@@ -6,8 +6,10 @@
 // (not a letter). There is no sign building in RimWorld, so the signs'
 // text is drawn over their cells here, at middle zoom or closer, in
 // vanilla's neutral label style (magenta is reserved for batshittium).
-// The label cells are not saved: they are recomputed from the town plan
-// and the saved seed. See docs/SHOWCASE.md, "Signs and Labels".
+// The executed plan is not saved: it is rebuilt from the saved seed and
+// the saved obstacles it was reduced around, and the label cells (and the
+// ground demolition clears) come from it. See docs/SHOWCASE.md, "Signs and
+// Labels".
 
 using System;
 using System.Collections.Generic;
@@ -42,6 +44,21 @@ namespace BatshitTechnology
 
         /// <summary>Saved: the plan's seed.</summary>
         private int seed;
+
+        /// <summary>
+        /// Saved: the indestructible things the plan was reduced around, as
+        /// town-local rectangles (Core boxes cannot be scribed).
+        /// </summary>
+        private List<CellRect> obstacles = new List<CellRect>();
+
+        /// <summary>
+        /// The plan the build executed; rebuilt from the seed and obstacles
+        /// after a load, never saved.
+        /// </summary>
+        private TownPlan plan;
+
+        /// <summary>Set when the plan could not be rebuilt, so the error is logged once.</summary>
+        private bool planFailed;
 
         /// <summary>Saved: the tick a resident last died.</summary>
         private int lastIncidentTick;
@@ -95,6 +112,41 @@ namespace BatshitTechnology
         /// <summary>The seed the town was planned with.</summary>
         public int Seed => seed;
 
+        /// <summary>
+        /// The plan the build executed: AnyRim at the Medium tier from the
+        /// seed, reduced around the saved obstacles exactly as the build
+        /// reduced it. Null if no town stands here or the plan could not be
+        /// rebuilt (logged once).
+        /// </summary>
+        internal TownPlan Plan
+        {
+            get
+            {
+                if (!built || planFailed)
+                {
+                    return null;
+                }
+
+                if (plan == null)
+                {
+                    try
+                    {
+                        TownPlan full = AnyRim.Plan(seed);
+                        plan = obstacles.Count > 0
+                            ? full.Avoiding(obstacles.Select(AnyRim.ToBox).ToList())
+                            : full;
+                    }
+                    catch (Exception e)
+                    {
+                        planFailed = true;
+                        Log.Error($"[BT] AnyRim could not rebuild its plan: {e}");
+                    }
+                }
+
+                return plan;
+            }
+        }
+
         /// <summary>The tick a resident last died (or the town was built).</summary>
         public int LastIncidentTick => lastIncidentTick;
 
@@ -126,28 +178,37 @@ namespace BatshitTechnology
             Math.Max(0, (Find.TickManager.TicksGame - lastIncidentTick) / GenDate.TicksPerDay);
 
         /// <summary>
-        /// Records a newly built town. The labels come from the plan
-        /// directly; after a load they are recomputed from the seed.
+        /// Records a newly built town. The labels come from the executed
+        /// plan directly; after a load the plan is rebuilt from the seed and
+        /// the obstacles, and the labels with it.
         /// </summary>
         /// <param name="townAnchor">The crossroads' map cell.</param>
         /// <param name="townBounds">Everything the town touches, map cells.</param>
         /// <param name="townLevelled">The core and firebreak, map cells.</param>
-        /// <param name="plan">The plan it was built from.</param>
+        /// <param name="executed">The plan it was built from, already reduced.</param>
+        /// <param name="townObstacles">What the plan was reduced around, town-local.</param>
         /// <param name="townResidents">The residents, in plan order.</param>
         /// <param name="townAnimals">The town's animals.</param>
         internal void Register(
-            IntVec3 townAnchor, CellRect townBounds, CellRect townLevelled, TownPlan plan,
-            IEnumerable<Pawn> townResidents, IEnumerable<Pawn> townAnimals)
+            IntVec3 townAnchor, CellRect townBounds, CellRect townLevelled, TownPlan executed,
+            IEnumerable<Box> townObstacles, IEnumerable<Pawn> townResidents,
+            IEnumerable<Pawn> townAnimals)
         {
             built = true;
             anchor = townAnchor;
             bounds = townBounds;
             levelled = townLevelled;
-            seed = plan.Seed;
+            seed = executed.Seed;
+            obstacles = (townObstacles ?? Enumerable.Empty<Box>())
+                .Select(b => CellRect.FromLimits(b.MinX, b.MinZ, b.MaxX, b.MaxZ))
+                .ToList();
+            plan = executed;
+            planFailed = false;
             lastIncidentTick = Find.TickManager.TicksGame;
             residents = townResidents.Where(p => p != null).ToList();
             animals = townAnimals.Where(p => p != null).ToList();
-            SetLabels(plan);
+            labelsFailed = false;
+            SetLabels(executed);
             lastPopulation = Population;
             guiFailed = false;
             censusFailed = false;
@@ -162,6 +223,9 @@ namespace BatshitTechnology
             levelled = default;
             residents.Clear();
             animals.Clear();
+            obstacles.Clear();
+            plan = null;
+            planFailed = false;
             labels = null;
             welcomeSign = IntVec3.Invalid;
             lastPopulation = -1;
@@ -284,6 +348,7 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref bounds, "bounds");
             Scribe_Values.Look(ref levelled, "levelled");
             Scribe_Values.Look(ref seed, "seed");
+            Scribe_Collections.Look(ref obstacles, "obstacles", LookMode.Value);
             Scribe_Values.Look(ref lastIncidentTick, "lastIncidentTick");
             if (Scribe.mode == LoadSaveMode.Saving)
             {
@@ -297,26 +362,32 @@ namespace BatshitTechnology
             {
                 residents = residents ?? new List<Pawn>();
                 animals = animals ?? new List<Pawn>();
+                obstacles = obstacles ?? new List<CellRect>(); // older saves have none
                 residents.RemoveAll(p => p == null);
                 animals.RemoveAll(p => p == null);
+                plan = null;
+                planFailed = false;
                 labels = null;
                 welcomeSign = IntVec3.Invalid;
                 lastPopulation = -1;
             }
         }
 
-        /// <summary>Takes the label cells from a plan.</summary>
-        /// <param name="plan">The plan the town was built from.</param>
-        private void SetLabels(TownPlan plan)
+        /// <summary>
+        /// Takes the label cells from a plan. A sign the plan dropped (an
+        /// obstacle on it, or its building dropped) stays dropped.
+        /// </summary>
+        /// <param name="executed">The plan the town was built from.</param>
+        private void SetLabels(TownPlan executed)
         {
-            labels = plan.Labels.Select(l => (AnyRim.ToMap(anchor, l.At), l.Kind)).ToList();
-            welcomeSign = AnyRim.ToMap(anchor, plan.WelcomeSign);
+            labels = executed.Labels.Select(l => (AnyRim.ToMap(anchor, l.At), l.Kind)).ToList();
+            welcomeSign = AnyRim.ToMap(anchor, executed.WelcomeSign);
         }
 
         /// <summary>
-        /// Recomputes the label cells from the saved seed (AnyRim at the
-        /// Medium tier), once; a failure is logged once and leaves the
-        /// signs blank.
+        /// Recomputes the label cells from the executed plan (rebuilt from
+        /// the saved seed and obstacles), once; a failure is logged once and
+        /// leaves the signs blank.
         /// </summary>
         private void EnsureLabels()
         {
@@ -327,7 +398,14 @@ namespace BatshitTechnology
 
             try
             {
-                SetLabels(TownPlan.AnyRim(seed, TownPalette.For(TownQuality.Medium)));
+                TownPlan executed = Plan;
+                if (executed == null)
+                {
+                    labelsFailed = true;
+                    return;
+                }
+
+                SetLabels(executed);
             }
             catch (Exception e)
             {

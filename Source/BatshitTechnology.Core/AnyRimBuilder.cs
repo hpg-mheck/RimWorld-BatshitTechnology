@@ -130,13 +130,10 @@ internal sealed partial class AnyRimBuilder
         Power();
         Residents();
         Labels();
-        stockpiles.Add(new StockpilePlan(
-            ArtificerStockpile,
-            new[]
-            {
-                "BT_BoltPainful", "BT_BoltReallyPainful",
-                "BT_ErgonomicSingularityGrenade",
-            }));
+
+        // No stockpiles: the town Artificer ships switched off, so a zone
+        // for its output would hold nothing and only draw the colony's
+        // bolts and grenades into town. The list stays for future towns.
         return Finish();
     }
 

@@ -55,9 +55,11 @@ are moved back to the base, so no demo kills a colonist.
   counting the fires and secondary blasts it starts, is 83.6 tiles; the
   reactor's barrage reaches 74.6. A corner is a candidate only if it is
   more than 87.6 tiles (the larger reach plus a 4-tile margin) from every
-  part of AnyRim, tapering roads included. On the usual site this rules
-  out the north-west and south-west corners and leaves the north-east and
-  south-east; the most open of the two gets the replicator.
+  part of AnyRim, tapering roads included. The site search keeps the
+  north-east and south-east corners clear by the same rule, measured the
+  same way, so both demos run; the most open of the two gets the
+  replicator. If ever only one corner qualifies, the showcase logs it and
+  skips the reactor demo, and its opening message says so.
 - **AnyRim keeps away from the base and the grenade range:** at least 10
   tiles from the base's cleared square and 15 from the grenade clearing.
 - **Fire cannot walk in.** A fire spreads to adjacent cells or throws a
@@ -95,7 +97,10 @@ in what is placed where, in the deadpan voice of
 ### The Plan
 
 Coordinates below are local: (0,0) is the crossroads, which is also
-Ground Zero. On the usual site that is map cell (55,163).
+Ground Zero. The site search prefers map cell (55,163); on open ground
+it settles a few tiles away, near (51,166), because candidates lie on a
+2-tile grid and the Ballista yard must stay 15 tiles from the grenade
+clearing.
 
 ```
                         N
@@ -214,8 +219,8 @@ Each building, with its walls and floor:
   autodoor):
   - the Transmogrifier, its bill suspended, with granite chunks by its
     hopper;
-  - the Artificer, fuelled and switched off, with a small critical-priority
-    player stockpile beside it for its output;
+  - the Artificer, fuelled and switched off (left running, its bolts
+    would be hauled 100 tiles to the base's magazines);
   - a 3 by 3 "employee wellness" room with the Brain Squeezer (switched
     off) and a potted plant;
   - the Random Replicator, still in its crate;
@@ -312,13 +317,15 @@ How they behave:
   `LordJob_AnyRimResident`. It assigns a custom duty,
   `BT_AnyRimResident`, which has no combat in it. Residents:
   - wander within 8 tiles of their front door;
-  - eat (the survival meals in the kitchens, and two in every pocket);
+  - never get hungry (civic composure sees to it; the kitchen meals are
+    set dressing, as the Doom Town food was);
   - sleep in their own beds;
-  - seek shelter from dangerous temperatures within 16 tiles.
+  - seek shelter from dangerous temperatures within 16 tiles of home,
+    and no further.
   
   The lord keeps downed residents, so nobody wanders off the map.
-- **Composure:** a hidden-cost hediff, `BT_AnyRimComposure` ("civic
-  composure"), blocks mental breaks and holds mood steady, and residents
+- **Composure:** a hediff, `BT_AnyRimComposure` ("civic composure"),
+  blocks mental breaks, holds mood steady and stops hunger, and residents
   never panic and flee. They do still dodge a grenade they can see.
 - **Generation:** from a custom kind, `BT_AnyRimResident`:
   - adults with the fixed names, genders and ages above;
@@ -358,21 +365,23 @@ the town, so:
   only beds of their own faction, colonists only theirs, and Ancients
   doors open for anyone who isn't hostile.
 - **Owned by the player,** so their buttons work: the Batshit devices,
-  the Ballista and magazines, and the Artificer's stockpile.
+  the Ballista and its magazines. The Ballista and magazines accept no
+  hauled bolts, so colony haulers never carry ammunition to town; they
+  hold what they were built with.
 - **Power:** RimWorld's power nets do not check faction, so the
   player's reactor lights the Ancients' lamps. Conduits run from the
   substation along Doorstep Lane's north sidewalk, up both Main Street
   sidewalks, and into every building and the Ballista yard.
 - **Things left off,** so that nothing draws colonists over: every TV,
-  the Brain Squeezer and the Ballista are switched off. The reactor and
-  Artificer have auto-refuel off, and the Transmogrifier's bill is
-  suspended.
-- **Forbidden:** every loose item in town. Residents eat forbidden food;
-  colonists and haulers ignore it. Unforbid what you want to take (the
-  grenades, for instance).
-- **Home area:** player buildings extend it as they spawn, so the town's
-  bounds are removed from it afterwards. Colonists do not fight fires,
-  repair or clean in AnyRim.
+  the Brain Squeezer, the Artificer and the Ballista are switched off.
+  The reactor and Artificer have auto-refuel off, and the
+  Transmogrifier's bill is suspended.
+- **Forbidden:** every loose item in town. Colonists and haulers ignore
+  forbidden things. Unforbid what you want to take (the grenades, for
+  instance).
+- **Home area:** player buildings extend it as they spawn, so the town
+  is removed from it afterwards. Colonists do not fight fires, repair or
+  clean in AnyRim.
 - **Cold climates:** each house gets a heater on the town grid if the
   outdoor temperature is below 5 °C when the town is built.
 
@@ -421,11 +430,17 @@ The quick-test map is random, so the town finds its own ground:
   spot (55,163), within x 45..60 and z 150..177 on a 250 map. They must
   keep the whole town inside the map with a 6-tile margin and obey the
   keep-away rules in "Safety Rules".
-- **Rejected outright:**
-  - anything indestructible (steam geysers, craters, ancient vents)
-    within the town;
+- **Rejected outright,** measured from the cells the town actually
+  occupies (its parts), not from a rectangle around it:
+  - anything indestructible (steam geysers, craters) within one cell of
+    a building, which would otherwise lose that building;
   - lava within 6 tiles;
-  - hostile pawns within 15 tiles, or hostile buildings within 35.
+  - hostile pawns within 15 tiles, hostile buildings within 35, ancient
+    vents within 20.
+
+  An indestructible feature elsewhere (in a lawn, on a road) simply
+  stays, and the town builds around it. Profoundly indestructible terrain
+  features may even add character (Matt "Breakpoint" Heck, 2026-10-13).
 - **Score:** the rest are scored by the work needed to level them:
   - deep water 6, shallow water and marsh 3, soft sand 2;
   - natural rock 4, thick rock roof 2, thin roof 1, other ruins 1;
@@ -433,16 +448,21 @@ The quick-test map is random, so the town finds its own ground:
   
   The cheapest wins. If none qualifies, the showcase logs
   `[BT-SHOWCASE] AnyRim skipped` and carries on without it.
-- **Levelling the town and its 4-tile firebreak:**
-  1. Move pawns out.
-  2. Remove roofs before rock, so that nothing collapses.
-  3. Destroy everything destroyable, with no leavings or blasts.
-  4. Clear any pending roof collapses.
-  5. Turn ground without heavy affordance (water, marsh, mud, soft sand)
+- **Levelling the town and its 4-tile firebreak.** Only the cells the
+  town occupies are touched: each part grown by the firebreak, and the
+  taper cells actually laid. The empty land inside the town's bounding
+  rectangle is left alone.
+  1. Unfog the area first, so that breaking into a fogged cave sends no
+     "area revealed" letter.
+  2. Move pawns out.
+  3. Remove roofs before rock, so that nothing collapses.
+  4. Destroy everything destroyable, with no leavings or blasts.
+  5. Clear any pending roof collapses.
+  6. Remove player zone cells from the cleared ground.
+  7. Turn ground without heavy affordance (water, marsh, mud, soft sand)
      into soil; other natural ground stays, so each run gives a desert,
      tundra or forest AnyRim.
-  6. Lay the planned surfaces, then build.
-  7. Unfog the area.
+  8. Lay the planned surfaces, then build.
 
 ## Implementation
 
@@ -470,8 +490,12 @@ RimWorld:
 - **`Source/AnyRim.cs`:**
   - finds a site, levels it, and executes the plan in order (terrain,
     roofs, buildings, furniture, items, plants, animals, residents);
-  - wires power, clears the home area, and registers the town;
-  - `AnyRim.Demolish` takes it down again.
+  - wires power, clears the home area, and registers the town, saving
+    the obstacles it built around so the exact town (signs included) is
+    known after a load;
+  - `AnyRim.Demolish` takes it down again, over the same cells. It
+    removes only the town's own residents and animals: a resident the
+    player recruited or an animal the player tamed stays.
 - **`Source/AnyRimResidents.cs`:** the lord job, its toil, and resident
   generation.
 - **`Source/MapComponent_AnyRim.cs`:** the saved town record, the census,
@@ -479,8 +503,11 @@ RimWorld:
 - **`Defs/Misc/BT_AnyRim.xml`:** the duty, pawn kind and composure
   hediff.
 - **Debug actions,** under "Mods" in the dev-mode Actions menu: "Build
-  AnyRim here" (click a crossroads), "Build AnyRim (best site)" and
-  "Remove AnyRim". The operator can use them in his own dev-mode games.
+  AnyRim here" (click a crossroads; it levels whatever stands there),
+  "Build AnyRim (best site)" and "Remove AnyRim". The operator can use
+  them in his own dev-mode games. The best site keeps the town 10 tiles
+  from the colony's buildings, and its reactor more than 78.6 tiles away
+  (its barrage's 74.6 plus a margin).
 
 ### Tests
 
@@ -504,10 +531,11 @@ RimWorld:
   - the town builds at a scored site;
   - every placement spawned where planned;
   - houses are enclosed, roofed rooms reachable from the street;
-  - no pending roof collapse; the firebreak holds no plants;
+  - no roof collapse pending before the first tick, and every roofed
+    cell still roofed after it; the firebreak holds no plants;
   - the devices are powered; the reactor's heat ring holds no room;
   - eight named, non-colonist residents, each in a lord;
-  - after 600 ticks all are still in town;
+  - after 600 ticks each is within 20 tiles of its own home;
   - the census drops by one when a resident dies;
   - demolition leaves nothing behind;
   - nothing logs an error.

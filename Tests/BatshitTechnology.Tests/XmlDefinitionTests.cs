@@ -458,8 +458,9 @@ public sealed class XmlDefinitionTests
     /// AnyRim's residents (docs/SHOWCASE.md): a duty with no combat in it
     /// whose wander radius stays within RimWorld's limit of 12, a pawn kind
     /// that passes the humanlike config checks and never arms or frightens
-    /// its pawns, and a visible "civic composure" hediff that blocks mental
-    /// breaks.
+    /// its pawns, a safe-temperature search kept within 16 tiles of home,
+    /// and a visible "civic composure" hediff that blocks mental breaks and
+    /// stops hunger.
     /// </summary>
     [Fact(DisplayName = "AnyRim residents are calm, unarmed and stay home")]
     public void AnyRimResidents_should_match_spec()
@@ -477,6 +478,11 @@ public sealed class XmlDefinitionTests
             float.Parse(duty.Descendants("wanderRadius").Single().Value, CultureInfo.InvariantCulture),
             1f, 12f);
         Assert.Equal("16", duty.Descendants("maxDistToSquadFlag").Single().Value);
+        // Vanilla's safe-temperature job giver searches the whole map.
+        Assert.DoesNotContain("JobGiver_SeekSafeTemperature", givers);
+        var seek = duty.Descendants("li").Single(e => (string?)e.Attribute("Class")
+            == "BatshitTechnology.JobGiver_AnyRimSeekSafeTemperature");
+        Assert.Equal("16", seek.Element("maxRadius")?.Value);
 
         var kind = SingleDef("PawnKindDef", "BT_AnyRimResident");
         Assert.Equal("Human", kind.Element("race")?.Value);
@@ -496,6 +502,8 @@ public sealed class XmlDefinitionTests
         Assert.False(string.IsNullOrWhiteSpace(composure.Element("description")?.Value));
         Assert.Equal("false", composure.Element("isBad")?.Value);
         Assert.Equal("true", composure.Descendants("blocksMentalBreaks").Single().Value);
+        // The town's food is finite and some front doors are far from it.
+        Assert.Equal("0", composure.Descendants("hungerRateFactor").Single().Value);
     }
 
     /// <summary>A ThingDef's last comp.</summary>

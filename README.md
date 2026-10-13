@@ -74,8 +74,17 @@ explosive volleys from chained magazines. The camera starts on a lone
 replicator in the most open far corner, which arms its self-destruct five
 seconds in, well clear of the base; a lone reactor in the next corner
 follows twenty seconds later, and then a colonist throws an Ergonomic
-Singularity Grenade at a junk pile west of the base. The window opens
-maximized at 2x UI scale.
+Singularity Grenade at a junk pile west of the base. Last, the camera
+visits **AnyRim**, a small test town in the north-west built from Nevada
+Test Site history: one Main Street, three model homes in wood, brick and
+steel, a five-and-dime selling singularity grenades, a funeral home with
+a reserved plot for everyone, a bank vault, a town hall, Public Works
+with the Batshit equipment, and eight residents whose names suggest they
+are not long for this world. Blow it up as you please; its residents
+belong to no one who will mind. The window opens maximized at 2x UI
+scale. In your own dev-mode games, the Actions menu's "Mods" section can
+build AnyRim at a click, at the best site, or remove it again. See
+docs/SHOWCASE.md.
 
 ## Research
 

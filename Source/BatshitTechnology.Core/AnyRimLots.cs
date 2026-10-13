@@ -31,9 +31,6 @@ internal sealed partial class AnyRimBuilder
     /// <summary>Public Works' front door, under the incident board.</summary>
     internal static readonly Cell PublicWorksDoor = new(7, -11);
 
-    /// <summary>The player stockpile beside the Artificer.</summary>
-    internal static readonly Box ArtificerStockpile = new(14, -9, 15, -8);
-
     /// <summary>
     /// The residents (docs/SHOWCASE.md, "Residents"): key, names, sex, age,
     /// home and the apparel worn over generated clothes.
@@ -180,8 +177,9 @@ internal sealed partial class AnyRimBuilder
 
     /// <summary>
     /// E1, Public Works (steel, concrete, an autodoor): the
-    /// Transmogrifier and Artificer with granite chunks and a player
-    /// stockpile, the crated Random Replicator, a shelf of batshittium,
+    /// Transmogrifier and Artificer with granite chunks (no stockpile:
+    /// the Artificer is off), the crated Random Replicator, a shelf of
+    /// batshittium,
     /// Morty's bed and desk, and the "employee wellness" room with the
     /// Brain Squeezer. A back door leads to the Ballista yard.
     /// </summary>

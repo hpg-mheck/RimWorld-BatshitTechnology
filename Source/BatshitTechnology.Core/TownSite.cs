@@ -252,9 +252,11 @@ public static class TownSite
     /// the cells the town really touches (<see cref="TownPlan.Parts"/>)
     /// rather than rectangles around it. One steam geyser in an empty
     /// corner of AnyRim's levelled area used to reject every candidate; it
-    /// only matters under a part. The map-edge test still uses
-    /// <see cref="TownPlan.Bounds"/>, and the levelling cost uses
-    /// <see cref="TownPlan.Core"/> grown by
+    /// only matters under a part, or within one cell of a building's outer
+    /// footprint, which is where <see cref="TownPlan.Avoiding"/> would drop
+    /// the whole building (so a chosen site never loses one). The map-edge
+    /// test still uses <see cref="TownPlan.Bounds"/>, and the levelling
+    /// cost uses <see cref="TownPlan.Core"/> grown by
     /// <see cref="TownPlan.FirebreakWidth"/>.
     /// </summary>
     /// <param name="grid">The frozen site grid.</param>
@@ -280,11 +282,72 @@ public static class TownSite
             throw new ArgumentNullException(nameof(plan));
         }
 
-        IReadOnlyList<Box> parts = plan.Parts.Count > 0
-            ? plan.Parts
-            : new[] { plan.Bounds };
-        return Best(grid, plan.Bounds, plan.Core, plan.FirebreakWidth, parts, parts,
-            candidates, preferred, edgeMargin, keepAways, penaltyPerTile);
+        return Best(grid, plan.Bounds, plan.Core, plan.FirebreakWidth,
+            KeepAwayParts(plan), NoGoParts(plan), candidates, preferred,
+            edgeMargin, keepAways, penaltyPerTile);
+    }
+
+    /// <summary>
+    /// Whether a town, moved to an anchor, keeps every one of its parts at
+    /// least a distance from an area: the rule the plan overload of
+    /// <c>Best</c> applies to each keep-away, so a caller can apply the
+    /// same rule later (the showcase's demo corners, for one).
+    /// </summary>
+    /// <param name="plan">The town; its parts are measured.</param>
+    /// <param name="anchor">The town's anchor, map coordinates.</param>
+    /// <param name="area">The area to stay clear of, map coordinates.</param>
+    /// <param name="minDistance">The least allowed gap, in cells.</param>
+    /// <returns>True if no part comes closer than allowed.</returns>
+    /// <exception cref="ArgumentNullException">No plan.</exception>
+    public static bool Clears(
+        TownPlan plan, Cell anchor, Box area, double minDistance)
+    {
+        if (plan == null)
+        {
+            throw new ArgumentNullException(nameof(plan));
+        }
+
+        return Clears(KeepAwayParts(plan), anchor, area, minDistance);
+    }
+
+    /// <summary>
+    /// Whether a town, moved to an anchor, keeps every building: no
+    /// obstacle comes within one cell of a building's outer footprint, which
+    /// is when <see cref="TownPlan.Avoiding"/> would drop the building (with
+    /// its residents). Obstacles anywhere else (a steam geyser in a lawn or
+    /// a road) are fine: the town simply builds around them.
+    /// </summary>
+    /// <remarks>
+    /// Indestructible things are tested this way rather than as no-go cells
+    /// under every part: the town's parts include every road, lawn and
+    /// floor cell, and one geyser then rejected 103 of 112 candidates.
+    /// </remarks>
+    /// <param name="plan">The town.</param>
+    /// <param name="anchor">The town's anchor, map coordinates.</param>
+    /// <param name="obstacles">The obstacles, map coordinates.</param>
+    /// <returns>True if no building would be lost.</returns>
+    /// <exception cref="ArgumentNullException">A null argument.</exception>
+    public static bool KeepsEveryBuilding(
+        TownPlan plan, Cell anchor, IReadOnlyList<Box> obstacles)
+    {
+        if (plan == null || obstacles == null)
+        {
+            throw new ArgumentNullException(plan == null ? nameof(plan) : nameof(obstacles));
+        }
+
+        foreach (BuildingPlan building in plan.Buildings)
+        {
+            Box guarded = building.Outer.ExpandedBy(1).Offset(anchor);
+            foreach (Box obstacle in obstacles)
+            {
+                if (guarded.Overlaps(obstacle))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -375,9 +438,10 @@ public static class TownSite
     /// <summary>
     /// Why candidates fail, for a log line when no site qualifies. Each
     /// candidate is charged to the first rule it breaks, in the order the
-    /// plan overload of <see cref="Best(SiteGrid, TownPlan, IEnumerable{Cell}, Cell, int, IReadOnlyList{KeepAway}, int)"/>
-    /// tests them: the map edge, then no-go cells, then each keep-away in
-    /// turn.
+    /// plan overload of
+    /// <see cref="Best(SiteGrid, TownPlan, IEnumerable{Cell}, Cell, int, IReadOnlyList{KeepAway}, int)"/>
+    /// tests them: the map edge, then no-go cells (under a part or beside
+    /// a building), then each keep-away in turn.
     /// </summary>
     /// <param name="grid">The frozen site grid.</param>
     /// <param name="plan">The town.</param>
@@ -405,7 +469,8 @@ public static class TownSite
             throw new InvalidOperationException("Freeze the site grid first.");
         }
 
-        IReadOnlyList<Box> parts = plan.Parts.Count > 0 ? plan.Parts : new[] { plan.Bounds };
+        IReadOnlyList<Box> parts = KeepAwayParts(plan);
+        IReadOnlyList<Box> noGo = NoGoParts(plan);
         Box usable = new Box(0, 0, grid.Width - 1, grid.Height - 1).ExpandedBy(-edgeMargin);
         Box levelled = plan.Core.ExpandedBy(plan.FirebreakWidth);
         int total = 0, offMap = 0, blocked = 0, acceptable = 0;
@@ -419,7 +484,7 @@ public static class TownSite
                 continue;
             }
 
-            if (NoGo(grid, levelled, parts, anchor))
+            if (NoGo(grid, levelled, noGo, anchor))
             {
                 blocked++;
                 continue;
@@ -449,12 +514,12 @@ public static class TownSite
 
     /// <summary>
     /// Whether a no-go cell lies under the town moved to an anchor: under
-    /// any of its parts, or, with no parts given, anywhere in its levelled
-    /// area.
+    /// any of the boxes given (its parts and the ring around each
+    /// building), or, with none given, anywhere in its levelled area.
     /// </summary>
     /// <param name="grid">The frozen site grid.</param>
     /// <param name="levelled">The core grown by the firebreak, town-local.</param>
-    /// <param name="noGoParts">The parts to test, or null for the levelled area.</param>
+    /// <param name="noGoParts">The boxes to test, or null for the levelled area.</param>
     /// <param name="anchor">The candidate anchor.</param>
     /// <returns>True if the candidate stands on no-go ground.</returns>
     private static bool NoGo(SiteGrid grid, Box levelled, IReadOnlyList<Box>? noGoParts, Cell anchor)
@@ -488,16 +553,63 @@ public static class TownSite
     {
         foreach (KeepAway rule in keepAways)
         {
-            foreach (Box part in parts)
+            if (!Clears(parts, anchor, rule.Area, rule.MinDistance))
             {
-                if (part.Offset(anchor).DistanceTo(rule.Area) < rule.MinDistance)
-                {
-                    return true;
-                }
+                return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Whether every box of a town, moved to an anchor, lies at least a
+    /// distance from an area.
+    /// </summary>
+    /// <param name="parts">The town's boxes, town-local.</param>
+    /// <param name="anchor">The candidate anchor.</param>
+    /// <param name="area">The area, map coordinates.</param>
+    /// <param name="minDistance">The least allowed gap, in cells.</param>
+    /// <returns>True if no box comes closer than allowed.</returns>
+    private static bool Clears(
+        IReadOnlyList<Box> parts, Cell anchor, Box area, double minDistance)
+    {
+        foreach (Box part in parts)
+        {
+            if (part.Offset(anchor).DistanceTo(area) < minDistance)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The boxes keep-aways are measured from: the plan's parts, or its
+    /// bounds if it has none.
+    /// </summary>
+    /// <param name="plan">The plan.</param>
+    /// <returns>The boxes, town-local.</returns>
+    private static IReadOnlyList<Box> KeepAwayParts(TownPlan plan) =>
+        plan.Parts.Count > 0 ? plan.Parts : new[] { plan.Bounds };
+
+    /// <summary>
+    /// The boxes that must hold no no-go cell: the keep-away boxes plus
+    /// every building's outer footprint grown by one cell, the margin
+    /// <see cref="TownPlan.Avoiding"/> drops a whole building for.
+    /// </summary>
+    /// <param name="plan">The plan.</param>
+    /// <returns>The boxes, town-local.</returns>
+    private static IReadOnlyList<Box> NoGoParts(TownPlan plan)
+    {
+        var boxes = new List<Box>(KeepAwayParts(plan));
+        foreach (BuildingPlan building in plan.Buildings)
+        {
+            boxes.Add(building.Outer.ExpandedBy(1));
+        }
+
+        return boxes;
     }
 
     /// <summary>The grid cells themselves, lazily.</summary>
@@ -527,7 +639,9 @@ public static class TownSite
 /// </summary>
 /// <param name="Candidates">Candidates examined.</param>
 /// <param name="OffMap">Too close to the map edge.</param>
-/// <param name="Blocked">A no-go cell under a part of the town.</param>
+/// <param name="Blocked">
+/// A no-go cell under a part of the town or within one cell of a building.
+/// </param>
 /// <param name="TooClose">Too close to each keep-away, by index.</param>
 /// <param name="Acceptable">Candidates that broke no rule.</param>
 public sealed record SiteRejections(

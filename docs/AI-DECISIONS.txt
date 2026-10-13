@@ -216,3 +216,31 @@ material; it is in AI-TODO with proposed properties.
 not preferable. The mod has used none so far. Prefer subclasses, comps,
 defs and the mod's own checks; reach for a Harmony patch only when an
 engine behaviour cannot be changed any other way, and record why here.
+2026-10-13 Claude: AnyRim, the showcase test town Matt "Breakpoint" Heck
+asked for (docs/SHOWCASE.md). Decisions:
+- The town is data first: Core's TownPlan holds every terrain cell, roof,
+  placement, building, resident and label in town-local coordinates, so
+  its geometry is unit tested without RimWorld; the game only executes
+  it. The Colony Bomb will reuse it at other sizes and quality tiers.
+- Residents belong to the hidden Ancients faction (no goodwill, no
+  letters, never hostile), with a custom lord, a combat-free duty and a
+  "civic composure" hediff (no mental breaks, steady mood, no hunger).
+  They keep the operator's ominous names.
+- Town structures are the Ancients'; only the Batshit devices are the
+  player's. Everything that would draw colonists 100 tiles (TVs, the
+  Brain Squeezer, the Artificer, the Ballista) is switched off, loose
+  items are forbidden, the town Ballista and magazines accept no hauled
+  bolts, and the town is removed from the home area.
+- Site rules are measured from the cells the town occupies (its parts),
+  not its bounding rectangle: a single steam geyser in an empty corner of
+  the rectangle had rejected every site on two maps. Indestructible
+  features may stay in town; the operator welcomes them as character.
+- The showcase's demo corners must clear the town's parts by 87.6 tiles,
+  the same rule the site search applies.
+- Switching a flickable device off sets CompFlickable's private
+  wantSwitchOn by reflection, so its toggle does not show "on" for a
+  device that is off; no Harmony.
+- An adversarial review (four reviewers, a skeptic each) found the town's
+  critical stockpile and magazines pulling the colony's bolts into town,
+  residents starving within days, and the clearing touching the whole
+  bounding rectangle; all fixed before release.

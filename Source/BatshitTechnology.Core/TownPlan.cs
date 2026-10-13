@@ -328,6 +328,49 @@ public sealed class TownPlan
     public IReadOnlyList<Box> Parts { get; init; } = Array.Empty<Box>();
 
     /// <summary>
+    /// The levelled area: <see cref="Core"/> grown by
+    /// <see cref="FirebreakWidth"/>. Ground work never reaches past it
+    /// (the road tapers beyond it are laid only where the ground allows).
+    /// </summary>
+    public Box LevelledArea => Core.ExpandedBy(FirebreakWidth);
+
+    /// <summary>
+    /// The ground a build clears, levels and later demolishes: every cell
+    /// within <see cref="FirebreakWidth"/> of a part (each part grown by the
+    /// firebreak), clipped to <see cref="LevelledArea"/>. Unlike the
+    /// levelled area, which is one rectangle, this leaves alone the empty
+    /// land between the town's arms, where a colony may stand.
+    /// </summary>
+    /// <returns>The cells, town-local, row by row from the south-west.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">A negative firebreak.</exception>
+    public IReadOnlyList<Cell> ClearedCells()
+    {
+        if (FirebreakWidth < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(FirebreakWidth), FirebreakWidth, "A firebreak is never negative.");
+        }
+
+        Box levelled = LevelledArea;
+        var cells = new HashSet<Cell>();
+        foreach (Box part in Parts)
+        {
+            Box grown = part.ExpandedBy(FirebreakWidth);
+            var clipped = new Box(
+                Math.Max(grown.MinX, levelled.MinX), Math.Max(grown.MinZ, levelled.MinZ),
+                Math.Min(grown.MaxX, levelled.MaxX), Math.Min(grown.MaxZ, levelled.MaxZ));
+            if (clipped.IsValid)
+            {
+                cells.UnionWith(clipped.Cells());
+            }
+        }
+
+        var ordered = new List<Cell>(cells);
+        ordered.Sort((a, b) => a.Z != b.Z ? a.Z.CompareTo(b.Z) : a.X.CompareTo(b.X));
+        return ordered;
+    }
+
+    /// <summary>
     /// Plans AnyRim, the showcase's test town, as docs/SHOWCASE.md
     /// describes it.
     /// </summary>

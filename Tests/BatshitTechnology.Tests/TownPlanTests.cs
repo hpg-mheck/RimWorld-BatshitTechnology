@@ -848,28 +848,71 @@ public sealed class TownPlanTests
     }
 
     /// <summary>
-    /// The Artificer's stockpile lies beside it on open floor inside Public
-    /// Works and accepts exactly the Artificer's outputs as its Def lists
-    /// them.
+    /// AnyRim zones no stockpile. The town Artificer ships switched off, so
+    /// a zone for its output would hold nothing of its own and only pull
+    /// the colony's bolts and grenades into town.
     /// </summary>
-    [Fact(DisplayName = "The Artificer's stockpile accepts its outputs")]
-    public void Stockpile_should_accept_the_artificer_outputs()
+    [Fact(DisplayName = "AnyRim zones no stockpile")]
+    public void AnyRim_should_zone_no_stockpile()
     {
-        StockpilePlan pile = Assert.Single(Plan.Stockpiles);
-        Box artificer = Plan.Placements.Single(p => p.Def == "BT_BatshittiumArtificer").Occupied;
-        Assert.Equal(0, artificer.DistanceTo(pile.Area.ExpandedBy(1)), 10);
-        Assert.Contains(Plan.Buildings.Single(b => b.Key == "E1").Rooms,
-            r => r.Contains(pile.Area));
-        Dictionary<Cell, Placement> built = BuildingCells(Plan);
-        Assert.DoesNotContain(pile.Area.Cells(), built.ContainsKey);
+        Assert.Empty(Plan.Stockpiles);
+        Assert.True(Only("BT_BatshittiumArtificer").SwitchedOff);
+    }
 
-        string defs = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Defs",
-            "ThingDefs", "Buildings_Ballista.xml");
-        var outputs = XDocument.Load(defs).Descendants("ThingDef")
-            .Single(d => d.Element("defName")?.Value == "BT_BatshittiumArtificer")
-            .Descendants("outputs").Single().Elements("li")
-            .Select(o => o.Element("thing")!.Value.Trim());
-        Assert.Equal(outputs.OrderBy(s => s), pile.Accepts.OrderBy(s => s));
+    // ===== Cleared ground =====
+
+    /// <summary>
+    /// The cleared ground hugs the town: every cell lies in the levelled
+    /// area within the firebreak of a part, every cell of the town inside
+    /// the levelled area is cleared, and the empty land between the town's
+    /// arms (where a colony may stand) is not.
+    /// </summary>
+    [Fact(DisplayName = "Cleared ground is the parts grown by the firebreak")]
+    public void ClearedCells_should_follow_the_parts()
+    {
+        IReadOnlyList<Cell> cleared = Plan.ClearedCells();
+        var set = new HashSet<Cell>(cleared);
+        Box levelled = Plan.LevelledArea;
+        int w = Plan.FirebreakWidth;
+        Assert.Equal(Plan.Core.ExpandedBy(w), levelled);
+        Assert.Equal(cleared.Count, set.Count);
+        Assert.All(cleared, c => Assert.True(levelled.Contains(c), $"{c}"));
+        Assert.All(cleared, c => Assert.Contains(Plan.Parts, p => p.ExpandedBy(w).Contains(c)));
+        foreach (Cell c in Plan.Parts.SelectMany(p => p.Cells()).Where(levelled.Contains))
+        {
+            Assert.Contains(c, set);
+        }
+
+        foreach (Cell c in levelled.Cells())
+        {
+            bool near = Plan.Parts.Any(p => p.ExpandedBy(w).Contains(c));
+            Assert.True(near == set.Contains(c), $"{c}");
+        }
+
+        // The north-east, between the cemetery road and the News Nob.
+        Assert.DoesNotContain(new Cell(40, 55), set);
+        Assert.True(cleared.Count < levelled.Area, $"{cleared.Count} of {levelled.Area}");
+        Assert.Equal(
+            cleared.OrderBy(c => c.Z).ThenBy(c => c.X), cleared);
+    }
+
+    /// <summary>
+    /// Ground the reduced plan no longer needs is not cleared: a building
+    /// dropped by <see cref="TownPlan.Avoiding"/> takes the cells only it
+    /// needed with it, and nothing new is cleared.
+    /// </summary>
+    [Fact(DisplayName = "A reduced plan clears no more than the full one")]
+    public void ClearedCells_should_shrink_with_the_plan()
+    {
+        var full = new HashSet<Cell>(Plan.ClearedCells());
+        TownPlan reduced = Plan.Avoiding(new[] { new Box(-40, -1, -38, 1) });
+        var less = new HashSet<Cell>(reduced.ClearedCells());
+        Assert.True(less.IsSubsetOf(full));
+        Assert.True(less.Count < full.Count, $"{less.Count} of {full.Count}");
+        Assert.DoesNotContain(new Cell(-37, 0), less);
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new TownPlan { FirebreakWidth = -1 }.ClearedCells());
+        Assert.Empty(new TownPlan().ClearedCells());
     }
 
     // ===== Palettes =====
@@ -987,20 +1030,52 @@ public sealed class TownPlanTests
     }
 
     /// <summary>
-    /// Dropping Public Works takes the Artificer's stockpile and the
-    /// incident board with it.
+    /// Dropping Public Works takes a stockpile inside it and the incident
+    /// board with it. AnyRim zones no stockpile, so one is added for the
+    /// test: the plan format still carries them.
     /// </summary>
     [Fact(DisplayName = "Avoiding Public Works drops its stockpile and label")]
     public void Avoiding_public_works_should_drop_its_stockpile()
     {
-        TownPlan reduced = Plan.Avoiding(new[] { new Box(12, -12, 12, -12) });
-        Assert.Empty(reduced.Stockpiles);
+        var pile = new StockpilePlan(new Box(14, -9, 15, -8), new[] { "Steel" });
+        var away = new StockpilePlan(new Box(-1, 30, -1, 30), new[] { "Steel" });
+        TownPlan zoned = WithStockpiles(Plan, pile, away);
+        TownPlan reduced = zoned.Avoiding(new[] { new Box(12, -12, 12, -12) });
+        Assert.Equal(new[] { away }, reduced.Stockpiles);
         Assert.DoesNotContain(reduced.Labels, l => l.Kind == LabelKind.Incident);
         Assert.DoesNotContain(reduced.Residents, r => r.Key == "Morty");
         Assert.Contains(reduced.Buildings, b => b.Key == "BallistaYard");
+        Assert.Empty(zoned.Avoiding(new[] { new Box(-1, 30, -1, 30) })
+            .Stockpiles.Where(s => s == away));
     }
 
     // ===== Helpers =====
+
+    /// <summary>A copy of a plan with the given stockpiles.</summary>
+    /// <param name="plan">The plan.</param>
+    /// <param name="piles">The stockpiles it should have.</param>
+    /// <returns>The copy.</returns>
+    private static TownPlan WithStockpiles(TownPlan plan, params StockpilePlan[] piles) =>
+        new()
+        {
+            Name = plan.Name,
+            Quality = plan.Quality,
+            Seed = plan.Seed,
+            Bounds = plan.Bounds,
+            Core = plan.Core,
+            FirebreakWidth = plan.FirebreakWidth,
+            GroundZero = plan.GroundZero,
+            Reactor = plan.Reactor,
+            WelcomeSign = plan.WelcomeSign,
+            Terrain = plan.Terrain,
+            Roofs = plan.Roofs,
+            Placements = plan.Placements,
+            Buildings = plan.Buildings,
+            Residents = plan.Residents,
+            Labels = plan.Labels,
+            Stockpiles = piles,
+            Parts = plan.Parts,
+        };
 
     /// <summary>A def's catalogue entry.</summary>
     /// <param name="p">A placement.</param>

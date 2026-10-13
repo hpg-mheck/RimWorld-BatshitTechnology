@@ -1,11 +1,13 @@
 // Batshit Technology - AnyRim, the showcase's test town.
 // The town is data (Core.TownPlan, local coordinates with Ground Zero at
 // (0,0)); this file puts it on a map. It finds a site (a cost grid the game
-// fills in, scored by Core.TownSite), levels the ground (pawns out, roofs
-// off before rock, everything destroyable vanished with no leavings or
-// blasts, pending roof collapses cleared, soft ground and water turned to
-// soil, fog lifted), then executes the plan in order: terrain, roofs,
-// buildings, crates, items, plants, animals, stockpiles, power, residents.
+// fills in, scored by Core.TownSite), levels the ground the town occupies
+// (its parts grown by the firebreak, not its bounding box: fog lifted,
+// pawns out, roofs off before rock, everything destroyable vanished with
+// no leavings or blasts, pending roof collapses cleared, zones taken off,
+// soft ground and water turned to soil), then executes the plan in order:
+// terrain, roofs, buildings, crates, items, plants, animals, stockpiles,
+// power, residents.
 // Every failure goes into a build report, logged once as an error so the
 // smoke test catches it. AnyRim.Demolish takes the town down again. Three
 // dev-mode actions under "Mods" build and remove it in any game. See
@@ -88,6 +90,12 @@ namespace BatshitTechnology
 
         /// <summary>Indestructible things the plan was reduced around.</summary>
         internal int ObstaclesAvoided { get; set; }
+
+        /// <summary>
+        /// The plan the build executed: the plan asked for, reduced around
+        /// indestructible things; null if nothing was built.
+        /// </summary>
+        internal TownPlan Plan { get; set; }
 
         /// <summary>Distinct failures, with a count when repeated.</summary>
         internal IReadOnlyList<string> Failures =>
@@ -213,6 +221,20 @@ namespace BatshitTechnology
         /// <summary>The rock-chunk recipe the Transmogrifier gets, suspended.</summary>
         private const string RockChunkRecipe = "BT_TransmogrifyRockChunks";
 
+        /// <summary>
+        /// How far the town reactor's self-destruct reaches: its 74.6-tile
+        /// barrage (docs/SHOWCASE.md, "Safety Rules") plus a 4-tile margin.
+        /// "Build AnyRim (best site)" keeps the reactor this far from the
+        /// colony's buildings.
+        /// </summary>
+        internal const double ReactorReach = 78.6;
+
+        /// <summary>
+        /// How far from a cleared cell a pawn being moved out may be set
+        /// down; the cleared ground is never thicker than this.
+        /// </summary>
+        private const int MoveOutReach = 120;
+
         /// <summary>AnyRim's plan at the Medium tier.</summary>
         /// <param name="seed">The seed for the taper wander and gaps.</param>
         /// <returns>The plan.</returns>
@@ -250,7 +272,23 @@ namespace BatshitTechnology
         /// <summary>The levelled area: the core and its firebreak, town-local.</summary>
         /// <param name="plan">The plan.</param>
         /// <returns>The box.</returns>
-        internal static Box LevelledArea(TownPlan plan) => plan.Core.ExpandedBy(plan.FirebreakWidth);
+        internal static Box LevelledArea(TownPlan plan) => plan.LevelledArea;
+
+        /// <summary>
+        /// The ground a build of the plan at an anchor clears, levels and
+        /// later demolishes, on the map: <see cref="TownPlan.ClearedCells"/>
+        /// (the parts grown by the firebreak, within the levelled area),
+        /// row by row, off-map cells left out.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="plan">The plan built (or to be built).</param>
+        /// <param name="anchor">The crossroads' map cell.</param>
+        /// <returns>The map cells.</returns>
+        internal static List<IntVec3> ClearedCells(Map map, TownPlan plan, IntVec3 anchor) =>
+            plan.ClearedCells()
+                .Select(c => ToMap(anchor, c))
+                .Where(c => c.InBounds(map))
+                .ToList();
 
         /// <summary>Everything the town touches, firebreak included, town-local.</summary>
         /// <param name="plan">The plan.</param>
@@ -356,10 +394,14 @@ namespace BatshitTechnology
         /// <param name="window">Where the crossroads may go, in map cells.</param>
         /// <param name="preferred">The preferred crossroads.</param>
         /// <param name="keepAways">Areas to keep away from, in map cells.</param>
+        /// <param name="anchorAllowed">
+        /// An extra rule a candidate crossroads (map cell) must pass before
+        /// it is scored, or null for none.
+        /// </param>
         /// <returns>The crossroads' map cell, or null.</returns>
         internal static IntVec3? FindSite(
             Map map, TownPlan plan, CellRect window, IntVec3 preferred,
-            IReadOnlyList<KeepAway> keepAways)
+            IReadOnlyList<KeepAway> keepAways, Predicate<IntVec3> anchorAllowed = null)
         {
             CellRect clipped = window.ClipInsideMap(map);
             if (clipped.Area <= 0)
@@ -367,14 +409,39 @@ namespace BatshitTechnology
                 return null;
             }
 
-            SiteGrid grid = ScanSite(map, blockIndestructible: true);
+            // Indestructible things are not no-go ground: the town builds
+            // around them. They only rule out a site that would lose a
+            // building to them (TownSite.KeepsEveryBuilding).
+            SiteGrid grid = ScanSite(map, blockIndestructible: false);
+            List<Box> fixtures = map.listerThings.AllThings
+                .Where(t => t.Spawned && !t.def.destroyable)
+                .Select(t => ToBox(t.OccupiedRect()))
+                .ToList();
             IReadOnlyList<KeepAway> rules = keepAways ?? Array.Empty<KeepAway>();
             List<Cell> candidates = TownSite.Grid(ToBox(clipped), SiteGridStep).ToList();
+            int refused = 0;
+            if (anchorAllowed != null)
+            {
+                int before = candidates.Count;
+                candidates = candidates
+                    .Where(c => anchorAllowed(new IntVec3(c.X, 0, c.Z)))
+                    .ToList();
+                refused = before - candidates.Count;
+            }
+
+            int wouldLoseBuilding = candidates.Count;
+            candidates = candidates.Where(c => TownSite.KeepsEveryBuilding(plan, c, fixtures)).ToList();
+            wouldLoseBuilding -= candidates.Count;
+
             Cell? best = TownSite.Best(
                 grid, plan, candidates, ToCell(preferred), EdgeMargin, rules, PenaltyPerTile);
             if (!best.HasValue)
             {
                 Log.Message($"[BT] AnyRim found no site in {clipped}: "
+                    + (refused > 0 ? $"{refused} refused by the caller's rule first; " : string.Empty)
+                    + (wouldLoseBuilding > 0
+                        ? $"{wouldLoseBuilding} would lose a building to an indestructible thing; "
+                        : string.Empty)
                     + TownSite.Explain(grid, plan, candidates, EdgeMargin, rules)
                     + "; " + DescribeNoGo(map, clipped.ExpandedBy(80)));
             }
@@ -418,22 +485,29 @@ namespace BatshitTechnology
         /// <param name="window">Where the crossroads may go, in map cells.</param>
         /// <param name="preferred">The preferred crossroads.</param>
         /// <param name="keepAways">Areas to keep away from, in map cells.</param>
+        /// <param name="anchorAllowed">
+        /// An extra rule a candidate crossroads (map cell) must pass, or
+        /// null for none.
+        /// </param>
         /// <returns>
         /// The build report; its <see cref="AnyRimBuildReport.Anchor"/> is
         /// Invalid if no site qualified (and nothing was built).
         /// </returns>
         internal static AnyRimBuildReport BuildBest(
-            Map map, int seed, CellRect window, IntVec3 preferred, IReadOnlyList<KeepAway> keepAways)
+            Map map, int seed, CellRect window, IntVec3 preferred, IReadOnlyList<KeepAway> keepAways,
+            Predicate<IntVec3> anchorAllowed = null)
         {
             TownPlan plan = Plan(seed);
-            IntVec3? site = FindSite(map, plan, window, preferred, keepAways);
+            IntVec3? site = FindSite(map, plan, window, preferred, keepAways, anchorAllowed);
             return site.HasValue ? Build(map, plan, site.Value) : new AnyRimBuildReport();
         }
 
         /// <summary>
         /// Builds a town with its crossroads at a map cell: reduces the plan
-        /// around indestructible things, levels the ground, executes the
-        /// plan, and registers the town with the map. One town per map.
+        /// around indestructible things, levels the ground it occupies,
+        /// executes the plan, and registers the town (with the obstacles,
+        /// so the executed plan can be rebuilt after a load) with the map.
+        /// One town per map.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="plan">The plan.</param>
@@ -460,8 +534,10 @@ namespace BatshitTechnology
                     report.ObstaclesAvoided = obstacles.Count;
                 }
 
-                PrepareGround(map, plan, anchor);
-                Execute(map, plan, anchor, record, report);
+                report.Plan = plan;
+                List<IntVec3> cleared = ClearedCells(map, plan, anchor);
+                PrepareGround(map, cleared);
+                Execute(map, plan, anchor, cleared, obstacles, record, report);
                 Log.Message($"[BT] AnyRim built at ({anchor.x},{anchor.z}): {report.Summary()}");
             }
 
@@ -502,37 +578,42 @@ namespace BatshitTechnology
         // ===== Ground work =====
 
         /// <summary>
-        /// Levels the core and its firebreak, in docs/SHOWCASE.md's order:
-        /// fog off first (so breaking into a fogged cave sends no "area
+        /// Levels the ground the town occupies (its cleared cells: the parts
+        /// grown by the firebreak, within the levelled area; never the empty
+        /// land inside its bounding box), in docs/SHOWCASE.md's order: fog
+        /// off first (so breaking into a fogged cave sends no "area
         /// revealed" letter), pawns out, roofs off before rock, everything
         /// destroyable vanished (no leavings, explosions or death blasts),
-        /// pending roof collapses cleared, then the ground made fit for
-        /// stone walls. The firebreak keeps its natural ground but loses its
-        /// plants with everything else.
+        /// pending roof collapses cleared, zones taken off, then the ground
+        /// made fit for stone walls. The firebreak keeps its natural ground
+        /// but loses its plants with everything else.
         /// </summary>
         /// <param name="map">The map.</param>
-        /// <param name="plan">The plan.</param>
-        /// <param name="anchor">The crossroads' map cell.</param>
-        private static void PrepareGround(Map map, TownPlan plan, IntVec3 anchor)
+        /// <param name="cleared">The cleared cells, on the map.</param>
+        private static void PrepareGround(Map map, List<IntVec3> cleared)
         {
-            CellRect area = ToMap(anchor, LevelledArea(plan)).ClipInsideMap(map);
-            foreach (IntVec3 c in area.ExpandedBy(1).ClipInsideMap(map))
+            var area = new HashSet<IntVec3>(cleared);
+            foreach (IntVec3 c in cleared)
             {
-                if (map.fogGrid.IsFogged(c))
+                foreach (IntVec3 offset in GenAdj.AdjacentCellsAndInside)
                 {
-                    map.fogGrid.Unfog(c);
+                    IntVec3 near = c + offset;
+                    if (near.InBounds(map) && map.fogGrid.IsFogged(near))
+                    {
+                        map.fogGrid.Unfog(near);
+                    }
                 }
             }
 
             MovePawnsOut(map, area);
-            foreach (IntVec3 c in area)
+            foreach (IntVec3 c in cleared)
             {
                 map.roofGrid.SetRoof(c, null);
             }
 
             var alreadyMarked = new HashSet<IntVec3>(map.roofCollapseBuffer.CellsMarkedToCollapse);
             var holders = new List<IntVec3>();
-            foreach (IntVec3 c in area)
+            foreach (IntVec3 c in cleared)
             {
                 foreach (Thing thing in c.GetThingList(map).ToList())
                 {
@@ -550,21 +631,42 @@ namespace BatshitTechnology
                 }
             }
 
-            ClearRoofCollapses(map, alreadyMarked, holders);
-            foreach (IntVec3 c in area)
+            ClearRoofCollapses(map, alreadyMarked, holders, area);
+            Unzone(map, area);
+            foreach (IntVec3 c in cleared)
             {
                 Level(map, c);
             }
         }
 
         /// <summary>
+        /// Takes every zone (the player's stockpiles and growing zones
+        /// included) off a set of cells, so nothing sows the town's lawns
+        /// or hauls into its houses. Cells outside the set keep their
+        /// zones, even where a zone is cut in two.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="area">The cells.</param>
+        private static void Unzone(Map map, HashSet<IntVec3> area)
+        {
+            foreach (Zone zone in map.zoneManager.AllZones.ToList())
+            {
+                foreach (IntVec3 c in zone.Cells.Where(area.Contains).ToList())
+                {
+                    zone.RemoveCell(c);
+                }
+            }
+        }
+
+        /// <summary>
         /// Moves every pawn out of an area: hostile ones vanish, everyone
-        /// else is set down just outside the nearest edge. A spawned wall
-        /// never wipes a pawn, so anyone left inside would be walled in.
+        /// else is set down on the nearest standable cell outside it. A
+        /// spawned wall never wipes a pawn, so anyone left inside would be
+        /// walled in.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="area">The area, map cells.</param>
-        private static void MovePawnsOut(Map map, CellRect area)
+        private static void MovePawnsOut(Map map, HashSet<IntVec3> area)
         {
             foreach (Pawn pawn in map.mapPawns.AllPawnsSpawned.ToList())
             {
@@ -579,9 +681,7 @@ namespace BatshitTechnology
                     continue;
                 }
 
-                IntVec3 edge = NearestOutside(pawn.Position, area, map);
-                if (!CellFinder.TryFindRandomCellNear(
-                        edge, map, 8, c => !area.Contains(c) && c.Standable(map), out IntVec3 cell))
+                if (!TryFindNearestOutside(pawn.Position, area, map, out IntVec3 cell))
                 {
                     continue; // nowhere to go; it will step out of any wall itself
                 }
@@ -592,24 +692,46 @@ namespace BatshitTechnology
             }
         }
 
-        /// <summary>The cell two steps outside an area's nearest edge.</summary>
-        /// <param name="c">A cell inside the area.</param>
+        /// <summary>
+        /// The nearest standable cell outside an area, searched in growing
+        /// square rings around a cell, up to <see cref="MoveOutReach"/>.
+        /// </summary>
+        /// <param name="from">A cell inside the area.</param>
         /// <param name="area">The area.</param>
-        /// <param name="map">The map, to clamp to.</param>
-        /// <returns>The cell.</returns>
-        private static IntVec3 NearestOutside(IntVec3 c, CellRect area, Map map)
+        /// <param name="map">The map.</param>
+        /// <param name="cell">The cell found, or Invalid.</param>
+        /// <returns>True if one was found.</returns>
+        private static bool TryFindNearestOutside(
+            IntVec3 from, HashSet<IntVec3> area, Map map, out IntVec3 cell)
         {
-            int west = c.x - area.minX;
-            int east = area.maxX - c.x;
-            int south = c.z - area.minZ;
-            int north = area.maxZ - c.z;
-            int nearest = Mathf.Min(Mathf.Min(west, east), Mathf.Min(south, north));
-            IntVec3 target = nearest == west ? new IntVec3(area.minX - 2, 0, c.z)
-                : nearest == east ? new IntVec3(area.maxX + 2, 0, c.z)
-                : nearest == south ? new IntVec3(c.x, 0, area.minZ - 2)
-                : new IntVec3(c.x, 0, area.maxZ + 2);
-            return new IntVec3(
-                Mathf.Clamp(target.x, 0, map.Size.x - 1), 0, Mathf.Clamp(target.z, 0, map.Size.z - 1));
+            for (int r = 1; r <= MoveOutReach; r++)
+            {
+                IntVec3 best = IntVec3.Invalid;
+                float bestDistance = float.MaxValue;
+                foreach (IntVec3 c in CellRect.CenteredOn(from, r).EdgeCells)
+                {
+                    if (!c.InBounds(map) || area.Contains(c) || !c.Standable(map))
+                    {
+                        continue;
+                    }
+
+                    float distance = c.DistanceToSquared(from);
+                    if (distance < bestDistance)
+                    {
+                        best = c;
+                        bestDistance = distance;
+                    }
+                }
+
+                if (best.IsValid)
+                {
+                    cell = best;
+                    return true;
+                }
+            }
+
+            cell = IntVec3.Invalid;
+            return false;
         }
 
         /// <summary>
@@ -619,18 +741,22 @@ namespace BatshitTechnology
         /// New marks are unroofed instead, then the removal-mode sweep
         /// vanilla's river generation uses takes off any roof left
         /// unsupported. Marks that were there before this build are left
-        /// for the game to resolve.
+        /// for the game to resolve, except inside the cleared cells: those
+        /// cells were just unroofed, and a mark left there would drop the
+        /// roof the town is about to put on them.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="alreadyMarked">Cells marked before anything was removed.</param>
         /// <param name="holders">Where removed roof holders stood.</param>
-        private static void ClearRoofCollapses(Map map, HashSet<IntVec3> alreadyMarked, List<IntVec3> holders)
+        /// <param name="area">The cleared cells.</param>
+        private static void ClearRoofCollapses(
+            Map map, HashSet<IntVec3> alreadyMarked, List<IntVec3> holders, HashSet<IntVec3> area)
         {
             List<IntVec3> marked = map.roofCollapseBuffer.CellsMarkedToCollapse;
             for (int i = marked.Count - 1; i >= 0; i--)
             {
                 IntVec3 c = marked[i];
-                if (alreadyMarked.Contains(c))
+                if (alreadyMarked.Contains(c) && !area.Contains(c))
                 {
                     continue;
                 }
@@ -745,15 +871,19 @@ namespace BatshitTechnology
         /// Executes a plan on levelled ground: terrain, roofs, buildings,
         /// crates, items, plants, animals and stockpiles; then power, rooms
         /// and fog; then the residents and their beds and graves; then the
-        /// home area is cleared over the town and the town is registered.
+        /// home area is cleared over what the town occupies (its cleared
+        /// cells and the road-taper cells laid) and the town is registered.
         /// </summary>
         /// <param name="map">The map.</param>
-        /// <param name="plan">The plan.</param>
+        /// <param name="plan">The plan, already reduced around obstacles.</param>
         /// <param name="anchor">The crossroads' map cell.</param>
+        /// <param name="cleared">The cleared cells, on the map.</param>
+        /// <param name="obstacles">What the plan was reduced around, town-local.</param>
         /// <param name="record">The map's town record.</param>
         /// <param name="report">Collects counts and failures.</param>
         private static void Execute(
-            Map map, TownPlan plan, IntVec3 anchor, MapComponent_AnyRim record, AnyRimBuildReport report)
+            Map map, TownPlan plan, IntVec3 anchor, List<IntVec3> cleared, List<Box> obstacles,
+            MapComponent_AnyRim record, AnyRimBuildReport report)
         {
             Faction town = AnyRimResidents.TownFaction();
             if (town == null)
@@ -761,7 +891,7 @@ namespace BatshitTechnology
                 report.Fail("no Ancients faction: town things are unowned");
             }
 
-            LayTerrain(map, plan, anchor, report);
+            List<IntVec3> tapers = LayTerrain(map, plan, anchor, report);
             foreach (RoofPlacement roof in plan.Roofs)
             {
                 IntVec3 c = ToMap(anchor, roof.At);
@@ -819,8 +949,8 @@ namespace BatshitTechnology
 
             map.powerNetManager.UpdatePowerNetsAndConnections_First();
             map.regionAndRoomUpdater.TryRebuildDirtyRegionsAndRooms();
-            CellRect footprint = ToMap(anchor, Footprint(plan)).ClipInsideMap(map);
-            foreach (IntVec3 c in footprint)
+            List<IntVec3> occupied = cleared.Concat(tapers).ToList();
+            foreach (IntVec3 c in occupied)
             {
                 if (map.fogGrid.IsFogged(c))
                 {
@@ -844,14 +974,15 @@ namespace BatshitTechnology
             Area home = map.areaManager.Home;
             if (home != null)
             {
-                foreach (IntVec3 c in footprint)
+                foreach (IntVec3 c in occupied)
                 {
                     home[c] = false;
                 }
             }
 
             record.Register(
-                anchor, footprint, ToMap(anchor, LevelledArea(plan)).ClipInsideMap(map), plan,
+                anchor, ToMap(anchor, Footprint(plan)).ClipInsideMap(map),
+                ToMap(anchor, LevelledArea(plan)).ClipInsideMap(map), plan, obstacles,
                 plan.Residents.Where(r => residents.ContainsKey(r.Key)).Select(r => residents[r.Key]),
                 animals);
         }
@@ -866,8 +997,11 @@ namespace BatshitTechnology
         /// <param name="plan">The plan.</param>
         /// <param name="anchor">The crossroads' map cell.</param>
         /// <param name="report">Collects counts and failures.</param>
-        private static void LayTerrain(Map map, TownPlan plan, IntVec3 anchor, AnyRimBuildReport report)
+        /// <returns>The cells laid outside the levelled area, on the map.</returns>
+        private static List<IntVec3> LayTerrain(
+            Map map, TownPlan plan, IntVec3 anchor, AnyRimBuildReport report)
         {
+            var tapers = new List<IntVec3>();
             var final = new Dictionary<Cell, TerrainPlacement>();
             foreach (TerrainPlacement placement in plan.Terrain)
             {
@@ -891,10 +1025,15 @@ namespace BatshitTechnology
                     continue;
                 }
 
-                if (!levelled.Contains(placement.At) && !ClearTaperCell(map, c))
+                if (!levelled.Contains(placement.At))
                 {
-                    report.TaperCellsSkipped++;
-                    continue;
+                    if (!ClearTaperCell(map, c))
+                    {
+                        report.TaperCellsSkipped++;
+                        continue;
+                    }
+
+                    tapers.Add(c);
                 }
 
                 map.terrainGrid.SetTerrain(c, def);
@@ -913,6 +1052,8 @@ namespace BatshitTechnology
 
                 report.TerrainCells++;
             }
+
+            return tapers;
         }
 
         /// <summary>
@@ -1348,7 +1489,7 @@ namespace BatshitTechnology
         /// Applies a spawned building's settings: switched off, fuelled,
         /// auto-refuel off, bills suspended (the Transmogrifier first gets
         /// its rock-chunk bill), and bolts loaded into a Ballista or
-        /// magazine.
+        /// magazine, which then refuses any more.
         /// </summary>
         /// <param name="building">The spawned building.</param>
         /// <param name="placement">The placement.</param>
@@ -1390,6 +1531,24 @@ namespace BatshitTechnology
             {
                 Load(building, placement, report);
             }
+
+            RefuseDeliveries(building);
+        }
+
+        /// <summary>
+        /// Sets a town Ballista's or magazine's storage filter to allow
+        /// nothing, after it is loaded, so the colony's haulers never carry
+        /// bolts to town (both are player-owned haul destinations of high
+        /// priority). It still fires: BoltStorage.Take ignores the filter,
+        /// and the bolts inside are not spawned, so nothing hauls them out.
+        /// Anything else is left alone.
+        /// </summary>
+        /// <param name="building">The spawned building.</param>
+        private static void RefuseDeliveries(Thing building)
+        {
+            BoltStorage storage = (building as Building_BatshittiumBallista)?.InternalMagazine
+                ?? (building as Building_BallistaMagazine)?.Storage;
+            storage?.Settings?.filter?.SetDisallowAll();
         }
 
         /// <summary>Switches a flickable building off, wanted state included.</summary>
@@ -1505,8 +1664,6 @@ namespace BatshitTechnology
         {
             var zone = new Zone_Stockpile(StorageSettingsPreset.DefaultStockpile, map.zoneManager);
             map.zoneManager.RegisterZone(zone);
-            // Critical, so nothing stored here is hauled off to the base.
-            zone.settings.Priority = StoragePriority.Critical;
             zone.settings.filter.SetDisallowAll();
             foreach (string defName in stockpile.Accepts)
             {
@@ -1547,17 +1704,19 @@ namespace BatshitTechnology
         // ===== Demolition =====
 
         /// <summary>
-        /// Takes the map's town down (docs/SHOWCASE.md, "Tests"): over its
-        /// core and firebreak, roofs come off first, so nothing collapses
-        /// as walls vanish; residents (or their corpses) and the town's
-        /// animals vanish, their lords with them; every destroyable thing
-        /// that is not a pawn vanishes (no self-destructs, death blasts or
-        /// leavings), apart from player corpses; stockpile cells are
-        /// unzoned; and the record is reset. The levelled terrain and the
-        /// road tapers stay.
+        /// Takes the map's town down (docs/SHOWCASE.md, "Tests") over the
+        /// ground it cleared, recomputed from the plan it executed: roofs
+        /// come off first, so nothing collapses as walls vanish; residents
+        /// (or their corpses) and the town's animals vanish, their lords
+        /// with them, unless they have left the town (recruited, captured,
+        /// enslaved or tamed: those are only forgotten); every destroyable
+        /// thing that is not a pawn vanishes (no self-destructs, death
+        /// blasts or leavings), apart from player corpses; the town's own
+        /// stockpile cells are unzoned (no other zone is touched); and the
+        /// record is reset. The levelled terrain and the road tapers stay.
         /// </summary>
         /// <param name="map">The map.</param>
-        /// <returns>False if the map had no town.</returns>
+        /// <returns>False if the map had no town, or its plan is lost.</returns>
         internal static bool Demolish(Map map)
         {
             MapComponent_AnyRim record = map?.GetComponent<MapComponent_AnyRim>();
@@ -1566,18 +1725,37 @@ namespace BatshitTechnology
                 return false;
             }
 
-            CellRect area = record.LevelledArea.ClipInsideMap(map);
-            foreach (IntVec3 c in area)
+            TownPlan plan = record.Plan;
+            if (plan == null)
+            {
+                Log.Error("[BT] AnyRim cannot be removed: its plan could not be rebuilt.");
+                return false;
+            }
+
+            List<IntVec3> cleared = ClearedCells(map, plan, record.Anchor);
+            foreach (IntVec3 c in cleared)
             {
                 map.roofGrid.SetRoof(c, null);
             }
 
-            foreach (Pawn pawn in record.Residents.Concat(record.Animals).ToList())
+            Faction town = Faction.OfAncients;
+            foreach (Pawn pawn in record.Residents.ToList())
             {
-                Vanish(pawn, map);
+                if (StillTownResident(pawn, town))
+                {
+                    Vanish(pawn, map);
+                }
             }
 
-            foreach (IntVec3 c in area)
+            foreach (Pawn pawn in record.Animals.ToList())
+            {
+                if (StillTownAnimal(pawn))
+                {
+                    Vanish(pawn, map);
+                }
+            }
+
+            foreach (IntVec3 c in cleared)
             {
                 foreach (Thing thing in c.GetThingList(map).ToList())
                 {
@@ -1600,11 +1778,14 @@ namespace BatshitTechnology
                 }
             }
 
-            foreach (Zone zone in map.zoneManager.AllZones.ToList())
+            foreach (StockpilePlan pile in plan.Stockpiles)
             {
-                foreach (IntVec3 c in zone.Cells.Where(area.Contains).ToList())
+                foreach (IntVec3 c in ToMap(record.Anchor, pile.Area).ClipInsideMap(map))
                 {
-                    zone.RemoveCell(c);
+                    if (map.zoneManager.ZoneAt(c) is Zone_Stockpile zone)
+                    {
+                        zone.RemoveCell(c);
+                    }
                 }
             }
 
@@ -1613,6 +1794,26 @@ namespace BatshitTechnology
             map.regionAndRoomUpdater.TryRebuildDirtyRegionsAndRooms();
             return true;
         }
+
+        /// <summary>
+        /// Whether a resident, alive or dead, still belongs to the town: of
+        /// the town's faction, and neither a prisoner nor a slave of the
+        /// colony. A recruited, captured or enslaved resident does not.
+        /// </summary>
+        /// <param name="pawn">The resident.</param>
+        /// <param name="town">The town's faction, or null if it is gone.</param>
+        /// <returns>True if demolition may take it.</returns>
+        private static bool StillTownResident(Pawn pawn, Faction town) =>
+            pawn != null && town != null && pawn.Faction == town
+            && !pawn.IsPrisonerOfColony && !pawn.IsSlaveOfColony;
+
+        /// <summary>
+        /// Whether a town animal, alive or dead, is still the town's: still
+        /// without a faction (wild), so not tamed by anyone.
+        /// </summary>
+        /// <param name="pawn">The animal.</param>
+        /// <returns>True if demolition may take it.</returns>
+        private static bool StillTownAnimal(Pawn pawn) => pawn != null && pawn.Faction == null;
 
         /// <summary>
         /// Vanishes a town pawn on this map, or its corpse if it is dead.
@@ -1694,8 +1895,10 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Dev mode, Actions, Mods: builds AnyRim at the cheapest site on
-        /// the map, near where the showcase would put it, at least 10 tiles
-        /// from the player's buildings.
+        /// the map, near where the showcase would put it, with its parts at
+        /// least 10 tiles from the player's buildings and its reactor more
+        /// than <see cref="ReactorReach"/> tiles from them, out of reach of
+        /// its own self-destruct.
         /// </summary>
         [DebugAction("Mods", "Build AnyRim (best site)", allowedGameStates = AllowedGameStates.PlayingOnMap)]
         private static void DebugBuildBest()
@@ -1707,6 +1910,7 @@ namespace BatshitTechnology
             }
 
             var keepAways = new List<KeepAway>();
+            Predicate<IntVec3> reactorClear = null;
             List<Building> colony = map.listerBuildings.allBuildingsColonist;
             if (colony.Count > 0)
             {
@@ -1717,10 +1921,18 @@ namespace BatshitTechnology
                 }
 
                 keepAways.Add(new KeepAway(ToBox(bounds), 10));
+                Cell? reactor = Plan(DefaultSeed).Reactor;
+                if (reactor.HasValue)
+                {
+                    reactorClear = anchor =>
+                        bounds.ClosestDistSquaredTo(ToMap(anchor, reactor.Value))
+                            > ReactorReach * ReactorReach;
+                }
             }
 
             AnyRimBuildReport report = BuildBest(
-                map, DefaultSeed, CellRect.WholeMap(map), Showcase.AnyRimPreferredSite(map), keepAways);
+                map, DefaultSeed, CellRect.WholeMap(map), Showcase.AnyRimPreferredSite(map), keepAways,
+                reactorClear);
             if (!report.Anchor.IsValid)
             {
                 Messages.Message("No site on this map suits AnyRim.", MessageTypeDefOf.RejectInput, false);

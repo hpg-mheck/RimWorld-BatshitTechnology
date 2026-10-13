@@ -306,17 +306,20 @@ public sealed class TownSiteTests
 
     /// <summary>
     /// The plan overload rejects a site only when a no-go cell lies under
-    /// one of the town's parts. A geyser in an empty corner of the levelled
-    /// area once rejected every candidate on two quick-test maps.
+    /// one of the town's parts or within one cell of a building's outer
+    /// footprint. A geyser in an empty corner of the levelled area once
+    /// rejected every candidate on two quick-test maps, so such a corner
+    /// is still accepted.
     /// </summary>
-    [Fact(DisplayName = "No-go ground matters only under the town's parts")]
+    [Fact(DisplayName = "No-go ground matters only under the town or beside a building")]
     public void Best_with_a_plan_should_test_no_go_under_parts_only()
     {
         TownPlan plan = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
         var anchor = new Cell(55, 163);
         Box levelled = plan.Core.ExpandedBy(plan.FirebreakWidth);
         Cell empty = levelled.Cells()
-            .First(c => !plan.Parts.Any(p => p.Contains(c)));
+            .First(c => !plan.Parts.Any(p => p.Contains(c))
+                && !plan.Buildings.Any(b => b.Outer.ExpandedBy(1).Contains(c)));
         Cell underPart = plan.Parts[0].MinX == 0 && plan.Parts[0].MinZ == 0
             ? new Cell(0, 0)
             : new Cell(plan.Parts[0].MinX, plan.Parts[0].MinZ);
@@ -325,12 +328,84 @@ public sealed class TownSiteTests
         open.Block(anchor.X + empty.X, anchor.Z + empty.Z);
         open.Freeze();
         Assert.Equal(anchor, TownSite.Best(open, plan, new[] { anchor }, anchor, 6, None));
+        Assert.Equal(0, TownSite.Explain(open, plan, new[] { anchor }, 6, None).Blocked);
 
         var built = new SiteGrid(250, 250);
         built.Block(anchor.X + underPart.X, anchor.Z + underPart.Z);
         built.Freeze();
         Assert.Null(TownSite.Best(built, plan, new[] { anchor }, anchor, 6, None));
         Assert.Equal(1, TownSite.Explain(built, plan, new[] { anchor }, 6, None).Blocked);
+    }
+
+    /// <summary>
+    /// A no-go cell one cell outside the Five-and-Dime's back wall lies
+    /// under no part, but <see cref="TownPlan.Avoiding"/> would drop the
+    /// whole building (and Bea) for it, so the site is rejected and
+    /// Explain charges it to no-go ground.
+    /// </summary>
+    [Fact(DisplayName = "No-go ground beside a building rejects a site")]
+    public void Best_with_a_plan_should_reject_no_go_beside_a_building()
+    {
+        TownPlan plan = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
+        Box five = plan.Buildings.Single(b => b.Key == "W1").Outer;
+        var behind = new Cell(five.MinX - 1, -11);
+        Assert.InRange(behind.Z, five.MinZ, five.MaxZ);
+        Assert.DoesNotContain(plan.Parts, p => p.Contains(behind));
+        TownPlan reduced = plan.Avoiding(
+            new[] { new Box(behind.X, behind.Z, behind.X, behind.Z) });
+        Assert.DoesNotContain(reduced.Buildings, b => b.Key == "W1");
+
+        var anchor = new Cell(55, 163);
+        var grid = new SiteGrid(250, 250);
+        grid.Block(anchor.X + behind.X, anchor.Z + behind.Z);
+        grid.Freeze();
+        Assert.Null(TownSite.Best(grid, plan, new[] { anchor }, anchor, 6, None));
+        SiteRejections tally = TownSite.Explain(grid, plan, new[] { anchor }, 6, None);
+        Assert.Equal(1, tally.Blocked);
+        Assert.Equal(0, tally.Acceptable);
+    }
+
+    /// <summary>
+    /// Site selection and <see cref="TownPlan.Avoiding"/> agree: for every
+    /// no-go cell the plan overload accepts (around each building and
+    /// across a sample of the levelled area), avoiding that cell keeps
+    /// every building and every resident. Some cells are accepted and some
+    /// rejected, so the check is not vacuous.
+    /// </summary>
+    [Fact(DisplayName = "An accepted no-go cell never costs a building")]
+    public void Accepted_no_go_cells_should_keep_every_building()
+    {
+        TownPlan plan = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
+        Box levelled = plan.Core.ExpandedBy(plan.FirebreakWidth);
+        var cells = new HashSet<Cell>(
+            levelled.Cells().Where(c => ((c.X + (2 * c.Z)) % 5 + 5) % 5 == 0));
+        foreach (BuildingPlan building in plan.Buildings)
+        {
+            cells.UnionWith(building.Outer.ExpandedBy(2).EdgeCells());
+            cells.UnionWith(building.Outer.ExpandedBy(1).EdgeCells());
+        }
+
+        // A small map that just holds the town, to keep the grids cheap.
+        var anchor = new Cell(45, 45);
+        int accepted = 0, rejected = 0;
+        foreach (Cell c in cells.Where(levelled.Contains))
+        {
+            var grid = new SiteGrid(110, 120);
+            grid.Block(anchor.X + c.X, anchor.Z + c.Z);
+            grid.Freeze();
+            if (TownSite.Best(grid, plan, new[] { anchor }, anchor, 0, None) == null)
+            {
+                rejected++;
+                continue;
+            }
+
+            accepted++;
+            TownPlan reduced = plan.Avoiding(new[] { new Box(c.X, c.Z, c.X, c.Z) });
+            Assert.True(plan.Buildings.Count == reduced.Buildings.Count, $"{c} drops a building");
+            Assert.True(plan.Residents.Count == reduced.Residents.Count, $"{c} drops a resident");
+        }
+
+        Assert.True(accepted > 100 && rejected > 100, $"{accepted} accepted, {rejected} rejected");
     }
 
     /// <summary>
@@ -349,5 +424,94 @@ public sealed class TownSiteTests
         var candidates = new[] { new Cell(55, 163), new Cell(54, 163) };
         Assert.Equal(new Cell(54, 163),
             TownSite.Best(grid, plan, candidates, new Cell(55, 163), 6, None));
+    }
+    // ===== Clears =====
+
+    /// <summary>
+    /// Clears applies the keep-away rule to one area: true when every part
+    /// lies at least the distance away (the gap may equal it), false when
+    /// any comes closer, and it agrees with Best given the same keep-away.
+    /// </summary>
+    [Fact(DisplayName = "Clears measures every part, as keep-aways do")]
+    public void Clears_should_measure_every_part()
+    {
+        TownPlan plan = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
+        var anchor = new Cell(100, 100);
+        Box east = plan.Parts.OrderByDescending(p => p.MaxX).First();
+        var spot = new Cell(anchor.X + east.MaxX + 10, anchor.Z + east.MinZ);
+        var area = new Box(spot.X, spot.Z, spot.X, spot.Z);
+
+        Assert.True(TownSite.Clears(plan, anchor, area, 10));
+        Assert.False(TownSite.Clears(plan, anchor, area, 10.01));
+        Assert.False(TownSite.Clears(plan, anchor, new Box(100, 100, 100, 100), 0.5));
+        Assert.True(TownSite.Clears(plan, anchor, new Box(100, 100, 100, 100), 0));
+        Assert.Throws<ArgumentNullException>(() => TownSite.Clears(null!, anchor, area, 1));
+
+        var grid = new SiteGrid(250, 250);
+        grid.Freeze();
+        foreach (double reach in new[] { 10, 10.01 })
+        {
+            Cell? best = TownSite.Best(grid, plan, new[] { anchor }, anchor, 6,
+                new[] { new KeepAway(area, reach) });
+            Assert.Equal(TownSite.Clears(plan, anchor, area, reach), best.HasValue);
+        }
+    }
+
+    /// <summary>
+    /// On the showcase map, every crossroads the site search accepts with
+    /// the showcase's keep-aways leaves both the north-east and south-east
+    /// demo pads clear under the showcase's own corner rule, including the
+    /// eastern candidates (x 57 and 59) a bounding-box rule would refuse.
+    /// </summary>
+    [Fact(DisplayName = "Every accepted showcase site keeps both demo pads")]
+    public void Accepted_showcase_sites_should_clear_both_pads()
+    {
+        TownPlan plan = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
+        var grid = new SiteGrid(250, 250);
+        grid.Freeze();
+        var northEast = new Box(200, 200, 200, 200);
+        var southEast = new Box(200, 50, 200, 50);
+        var keepAways = new[]
+        {
+            new KeepAway(new Box(109, 109, 141, 141), 10),
+            new KeepAway(new Box(87, 112, 113, 138), 15),
+            new KeepAway(northEast, 87.6),
+            new KeepAway(southEast, 87.6),
+        };
+        var accepted = TownSite.Grid(new Box(45, 150, 60, 177), 2)
+            .Where(c => TownSite.Best(grid, plan, new[] { c }, c, 6, keepAways) != null)
+            .ToList();
+
+        Assert.Contains(new Cell(57, 170), accepted);
+        Assert.Contains(new Cell(59, 170), accepted);
+        Assert.All(accepted, c =>
+        {
+            Assert.True(TownSite.Clears(plan, c, northEast, 87.6), $"{c} north-east");
+            Assert.True(TownSite.Clears(plan, c, southEast, 87.6), $"{c} south-east");
+        });
+    }
+
+    /// <summary>
+    /// An indestructible thing rules out a site only within one cell of a
+    /// building (where Avoiding would drop it); in a lawn or on a road it
+    /// is fine. One geyser once rejected 103 of 112 candidates when every
+    /// part counted.
+    /// </summary>
+    [Fact(DisplayName = "Indestructible things only matter beside buildings")]
+    public void KeepsEveryBuilding_should_guard_buildings_only()
+    {
+        TownPlan plan = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
+        var anchor = new Cell(55, 163);
+        Box w1 = plan.Buildings.Single(b => b.Key == "W1").Outer;
+        var besideW1 = new Box(w1.MinX - 1, w1.MinZ, w1.MinX - 1, w1.MinZ).Offset(anchor);
+        Assert.False(TownSite.KeepsEveryBuilding(plan, anchor, new[] { besideW1 }));
+
+        Cell road = new Cell(0, 30); // Main Street, between lots
+        Assert.DoesNotContain(plan.Buildings, b => b.Outer.ExpandedBy(1).Contains(road));
+        var onRoad = new Box(road.X, road.Z, road.X + 1, road.Z + 1).Offset(anchor);
+        Assert.True(TownSite.KeepsEveryBuilding(plan, anchor, new[] { onRoad }));
+        Assert.True(TownSite.KeepsEveryBuilding(plan, anchor, Array.Empty<Box>()));
+        Assert.True(plan.Avoiding(new[] { onRoad.Offset(new Cell(-anchor.X, -anchor.Z)) })
+            .Buildings.Count == plan.Buildings.Count);
     }
 }

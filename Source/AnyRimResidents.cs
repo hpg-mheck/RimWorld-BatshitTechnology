@@ -3,11 +3,12 @@
 // blowing them up costs no goodwill and sends no letters. Each household
 // gets its own lord (LordJob_AnyRimResident), whose duty
 // (BT_AnyRimResident, Defs/Misc/BT_AnyRim.xml) has no combat in it:
-// eat, sleep, get out of dangerous temperatures and wander near the front
-// door. Without a lord a non-colonist walks off the map, and vanilla lords
-// drop downed pawns, so this one keeps them. The civic composure hediff
-// blocks mental breaks and pins mood, and residents never flee when hurt.
-// See docs/SHOWCASE.md, "Residents".
+// eat, sleep, get out of dangerous temperatures (within 16 tiles of home,
+// JobGiver_AnyRimSeekSafeTemperature) and wander near the front door.
+// Without a lord a non-colonist walks off the map, and vanilla lords drop
+// downed pawns, so this one keeps them. The civic composure hediff blocks
+// mental breaks, pins mood and stops hunger, and residents never flee when
+// hurt. See docs/SHOWCASE.md, "Residents".
 
 using System;
 using System.Collections.Generic;
@@ -163,6 +164,127 @@ namespace BatshitTechnology
                     wanderRadius = wanderRadius,
                 };
             }
+        }
+    }
+
+    /// <summary>
+    /// The residents' way out of dangerous temperatures: vanilla's
+    /// JobGiver_SeekSafeTemperature, except that the search keeps to
+    /// regions within <see cref="JobGiver_SeekSafeTemperature.maxRadius"/>
+    /// of the duty location (the household's front door) and never picks a
+    /// forbidden cell. Vanilla passes maxRadius to its region search, which
+    /// ignores it, and checks only the pawn's allowed area, so a resident
+    /// with serious heatstroke could walk to any cool room on the map, the
+    /// colony's included.
+    /// </summary>
+    public class JobGiver_AnyRimSeekSafeTemperature : JobGiver_SeekSafeTemperature
+    {
+        /// <summary>Most regions searched, as vanilla allows.</summary>
+        private const int MaxRegions = 9999;
+
+        /// <summary>Ticks a resident waits once somewhere comfortable, as vanilla.</summary>
+        private const int WaitTicks = 500;
+
+        /// <summary>Scratch list for shuffling a region's cells (main thread only).</summary>
+        private static readonly List<IntVec3> Shuffled = new List<IntVec3>();
+
+        /// <summary>
+        /// Vanilla's rules (serious temperature injury unless
+        /// requiresInjury is off; wait where it is comfortable), then a
+        /// walk to a comfortable cell near home, or no job if there is
+        /// none. A radius of zero or less finds nothing.
+        /// </summary>
+        /// <param name="pawn">The resident.</param>
+        /// <returns>The job, or null.</returns>
+        protected override Job TryGiveJob(Pawn pawn)
+        {
+            if (pawn?.health?.hediffSet == null || !pawn.Spawned || pawn.mindState == null)
+            {
+                return null;
+            }
+
+            if (requiresInjury
+                && !pawn.health.hediffSet.HasTemperatureInjury(TemperatureInjuryStage.Serious))
+            {
+                return null;
+            }
+
+            FloatRange comfortable = pawn.ComfortableTemperatureRange();
+            if (comfortable.Includes(pawn.AmbientTemperature))
+            {
+                return waitInSafeTemp
+                    ? JobMaker.MakeJob(
+                        JobDefOf.Wait_SafeTemperature, WaitTicks, checkOverrideOnExpiry: true)
+                    : null;
+            }
+
+            if (maxRadius <= 0f
+                || !TryFindSafeCell(pawn, pawn.DutyLocation(), comfortable, out IntVec3 cell))
+            {
+                return null;
+            }
+
+            return JobMaker.MakeJob(JobDefOf.GotoSafeTemperature, cell);
+        }
+
+        /// <summary>
+        /// The nearest comfortable region, breadth first from the pawn,
+        /// entering only regions that reach within the radius of home, and
+        /// a cell in it that is within the radius and not forbidden.
+        /// </summary>
+        /// <param name="pawn">The resident.</param>
+        /// <param name="home">The duty location the radius is measured from.</param>
+        /// <param name="comfortable">The temperatures it is comfortable in.</param>
+        /// <param name="cell">The cell found, or Invalid.</param>
+        /// <returns>True if a cell was found.</returns>
+        private bool TryFindSafeCell(
+            Pawn pawn, IntVec3 home, FloatRange comfortable, out IntVec3 cell)
+        {
+            cell = IntVec3.Invalid;
+            Region root = pawn.Position.GetRegion(pawn.Map, RegionType.Set_Passable);
+            if (root == null || !home.IsValid)
+            {
+                return false;
+            }
+
+            float reachSquared = maxRadius * maxRadius;
+            TraverseParms parms = TraverseParms.For(pawn);
+            IntVec3 found = IntVec3.Invalid;
+            RegionTraverser.BreadthFirstTraverse(
+                root,
+                (from, to) => to.Allows(parms, isDestination: false)
+                    && to.extentsClose.ClosestDistSquaredTo(home) <= reachSquared,
+                region => !region.IsDoorway
+                    && region.Room != null
+                    && comfortable.Includes(region.Room.Temperature)
+                    && TryGetCell(region, pawn, home, out found),
+                MaxRegions);
+            cell = found;
+            return cell.IsValid;
+        }
+
+        /// <summary>
+        /// A random cell of a region within the radius of home that the
+        /// resident may use (not forbidden, inside any allowed area).
+        /// </summary>
+        /// <param name="region">The region.</param>
+        /// <param name="pawn">The resident.</param>
+        /// <param name="home">The duty location.</param>
+        /// <param name="cell">The cell, or Invalid.</param>
+        /// <returns>True if the region has one.</returns>
+        private bool TryGetCell(Region region, Pawn pawn, IntVec3 home, out IntVec3 cell)
+        {
+            foreach (IntVec3 c in region.Cells.InRandomOrder(Shuffled))
+            {
+                if (c.InHorDistOf(home, maxRadius) && !c.IsForbidden(pawn) && c.InAllowedArea(pawn))
+                {
+                    cell = c;
+                    return true;
+                }
+            }
+
+            cell = IntVec3.Invalid;
+            return false;
         }
     }
 

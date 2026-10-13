@@ -29,6 +29,13 @@ namespace BatshitTechnology
         private const string KeepOpenFlag = "btsmoketestkeep";
         private const int SettleFrames = 120;
 
+        /// <summary>
+        /// How far from its household's home (its lord's duty cell) an
+        /// AnyRim resident may be after 600 ticks: the duty's 16-tile flag
+        /// radius plus 4 for pathing around walls.
+        /// </summary>
+        private const float AnyRimHomeReach = 20f;
+
         private bool done;
         private int framesWithMap;
         private int passed;
@@ -652,11 +659,9 @@ namespace BatshitTechnology
         private void TestAnyRim(Map map)
         {
             var mark = ErrorMark();
-            TownPlan plan;
             AnyRimBuildReport report;
             try
             {
-                plan = AnyRim.Plan(AnyRim.DefaultSeed);
                 report = AnyRim.BuildBest(
                     map, AnyRim.DefaultSeed, Showcase.AnyRimWindow(map),
                     Showcase.AnyRimPreferredSite(map), Showcase.AnyRimKeepAways(map.Center));
@@ -672,6 +677,16 @@ namespace BatshitTechnology
             Check("AnyRim builds at a scored site", built, "no site qualified");
             if (!built)
             {
+                return;
+            }
+
+            // Checked against what was built: the plan reduced around any
+            // indestructible things, not the full plan.
+            TownPlan plan = report.Plan ?? record.Plan;
+            if (plan == null)
+            {
+                Check("AnyRim's executed plan is known", false, "neither the report nor the record has it");
+                AnyRim.Demolish(map);
                 return;
             }
 
@@ -692,7 +707,7 @@ namespace BatshitTechnology
             }
             finally
             {
-                CheckAnyRimDemolished(map, record, residents.Concat(animals).ToList());
+                CheckAnyRimDemolished(map, plan, record, residents.Concat(animals).ToList());
             }
 
             Check("AnyRim logged no errors", !NewErrorSince(mark), "an error was logged (see above)");
@@ -700,16 +715,22 @@ namespace BatshitTechnology
 
         /// <summary>
         /// The freshly built town: every placement where planned, enclosed
-        /// roofed rooms reachable from the street, no pending roof
-        /// collapse, a bare firebreak, powered devices (the town reactor
-        /// refuelled first), and no room in the reactor's heat ring.
+        /// roofed rooms reachable from the street, no roof collapse (none
+        /// pending before any tick, and every roofed cell nearby still
+        /// roofed after two), a bare firebreak, powered devices (the town
+        /// reactor refuelled first), and no room in the reactor's heat
+        /// ring.
         /// </summary>
         /// <param name="map">The map.</param>
-        /// <param name="plan">The plan built.</param>
+        /// <param name="plan">The plan built (reduced around obstacles).</param>
         /// <param name="anchor">The crossroads' map cell.</param>
         /// <param name="record">The town record.</param>
         private void CheckAnyRimBuilt(Map map, TownPlan plan, IntVec3 anchor, MapComponent_AnyRim record)
         {
+            // Before any tick: a mark left by the build drops on the first
+            // one (MapPreTick), and a thin roof leaves no rubble behind.
+            CellRect nearby = record.LevelledArea.ExpandedBy(8).ClipInsideMap(map);
+            int pending = map.roofCollapseBuffer.CellsMarkedToCollapse.Count(nearby.Contains);
             bool cold = map.mapTemperature.OutdoorTemp < AnyRim.ColdBelowCelsius;
             var missing = plan.Placements
                 .Where(p => cold || !p.OnlyIfCold)
@@ -736,16 +757,22 @@ namespace BatshitTechnology
             Check("AnyRim's rooms are enclosed, roofed and reachable from the street",
                 badRooms.Count == 0, string.Join("; ", badRooms.Take(5)));
 
+            List<IntVec3> roofed = nearby.Cells.Where(c => c.Roofed(map)).ToList();
             Tick(2);
             CellRect footprint = record.Bounds;
+            List<IntVec3> lost = roofed.Where(c => !c.Roofed(map)).ToList();
             int collapsed = map.listerThings.ThingsOfDef(ThingDefOf.CollapsedRocks)
-                .Count(t => footprint.ExpandedBy(8).Contains(t.Position));
+                .Count(t => nearby.Contains(t.Position));
             Check("no roof collapses around AnyRim",
-                map.roofCollapseBuffer.CellsMarkedToCollapse.Count == 0 && collapsed == 0,
-                $"{map.roofCollapseBuffer.CellsMarkedToCollapse.Count} marked, {collapsed} collapsed rocks");
+                pending == 0 && lost.Count == 0 && collapsed == 0,
+                $"{pending} cells marked before any tick, {lost.Count} of {roofed.Count} roofed cells "
+                    + $"lost in two ticks (e.g. {string.Join(", ", lost.Take(3))}), "
+                    + $"{collapsed} collapsed rocks");
 
-            int plantsInFirebreak = AnyRim.LevelledArea(plan).Cells()
-                .Where(c => !plan.Core.Contains(c))
+            // The firebreak: cleared ground the town does not build on.
+            var partCells = new HashSet<Cell>(plan.Parts.SelectMany(p => p.Cells()));
+            int plantsInFirebreak = plan.ClearedCells()
+                .Where(c => !partCells.Contains(c))
                 .Select(c => AnyRim.ToMap(anchor, c))
                 .Where(c => c.InBounds(map))
                 .Count(c => c.GetPlant(map) != null);
@@ -792,9 +819,10 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// The residents: eight named non-colonists, each in a lord, still
-        /// in town after 600 ticks; then the census drops by one when one
-        /// is killed, and the incident clock restarts.
+        /// The residents: eight named non-colonists, each in a lord, each
+        /// still within <see cref="AnyRimHomeReach"/> tiles of its own
+        /// household's home after 600 ticks; then the census drops by one
+        /// when one is killed, and the incident clock restarts.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="plan">The plan built.</param>
@@ -814,10 +842,26 @@ namespace BatshitTechnology
                 string.Join(", ", residents.Select(p => $"{p.LabelShort}: {p.Faction}, lord {p.GetLord() != null}")));
 
             Tick(600);
-            CellRect town = AnyRim.ToMap(anchor, plan.Core).ExpandedBy(20);
-            var strays = residents.Where(p => p.Dead || !p.Spawned || !town.Contains(p.Position)).ToList();
+            var strays = new List<string>();
+            foreach (Pawn p in residents)
+            {
+                var household = p.GetLord()?.LordJob as LordJob_AnyRimResident;
+                if (p.Dead || !p.Spawned || household == null)
+                {
+                    strays.Add($"{p.LabelShort}: dead {p.Dead}, spawned {p.Spawned}, "
+                        + $"household {household != null}");
+                    continue;
+                }
+
+                float distance = p.Position.DistanceTo(household.Home);
+                if (distance > AnyRimHomeReach)
+                {
+                    strays.Add($"{p.LabelShort} {distance:F1} tiles from home at {p.Position}");
+                }
+            }
+
             Check("AnyRim's residents are still in town after 600 ticks", strays.Count == 0,
-                string.Join(", ", strays.Select(p => $"{p.LabelShort} at {p.PositionHeld}")));
+                string.Join(", ", strays));
 
             Pawn victim = residents.FirstOrDefault(p => !p.Dead && p.Spawned);
             if (victim == null)
@@ -838,17 +882,23 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Takes the town down and checks nothing is left: no town pawns or
-        /// corpses, no destroyable thing, zone or household lord on the
-        /// ground it levelled, and an empty record.
+        /// corpses, no destroyable thing on the ground it cleared, none of
+        /// its stockpile zones, no household lord, and an empty record.
         /// </summary>
         /// <param name="map">The map.</param>
+        /// <param name="plan">The plan built (reduced around obstacles).</param>
         /// <param name="record">The town record.</param>
         /// <param name="townPawns">The residents and animals, captured before.</param>
-        private void CheckAnyRimDemolished(Map map, MapComponent_AnyRim record, List<Pawn> townPawns)
+        private void CheckAnyRimDemolished(
+            Map map, TownPlan plan, MapComponent_AnyRim record, List<Pawn> townPawns)
         {
-            CellRect area = record.LevelledArea;
+            IntVec3 anchor = record.Anchor;
+            List<IntVec3> cleared = AnyRim.ClearedCells(map, plan, anchor);
+            List<IntVec3> stockpiles = plan.Stockpiles
+                .SelectMany(s => AnyRim.ToMap(anchor, s.Area).ClipInsideMap(map).Cells)
+                .ToList();
             bool removed = AnyRim.Demolish(map);
-            var left = area.ClipInsideMap(map).Cells
+            var left = cleared
                 .SelectMany(c => c.GetThingList(map))
                 .Where(t => t.def.destroyable && !(t is Pawn))
                 .Select(t => t.def.defName)
@@ -857,7 +907,7 @@ namespace BatshitTechnology
             bool pawnsGone = townPawns.All(p => !p.SpawnedOrAnyParentSpawned
                 && (p.Corpse == null || !p.Corpse.Spawned));
             bool lordsGone = !map.lordManager.lords.Any(l => l.LordJob is LordJob_AnyRimResident);
-            bool zonesGone = !map.zoneManager.AllZones.Any(z => z.Cells.Any(area.Contains));
+            bool zonesGone = stockpiles.All(c => map.zoneManager.ZoneAt(c) == null);
             Check("AnyRim demolition leaves nothing behind",
                 removed && !record.Built && record.Population == 0 && left.Count == 0 && pawnsGone
                     && lordsGone && zonesGone,

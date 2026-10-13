@@ -131,3 +131,11 @@ covered instead by: Def validation against the real game assembly
 test (Tools/smoke-test.ps1). Pure logic lives in BatshitTechnology.Core with
 unit tests (WeightedSelector, ReactorHeat, MonologuePicker, BallistaPower,
 MagazineNetwork, BlastSchedule).
+
+AnyRim follows the same split. Its geometry, site scoring, palettes, def
+catalogue and texts are pure Core code with unit tests (TownGeometryTests,
+TownPlanTests, TownSiteTests, AnyRimTextTests, TownDefsTests). The game
+side (Source/AnyRim.cs, AnyRimResidents.cs including
+JobGiver_AnyRimSeekSafeTemperature, MapComponent_AnyRim.cs, and the
+Showcase hooks) needs a live map, so it is covered by the smoke runner's
+TestAnyRim checks and by the showcase's TOUR capture instead.

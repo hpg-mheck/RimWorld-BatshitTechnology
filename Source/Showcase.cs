@@ -91,20 +91,12 @@ namespace BatshitTechnology
             // AnyRim goes up before the self-destruct demo, which clears
             // the fog and must pick corners out of the town's reach.
             bool town = BuildAnyRim(map, center);
-            Thing doomed = BuildSelfDestructDemo(map, center);
+            Thing doomed = BuildSelfDestructDemo(map, center, out int demos);
             Find.CameraDriver.JumpToCurrentMapLoc(doomed?.Position ?? center);
             Find.CameraDriver.SetRootSize(MaxCameraSize);
             Find.TickManager.CurTimeSpeed = TimeSpeed.Normal;
             Messages.Message(
-                "Batshit Technology showcase: this lone replicator arms its "
-                    + "self-destruct in five seconds, a lone reactor follows it, "
-                    + "then a colonist throws an Ergonomic Singularity Grenade. "
-                    + "The demo base is at the map's centre; select things there "
-                    + "to see their buttons and status."
-                    + (town
-                        ? " AnyRim, a small test town, stands to the north-west; "
-                            + "the camera visits it after the grenade."
-                        : string.Empty),
+                OpeningMessage(demos, throwAtTick >= 0, town),
                 MessageTypeDefOf.PositiveEvent, false);
             // Tools/smoke-test.ps1 waits for this line before maximizing.
             Log.Message("[BT-SHOWCASE] READY");
@@ -136,8 +128,11 @@ namespace BatshitTechnology
         /// </summary>
         private const int TourLookNorth = 20;
 
-        /// <summary>The map rectangle AnyRim stands in, or null if it was skipped.</summary>
-        private static CellRect? anyRimBounds;
+        /// <summary>The plan AnyRim was built from, or null if it was skipped.</summary>
+        private static TownPlan anyRimPlan;
+
+        /// <summary>AnyRim's crossroads, or Invalid if it was skipped.</summary>
+        private static IntVec3 anyRimAnchor = IntVec3.Invalid;
 
         /// <summary>The tick to tour AnyRim at, or -1.</summary>
         private static int tourAtTick = -1;
@@ -190,7 +185,8 @@ namespace BatshitTechnology
         /// <returns>True if the town was built.</returns>
         private static bool BuildAnyRim(Map map, IntVec3 baseCenter)
         {
-            anyRimBounds = null;
+            anyRimPlan = null;
+            anyRimAnchor = IntVec3.Invalid;
             tourAtTick = -1;
             try
             {
@@ -198,9 +194,11 @@ namespace BatshitTechnology
                     map, AnyRim.DefaultSeed, AnyRimWindow(map), AnyRimPreferredSite(map),
                     AnyRimKeepAways(baseCenter));
                 MapComponent_AnyRim record = map.GetComponent<MapComponent_AnyRim>();
-                if (report.Anchor.IsValid && record != null && record.Built)
+                if (report.Anchor.IsValid && record != null && record.Built
+                    && report.Plan != null)
                 {
-                    anyRimBounds = record.Bounds;
+                    anyRimPlan = report.Plan;
+                    anyRimAnchor = report.Anchor;
                     Log.Message($"[BT-SHOWCASE] ANYRIM at ({report.Anchor.x},{report.Anchor.z})");
                     return true;
                 }
@@ -385,21 +383,23 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Two lone devices on small pads in the far corners with the most
-        /// open ground, among the corners more than
-        /// <see cref="DemoCornerReach"/> tiles from AnyRim: a Random
-        /// Replicator, armed after <see cref="ArmDelayTicks"/>, then a
-        /// Batshittium Reactor, armed after the replicator's blast has
+        /// open ground, among the corners that every part of AnyRim (as
+        /// built) clears by <see cref="DemoCornerReach"/> tiles, the rule
+        /// the site search applied (<see cref="TownSite.Clears"/>): a
+        /// Random Replicator, armed after <see cref="ArmDelayTicks"/>, then
+        /// a Batshittium Reactor, armed after the replicator's blast has
         /// played out. The replicator is selected first so its blast rings
         /// show. Fog is cleared so every blast can be watched. The grenade
         /// demo and the AnyRim tour are scheduled after them.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="baseCenter">The demo base's centre.</param>
+        /// <param name="demos">How many self-destruct demos were set up: 0, 1 or 2.</param>
         /// <returns>
         /// The replicator, which the camera starts on, or null if no corner
         /// was safe to use.
         /// </returns>
-        private static Thing BuildSelfDestructDemo(Map map, IntVec3 baseCenter)
+        private static Thing BuildSelfDestructDemo(Map map, IntVec3 baseCenter, out int demos)
         {
             List<IntVec3> corners = new[]
                 {
@@ -410,10 +410,12 @@ namespace BatshitTechnology
                 }
                 .Select(offset => baseCenter + offset)
                 .Where(c => CellRect.CenteredOn(c, 3).InBounds(map))
-                .Where(c => anyRimBounds == null
-                    || anyRimBounds.Value.ClosestDistSquaredTo(c) > DemoCornerReach * DemoCornerReach)
+                .Where(c => anyRimPlan == null || TownSite.Clears(
+                    anyRimPlan, AnyRim.ToCell(anyRimAnchor), AnyRim.ToBox(CellRect.SingleCell(c)),
+                    DemoCornerReach))
                 .OrderByDescending(c => OpenGround(map, c))
                 .ToList();
+            demos = Math.Min(corners.Count, 2);
             map.fogGrid.ClearAllFog();
             int now = Find.TickManager.TicksGame;
             pendingDemos.Clear();
@@ -439,11 +441,55 @@ namespace BatshitTechnology
                 Thing reactor = Spawn(map, "BT_BatshittiumReactor", corners[1]);
                 pendingDemos.Add((reactor, now + ArmDelayTicks + SecondDemoDelayTicks));
             }
+            else if (corners.Count == 1)
+            {
+                Log.Message("[BT-SHOWCASE] only one demo corner clears AnyRim; reactor demo skipped");
+            }
 
             int throwAt = now + ArmDelayTicks + SecondDemoDelayTicks + GrenadeDemoDelayTicks;
             BuildGrenadeDemo(map, baseCenter, throwAt);
-            tourAtTick = anyRimBounds.HasValue ? throwAt + TourDelayTicks : -1;
+            tourAtTick = anyRimPlan != null ? throwAt + TourDelayTicks : -1;
             return replicator;
+        }
+
+        /// <summary>
+        /// The showcase's opening message, saying only what will run: the
+        /// replicator and reactor demos that found a corner, the grenade if
+        /// a colonist holds one, and the AnyRim tour if the town stands.
+        /// </summary>
+        /// <param name="demos">Self-destruct demos set up: 0, 1 or 2.</param>
+        /// <param name="grenade">Whether the grenade throw is scheduled.</param>
+        /// <param name="town">Whether AnyRim was built.</param>
+        /// <returns>The message.</returns>
+        private static string OpeningMessage(int demos, bool grenade, bool town)
+        {
+            var steps = new List<string>();
+            if (demos >= 1)
+            {
+                steps.Add("this lone replicator arms its self-destruct in five seconds");
+            }
+
+            if (demos >= 2)
+            {
+                steps.Add(grenade ? "a lone reactor follows it" : "and a lone reactor follows it");
+            }
+
+            if (grenade)
+            {
+                steps.Add(steps.Count > 0
+                    ? "then a colonist throws an Ergonomic Singularity Grenade"
+                    : "a colonist throws an Ergonomic Singularity Grenade shortly");
+            }
+
+            string intro = steps.Count > 0
+                ? string.Join(", ", steps) + ". The demo base"
+                : "the demo base";
+            return "Batshit Technology showcase: " + intro + " is at the map's centre; "
+                + "select things there to see their buttons and status."
+                + (town
+                    ? " AnyRim, a small test town, stands to the north-west; the camera visits it "
+                        + (grenade ? "after the grenade." : "in about a minute.")
+                    : string.Empty);
         }
 
         /// <summary>
@@ -457,6 +503,7 @@ namespace BatshitTechnology
         /// <param name="throwAt">The tick to throw at.</param>
         private static void BuildGrenadeDemo(Map map, IntVec3 baseCenter, int throwAt)
         {
+            throwAtTick = -1; // set below once a grenadier is ready
             grenadeTarget = baseCenter + new IntVec3(-25, 0, 0);
             Clear(map, CellRect.CenteredOn(grenadeTarget, 13));
             ThingDef stool = DefDatabase<ThingDef>.GetNamedSilentFail("Stool");

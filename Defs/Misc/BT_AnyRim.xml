@@ -4,11 +4,15 @@
        duty, their pawn kind and the hediff that keeps them calm. The code
        is in Source/AnyRimResidents.cs. -->
 
-  <!-- Daily life with no combat in it. Eat, sleep and get out of
-       dangerous temperatures within 16 tiles of home (cells farther out
-       count as forbidden, so residents never raid the colony's food), and
-       otherwise wander near the front door. The lord sets the wander
-       radius per household; RimWorld warns above 12. -->
+  <!-- Daily life with no combat in it. Basic needs are met within 16
+       tiles of home: cells farther out count as forbidden, so residents
+       never raid the colony's food (civic composure stops their hunger in
+       any case). A resident with serious heatstroke or hypothermia looks
+       for a comfortable room within 16 tiles of home, never on forbidden
+       ground; vanilla's JobGiver_SeekSafeTemperature ignores both limits
+       and would search the whole map. Otherwise residents wander near the
+       front door. The lord sets the wander radius per household; RimWorld
+       warns above 12. -->
   <DutyDef>
     <defName>BT_AnyRimResident</defName>
     <socialModeMax>Quiet</socialModeMax>
@@ -20,7 +24,7 @@
             <li Class="ThinkNode_Subtree">
               <treeDef>SatisfyBasicNeeds</treeDef>
             </li>
-            <li Class="JobGiver_SeekSafeTemperature">
+            <li Class="BatshitTechnology.JobGiver_AnyRimSeekSafeTemperature">
               <maxRadius>16</maxRadius>
             </li>
           </subNodes>
@@ -71,11 +75,14 @@
 
   <!-- Blocks mental breaks and holds mood steady, after vanilla's
        mind-numb serum (Anomaly), so a test never sets a resident off on a
-       berserk or sends them wandering off the map. -->
+       berserk or sends them wandering off the map. Hunger is stopped too:
+       the town's food is finite, and some front doors are more than 16
+       tiles from any of it, so residents would otherwise starve within
+       days. The kitchens' meals stay as set dressing. -->
   <HediffDef>
     <defName>BT_AnyRimComposure</defName>
     <label>civic composure</label>
-    <description>A steady, community-minded outlook, issued with the house keys. Mental breaks: none. Mood: holds at 70 percent, whatever the neighbourhood is doing. Panic and flight: not observed. Residents still step aside from anything they can see coming. It is not a substitute for a shelter.</description>
+    <description>A steady, community-minded outlook, issued with the house keys. Mental breaks: none. Mood: holds at 70 percent, whatever the neighbourhood is doing. Appetite: suspended for the duration of residency; the kitchens are kept stocked for appearances. Panic and flight: not observed. Residents still step aside from anything they can see coming. It is not a substitute for a shelter.</description>
     <hediffClass>HediffWithComps</hediffClass>
     <isBad>false</isBad>
     <everCurableByItem>false</everCurableByItem>
@@ -84,6 +91,7 @@
         <blocksMentalBreaks>true</blocksMentalBreaks>
         <pctAllThoughtNullification>1</pctAllThoughtNullification>
         <overrideMoodBase>0.7</overrideMoodBase>
+        <hungerRateFactor>0</hungerRateFactor> <!-- no one starves in town -->
       </li>
     </stages>
   </HediffDef>
