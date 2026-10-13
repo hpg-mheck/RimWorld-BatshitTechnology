@@ -3,7 +3,15 @@
   <packageId>Matt.RandomReplicator</packageId>
   <name>Random Replicator</name>
   <author>Matt + ChatGPT (build helper)</author>
-  <description>v0.4: internal storage (10), eject gizmos, blast ring overlay, power-cut letters.</description>
-  <supportedVersions><li>1.5</li></supportedVersions>
-  <modVersion IgnoreIfNoMatchingField="True">0.4.0</modVersion>
+  <description>Batshit technology, in its own research tab (Batshittium Lore, Batshittium Arcana).
+
+Batshittium: an element transmogrified from ordinary rock chunks, ten to one, in the Batshittium Transmogrifier.
+
+Batshittium Reactor: 250,000 W from one unit of batshittium for anywhere between 0.1 and 36 hours, with enough waste heat to cook every room within 12 tiles. Build it far from home.
+
+Random Replicator: fabricates a random food item every 6 in-game hours into a refrigerated compartment (10 items) that haulers empty into your stockpiles. It draws 50W, plus 50W while refrigeration is on. Player-ordered, pawn-armed self-destruct: 10-second countdown with a blast-radius ring, then a massive blast and widespread fires.</description>
+  <supportedVersions>
+    <li>1.6</li>
+  </supportedVersions>
+  <modVersion IgnoreIfNoMatchingField="True">0.5.0</modVersion>
 </ModMetaData>

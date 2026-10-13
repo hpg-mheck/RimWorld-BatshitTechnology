@@ -12,6 +12,8 @@
     <Deterministic>true</Deterministic>
     <Nullable>disable</Nullable>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- Override by setting the RIMWORLD_DIR env var to your install root -->
+    <RIMWORLD_DIR Condition=" '$(RIMWORLD_DIR)' == '' ">C:\Program Files (x86)\Steam\steamapps\common\RimWorld</RIMWORLD_DIR>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <Optimize>true</Optimize>
@@ -36,8 +38,13 @@
     <Reference Include="System.Xml"/>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BatshittiumReactor.cs" />
+    <Compile Include="Building_RandomReplicator.cs" />
     <Compile Include="CompRandomReplicator.cs" />
     <Compile Include="SelfDestruct.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="CheckRimWorldDir" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(RIMWORLD_DIR)\RimWorldWin64_Data\Managed\Assembly-CSharp.dll')">
+    <Error Text="RimWorld not found at '$(RIMWORLD_DIR)'. Set the RIMWORLD_DIR environment variable to your RimWorld install folder." />
+  </Target>
 </Project>

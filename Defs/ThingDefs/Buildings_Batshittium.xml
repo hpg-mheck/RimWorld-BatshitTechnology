@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Batshittium Transmogrifier: powered work table; one bill turns 10 rock chunks into 1 batshittium -->
+  <ThingDef ParentName="BenchBase">
+    <defName>RR_BatshittiumTransmogrifier</defName>
+    <label>batshittium transmogrifier</label>
+    <description>A humming machine that transmogrifies ordinary rock chunks into batshittium, ten chunks to one unit. Nobody is entirely sure where the rest goes.</description>
+    <thingClass>Building_WorkTable</thingClass>
+    <graphicData>
+      <texPath>Things/Building/Production/RR_BatshittiumTransmogrifier</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(2,2)</drawSize>
+    </graphicData>
+    <costList>
+      <Steel>150</Steel>
+      <ComponentIndustrial>4</ComponentIndustrial>
+    </costList>
+    <statBases>
+      <WorkToBuild>3000</WorkToBuild>
+      <MaxHitPoints>200</MaxHitPoints>
+      <Flammability>0.5</Flammability>
+      <Beauty>-4</Beauty>
+      <Mass>40</Mass>
+    </statBases>
+    <altitudeLayer>Building</altitudeLayer>
+    <fillPercent>0.7</fillPercent>
+    <size>(2,2)</size>
+    <passability>Impassable</passability>
+    <designationCategory>Production</designationCategory>
+    <hasInteractionCell>true</hasInteractionCell>
+    <interactionCellOffset>(0,0,-1)</interactionCellOffset>
+    <inspectorTabs>
+      <li>ITab_Bills</li>
+    </inspectorTabs>
+    <building>
+      <spawnedConceptLearnOpportunity>BillsTab</spawnedConceptLearnOpportunity>
+    </building>
+    <comps>
+      <li Class="CompProperties_Power">
+        <compClass>CompPowerTrader</compClass>
+        <basePowerConsumption>300</basePowerConsumption>
+      </li>
+      <li Class="CompProperties_Flickable" />
+    </comps>
+    <recipes>
+      <li>RR_TransmogrifyRockChunks</li>
+    </recipes>
+    <researchPrerequisites>
+      <li>RR_BatshittiumLore</li>
+    </researchPrerequisites>
+    <placeWorkers>
+      <li>PlaceWorker_PreventInteractionSpotOverlap</li>
+    </placeWorkers>
+  </ThingDef>
+
+  <!-- Batshittium Reactor: 250,000 W while one unit of batshittium burns (0.1-36 in-game hours, at random).
+       Dumps a huge amount of waste heat into every room within 12 tiles, so build it away from housing. -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>RR_BatshittiumReactor</defName>
+    <label>batshittium reactor</label>
+    <description>Burns one unit of batshittium at a time to produce 250,000 W. Each unit lasts anywhere from a few minutes to a day and a half, and nobody can predict which. Haulers keep it loaded.\n\nIt sheds an enormous amount of waste heat into every room within 12 tiles, inside or out. Build it well away from anywhere people live.</description>
+    <thingClass>Building</thingClass>
+    <graphicData>
+      <texPath>Things/Building/Power/RR_BatshittiumReactor</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(2,2)</drawSize>
+    </graphicData>
+    <size>(2,2)</size>
+    <rotatable>false</rotatable>
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>Impassable</passability>
+    <fillPercent>0.9</fillPercent>
+    <castEdgeShadows>true</castEdgeShadows>
+    <tickerType>Normal</tickerType>
+    <designationCategory>Power</designationCategory>
+    <minifiedDef>MinifiedThing</minifiedDef>
+    <terrainAffordanceNeeded>Medium</terrainAffordanceNeeded>
+    <costList>
+      <Steel>250</Steel>
+      <ComponentIndustrial>8</ComponentIndustrial>
+    </costList>
+    <statBases>
+      <WorkToBuild>8000</WorkToBuild>
+      <MaxHitPoints>500</MaxHitPoints>
+      <Flammability>0</Flammability>
+      <Beauty>-20</Beauty>
+      <Mass>80</Mass>
+    </statBases>
+    <comps>
+      <li Class="CompProperties_Power">
+        <compClass>CompPowerPlant</compClass>
+        <basePowerConsumption>-250000</basePowerConsumption> <!-- negative = output -->
+        <transmitsPower>true</transmitsPower>
+        <soundAmbientProducingPower>ChemfuelFiredGenerator_Ambience</soundAmbientProducingPower>
+      </li>
+      <li Class="CompProperties_Flickable" />
+      <li Class="CompProperties_Refuelable">
+        <!-- One unit burns while a second waits loaded, so supply never gaps. The reactor comp spends
+             each unit when its burn ends, so vanilla's per-tick consumption is off. -->
+        <fuelCapacity>2</fuelCapacity>
+        <fuelConsumptionRate>0</fuelConsumptionRate>
+        <consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed>
+        <autoRefuelPercent>0.5</autoRefuelPercent>
+        <fuelFilter>
+          <thingDefs>
+            <li>RR_Batshittium</li>
+          </thingDefs>
+        </fuelFilter>
+        <fuelLabel>Batshittium</fuelLabel>
+        <fuelGizmoLabel>Batshittium</fuelGizmoLabel>
+        <outOfFuelMessage>Needs batshittium</outOfFuelMessage>
+        <fuelIconPath>Things/Item/Resource/RR_Batshittium</fuelIconPath>
+        <showFuelGizmo>true</showFuelGizmo>
+        <showAllowAutoRefuelToggle>true</showAllowAutoRefuelToggle>
+      </li>
+      <li Class="CompProperties_Glower"> <!-- lit while fueled and switched on -->
+        <glowRadius>8</glowRadius>
+        <glowColor>(217,64,255,0)</glowColor>
+      </li>
+      <li Class="RandomReplicator.CompProperties_BatshittiumReactor">
+        <burnHoursRange>0.1~36</burnHoursRange> <!-- in-game hours per unit -->
+        <heatPerSecond>1000</heatPerSecond> <!-- a vanilla heater pushes 21 -->
+        <heatRadius>12</heatRadius>
+        <heatMaxTemperature>200</heatMaxTemperature> <!-- °C; things auto-ignite above 240 -->
+      </li>
+    </comps>
+    <placeWorkers>
+      <li>RandomReplicator.PlaceWorker_ShowReactorHeatRadius</li>
+    </placeWorkers>
+    <researchPrerequisites>
+      <li>RR_BatshittiumLore</li>
+    </researchPrerequisites>
+  </ThingDef>
+</Defs>

@@ -1,0 +1,14 @@
+# BEGIN managed by claude-wrangler
+# Local Claude Code runtime, session state, launchers, and sentinel
+# artifacts.
+.local/
+bin/claude-local
+bin/claude-local.cmd
+README-LOCAL-Start-Claude.md
+# END managed by claude-wrangler
+
+# Visual Studio state and build output (Assemblies/ is rebuilt from Source/)
+.vs/
+[Oo]bj/
+*.user
+Assemblies/
