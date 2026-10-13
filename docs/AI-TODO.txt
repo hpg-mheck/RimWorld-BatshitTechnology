@@ -39,6 +39,9 @@
   - [ ] Disarm attempts (50% nothing, 25% crumbles to parts, 25% misfire
     into a water-filled crater; a shelter in the crater sinks and its
     pawns swim), and the =*FOOMPF!*= for entering a deployed shelter.
+  - [ ] Colony Bomb Terror-Joy: shelter survivors whose shelter the blast
+    touched go violently insane for about 30 s, then enjoy about five
+    minutes of cathartic joy (forcefield up or not).
 - [ ] Later: let pawns shoot from inside the Colony Deployment Shelter
   (never while its forcefield is up). Vanilla has no garrison mechanic.
 - [ ] Antiparticle Board: a new material, exactly what it sounds like: a

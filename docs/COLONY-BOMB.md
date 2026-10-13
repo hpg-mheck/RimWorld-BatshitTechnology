@@ -317,6 +317,25 @@ shockwave, depending on the lull, the pull and the pause. The field lasts
 That is the game: watch the warnings and decide whether to stay in or
 run.
 
+### Colony Bomb Terror-Joy
+
+Pawns who ride out a Colony Bomb deployment inside a shelter, and live,
+come out changed. Added by Matt "Breakpoint" Heck on 2026-10-13.
+
+- **When:** only if the bomb's blast effects actually touched the
+  shelter while the pawns were inside it. It happens whether or not the
+  forcefield was up; if it was not, they have bigger problems.
+- **Terror:** first a temporary psychosis, about 30 seconds of violent
+  insanity (a short berserk mental state, `BT_ColonyBombTerror`)
+  *(proposal: 1,800 ticks, starting as the pawn leaves the shelter)*.
+- **Joy:** then cathartic joy in its wake, a strong mood buff that lasts
+  about five minutes *(proposal: five minutes at normal speed, 18,000
+  ticks, about seven in-game hours)*, with a line of its own per the
+  motif's Words rules.
+- **Bookkeeping:** the bomb's sequence records which shelters its blasts
+  reached, and the shelter marks everyone inside at that moment. Pawns
+  who entered after the blast passed get nothing.
+
 ## Interactions and Edge Cases
 
 - **Destroyed mid-countdown:** the bomb follows the self-destruct rule; it
