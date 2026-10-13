@@ -99,6 +99,14 @@
   impassable terrain first blasts a radius-3 hole (no harm to the blimp
   or occupants), leaves fitting rubble, and sets pawns and animals in
   range on fire, moderately injured.
+- [ ] The Tractor Bomb, Tractor Bomb Dial-A-Yield and the Tractor Barn,
+  specified by Matt "Breakpoint" Heck on 2026-10-13 in
+  docs/TRACTOR-BOMB.md: an expendable robot that patrols for hostiles,
+  closes to 15 tiles, emplaces itself, counts down 3 to 5 s, pulls
+  everything within 10 tiles to within 1.5, and explodes over 5 tiles;
+  per-bomb adjustable radii once Dial-A-Yield is researched; built and
+  repaired autonomously by the Tractor Barn on production bills
+  (proposed). Shares the generalized implosion with the Colony Bomb.
 
 ## Test justifications
 

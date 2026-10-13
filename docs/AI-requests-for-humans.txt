@@ -36,3 +36,7 @@ Matt "Breakpoint" Heck:
    wandering prevailing wind direction (vanilla has none); the warp's
    hit rate (60% proposed); world-map flight; and how the blimp is built
    and researched.
+8. The Tractor Bomb (docs/TRACTOR-BOMB.md, "Open Questions"): its
+   research prerequisite; a safety interlock near colonists or not;
+   Dial-A-Yield ranges; the barn's bills-based autonomy; costs; and
+   whether patrols stay inside the home area.
