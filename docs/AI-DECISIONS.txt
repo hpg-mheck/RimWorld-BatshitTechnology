@@ -147,3 +147,30 @@ explodes at 5 s, and gives caught survivors a +30, 3-day memory labelled
 with one of 25 quips (Thought_Quip, now also the Brain Squeezer's base).
 Its weapon tag is BatshitSingularityGrenade so raiders never spawn with
 one.
+2026-10-13 Claude: Singularity fixes from Matt "Breakpoint" Heck's play
+test (overnight session).
+- The "cycling horizontal line of items" beside the singularity: in 1.6,
+  GenSpawn.Spawn of an item into a full cell shoves the cell's item aside
+  (GenPlace Near, always searching in the same order, hence a line) or
+  destroys it if there's no room. Pulling items into occupied cells churned
+  them every step and destroyed stock (the smoke test, run against the old
+  code, saw 475 moves away from the centre and all 40 steel lost). Items
+  now move only into a cell with room, or merge into a matching stack
+  there, and otherwise wait; ripped-loose packages are placed, not
+  spawned.
+- The log errors: minified buildings tick inside their packages in 1.6
+  (MinifiedThing is TickerType.Normal and ticks its contents), and the
+  reactor's heat code ran with no map: a NullReferenceException every 250
+  ticks. That also hit any reactor uninstalled in normal play. The
+  reactor, Artificer, Ballista and Magazine ticks now return when not
+  spawned (the replicator and self-destruct already did).
+- The smoke script missed it because it attributed errors by their first
+  line only ("Exception ticking MinifiedThing123"); it now also reads the
+  stack trace. New runner checks: every device ticks packed without an
+  error (via Log.Messages), and a pull shoves nothing away and loses
+  nothing. All three were confirmed to fail on the old code first.
+- Pawns are now seized from the singularity's first tick (caught and held
+  stunned), so nobody strolls out while the drag is still slow.
+- The vortex gained a fainter, larger outer layer spun the other way, and
+  both layers throb four times, harder each time, in the final second
+  (Core.SingularityPull.FinalPulse, unit tested).

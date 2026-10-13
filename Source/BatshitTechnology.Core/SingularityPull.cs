@@ -36,6 +36,29 @@ public static class SingularityPull
         seconds * (startRate + ((endRate - startRate) / 3));
 
     /// <summary>
+    /// The vortex's size multiplier in its final moments: 1 until the last
+    /// <paramref name="pulseSeconds"/>, then a throb of
+    /// <paramref name="cycles"/> swells whose strength grows toward zero.
+    /// </summary>
+    /// <param name="secondsLeft">Seconds until it explodes.</param>
+    /// <param name="pulseSeconds">How long before the end it starts.</param>
+    /// <param name="cycles">How many swells.</param>
+    /// <param name="amplitude">The largest swell, as a fraction of size.</param>
+    /// <returns>The multiplier, in [1 - amplitude, 1 + amplitude].</returns>
+    public static double FinalPulse(
+        double secondsLeft, double pulseSeconds = 1, int cycles = 4, double amplitude = 0.2)
+    {
+        if (pulseSeconds <= 0 || secondsLeft >= pulseSeconds)
+        {
+            return 1;
+        }
+
+        double into = 1 - (Math.Max(0, secondsLeft) / pulseSeconds); // 0 to 1
+        double strength = amplitude * (0.35 + (0.65 * into));
+        return 1 + (strength * Math.Sin(2 * Math.PI * cycles * into));
+    }
+
+    /// <summary>
     /// The steps that take a cell one closer to a centre, best first: the
     /// diagonal (or straight) step along both axes, then each axis alone,
     /// larger gap first, for when the first is blocked.

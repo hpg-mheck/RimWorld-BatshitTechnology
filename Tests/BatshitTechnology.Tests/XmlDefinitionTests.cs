@@ -427,6 +427,11 @@ public sealed class XmlDefinitionTests
         Assert.Equal("300", settings.Element("pullTicks")?.Value);
         Assert.Equal("BT_ErgonomicallySingularized", settings.Element("survivorThought")?.Value);
 
+        // The vortex's outer, counter-rotating layer is loaded by path in code
+        // (SingularityField.OuterTexPath), so no Def points at it.
+        Assert.True(File.Exists(Path.Combine(
+            FixturesDirectory, "Textures", "Things", "Mote", "BT_SingularityVortexOuter.png")));
+
         var research = SingleDef("ResearchProjectDef", "BT_Research_SingularityGrenade");
         Assert.Equal(new[] { "BT_Research_Artificer" }, ListValues(research.Element("prerequisites")));
     }

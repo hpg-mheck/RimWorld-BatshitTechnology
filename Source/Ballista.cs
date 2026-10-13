@@ -233,6 +233,13 @@ namespace BatshitTechnology
         /// <summary>Counts down the burst and keeps the power draw current.</summary>
         protected override void Tick()
         {
+            // Minified (uninstalled) buildings still tick inside their package in
+            // 1.6, with no map; nothing here makes sense off the map.
+            if (!Spawned)
+            {
+                return;
+            }
+
             base.Tick();
             if (burstTicksLeft > 0)
             {
@@ -643,6 +650,13 @@ namespace BatshitTechnology
         /// <summary>Counts down feeding and keeps the draw current.</summary>
         protected override void Tick()
         {
+            // Minified (uninstalled) buildings still tick inside their package in
+            // 1.6, with no map; nothing here makes sense off the map.
+            if (!Spawned)
+            {
+                return;
+            }
+
             base.Tick();
             if (feedingTicksLeft > 0)
             {

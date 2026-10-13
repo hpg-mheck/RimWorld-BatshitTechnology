@@ -159,11 +159,25 @@ if (-not $done) { "  (no DONE line: timed out after $TimeoutSeconds s, or the ga
 # Errors: RimWorld logs errors and exceptions as plain lines; skip Unity's
 # stack-trace and file-location noise.
 $errorPattern = 'Exception|\bError\b|XML error|Config error|Could not (resolve|find|load)'
-$errors = $lines | ? {
-  $_ -match $errorPattern -and $_ -notmatch '^\s*(at |\(Filename|UnityEngine\.|Verse\.Log:)'
-} | Select-Object -Unique
+$tracePattern = '^\s*(at |\(Filename|UnityEngine\.|Verse\.Log:)'
 $modPattern = 'BT_|BatshitTechnology|RandomReplicator|Batshitt'
-$modErrors = @($errors | ? { $_ -match $modPattern })
+# An error is the mod's if its own line or its stack trace (the "at ..."
+# lines that follow) mentions the mod: "Exception ticking MinifiedThing123"
+# names no mod, but its trace runs through BatshitTechnology code.
+$errors = @()
+$modErrors = @()
+for ($i = 0; $i -lt $lines.Count; $i++) {
+  $line = $lines[$i]
+  if ($line -notmatch $errorPattern -or $line -match $tracePattern) { continue }
+  $trace = @()
+  for ($j = $i + 1; $j -lt $lines.Count -and $lines[$j] -match $tracePattern; $j++) {
+    $trace += $lines[$j]
+  }
+  $errors += $line
+  if ($line -match $modPattern -or ($trace -match $modPattern)) { $modErrors += $line }
+}
+$errors = @($errors | Select-Object -Unique)
+$modErrors = @($modErrors | Select-Object -Unique)
 ''
 "== Log errors: $(@($errors).Count) total, $($modErrors.Count) mentioning this mod"
 $errors | Select-Object -First 40 | % { "  $_" }

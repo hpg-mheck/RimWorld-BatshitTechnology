@@ -45,6 +45,33 @@ public sealed class SingularityPullTests
         Assert.True(total >= 10, $"{total} cells");
     }
 
+    /// <summary>Before the final second the vortex keeps its size.</summary>
+    [Theory(DisplayName = "No pulse before the final second")]
+    [InlineData(5)]
+    [InlineData(1.5)]
+    [InlineData(1)]
+    public void FinalPulse_should_wait_for_the_final_second(double secondsLeft)
+    {
+        Assert.Equal(1d, SingularityPull.FinalPulse(secondsLeft));
+    }
+
+    /// <summary>
+    /// In the final second it throbs four times, never beyond the
+    /// amplitude, and harder near the end than at the start.
+    /// </summary>
+    [Fact(DisplayName = "Final pulse throbs four times, growing")]
+    public void FinalPulse_should_throb_and_grow()
+    {
+        double[] scale = Enumerable.Range(0, 1000)
+            .Select(i => SingularityPull.FinalPulse(1 - (i / 1000d)))
+            .ToArray();
+        Assert.All(scale, v => Assert.InRange(v, 0.8, 1.2));
+        int swells = Enumerable.Range(1, scale.Length - 1)
+            .Count(i => scale[i - 1] < 1.02 && scale[i] >= 1.02);
+        Assert.Equal(4, swells);
+        Assert.True(scale.Skip(750).Max() > scale.Take(250).Max(), "later swells are bigger");
+    }
+
     /// <summary>
     /// Every suggested step brings a thing at least one cell closer to the
     /// centre (Chebyshev distance), and the first takes both axes.

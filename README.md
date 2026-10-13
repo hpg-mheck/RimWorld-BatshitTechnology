@@ -200,15 +200,17 @@ colony pays the listed cost.
 - A thrown weapon, made at the Batshittium Artificer (one per unit of
   batshittium, after its research). Equip it and throw it like vanilla
   grenades: range 12.9, a six-second cooldown, as often as you like.
-- Where it lands it opens a **singularity** (a spinning magenta vortex)
-  for five seconds:
+- Where it lands it opens a **singularity** (a magenta vortex, with a
+  fainter outer layer spinning the other way, that throbs in its final
+  second) for five seconds:
   - Its reach to rip fixtures loose grows from the centre to 10 tiles
     over the first two seconds. Furniture and anything else that can be
     uninstalled is uninstalled; walls and other buildings are torn down to
     their materials; plants are uprooted. Natural rock holds.
-  - Every pawn and item within 10 tiles is dragged toward the centre, one
-    cell at a time, accelerating from 0.6 to 12 cells per second (about 22
-    cells in all). Pawns are stunned while it has them.
+  - Every pawn within 10 tiles is seized the moment it opens and held
+    stunned. Pawns and items are dragged toward the centre, one cell at a
+    time, accelerating from 0.6 to 12 cells per second (about 22 cells in
+    all). Items pile up one stack per cell, merging where they match.
   - Then it explodes on the pile: Bomb, radius 5.9, 65 damage.
 - Every pawn it caught who survives gets **ergonomically singularized**: a
   +30 mood memory for three days, labelled with one of 25 quips ("I can't

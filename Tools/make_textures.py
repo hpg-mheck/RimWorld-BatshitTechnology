@@ -697,6 +697,31 @@ def singularity_vortex():
     save(img, size, 'Things/Mote/BT_SingularityVortex.png')
 
 
+def singularity_vortex_outer():
+    """The singularity's outer layer, drawn larger beneath the main vortex
+    and spun the other way: six thin, faint arms winding the opposite
+    direction, with an empty middle so the main vortex's core shows."""
+    size = 256
+    img = new_canvas(size)
+    c = size / 2
+    arms = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    ad = draw(arms)
+    for arm in range(6):
+        base = arm * math.pi / 3
+        for i in range(150):
+            t = i / 150
+            r = 40 + t * 82
+            a = base - t * 2.6  # the other way round
+            x, y = c + r * math.cos(a), c + r * math.sin(a)
+            width = 7 * (1 - t) + 2
+            alpha = int(150 * math.sin(math.pi * t) ** 0.8)  # fades in and out along the arm
+            color = BS_LIGHT if i % 11 < 2 else BS_MID
+            ad.ellipse(s(x - width / 2, y - width / 2, x + width / 2, y + width / 2),
+                       fill=(*color[:3], alpha))
+    img.alpha_composite(arms.filter(ImageFilter.GaussianBlur(2 * SS)))
+    save(img, size, 'Things/Mote/BT_SingularityVortexOuter.png')
+
+
 if __name__ == '__main__':
     batshittium_item()
     transmogrifier()
@@ -713,3 +738,4 @@ if __name__ == '__main__':
     singularity_grenade_item()
     singularity_grenade_projectile()
     singularity_vortex()
+    singularity_vortex_outer()

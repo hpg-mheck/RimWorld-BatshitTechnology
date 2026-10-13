@@ -122,6 +122,14 @@ namespace BatshitTechnology
     {
         private const int TicksPerSecond = 60;
 
+        /// <summary>How often it re-seizes the pawns in reach, in ticks.</summary>
+        private const int GrabIntervalTicks = 15;
+
+        /// <summary>The outer, counter-rotating layer's texture.</summary>
+        private const string OuterTexPath = "Things/Mote/BT_SingularityVortexOuter";
+
+        private static Material outerMaterial; // loaded on first draw, on the main thread
+
         private Thing instigator;
         private int ticks;
         private double pendingSteps;
@@ -148,6 +156,9 @@ namespace BatshitTechnology
 
         /// <summary>Fixtures torn down so far (diagnostics).</summary>
         public int TornDown { get; private set; }
+
+        /// <summary>Item moves made so far (diagnostics).</summary>
+        public int ItemsMoved { get; private set; }
 
         /// <summary>Pawns caught so far (diagnostics).</summary>
         public int CaughtCount => caught.Count;
@@ -204,6 +215,11 @@ namespace BatshitTechnology
             SingularityExtension s = Settings;
             if (!exploded)
             {
+                if (ticks % GrabIntervalTicks == 1)
+                {
+                    GrabPawns(s);
+                }
+
                 RipLoose(s);
                 double rate = SingularityPull.Rate(
                     ticks / (double)s.pullTicks, s.pullRateStart, s.pullRateEnd);
@@ -282,7 +298,8 @@ namespace BatshitTechnology
                 MinifiedThing minified = building.MakeMinified();
                 if (minified != null)
                 {
-                    GenSpawn.Spawn(minified, at, map);
+                    // Placed, not spawned: an item already lying there stays put.
+                    GenPlace.TryPlaceThing(minified, at, map, ThingPlaceMode.Near);
                     Uninstalled++;
                 }
 
@@ -292,6 +309,31 @@ namespace BatshitTechnology
             building.Destroy(DestroyMode.Deconstruct); // leaves its materials
             TornDown++;
             FleckMaker.ThrowDustPuffThick(at.ToVector3Shifted(), map, 2f, Color.gray);
+        }
+
+        /// <summary>
+        /// Seizes every pawn in reach from the moment it opens: they are
+        /// caught (for the survivors' memory) and held stunned, so nobody
+        /// strolls out while the drag is still slow.
+        /// </summary>
+        /// <param name="s">The settings.</param>
+        private void GrabPawns(SingularityExtension s)
+        {
+            foreach (Pawn pawn in Map.mapPawns.AllPawnsSpawned.ToList())
+            {
+                if (pawn.Dead || !pawn.Position.InHorDistOf(Position, s.radius))
+                {
+                    continue;
+                }
+
+                if (!caught.Contains(pawn))
+                {
+                    caught.Add(pawn);
+                }
+
+                pawn.stances?.stunner?.StunFor(
+                    GrabIntervalTicks + 15, instigator, addBattleLog: false, showMote: false);
+            }
         }
 
         /// <summary>
@@ -326,11 +368,51 @@ namespace BatshitTechnology
 
                     pawn.stances?.stunner?.StunFor(45, instigator, addBattleLog: false, showMote: false);
                 }
-                else if (t.def.category == ThingCategory.Item
-                    && TryNextCell(t.Position, center, map, out IntVec3 itemNext))
+                else if (t.def.category == ThingCategory.Item)
                 {
-                    t.DeSpawn();
-                    GenSpawn.Spawn(t, itemNext, map);
+                    PullItem(t, center, map);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Drags an item one cell closer: into a cell with room for another
+        /// item, or onto a matching stack there, which absorbs it. Otherwise
+        /// it waits. (Spawning an item into a full cell makes RimWorld shove
+        /// the cell's item aside, or destroy it if there's no room: that
+        /// churned items back and forth in a line beside the singularity.)
+        /// </summary>
+        /// <param name="item">The item.</param>
+        /// <param name="center">The singularity's centre.</param>
+        /// <param name="map">The map.</param>
+        private void PullItem(Thing item, IntVec3 center, Map map)
+        {
+            foreach (var (dx, dz) in SingularityPull.StepsToward(
+                item.Position.x, item.Position.z, center.x, center.z))
+            {
+                var next = new IntVec3(item.Position.x + dx, 0, item.Position.z + dz);
+                if (!next.InBounds(map) || !next.Walkable(map))
+                {
+                    continue;
+                }
+
+                Thing stack = next.GetThingList(map).FirstOrDefault(
+                    o => o != item && o.def.category == ThingCategory.Item && o.CanStackWith(item));
+                if (stack != null && stack.stackCount < stack.def.stackLimit)
+                {
+                    // Absorbing a spawned item destroys it once it's all
+                    // merged; a partial merge leaves the rest where it was.
+                    stack.TryAbsorbStack(item, respectStackLimit: true);
+                    ItemsMoved++;
+                    return;
+                }
+
+                if (next.GetItemCount(map) < next.GetMaxItemsAllowedInCell(map))
+                {
+                    item.DeSpawn();
+                    GenSpawn.Spawn(item, next, map);
+                    ItemsMoved++;
+                    return;
                 }
             }
         }
@@ -400,8 +482,10 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Draws the vortex: spinning faster and growing as the pull goes on.
-        /// Gone once it explodes.
+        /// Draws the vortex in two layers: the main one spinning faster and
+        /// growing as the pull goes on, and a fainter outer one, larger,
+        /// beneath it and spinning the other way, for depth. Both throb in
+        /// the final second. Gone once it explodes.
         /// </summary>
         /// <param name="drawLoc">Where to draw.</param>
         /// <param name="flip">Unused.</param>
@@ -418,12 +502,22 @@ namespace BatshitTechnology
             float progress = Mathf.Clamp01(seconds / total);
             // Turns: 0.3 per second at the start, accelerating to 3.
             float turns = (0.3f * seconds) + (2.7f * seconds * seconds / (2f * total));
-            float size = s.radius * 2f * (0.35f + (0.65f * progress));
+            float pulse = (float)SingularityPull.FinalPulse(total - seconds);
+            float size = s.radius * 2f * (0.35f + (0.65f * progress)) * pulse;
+
             Vector3 pos = drawLoc;
             pos.y = AltitudeLayer.MoteOverhead.AltitudeFor();
-            Matrix4x4 matrix = Matrix4x4.TRS(
-                pos, Quaternion.AngleAxis(-turns * 360f, Vector3.up), new Vector3(size, 1f, size));
-            Graphics.DrawMesh(MeshPool.plane10, matrix, Graphic.MatSingle, 0);
+            outerMaterial ??= MaterialPool.MatFrom(OuterTexPath, ShaderDatabase.Transparent);
+            float outer = size * 1.25f;
+            Graphics.DrawMesh(
+                MeshPool.plane10,
+                Matrix4x4.TRS(pos - new Vector3(0f, 0.002f, 0f),
+                    Quaternion.AngleAxis(turns * 0.6f * 360f, Vector3.up), new Vector3(outer, 1f, outer)),
+                outerMaterial, 0);
+            Graphics.DrawMesh(
+                MeshPool.plane10,
+                Matrix4x4.TRS(pos, Quaternion.AngleAxis(-turns * 360f, Vector3.up), new Vector3(size, 1f, size)),
+                Graphic.MatSingle, 0);
         }
     }
 

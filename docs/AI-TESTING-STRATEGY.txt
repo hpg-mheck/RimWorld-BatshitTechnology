@@ -44,7 +44,11 @@ Singularity Grenade (singularity opens, a wall is torn down and a stool
 uninstalled, a steel stack and a colonist are dragged in, it explodes and
 the surviving colonist gets the memory), and each device's pulverization
 blast (rock spewed, colonist stunned, bolts cooked off and
-none spilled, half-made bolts sprayed). Before the destructive tests the
+none spilled, half-made bolts sprayed). It also packs up (minifies) every
+device and ticks the packages, watching RimWorld's log queue for errors,
+and checks a singularity's pull shoves no item away and loses none. The
+script counts an error as the mod's when its line or its stack trace
+mentions the mod. Before the destructive tests the
 runner removes the other devices with DestroyMode.Vanish, so a random 5%
 damage trigger cannot set one off mid-test. The script reports those lines plus
 every error in the game log and exits 1 on any failure or mod error. Use

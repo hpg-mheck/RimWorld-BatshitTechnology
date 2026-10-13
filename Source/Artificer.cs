@@ -112,7 +112,9 @@ namespace BatshitTechnology
         public override void CompTick()
         {
             base.CompTick();
-            if (!CanWork)
+            // Minified (uninstalled) buildings still tick inside their package in
+            // 1.6, with no map; nothing here makes sense off the map.
+            if (!parent.Spawned || !CanWork)
             {
                 return;
             }

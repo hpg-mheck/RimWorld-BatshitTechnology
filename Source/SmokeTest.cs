@@ -109,6 +109,7 @@ namespace BatshitTechnology
             TestArtificer(map, center);
             TestReactorBurnCycle(reactor, fuel);
             TestSelfDestructAbort(replicator);
+            TestMinifiedDevicesTick(map, center);
 
             // Destructive tests from here on. Remove the other devices
             // quietly first: a 5% damage roll on the reactor would otherwise
@@ -532,6 +533,115 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// Halfway through a pull: the wall is down, the stool is loose, and
+        /// the steel and colonist have been dragged in.
+        /// </summary>
+        /// <param name="field">The singularity.</param>
+        /// <param name="wall">A wall in its reach.</param>
+        /// <param name="stool">A stool in its reach.</param>
+        /// <param name="steel">A steel stack in its reach.</param>
+        /// <param name="pawn">A colonist in its reach, or null.</param>
+        /// <param name="eye">Its centre.</param>
+        /// <param name="steelBefore">The steel's starting distance.</param>
+        /// <param name="pawnBefore">The colonist's starting distance.</param>
+        private void CheckRipAndDrag(
+            SingularityField field, Thing wall, Thing stool, Thing steel, Pawn pawn,
+            IntVec3 eye, float steelBefore, float pawnBefore)
+        {
+            Check("the singularity rips a wall down and a stool loose",
+                wall.Destroyed && !stool.Spawned && field.TornDown >= 1 && field.Uninstalled >= 1,
+                $"wall gone {wall.Destroyed}, stool spawned {stool.Spawned}, "
+                    + $"torn down {field.TornDown}, uninstalled {field.Uninstalled}");
+            float steelAfter = steel.Spawned ? steel.Position.DistanceTo(eye) : 0f;
+            float pawnAfter = pawn != null && pawn.Spawned ? pawn.Position.DistanceTo(eye) : 0f;
+            Check("the singularity drags items and pawns in",
+                steelAfter < steelBefore - 2f && (pawn == null || (pawnAfter < pawnBefore - 2f
+                    && field.CaughtCount >= 1)),
+                $"steel {steelBefore:F1}->{steelAfter:F1}, pawn {pawnBefore:F1}->{pawnAfter:F1}, "
+                    + $"caught {field.CaughtCount}");
+        }
+
+        /// <summary>
+        /// Uninstalled devices tick inside their packages in 1.6, off the
+        /// map. Each device, fuelled where it takes fuel, is minified and
+        /// ticked past the reactor's heat interval without logging an error.
+        /// (Found in play: a reactor ripped loose by a singularity threw a
+        /// NullReferenceException from its heat code every 250 ticks.)
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestMinifiedDevicesTick(Map map, IntVec3 center)
+        {
+            IntVec3 at = Clamp(map, center + new IntVec3(30, 0, -30));
+            PrepareGround(map, CellRect.CenteredOn(at, 18));
+            var packages = new List<Thing>();
+            string[] devices =
+            {
+                "BT_BatshittiumReactor", "BT_BatshittiumArtificer", "BT_RandomReplicator",
+                "BT_BatshittiumTransmogrifier", "BT_BrainSqueezer", "BT_BatshittiumBallista",
+                "BT_BallistaMagazine",
+            };
+            for (int i = 0; i < devices.Length; i++)
+            {
+                // Each on its own spot: spawning a building wipes any item
+                // under it, packages included.
+                IntVec3 spot = at + new IntVec3((i - 3) * 5, 0, 0);
+                Thing device = Spawn(map, devices[i], spot);
+                device.TryGetComp<CompRefuelable>()?.Refuel(2f);
+                Tick(2);
+                MinifiedThing package = device.MakeMinified();
+                GenPlace.TryPlaceThing(package, spot, map, ThingPlaceMode.Near);
+                packages.Add(package);
+            }
+
+            var mark = ErrorMark();
+            Tick(600);
+            Check("uninstalled devices tick in their packages without errors",
+                !NewErrorSince(mark) && packages.All(t => t.Spawned),
+                $"error logged {NewErrorSince(mark)}, packages on the map "
+                    + $"{packages.Count(t => t.Spawned)}/{packages.Count}");
+            foreach (Thing package in packages)
+            {
+                package.Destroy(DestroyMode.Vanish);
+            }
+        }
+
+        /// <summary>The newest logged error, and how many times it has repeated.</summary>
+        /// <returns>A mark to compare against later.</returns>
+        private static (LogMessage Last, int Repeats) ErrorMark()
+        {
+            LogMessage last = Log.Messages.LastOrDefault(m => m.type == LogMessageType.Error);
+            return (last, last?.repeats ?? 0);
+        }
+
+        /// <summary>Whether an error has been logged since a mark.</summary>
+        /// <param name="mark">From <see cref="ErrorMark"/>.</param>
+        /// <returns>True if a new error (or a repeat) was logged.</returns>
+        private static bool NewErrorSince((LogMessage Last, int Repeats) mark)
+        {
+            var now = ErrorMark();
+            return now.Last != mark.Last || now.Repeats != mark.Repeats;
+        }
+
+        /// <summary>
+        /// How much of each item's def lies within 12 tiles of a spot, counting
+        /// stacks merged into others.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="at">The spot.</param>
+        /// <param name="tracked">The items whose defs to count.</param>
+        /// <returns>Total stack count per def.</returns>
+        private static Dictionary<ThingDef, int> ItemAmounts(Map map, IntVec3 at, List<Thing> tracked)
+        {
+            var defs = tracked.Select(t => t.def).Distinct().ToList();
+            return defs.ToDictionary(
+                d => d,
+                d => map.listerThings.ThingsOfDef(d)
+                    .Where(t => t.Spawned && t.Position.InHorDistOf(at, 12f))
+                    .Sum(t => t.stackCount));
+        }
+
+        /// <summary>
         /// Removes every Batshit device but one without triggering anything
         /// (Vanish sets off no self-destruct or death blast).
         /// </summary>
@@ -706,6 +816,26 @@ namespace BatshitTechnology
             Thing steel = ThingMaker.MakeThing(ThingDefOf.Steel);
             steel.stackCount = 30;
             GenSpawn.Spawn(steel, at + new IntVec3(8, 0, 0), map);
+
+            // A spread of different items, plus a second steel stack to
+            // merge, all drawn toward the same pile. Before v0.8's fix,
+            // items pulled into full cells shoved their occupants aside (or
+            // destroyed them), churning a line of items beside the centre.
+            var loose = new List<Thing> { steel };
+            foreach (var (def, offset) in new[]
+            {
+                (ThingDefOf.WoodLog, new IntVec3(-8, 0, 1)), (ThingDefOf.Plasteel, new IntVec3(6, 0, 5)),
+                (ThingDefOf.ComponentIndustrial, new IntVec3(-3, 0, 8)), (ThingDefOf.Silver, new IntVec3(4, 0, -7)),
+                (ThingDefOf.Gold, new IntVec3(-6, 0, -6)), (ThingDefOf.Cloth, new IntVec3(9, 0, 3)),
+                (ThingDefOf.MedicineHerbal, new IntVec3(1, 0, -9)), (ThingDefOf.Steel, new IntVec3(7, 0, -1)),
+            })
+            {
+                Thing item = ThingMaker.MakeThing(def);
+                item.stackCount = Mathf.Min(10, def.stackLimit);
+                loose.Add(GenSpawn.Spawn(item, at + offset, map));
+            }
+
+            Dictionary<ThingDef, int> amounts = ItemAmounts(map, at, loose);
             Thing wall = GenSpawn.Spawn(
                 ThingMaker.MakeThing(ThingDefOf.Wall, ThingDefOf.WoodLog), at + new IntVec3(0, 0, 6), map);
             Thing stool = GenSpawn.Spawn(
@@ -717,6 +847,7 @@ namespace BatshitTechnology
                 pawn.jobs.StopAll();
                 pawn.Position = at + new IntVec3(-7, 0, 3);
                 pawn.Notify_Teleported();
+                pawn.drafter.Drafted = true; // stand still until the grenade lands
             }
 
             IntVec3 from = at + new IntVec3(11, 0, -2);
@@ -740,21 +871,39 @@ namespace BatshitTechnology
             IntVec3 eye = field.Position;
             float steelBefore = steel.Position.DistanceTo(eye);
             float pawnBefore = pawn?.Position.DistanceTo(eye) ?? 0f;
-            Tick(150);
-            Check("the singularity rips a wall down and a stool loose",
-                wall.Destroyed && !stool.Spawned && field.TornDown >= 1 && field.Uninstalled >= 1,
-                $"wall gone {wall.Destroyed}, stool spawned {stool.Spawned}, "
-                    + $"torn down {field.TornDown}, uninstalled {field.Uninstalled}");
-            float steelAfter = steel.Spawned ? steel.Position.DistanceTo(eye) : 0f;
-            float pawnAfter = pawn != null && pawn.Spawned ? pawn.Position.DistanceTo(eye) : 0f;
-            Check("the singularity drags items and pawns in",
-                steelAfter < steelBefore - 2f && (pawn == null || (pawnAfter < pawnBefore - 2f
-                    && field.CaughtCount >= 1)),
-                $"steel {steelBefore:F1}->{steelAfter:F1}, pawn {pawnBefore:F1}->{pawnAfter:F1}, "
-                    + $"caught {field.CaughtCount}");
+            var nearest = loose.ToDictionary(t => t, t => t.Position.DistanceTo(eye));
+            int pushedAway = 0;
+            int watchTicks = field.Settings.pullTicks - 10; // to just before the explosion
+            for (int i = 0; i < watchTicks; i++)
+            {
+                Tick(1);
+                foreach (Thing t in loose.Where(t => t.Spawned))
+                {
+                    float d = t.Position.DistanceTo(eye);
+                    if (d > nearest[t] + 0.01f)
+                    {
+                        pushedAway++;
+                    }
+
+                    nearest[t] = Mathf.Min(nearest[t], d);
+                }
+
+                if (i == 149)
+                {
+                    CheckRipAndDrag(field, wall, stool, steel, pawn, eye, steelBefore, pawnBefore);
+                }
+            }
+
+            Check("pulled items never get shoved away from the singularity",
+                pushedAway == 0, $"{pushedAway} moves away from the centre");
+            Dictionary<ThingDef, int> after = ItemAmounts(map, at, loose);
+            Check("pulled items are merged or piled, never lost",
+                amounts.All(kv => after.TryGetValue(kv.Key, out int n) && n >= kv.Value), // the torn-down wall adds wood
+                string.Join(", ", amounts.Select(kv =>
+                    $"{kv.Key.defName} {kv.Value}->{(after.TryGetValue(kv.Key, out int n) ? n : 0)}")));
 
             int comforted = SingularityField.SurvivorsComforted;
-            Tick(200);
+            Tick(60);
             Check("the singularity explodes and closes", field.Destroyed && field.Exploded);
             bool thought = pawn?.needs?.mood?.thoughts?.memories?.Memories
                 .Any(m => m.def.defName == "BT_ErgonomicallySingularized") ?? false;
