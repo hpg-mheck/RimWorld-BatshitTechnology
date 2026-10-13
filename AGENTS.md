@@ -50,6 +50,10 @@ subdirectory.
 - Do not commit build artifacts (`bin`, `obj`, `Assemblies`, `.vs`, etc.).
   Update `.gitignore` as needed.
 - Prefer descriptive commit messages summarising intent and key changes.
+- Build each feature on its own branch, `feature/<name>`, cut from
+  `trunk`, and merge it back into `trunk` when it is complete (all tests
+  and the smoke test passing, docs updated). `ROADMAP.md` lists the
+  features in order with their branches.
 
 ## Communication
 - Address the operator as Matt “Breakpoint” Heck whenever notes require human
