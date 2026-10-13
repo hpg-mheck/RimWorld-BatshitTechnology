@@ -20,6 +20,10 @@ New material should come from the same question: what would arrive
 sooner, cost less or be more fun if nobody minded the risk, and what does
 the risk look like when it lands?
 
+The byline says it in eight words: **The Future: Sooner. Cheaper.
+Funnier. And ludicrously dangerous.** Use it as written, in the mod's
+description and anywhere else the mod introduces itself.
+
 ## The Idea in One Line
 
 Sensible industrial steel, barely containing something magenta and wrong.

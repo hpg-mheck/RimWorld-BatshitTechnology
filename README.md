@@ -5,9 +5,7 @@ gadgets and mods, done as a very entertaining exercise to see how well
 Claude could be taught to do rapid-prototyping on Windows for a complex
 plugin architecture. Share and enjoy.
 
-The premise: *could we have the future sooner, cheaper, or more
-entertainingly, if we were willing to accept truly unhinged levels of
-danger?* Every gadget here says yes, and then shows the bill.
+**The Future: Sooner. Cheaper. Funnier. And ludicrously dangerous.**
 
 Everything lives in its own research tab, **Batshit Technology**:
 
