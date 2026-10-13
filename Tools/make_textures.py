@@ -104,7 +104,8 @@ def shard(d, base, height, width, angle_deg):
     d.polygon(pts([at('bl'), at('tl'), at('tip'), at('bot')]), fill=BS_LIGHT)
     d.polygon(pts([at('tip'), at('tr'), at('br'), at('bot')]), fill=BS_DARK)
     d.line(pts([at('tip'), at('bot')]), fill=BS_MID, width=2 * SS)
-    edge_in = [(p[0] * 0.8 + q[0] * 0.2, p[1] * 0.8 + q[1] * 0.2) for p, q in ((at('bl'), at('bot')), (at('tl'), at('tip')))]
+    pairs = ((at('bl'), at('bot')), (at('tl'), at('tip')))
+    edge_in = [(p[0] * 0.8 + q[0] * 0.2, p[1] * 0.8 + q[1] * 0.2) for p, q in pairs]
     d.line(pts(edge_in), fill=(255, 255, 255, 150), width=2 * SS)  # glint along the lit edge
     d.polygon(pts([at(k) for k in ('bl', 'tl', 'tip', 'tr', 'br', 'bot')]), outline=OUTLINE, width=3 * SS)
 
@@ -169,7 +170,8 @@ def transmogrifier():
     d = draw(img)
     orb(d, 142, 112, 47, BS_DEEP, BS_MID)
     for arm in range(3):  # swirl
-        spiral = [(142 + r * math.cos(arm * 2.094 + r * 0.11), 112 + r * math.sin(arm * 2.094 + r * 0.11)) for r in range(6, 46, 2)]
+        spiral = [(142 + r * math.cos(arm * 2.094 + r * 0.11),
+                   112 + r * math.sin(arm * 2.094 + r * 0.11)) for r in range(6, 46, 2)]
         d.line(pts(spiral), fill=(*BS_LIGHT[:3], 210), width=4 * SS, joint='curve')
     glow(img, lambda g, c: g.ellipse(s(130, 100, 154, 124), fill=c), (255, 230, 255), blur=4, alpha=255)
     d = draw(img)

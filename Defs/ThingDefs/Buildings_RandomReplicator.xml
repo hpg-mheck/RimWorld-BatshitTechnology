@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Defs>
-  <!-- Random Replicator: Player-buildable device that fabricates a random food item every 6h into refrigerated storage (10) -->
+  <!-- Random Replicator: player-buildable device that fabricates a random
+       food item every 6h into refrigerated storage (10 items) -->
   <ThingDef ParentName="BuildingBase">
     <defName>RandomReplicator</defName>
     <label>random replicator</label>
@@ -73,7 +74,8 @@
         <mealWeight>5</mealWeight> <!-- meals are 5x likelier than any one raw food -->
         <requirePower>true</requirePower> <!-- unpowered: no production, and no refrigeration -->
         <writeTimeLeftToSpawn>true</writeTimeLeftToSpawn>
-        <refrigerationPowerConsumption>50</refrigerationPowerConsumption> <!-- W while refrigeration is on; a vanilla cooler is 200 W -->
+        <!-- W while refrigeration is on; a vanilla cooler is 200 W -->
+        <refrigerationPowerConsumption>50</refrigerationPowerConsumption>
         <sendPowerCutLetters>true</sendPowerCutLetters> <!-- only when refrigerated food is at risk -->
         <selfDestructArmingTicks>120</selfDestructArmingTicks> <!-- 2 seconds of pawn work -->
         <selfDestructSeconds>10</selfDestructSeconds>

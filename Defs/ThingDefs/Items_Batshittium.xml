@@ -15,7 +15,8 @@
     <soundInteract>Metal_Drop</soundInteract>
     <soundDrop>Metal_Drop</soundDrop>
     <statBases>
-      <!-- Below the ~180 silver of stone blocks the same 10 chunks would make, so transmogrifying isn't a money printer -->
+      <!-- Below the ~180 silver of stone blocks the same 10 chunks would
+           make, so transmogrifying isn't a money printer -->
       <MarketValue>40</MarketValue>
       <Mass>1</Mass>
     </statBases>

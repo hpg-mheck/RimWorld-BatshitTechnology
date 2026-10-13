@@ -1,0 +1,5 @@
+# Fix Me
+
+- Document concrete replication edge cases that still lack coverage in unit
+  tests.
+- Replace placeholder logging with structured diagnostics before shipping.
