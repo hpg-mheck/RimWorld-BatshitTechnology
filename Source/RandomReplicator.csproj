@@ -51,7 +51,10 @@
     <Reference Include="System.Xml"/>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Artificer.cs" />
+    <Compile Include="Ballista.cs" />
     <Compile Include="BatshittiumReactor.cs" />
+    <Compile Include="BoltStorage.cs" />
     <Compile Include="BrainSqueezer.cs" />
     <Compile Include="Building_RandomReplicator.cs" />
     <Compile Include="CompRandomReplicator.cs" />

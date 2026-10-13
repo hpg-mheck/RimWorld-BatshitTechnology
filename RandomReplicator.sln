@@ -40,6 +40,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Defs", "Defs", "{C6C11387-D
         Defs\\Misc\\RR_BrainSqueezer.xml = Defs\\Misc\\RR_BrainSqueezer.xml
         Defs\\RecipeDefs\\RR_Recipes.xml = Defs\\RecipeDefs\\RR_Recipes.xml
         Defs\\ResearchProjectDefs\\RR_Research.xml = Defs\\ResearchProjectDefs\\RR_Research.xml
+        Defs\\ThingDefs\\Buildings_Ballista.xml = Defs\\ThingDefs\\Buildings_Ballista.xml
         Defs\\ThingDefs\\Buildings_Batshittium.xml = Defs\\ThingDefs\\Buildings_Batshittium.xml
         Defs\\ThingDefs\\Buildings_BrainSqueezer.xml = Defs\\ThingDefs\\Buildings_BrainSqueezer.xml
         Defs\\ThingDefs\\Buildings_RandomReplicator.xml = Defs\\ThingDefs\\Buildings_RandomReplicator.xml

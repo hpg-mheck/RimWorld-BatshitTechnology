@@ -94,6 +94,8 @@ namespace RandomReplicator
             TestReplicatorStorage(map, replicator);
             TestReactorHeat(map, center);
             TestBrainSqueezer(map, center); // while the reactor still has fuel
+            TestBallista(map, center);
+            TestArtificer(map, center);
             TestReactorBurnCycle(reactor, fuel);
             TestSelfDestructAbort(replicator);
             TestDetonation(replicator);
@@ -303,6 +305,166 @@ namespace RandomReplicator
                 pawn.health.hediffSet.HasHediff(RR_BrainSqueezerDefOf.RR_BrainSqueezedCalm));
             Check("the colonist gained joy", pawn.needs.joy.CurLevel > 0.2f,
                 $"joy {pawn.needs.joy.CurLevel:F2}");
+        }
+
+        /// <summary>
+        /// Magazine chaining, standby and burst power, volleys from a forced
+        /// target, magazines drained before the internal reserve, explosive
+        /// ammo, and holding fire when the grid cannot supply a volley.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The reactor's position.</param>
+        private void TestBallista(Map map, IntVec3 center)
+        {
+            var ballista = (Building_BatshittiumBallista)Spawn(
+                map, "RR_BatshittiumBallista", center + new IntVec3(4, 0, -5));
+            var chained1 = (Building_BallistaMagazine)Spawn(
+                map, "RR_BallistaMagazine", center + new IntVec3(6, 0, -5));
+            var chained2 = (Building_BallistaMagazine)Spawn(
+                map, "RR_BallistaMagazine", center + new IntVec3(7, 0, -5));
+            var detached = (Building_BallistaMagazine)Spawn(
+                map, "RR_BallistaMagazine", center + new IntVec3(-3, 0, -3));
+            WaitForPower(ballista, chained1, chained2, detached);
+            Check("ballista and magazines are powered",
+                ballista.GetComp<CompPowerTrader>().PowerOn && chained2.CanFeed && detached.CanFeed,
+                PowerDetail(ballista));
+
+            List<Building_BallistaMagazine> connected = ballista.ConnectedMagazines();
+            Check("chained magazines connect; a detached one does not",
+                connected.Contains(chained1) && connected.Contains(chained2)
+                    && !connected.Contains(detached),
+                $"{connected.Count} connected");
+
+            var power = ballista.GetComp<CompPowerTrader>();
+            ballista.SetRange(30);
+            ballista.SetCount(4);
+            Tick(2);
+            Check("standby draw follows range x count",
+                Mathf.Abs(-power.PowerOutput - ballista.StandbyWatts) < 0.5f,
+                $"draw {-power.PowerOutput:F1} W, expected {ballista.StandbyWatts:F1} W");
+
+            ThingDef painful = RR_BallistaDefOf.RR_BoltPainful;
+            AddBolts(ballista.InternalMagazine, painful, 16);
+            AddBolts(chained2.Storage, painful, 100);
+            int volleysBefore = Building_BatshittiumBallista.VolleysFired;
+            int boltsBefore = Building_BatshittiumBallista.BoltsFired;
+            ballista.OrderAttack(new LocalTargetInfo(ballista.Position + new IntVec3(25, 0, 0)));
+            float peakDraw = 0f;
+            bool magazineFed = false;
+            for (int t = 0; t < 900; t++)
+            {
+                Tick(1);
+                peakDraw = Mathf.Max(peakDraw, -power.PowerOutput);
+                magazineFed |= chained2.IsFeeding;
+            }
+
+            int volleys = Building_BatshittiumBallista.VolleysFired - volleysBefore;
+            int bolts = Building_BatshittiumBallista.BoltsFired - boltsBefore;
+            Check("volleys fire about every five seconds", volleys >= 2, $"{volleys} volleys in 15 s");
+            Check("each volley fires the selected count", volleys > 0 && bolts == volleys * 4,
+                $"{bolts} bolts in {volleys} volleys");
+            Check("magazines are drained before the internal reserve",
+                ballista.InternalMagazine.CountOf(painful) == 16
+                    && chained2.Storage.CountOf(painful) == 100 - bolts,
+                $"internal {ballista.InternalMagazine.CountOf(painful)}, "
+                    + $"magazine {chained2.Storage.CountOf(painful)}");
+            Check("a volley draws the firing burst",
+                Mathf.Abs(peakDraw - ballista.FiringWatts) < 0.5f,
+                $"peak {peakDraw:F0} W, expected {ballista.FiringWatts:F0} W");
+            Check("a feeding magazine draws feeding power", magazineFed);
+
+            ThingDef reallyPainful = RR_BallistaDefOf.RR_BoltReallyPainful;
+            ballista.SetAmmo(reallyPainful);
+            AddBolts(chained1.Storage, reallyPainful, 20);
+            Tick(700);
+            Check("explosive bolts fire when selected",
+                chained1.Storage.CountOf(reallyPainful) < 20,
+                $"{chained1.Storage.CountOf(reallyPainful)} of 20 left");
+
+            // A maxed volley needs 990 kW for a second; one reactor makes 250 kW
+            // and there are no batteries, so the Ballista must hold fire.
+            ballista.SetAmmo(painful);
+            ballista.SetCount(256);
+            ballista.SetRange(325);
+            int heldBefore = Building_BatshittiumBallista.VolleysHeldForPower;
+            int left = chained2.Storage.CountOf(painful);
+            Tick(700);
+            Check("holds fire when the grid cannot supply a volley",
+                Building_BatshittiumBallista.VolleysHeldForPower > heldBefore
+                    && chained2.Storage.CountOf(painful) == left,
+                $"held {Building_BatshittiumBallista.VolleysHeldForPower - heldBefore}, "
+                    + $"bolts {left} -> {chained2.Storage.CountOf(painful)}");
+            ballista.OrderAttack(LocalTargetInfo.Invalid);
+            ballista.SetCount(4);
+            ballista.SetRange(30);
+        }
+
+        /// <summary>
+        /// The Artificer idles until a bolt type is researched, then turns
+        /// each unit of batshittium into bolts, by hand and on its own.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The reactor's position.</param>
+        private void TestArtificer(Map map, IntVec3 center)
+        {
+            Thing artificer = Spawn(map, "RR_BatshittiumArtificer", center + new IntVec3(3, 0, 3));
+            var comp = artificer.TryGetComp<CompBatshittiumArtificer>();
+            var fuel = artificer.TryGetComp<CompRefuelable>();
+            WaitForPower(artificer);
+            Check("artificer idles until a bolt type is researched",
+                comp.Current == null || comp.Current.research.IsFinished);
+
+            foreach (ArtificerOutput output in comp.Props.outputs)
+            {
+                if (output.research != null && !output.research.IsFinished)
+                {
+                    Find.ResearchManager.FinishProject(
+                        output.research, doCompletionDialog: false, doCompletionLetter: false);
+                }
+            }
+
+            ThingDef painful = RR_BallistaDefOf.RR_BoltPainful;
+            fuel.Refuel(2f);
+            comp.Select(painful);
+            int before = TotalBolts(map, painful);
+            comp.FinishUnit();
+            Check("one unit becomes ten painful bolts",
+                TotalBolts(map, painful) - before == 10 && fuel.Fuel == 1f,
+                $"bolts +{TotalBolts(map, painful) - before}, fuel {fuel.Fuel}");
+
+            Tick(comp.Props.ticksPerUnit + 10);
+            Check("it works the next unit on its own",
+                TotalBolts(map, painful) - before == 20 && !fuel.HasFuel,
+                $"bolts +{TotalBolts(map, painful) - before}, fuel {fuel.Fuel}");
+        }
+
+        /// <summary>Puts bolts straight into a bolt store.</summary>
+        /// <param name="storage">The store.</param>
+        /// <param name="bolt">The bolt type.</param>
+        /// <param name="count">How many.</param>
+        private static void AddBolts(BoltStorage storage, ThingDef bolt, int count)
+        {
+            Thing bolts = ThingMaker.MakeThing(bolt);
+            bolts.stackCount = count;
+            storage.Container.TryAdd(bolts);
+        }
+
+        /// <summary>
+        /// Every bolt of a type on the map: loose stacks plus what Ballistas
+        /// and magazines hold, so hauling between them doesn't change it.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="bolt">The bolt type.</param>
+        /// <returns>The total.</returns>
+        private static int TotalBolts(Map map, ThingDef bolt)
+        {
+            int loose = map.listerThings.ThingsOfDef(bolt).Sum(t => t.stackCount);
+            int stored = map.listerThings.AllThings
+                .Select(t => t is Building_BatshittiumBallista b ? b.InternalMagazine
+                    : t is Building_BallistaMagazine m ? m.Storage : null)
+                .Where(s => s != null)
+                .Sum(s => s.CountOf(bolt));
+            return loose + stored;
         }
 
         /// <summary>

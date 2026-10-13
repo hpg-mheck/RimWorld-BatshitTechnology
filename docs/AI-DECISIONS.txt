@@ -46,3 +46,26 @@ gating every device and Batshittium Arcana gating nothing yet, both at tech
 level Neolithic so every colony pays the listed cost; Batshittium,
 Transmogrifier (10 chunks to 1), Reactor (250 kW, random 0.1-36 h per unit,
 radius waste heat capped at 200 C, below the 240 C auto-ignition point).
+2026-10-12 Claude: Brain Squeezer (v0.6): a sittable joy building using a
+JobDriver_WatchBuilding subclass; 28 monologue lines live in XML on the
+thought (MonologueExtension); after-effects are a +6 memory labelled with
+the last line and a day of MentalBreakThreshold -0.05.
+2026-10-12 Claude: Batshittium Ballista (v0.7), spec agreed with Matt
+"Breakpoint" Heck: power is linear in units = count x range / 10, from
+50 W standby / 1,000 W per volley at the baseline to 62.5 kW / 990 kW at
+256 bolts and 325 tiles (a quarter of one reactor at standby; four reactors
+less 10 kW of magazine feeding at full fire). Implementation choices:
+- Subclass Building_TurretGun; give each Ballista its own clone of the
+  gun's VerbProperties so range is per building (vanilla shares one per
+  Def). Range presets skip 80-89 because vanilla draws cell rings below 90
+  tiles and the engine caps them at ~79.8; at 90+ a circle outline is drawn.
+- The firing draw is a one-second PowerOutput spike per volley. Before a
+  volley the grid must cover it from surplus or stored battery energy, or
+  the Ballista holds fire with a message.
+- Bolt stores (16 internal, 2,560 per magazine) are bookcase-style haul
+  destinations. ThingOwner accepts any amount, so CappedThingOwner caps
+  GetCountCanAccept and TryAdd; haul jobs size themselves from it.
+- Magazines connect by shared edges, chained (Core.MagazineNetwork); a
+  volley drains magazines nearest-first, then the internal reserve.
+- The Artificer is a comp on a plain building fed by CompRefuelable;
+  outputs are gated per bolt research.

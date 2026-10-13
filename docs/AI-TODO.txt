@@ -1,14 +1,7 @@
 # AI TODO List
 
-- [ ] Batshittium Ballista system (spec agreed 2026-10-12): volley turret
-  every 5 s, range 10 to 325 and 1 to 256 projectiles, power linear from
-  50 W standby / 1000 W per-volley burst to 62.5 kW / 990 kW at max;
-  Painful (kinetic) and Really Painful (explosive) bolts from an automated
-  Batshittium Artificer; 16-bolt internal magazine plus adjacency-chained
-  2560-bolt magazines (5 W standby, 500 W while feeding); research under
-  Batshittium Arcana for each part.
-- [ ] Tune the reactor's heat (heatPerSecond, heatRadius) and the
-  replicator's numbers after in-game play.
+- [ ] Tune after real play: the reactor's heat (heatPerSecond, heatRadius),
+  the replicator, and the Ballista (bolt damage, scatter, research costs).
 - [ ] Replace placeholder textures with hand-drawn art if wanted.
 - [ ] Review RimWorld mod gameplay behaviours once core mechanics stabilize.
 - [ ] Identify opportunities for deterministic integration tests covering
@@ -21,4 +14,5 @@ power nets, Unity), so they are not unit-testable in this project. They are
 covered instead by: Def validation against the real game assembly
 (Tools/validate-defs.ps1), the XML regression tests, and the in-game smoke
 test (Tools/smoke-test.ps1). Pure logic lives in RandomReplicator.Core with
-unit tests (WeightedSelector, ReactorHeat, MonologuePicker).
+unit tests (WeightedSelector, ReactorHeat, MonologuePicker, BallistaPower,
+MagazineNetwork).

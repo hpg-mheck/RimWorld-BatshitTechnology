@@ -34,7 +34,7 @@ public sealed class XmlDefinitionTests
 
         Assert.Equal("Matt.RandomReplicator", root.Element("packageId")?.Value);
         Assert.Equal("Random Replicator", root.Element("name")?.Value);
-        Assert.Equal("0.6.0", root.Element("modVersion")?.Value);
+        Assert.Equal("0.7.0", root.Element("modVersion")?.Value);
         Assert.Equal(new[] { "1.6" }, ListValues(root.Element("supportedVersions")));
     }
 
@@ -220,6 +220,77 @@ public sealed class XmlDefinitionTests
         var calm = SingleDef("HediffDef", "RR_BrainSqueezedCalm");
         string offset = calm.Descendants("MentalBreakThreshold").Single().Value;
         Assert.True(double.Parse(offset, CultureInfo.InvariantCulture) < 0, "break threshold");
+    }
+
+    /// <summary>
+    /// Verifies the Ballista system: bolts map to projectiles, store
+    /// capacities, volley cadence and limits, magazine power, the
+    /// Artificer's outputs, and five 1000-point projects behind Arcana.
+    /// </summary>
+    [Fact(DisplayName = "Ballista system is wired up to the agreed spec")]
+    public void Ballista_system_should_match_spec()
+    {
+        Assert.Equal("RR_Projectile_BoltPainful",
+            ThingDef("RR_BoltPainful").Descendants("projectile").Single().Value);
+        Assert.Equal("RR_Projectile_BoltReallyPainful",
+            ThingDef("RR_BoltReallyPainful").Descendants("projectile").Single().Value);
+        Assert.Equal("Projectile_Explosive",
+            ThingDef("RR_Projectile_BoltReallyPainful").Element("thingClass")?.Value);
+
+        var ballista = ThingDef("RR_BatshittiumBallista");
+        Assert.Equal("16", ballista.Descendants("capacity").Single().Value);
+        Assert.Equal(
+            "5", ballista.Element("building")?.Element("turretBurstCooldownTime")?.Value);
+        var ranges = ListValues(ballista.Descendants("rangePresets").Single())
+            .Select(int.Parse).ToList();
+        Assert.Equal(325, ranges.Max());
+        Assert.DoesNotContain(ranges, r => r >= 80 && r < 90); // ring cap ~79.8
+        Assert.Equal(256, ListValues(ballista.Descendants("countPresets").Single())
+            .Select(int.Parse).Max());
+
+        var magazine = ThingDef("RR_BallistaMagazine");
+        Assert.Equal("2560", magazine.Descendants("capacity").Single().Value);
+        Assert.Equal("5", magazine.Descendants("standbyWatts").Single().Value);
+        Assert.Equal("500", magazine.Descendants("feedingWatts").Single().Value);
+
+        var outputs = ThingDef("RR_BatshittiumArtificer").Descendants("outputs").Single()
+            .Elements("li")
+            .Select(o => $"{o.Element("bolt")?.Value}:{o.Element("countPerUnit")?.Value}:"
+                + o.Element("research")?.Value);
+        Assert.Equal(
+            new[]
+            {
+                "RR_BoltPainful:10:RR_Research_PainfulBolts",
+                "RR_BoltReallyPainful:5:RR_Research_ReallyPainfulBolts",
+            },
+            outputs);
+
+        var projects = new[]
+        {
+            "RR_Research_PainfulBolts", "RR_Research_ReallyPainfulBolts",
+            "RR_Research_Artificer", "RR_Research_Magazine", "RR_Research_Ballista",
+        };
+        foreach (string name in projects)
+        {
+            Assert.Equal("1000", SingleDef("ResearchProjectDef", name).Element("baseCost")?.Value);
+            Assert.True(Requires(name, "RR_BatshittiumArcana"), $"{name} must follow Arcana");
+        }
+
+        Assert.Equal(
+            new[] { "RR_Research_Ballista" }, ListValues(ballista.Element("researchPrerequisites")));
+        Assert.Equal(
+            new[] { "RR_Research_Magazine" }, ListValues(magazine.Element("researchPrerequisites")));
+    }
+
+    /// <summary>Whether a research project requires another, directly or not.</summary>
+    /// <param name="project">The project's defName.</param>
+    /// <param name="required">The prerequisite to look for.</param>
+    /// <returns>True if <paramref name="required"/> is upstream.</returns>
+    private static bool Requires(string project, string required)
+    {
+        var direct = ListValues(
+            SingleDef("ResearchProjectDef", project).Element("prerequisites"));
+        return direct.Contains(required) || direct.Any(p => Requires(p, required));
     }
 
     /// <summary>

@@ -57,6 +57,14 @@ namespace RandomReplicator
         /// <summary>The refrigeration toggle.</summary>
         public static readonly Texture2D Refrigeration =
             ContentFinder<Texture2D>.Get("UI/Commands/TempLower");
+
+        /// <summary>The Ballista's range picker.</summary>
+        public static readonly Texture2D BallistaRange =
+            ContentFinder<Texture2D>.Get("UI/Commands/Attack");
+
+        /// <summary>The Ballista's projectile-count picker.</summary>
+        public static readonly Texture2D BallistaCount =
+            ContentFinder<Texture2D>.Get("UI/Commands/SquadAttack");
     }
 
     /// <summary>

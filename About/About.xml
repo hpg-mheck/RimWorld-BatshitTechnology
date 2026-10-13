@@ -11,9 +11,11 @@ Batshittium Reactor: 250,000 W from one unit of batshittium for anywhere between
 
 Random Replicator: fabricates a random food item every 6 in-game hours into a refrigerated compartment (10 items) that haulers empty into your stockpiles. It draws 50W, plus 50W while refrigeration is on. Player-ordered, pawn-armed self-destruct: 10-second countdown with a blast-radius ring, then a massive blast and widespread fires.
 
-Brain Squeezer: a chair colonists sit in for moderate recreation, muttering disturbing inner monologue. They come away calmer, with fewer breakdowns, riots and arguments for a day.</description>
+Brain Squeezer: a chair colonists sit in for moderate recreation, muttering disturbing inner monologue. They come away calmer, with fewer breakdowns, riots and arguments for a day.
+
+Batshittium Ballista: volleys of up to 256 insanely inaccurate, terrifyingly destructive bolts, up to 325 tiles away, every five seconds. Painful (kinetic) and Really Painful (explosive) bolts come from an automated Artificer and feed in from chained magazines. Range and projectile count multiply its power draw, up to four reactors at full fire.</description>
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
-  <modVersion IgnoreIfNoMatchingField="True">0.6.0</modVersion>
+  <modVersion IgnoreIfNoMatchingField="True">0.7.0</modVersion>
 </ModMetaData>

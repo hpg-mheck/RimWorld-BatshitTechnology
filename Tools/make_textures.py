@@ -275,8 +275,185 @@ def brain_squeezer():
     save(img, size, 'Things/Building/Joy/RR_BrainSqueezer.png')
 
 
+HAZARD = (232, 190, 40, 255)
+
+
+def bolt(d, x, y, length, angle_deg, explosive):
+    """One Ballista bolt from its tail at (x, y), pointing along angle_deg
+    (0 = north): shaft, fletching and either a steel head or a glowing
+    batshittium warhead."""
+    a = math.radians(angle_deg)
+    ux, uy = math.sin(a), -math.cos(a)  # unit vector toward the tip
+    px, py = -uy, ux                    # perpendicular
+    tip = (x + ux * length, y + uy * length)
+    d.line(pts([(x, y), tip]), fill=OUTLINE, width=7 * SS)
+    d.line(pts([(x, y), tip]), fill=STEEL_LIGHT, width=4 * SS)
+    for side in (-1, 1):  # fletching
+        d.polygon(pts([(x + ux * 2, y + uy * 2),
+                       (x + ux * 14 + px * side * 7, y + uy * 14 + py * side * 7),
+                       (x + ux * 16, y + uy * 16)]),
+                  fill=BS_DARK, outline=OUTLINE, width=2 * SS)
+    hx, hy = tip
+    if explosive:
+        d.ellipse(s(hx - 8, hy - 8, hx + 8, hy + 8), fill=BS_MID, outline=OUTLINE, width=2 * SS)
+        d.ellipse(s(hx - 4, hy - 5, hx + 1, hy), fill=BS_CORE)
+        d.line(pts([(hx - px * 8, hy - py * 8), (hx + px * 8, hy + py * 8)]),
+               fill=HAZARD, width=3 * SS)
+    else:
+        d.polygon(pts([(hx + ux * 12, hy + uy * 12), (hx + px * 6, hy + py * 6),
+                       (hx - px * 6, hy - py * 6)]),
+                  fill=STEEL, outline=OUTLINE, width=2 * SS)
+        d.line(pts([(hx, hy), (hx + ux * 10, hy + uy * 10)]), fill=BS_LIGHT, width=2 * SS)
+
+
+def bolt_item(explosive):
+    """A small bundle of three bolts."""
+    size = 128
+    img = new_canvas(size)
+    if explosive:
+        glow(img, lambda g, c: g.ellipse(s(60, 10, 116, 66), fill=c), BS_GLOW, blur=8, alpha=150)
+    d = draw(img)
+    for x, y, ang in ((30, 112, 38), (44, 116, 30), (58, 118, 22)):
+        bolt(d, x, y, 84, ang, explosive)
+    d.rounded_rectangle(s(36, 84, 70, 96), radius=4 * SS, fill=(120, 92, 60, 255),
+                        outline=OUTLINE, width=2 * SS)  # binding strap
+    name = 'RR_BoltReallyPainful' if explosive else 'RR_BoltPainful'
+    save(img, size, f'Things/Item/Resource/{name}.png')
+
+
+def bolt_projectile(explosive):
+    """A bolt in flight, pointing north (RimWorld rotates it to its heading)."""
+    size = 64
+    img = new_canvas(size)
+    if explosive:
+        glow(img, lambda g, c: g.ellipse(s(18, 2, 46, 30), fill=c), BS_GLOW, blur=4, alpha=200)
+    bolt(draw(img), 32, 60, 42, 0, explosive)
+    name = 'RR_BoltReallyPainful' if explosive else 'RR_BoltPainful'
+    save(img, size, f'Things/Projectile/{name}.png')
+
+
+def ballista_base():
+    """2x2 plinth with a turntable; the launcher top is drawn over it."""
+    size = 256
+    img = new_canvas(size)
+    d = draw(img)
+    gradient_fill(img, lambda m: m.rounded_rectangle(s(10, 10, 246, 246), radius=20 * SS, fill=255),
+                  STEEL, STEEL_DEEP)
+    d = draw(img)
+    d.rounded_rectangle(s(10, 10, 246, 246), radius=20 * SS, outline=OUTLINE, width=4 * SS)
+    for cx, cy in ((34, 34), (222, 34), (34, 222), (222, 222)):  # hazard corners
+        d.ellipse(s(cx - 14, cy - 14, cx + 14, cy + 14), fill=HAZARD, outline=OUTLINE, width=2 * SS)
+        d.line(s(cx - 9, cy + 9, cx + 9, cy - 9), fill=OUTLINE, width=4 * SS)
+    circle(d, 128, 128, 92, fill=STEEL_DARK, outline=OUTLINE, width=4)
+    circle(d, 128, 128, 80, outline=(*BS_MID[:3], 220), width=3)  # glowing ring
+    for i in range(16):
+        a = math.radians(i * 22.5)
+        circle(d, 128 + 86 * math.cos(a), 128 + 86 * math.sin(a), 3, fill=STEEL_LIGHT,
+               outline=OUTLINE, width=1)
+    circle(d, 128, 128, 56, fill=STEEL_DEEP, outline=OUTLINE, width=3)
+    save(img, size, 'Things/Building/Security/RR_BatshittiumBallista_Base.png')
+
+
+def ballista_top():
+    """The launcher, pointing north: a long rail, bow limbs and a glowing
+    batshittium core where the bolts are loaded."""
+    size = 256
+    img = new_canvas(size)
+    glow(img, lambda g, c: g.ellipse(s(100, 120, 156, 176), fill=c), BS_GLOW, blur=8, alpha=200)
+    d = draw(img)
+    d.rounded_rectangle(s(116, 18, 140, 190), radius=8 * SS, fill=STEEL_DARK,
+                        outline=OUTLINE, width=4 * SS)  # rail
+    d.line(s(128, 26, 128, 182), fill=STEEL_LIGHT, width=3 * SS)
+    for side in (-1, 1):  # bow limbs
+        limb = [(128, 96), (128 + side * 46, 84), (128 + side * 92, 108),
+                (128 + side * 96, 120), (128 + side * 52, 100), (128, 110)]
+        d.polygon(pts(limb), fill=STEEL, outline=OUTLINE, width=3 * SS)
+        d.line(pts([(128 + side * 94, 114), (128, 160)]), fill=(*BS_LIGHT[:3], 230),
+               width=2 * SS)  # string
+    for y in (40, 60):  # a loaded bolt's fletching visible on the rail
+        d.polygon(pts([(122, y), (134, y), (128, y - 12)]), fill=BS_DARK, outline=OUTLINE,
+                  width=2 * SS)
+    circle(d, 128, 148, 24, fill=STEEL, outline=OUTLINE, width=4)
+    orb(d, 128, 148, 15, BS_DARK, BS_CORE)
+    save(img, size, 'Things/Building/Security/RR_BatshittiumBallista_Top.png')
+
+
+def ballista_magazine():
+    """1x1 ammo crate with bolts visible through the lid and a status light."""
+    size = 128
+    img = new_canvas(size)
+    d = draw(img)
+    gradient_fill(img, lambda m: m.rounded_rectangle(s(10, 14, 118, 118), radius=10 * SS, fill=255),
+                  STEEL_LIGHT, STEEL_DARK)
+    d = draw(img)
+    d.rounded_rectangle(s(10, 14, 118, 118), radius=10 * SS, outline=OUTLINE, width=3 * SS)
+    d.rounded_rectangle(s(22, 26, 106, 92), radius=6 * SS, fill=(40, 38, 44, 255),
+                        outline=OUTLINE, width=2 * SS)
+    for x in range(30, 104, 12):  # bolt tips in their racks
+        d.line(s(x, 34, x, 84), fill=STEEL_LIGHT, width=4 * SS)
+        d.polygon(pts([(x - 4, 38), (x + 4, 38), (x, 30)]), fill=BS_MID)
+    for x in (16, 112):  # hazard edges
+        d.rectangle(s(x - 4, 96, x + 4, 112), fill=HAZARD)
+    glow(img, lambda g, c: g.ellipse(s(56, 98, 72, 114), fill=c), (80, 230, 160), blur=3, alpha=220)
+    d = draw(img)
+    circle(d, 64, 106, 5, fill=(80, 220, 150, 255), outline=OUTLINE, width=1)
+    save(img, size, 'Things/Building/Security/RR_BallistaMagazine.png')
+
+
+def artificer():
+    """2x2 automated bolt works: batshittium hopper, an articulated arm over a
+    jig, a tray of finished bolts and a front panel."""
+    size = 256
+    img = new_canvas(size)
+    gradient_fill(img, lambda m: m.rounded_rectangle(s(12, 20, 244, 240), radius=24 * SS, fill=255),
+                  STEEL_LIGHT, STEEL_DARK)
+    d = draw(img)
+    d.rounded_rectangle(s(12, 196, 244, 240), radius=24 * SS, fill=STEEL_DARK)
+    d.rounded_rectangle(s(12, 20, 244, 240), radius=24 * SS, outline=OUTLINE, width=4 * SS)
+    d.rounded_rectangle(s(26, 32, 230, 194), radius=16 * SS, fill=STEEL, outline=STEEL_DEEP,
+                        width=2 * SS)
+    # hopper of batshittium
+    d.polygon(pts([(30, 40), (92, 40), (84, 100), (38, 100)]), fill=STEEL_DEEP, outline=OUTLINE,
+              width=3 * SS)
+    glow(img, lambda g, c: g.ellipse(s(40, 46, 84, 90), fill=c), BS_GLOW, blur=5, alpha=170)
+    d = draw(img)
+    for bx, by, h in ((50, 88, 26), (64, 90, 34), (76, 88, 24)):
+        shard(d, (bx, by), h, 11, (bx - 64) * 0.8)
+    # jig and arm
+    d.rounded_rectangle(s(104, 100, 196, 130), radius=6 * SS, fill=STEEL_DEEP, outline=OUTLINE,
+                        width=3 * SS)
+    bolt(d, 112, 116, 72, 90, False)
+    d.line(s(204, 44, 170, 76), fill=OUTLINE, width=12 * SS)
+    d.line(s(204, 44, 170, 76), fill=HAZARD, width=7 * SS)
+    d.line(s(170, 76, 150, 108), fill=OUTLINE, width=10 * SS)
+    d.line(s(170, 76, 150, 108), fill=HAZARD, width=5 * SS)
+    circle(d, 204, 44, 9, fill=STEEL_LIGHT, outline=OUTLINE, width=2)
+    circle(d, 170, 76, 7, fill=STEEL_LIGHT, outline=OUTLINE, width=2)
+    glow(img, lambda g, c: g.ellipse(s(140, 98, 160, 118), fill=c), BS_GLOW, blur=3, alpha=230)
+    # finished bolts tray
+    d = draw(img)
+    d.rounded_rectangle(s(104, 140, 226, 186), radius=6 * SS, fill=(40, 38, 44, 255),
+                        outline=OUTLINE, width=2 * SS)
+    for y in (152, 166, 178):
+        bolt(d, 112, y, 100, 90, y == 166)
+    # control panel on the front
+    d.rounded_rectangle(s(92, 204, 172, 234), radius=4 * SS, fill=(36, 40, 46, 255),
+                        outline=OUTLINE, width=2 * SS)
+    d.rectangle(s(99, 210, 139, 228), fill=(70, 205, 145, 255), outline=OUTLINE, width=1 * SS)
+    for x, c in ((150, (220, 60, 60, 255)), (162, BS_MID)):
+        circle(d, x, 219, 3.5, fill=c, outline=OUTLINE, width=1)
+    save(img, size, 'Things/Building/Production/RR_BatshittiumArtificer.png')
+
+
 if __name__ == '__main__':
     batshittium_item()
     transmogrifier()
     reactor()
     brain_squeezer()
+    for explosive in (False, True):
+        bolt_item(explosive)
+        bolt_projectile(explosive)
+    ballista_base()
+    ballista_top()
+    ballista_magazine()
+    artificer()

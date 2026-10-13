@@ -7,3 +7,10 @@
 - A replicator storing food at a priority above every stockpile keeps it
   inside, where nobody eats it. The default priority is Low and the
   auto-eject toggle covers colonies without a food stockpile.
+- The self-destruct's fire blanket (80% of ~17,600 cells) costs 1 to 11 ms
+  per tick over the following ten seconds in smoke tests; fine at normal
+  speed, sluggish at speed 3 on big maps.
+- The smoke test fires the Ballista at a forced ground target only; its
+  automatic targeting of real raiders is vanilla code but untested here.
+- The Ballista holds fire under a roof (its bolts arc overhead), as vanilla
+  mortars do.
