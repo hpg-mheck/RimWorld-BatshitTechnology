@@ -16,6 +16,9 @@
 - Fire counts as damage, so a burning self-destruct device rolls its 5%
   trigger on every fire tick and will almost certainly go off. That is
   probably the most batshit outcome, but worth watching in play.
+- The singularity moves pawns by teleporting them a cell at a time (with
+  the draw position tweened), and stuns them while it has them; there is
+  no true physics, and natural rock is never ripped loose.
 - The smoke test fires the Ballista at a forced ground target only; its
   automatic targeting of real raiders is vanilla code but untested here.
 - The Ballista holds fire under a roof (its bolts arc overhead), as vanilla

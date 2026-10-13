@@ -261,13 +261,14 @@ public sealed class XmlDefinitionTests
 
         var outputs = ThingDef("BT_BatshittiumArtificer").Descendants("outputs").Single()
             .Elements("li")
-            .Select(o => $"{o.Element("bolt")?.Value}:{o.Element("countPerUnit")?.Value}:"
+            .Select(o => $"{o.Element("thing")?.Value}:{o.Element("countPerUnit")?.Value}:"
                 + o.Element("research")?.Value);
         Assert.Equal(
             new[]
             {
                 "BT_BoltPainful:10:BT_Research_PainfulBolts",
                 "BT_BoltReallyPainful:5:BT_Research_ReallyPainfulBolts",
+                "BT_ErgonomicSingularityGrenade:1:BT_Research_SingularityGrenade",
             },
             outputs);
 
@@ -319,7 +320,7 @@ public sealed class XmlDefinitionTests
             .Select(r => $"{r.Element("researchViewX")?.Value},{r.Element("researchViewY")?.Value}")
             .ToList();
 
-        Assert.Equal(11, spots.Count);
+        Assert.Equal(12, spots.Count);
         Assert.Equal(spots.Count, spots.Distinct().Count());
     }
 
@@ -391,6 +392,61 @@ public sealed class XmlDefinitionTests
 
         Assert.Equal(5, blasts.Count);
         Assert.Equal(4, blasts.Distinct().Count()); // Ballista and Magazine share the cook-off
+    }
+
+    /// <summary>
+    /// The Ergonomic Singularity Grenade: an equippable thrown weapon whose
+    /// projectile opens the singularity, with a raider-proof weapon tag, a
+    /// 10-tile, five-second pull and a big explosion, behind its own project
+    /// after the Artificer.
+    /// </summary>
+    [Fact(DisplayName = "Singularity grenade is wired up as agreed")]
+    public void SingularityGrenade_should_match_spec()
+    {
+        var grenade = ThingDef("BT_ErgonomicSingularityGrenade");
+        Assert.Equal("BaseWeapon", grenade.Attribute("ParentName")?.Value);
+        var verb = grenade.Element("verbs")?.Elements("li").Single();
+        Assert.Equal("Verb_LaunchProjectile", verb?.Element("verbClass")?.Value);
+        Assert.Equal("BT_Projectile_SingularityGrenade", verb?.Element("defaultProjectile")?.Value);
+        Assert.Equal(new[] { "BatshitSingularityGrenade" }, ListValues(grenade.Element("weaponTags")));
+
+        var projectile = ThingDef("BT_Projectile_SingularityGrenade");
+        Assert.Equal("BatshitTechnology.Projectile_SingularityGrenade",
+            projectile.Element("thingClass")?.Value);
+        // Regression (found by the smoke test): a thrown verb with a forced-miss
+        // radius needs a Projectile_Explosive, or RimWorld reports a config error;
+        // the class derives from it (checked by the Def validator's class
+        // resolution and the smoke test's log scan), and goes off on landing.
+        Assert.Equal("0", projectile.Descendants("explosionDelay").Single().Value);
+
+        var field = ThingDef("BT_SingularityField");
+        Assert.Equal("RealtimeOnly", field.Element("drawerType")?.Value);
+        var settings = field.Descendants("li")
+            .Single(e => e.Attribute("Class")?.Value == "BatshitTechnology.SingularityExtension");
+        Assert.Equal("10", settings.Element("radius")?.Value);
+        Assert.Equal("300", settings.Element("pullTicks")?.Value);
+        Assert.Equal("BT_ErgonomicallySingularized", settings.Element("survivorThought")?.Value);
+
+        var research = SingleDef("ResearchProjectDef", "BT_Research_SingularityGrenade");
+        Assert.Equal(new[] { "BT_Research_Artificer" }, ListValues(research.Element("prerequisites")));
+    }
+
+    /// <summary>
+    /// Survivors get a huge, quip-labelled mood boost, drawn from 25 short,
+    /// unique quips.
+    /// </summary>
+    [Fact(DisplayName = "Singularity survivors get a huge boost and one of 25 quips")]
+    public void SingularitySurvivors_should_get_mood_and_quips()
+    {
+        var thought = SingleDef("ThoughtDef", "BT_ErgonomicallySingularized");
+        Assert.Equal("BatshitTechnology.Thought_Quip", thought.Element("thoughtClass")?.Value);
+        int mood = int.Parse(thought.Descendants("baseMoodEffect").Single().Value);
+        Assert.True(mood >= 20, $"mood {mood}");
+
+        string[] quips = ListValues(thought.Descendants("lines").Single());
+        Assert.Equal(25, quips.Length);
+        Assert.Equal(quips.Length, quips.Distinct().Count());
+        Assert.All(quips, q => Assert.InRange(q.Length, 1, 70));
     }
 
     /// <summary>A ThingDef's last comp.</summary>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Ergonomic Singularity Grenade: thrown like a vanilla grenade (equip it, then throw as often as the
+       cooldown allows). Made at the Batshittium Artificer. Where it lands, a singularity rips fixtures
+       loose and drags everything within 10 tiles toward its centre for five seconds, ever faster, then
+       explodes. Surviving pawns it caught feel wonderful about it. -->
+  <ThingDef ParentName="BaseWeapon">
+    <defName>BT_ErgonomicSingularityGrenade</defName>
+    <label>ergonomic singularity grenade</label>
+    <description>A batshittium grenade with a cushioned, contoured grip and a very small black hole inside. Where it lands it opens a singularity that rips fixtures loose and drags everything within 10 tiles toward its centre for five seconds, faster and faster, before exploding.\n\nAnyone caught in it who survives says it was the most comfortable thing that ever happened to them, and seems to mean it.</description>
+    <techLevel>Industrial</techLevel>
+    <graphicData>
+      <texPath>Things/Item/Equipment/BT_ErgonomicSingularityGrenade</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+    </graphicData>
+    <uiIconScale>1.2</uiIconScale>
+    <soundInteract>Interact_Grenade</soundInteract>
+    <statBases>
+      <Mass>1</Mass>
+      <MarketValue>600</MarketValue>
+      <RangedWeapon_Cooldown>6</RangedWeapon_Cooldown>
+    </statBases>
+    <weaponClasses>
+      <li>Ranged</li>
+    </weaponClasses>
+    <!-- Its own tag, so no raider is generated carrying one -->
+    <weaponTags>
+      <li>BatshitSingularityGrenade</li>
+    </weaponTags>
+    <thingCategories>
+      <li>Grenades</li>
+    </thingCategories>
+    <verbs>
+      <li>
+        <label>throw ergonomic singularity grenade</label>
+        <verbClass>Verb_LaunchProjectile</verbClass>
+        <hasStandardCommand>true</hasStandardCommand>
+        <range>12.9</range>
+        <forcedMissRadius>1.9</forcedMissRadius>
+        <warmupTime>1.5</warmupTime>
+        <noiseRadius>4</noiseRadius>
+        <ai_IsBuildingDestroyer>true</ai_IsBuildingDestroyer>
+        <soundCast>ThrowGrenade</soundCast>
+        <targetParams>
+          <canTargetLocations>true</canTargetLocations>
+        </targetParams>
+        <defaultProjectile>BT_Projectile_SingularityGrenade</defaultProjectile>
+        <rangedFireRulepack>Combat_RangedFire_Thrown</rangedFireRulepack>
+      </li>
+    </verbs>
+  </ThingDef>
+
+  <ThingDef ParentName="BaseGrenadeProjectile">
+    <defName>BT_Projectile_SingularityGrenade</defName>
+    <label>ergonomic singularity grenade</label>
+    <thingClass>BatshitTechnology.Projectile_SingularityGrenade</thingClass>
+    <graphicData>
+      <texPath>Things/Projectile/BT_SingularityGrenade</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+    </graphicData>
+    <projectile>
+      <!-- For the stats panel and the AI; the singularity's own pull and explosion are set below.
+           10 is the area it endangers. It goes off on landing (no fuse). -->
+      <damageDef>Bomb</damageDef>
+      <damageAmountBase>65</damageAmountBase>
+      <explosionRadius>10</explosionRadius>
+      <explosionDelay>0</explosionDelay>
+    </projectile>
+  </ThingDef>
+
+  <!-- The singularity itself: drawn as a spinning vortex, ticks for five seconds, then explodes -->
+  <ThingDef>
+    <defName>BT_SingularityField</defName>
+    <label>ergonomic singularity</label>
+    <thingClass>BatshitTechnology.SingularityField</thingClass>
+    <category>Ethereal</category>
+    <tickerType>Normal</tickerType>
+    <drawerType>RealtimeOnly</drawerType>
+    <altitudeLayer>MoteOverhead</altitudeLayer>
+    <useHitPoints>false</useHitPoints>
+    <selectable>false</selectable>
+    <graphicData>
+      <texPath>Things/Mote/BT_SingularityVortex</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <shaderType>Transparent</shaderType>
+    </graphicData>
+    <modExtensions>
+      <li Class="BatshitTechnology.SingularityExtension">
+        <radius>10</radius>
+        <pullTicks>300</pullTicks> <!-- five seconds -->
+        <pullRateStart>0.6</pullRateStart> <!-- cells per second, accelerating to... -->
+        <pullRateEnd>12</pullRateEnd> <!-- ...this; about 22 cells in all -->
+        <ripTicks>120</ripTicks> <!-- reach to rip fixtures loose grows to the radius over 2 s -->
+        <explosionDamageDef>Bomb</explosionDamageDef>
+        <explosionRadius>5.9</explosionRadius>
+        <explosionDamage>65</explosionDamage>
+        <survivorDelayTicks>30</survivorDelayTicks>
+        <survivorThought>BT_ErgonomicallySingularized</survivorThought>
+      </li>
+    </modExtensions>
+  </ThingDef>
+</Defs>

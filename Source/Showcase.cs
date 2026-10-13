@@ -8,8 +8,9 @@
 // devices in the most open far corners self-destruct, well clear of the
 // base, with the camera on each as it arms: a Random Replicator five
 // seconds in (blast, fires, secondaries), then a Batshittium Reactor twenty
-// seconds later (core blast and a barrage of bolts). Then it leaves the
-// game running.
+// seconds later (core blast and a barrage of bolts). Last, a colonist
+// throws an Ergonomic Singularity Grenade at a junk pile (and a volunteer)
+// west of the base. Then it leaves the game running.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -86,9 +87,10 @@ namespace BatshitTechnology
             Find.TickManager.CurTimeSpeed = TimeSpeed.Normal;
             Messages.Message(
                 "Batshit Technology showcase: this lone replicator arms its "
-                    + "self-destruct in five seconds, and a lone reactor follows "
-                    + "it. The demo base is at the map's centre; select things "
-                    + "there to see their buttons and status.",
+                    + "self-destruct in five seconds, a lone reactor follows it, "
+                    + "then a colonist throws an Ergonomic Singularity Grenade. "
+                    + "The demo base is at the map's centre; select things there "
+                    + "to see their buttons and status.",
                 MessageTypeDefOf.PositiveEvent, false);
             // Tools/smoke-test.ps1 waits for this line before maximizing.
             Log.Message("[BT-SHOWCASE] READY");
@@ -158,11 +160,28 @@ namespace BatshitTechnology
             new List<(Thing Device, int ArmAt)>();
 
         /// <summary>
+        /// Game ticks from the reactor demo arming to the grenade throw: its
+        /// countdown and barrage, and a breath.
+        /// </summary>
+        private const int GrenadeDemoDelayTicks = 1200;
+
+        private static Pawn grenadier;
+        private static Pawn volunteer;
+        private static IntVec3 grenadeTarget;
+        private static int throwAtTick = -1;
+
+        /// <summary>
         /// Called every game tick by the runner; arms each self-destruct demo
         /// when its moment comes, with the camera on it.
         /// </summary>
         internal static void Tick()
         {
+            if (throwAtTick >= 0 && Find.TickManager.TicksGame >= throwAtTick)
+            {
+                throwAtTick = -1;
+                ThrowGrenade();
+            }
+
             // Pull back to take in the whole blast when it goes off.
             if (watching != null && watching.Destroyed)
             {
@@ -236,7 +255,103 @@ namespace BatshitTechnology
 
             Find.Selector.ClearSelection();
             Find.Selector.Select(replicator, playSound: false);
+            BuildGrenadeDemo(
+                map, baseCenter, now + ArmDelayTicks + SecondDemoDelayTicks + GrenadeDemoDelayTicks);
             return replicator;
+        }
+
+        /// <summary>
+        /// A junk pile 25 tiles west of the base (stools, a wooden wall and
+        /// stacks of steel and wood), and a colonist armed with an Ergonomic
+        /// Singularity Grenade, due to throw it at the pile with another
+        /// colonist volunteering inside it.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="baseCenter">The demo base's centre.</param>
+        /// <param name="throwAt">The tick to throw at.</param>
+        private static void BuildGrenadeDemo(Map map, IntVec3 baseCenter, int throwAt)
+        {
+            grenadeTarget = baseCenter + new IntVec3(-25, 0, 0);
+            Clear(map, CellRect.CenteredOn(grenadeTarget, 13));
+            ThingDef stool = DefDatabase<ThingDef>.GetNamedSilentFail("Stool");
+            foreach (IntVec3 offset in new[]
+            {
+                new IntVec3(-6, 0, 4), new IntVec3(5, 0, -5), new IntVec3(-3, 0, -7), new IntVec3(7, 0, 6),
+            })
+            {
+                if (stool != null)
+                {
+                    GenSpawn.Spawn(ThingMaker.MakeThing(stool, ThingDefOf.WoodLog), grenadeTarget + offset, map);
+                }
+            }
+
+            for (int x = -3; x <= 3; x++)
+            {
+                GenSpawn.Spawn(
+                    ThingMaker.MakeThing(ThingDefOf.Wall, ThingDefOf.WoodLog),
+                    grenadeTarget + new IntVec3(x, 0, 8), map);
+            }
+
+            foreach (var (def, offset) in new[]
+            {
+                (ThingDefOf.Steel, new IntVec3(8, 0, -2)), (ThingDefOf.WoodLog, new IntVec3(-8, 0, 0)),
+                (ThingDefOf.Steel, new IntVec3(2, 0, 9)), (ThingDefOf.WoodLog, new IntVec3(-4, 0, -9)),
+            })
+            {
+                Thing stack = ThingMaker.MakeThing(def);
+                stack.stackCount = 50;
+                GenSpawn.Spawn(stack, grenadeTarget + offset, map);
+            }
+
+            List<Pawn> colonists = map.mapPawns.FreeColonistsSpawned
+                .Where(p => !p.Dead && !p.Downed).ToList();
+            if (colonists.Count == 0)
+            {
+                return;
+            }
+
+            grenadier = colonists[0];
+            Thing grenade = ThingMaker.MakeThing(
+                DefDatabase<ThingDef>.GetNamed("BT_ErgonomicSingularityGrenade"));
+            grenadier.equipment.DestroyAllEquipment();
+            grenadier.equipment.AddEquipment((ThingWithComps)grenade);
+            volunteer = colonists.Count > 1 ? colonists[colonists.Count - 1] : null;
+            throwAtTick = throwAt;
+        }
+
+        /// <summary>
+        /// Brings the grenadier into range, points the camera at the pile,
+        /// and orders the throw.
+        /// </summary>
+        private static void ThrowGrenade()
+        {
+            if (grenadier == null || grenadier.Dead || !grenadier.Spawned)
+            {
+                return;
+            }
+
+            Teleport(grenadier, grenadeTarget + new IntVec3(12, 0, 0));
+            if (volunteer != null && !volunteer.Dead && volunteer.Spawned)
+            {
+                Teleport(volunteer, grenadeTarget + new IntVec3(-7, 0, -3));
+            }
+
+            Find.CameraDriver.JumpToCurrentMapLoc(grenadeTarget);
+            Find.CameraDriver.SetRootSize(CountdownCameraSize);
+            grenadier.drafter.Drafted = true;
+            Job job = JobMaker.MakeJob(JobDefOf.AttackStatic, grenadeTarget);
+            job.maxNumStaticAttacks = 1;
+            grenadier.jobs.TryTakeOrderedJob(job, JobTag.Misc);
+        }
+
+        /// <summary>Moves a pawn, interrupting whatever it was doing.</summary>
+        /// <param name="pawn">The pawn.</param>
+        /// <param name="cell">Where to put it.</param>
+        private static void Teleport(Pawn pawn, IntVec3 cell)
+        {
+            pawn.jobs?.StopAll();
+            pawn.Position = cell;
+            pawn.Notify_Teleported();
         }
 
         /// <summary>

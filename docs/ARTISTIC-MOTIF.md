@@ -59,6 +59,8 @@ reuse them by name rather than inventing near-duplicates.
 | Status screen | (panel green) | 70, 205, 145 |
 | Self-destruct warning | (`CompSelfDestruct`) | 255, 158, 26, then 255, 26, 15 |
 | Rock | `ROCK_LIGHT`, `ROCK` | 150, 142, 140; 116, 110, 110 |
+| Cushioning | `CUSHION`, `CUSHION_DARK` | 118, 96, 138; 88, 68, 106 |
+| A singularity's core | `VOID` | 14, 6, 22 |
 
 Colour rules:
 
@@ -98,6 +100,12 @@ helper in the generator.
   (`orb()`), seen in the Transmogrifier, Reactor and Replicator. Contents
   inside a porthole show what the device does: rock swirling into
   batshittium, a bat in the reactor core, a meal half replicated.
+- **Comfort.** Anything a pawn touches for pleasure, or is promised
+  comfort by, gets dusty-purple cushioning (`CUSHION`): the Brain
+  Squeezer's padding, the singularity grenade's finger-grooved grip.
+- **Singularities.** A void core inside a bright magenta accretion ring
+  (`singularity_core()`); seen from above, spiral arms wind into it
+  (`singularity_vortex()`).
 - **Batshittium itself.** Faceted crystal shards (`shard()`) with a
   glinting edge and the occasional four-point sparkle (`sparkle()`).
 - **Bats.** The bat silhouette (`bat()`) is the house mark. Use it at

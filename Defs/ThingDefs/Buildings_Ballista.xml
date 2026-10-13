@@ -370,7 +370,7 @@
   <ThingDef ParentName="BuildingBase">
     <defName>BT_BatshittiumArtificer</defName>
     <label>batshittium artificer</label>
-    <description>An automated workshop that turns batshittium into Ballista bolts with no one at the controls: 10 Painful bolts or 5 Really Painful bolts per unit, one unit an hour while powered. Haulers keep it loaded with batshittium and carry its bolts to your magazines.</description>
+    <description>An automated workshop that turns batshittium into Ballista bolts and grenades with no one at the controls: 10 Painful bolts, 5 Really Painful bolts or one Ergonomic Singularity Grenade per unit, one unit an hour while powered. Haulers keep it loaded with batshittium and carry off what it makes.</description>
     <thingClass>Building</thingClass>
     <graphicData>
       <texPath>Things/Building/Production/BT_BatshittiumArtificer</texPath>
@@ -429,14 +429,19 @@
         <ticksPerUnit>2500</ticksPerUnit> <!-- one in-game hour per unit -->
         <outputs>
           <li>
-            <bolt>BT_BoltPainful</bolt>
+            <thing>BT_BoltPainful</thing>
             <countPerUnit>10</countPerUnit>
             <research>BT_Research_PainfulBolts</research>
           </li>
           <li>
-            <bolt>BT_BoltReallyPainful</bolt>
+            <thing>BT_BoltReallyPainful</thing>
             <countPerUnit>5</countPerUnit>
             <research>BT_Research_ReallyPainfulBolts</research>
+          </li>
+          <li>
+            <thing>BT_ErgonomicSingularityGrenade</thing>
+            <countPerUnit>1</countPerUnit>
+            <research>BT_Research_SingularityGrenade</research>
           </li>
         </outputs>
       </li>

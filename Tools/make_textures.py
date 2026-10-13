@@ -593,6 +593,110 @@ def random_replicator():
     save(img, size, 'Things/Building/Production/BT_RandomReplicator.png')
 
 
+CUSHION = (118, 96, 138, 255)        # the Brain Squeezer's padding
+CUSHION_DARK = (88, 68, 106, 255)
+VOID = (14, 6, 22, 255)              # a singularity's core
+
+
+def singularity_core(img, cx, cy, r):
+    """A tiny black hole: a dark core inside a glowing magenta accretion
+    ring, with a hot spot where the ring turns toward the viewer."""
+    glow(img, lambda g, c: g.ellipse(s(cx - r * 1.5, cy - r * 1.5, cx + r * 1.5, cy + r * 1.5), fill=c),
+         BS_GLOW, blur=max(2, r * 0.5), alpha=220)
+    d = draw(img)
+    circle(d, cx, cy, r, fill=BS_MID)
+    circle(d, cx, cy, r * 0.82, outline=BS_LIGHT, width=max(1, int(r * 0.18)))
+    orb(d, cx, cy, r * 0.62, VOID, (40, 10, 60, 255), steps=24)
+    d.ellipse(s(cx - r * 0.9, cy - r * 0.95, cx - r * 0.2, cy - r * 0.55), fill=(*BS_CORE[:3], 200))
+
+
+def grenade_body(img, cx, cy, scale):
+    """The Ergonomic Singularity Grenade, upright: a steel shell, a
+    cushioned grip with finger grooves, a glass dome over the singularity,
+    and a hazard-yellow lever and pin."""
+    d = draw(img)
+    def S(*v):
+        return [cx + v[i] * scale if i % 2 == 0 else cy + v[i] * scale for i in range(len(v))]
+
+    # lever and pin ring, behind the body
+    lever = S(6, -30, 24, -24, 31, 10)
+    d.line(s(*lever), fill=OUTLINE, width=max(3, int(9 * scale)) * SS, joint='curve')
+    d.line(s(*lever), fill=HAZARD, width=max(1, int(5 * scale)) * SS, joint='curve')
+    circle(d, cx - 16 * scale, cy - 30 * scale, 8 * scale, outline=OUTLINE, width=max(2, int(5 * scale)))
+    circle(d, cx - 16 * scale, cy - 30 * scale, 8 * scale, outline=STEEL_LIGHT, width=max(1, int(2 * scale)))
+    # steel shell
+    gradient_fill(img, lambda m: m.ellipse(s(*S(-24, -30, 24, 40)), fill=255), STEEL_LIGHT, STEEL_DARK)
+    d = draw(img)
+    d.ellipse(s(*S(-24, -30, 24, 40)), outline=OUTLINE, width=max(2, int(4 * scale)) * SS)
+    # cushioned, contoured grip with finger grooves
+    d.rounded_rectangle(s(*S(-26, 2, 26, 36)), radius=int(12 * scale) * SS, fill=CUSHION,
+                        outline=OUTLINE, width=max(2, int(3 * scale)) * SS)
+    for gy in (10, 19, 28):
+        d.line(s(*S(-22, gy, 22, gy)), fill=CUSHION_DARK, width=max(1, int(3 * scale)) * SS)
+    d.line(s(*S(-18, 5, -18, 33)), fill=(*CUSHION[:3], 255), width=1)
+    d.ellipse(s(*S(-20, 4, -8, 12)), fill=(170, 150, 190, 160))  # padding sheen
+    # glass dome over the singularity
+    circle(d, cx, cy - 12 * scale, 15 * scale, fill=(40, 34, 52, 255), outline=OUTLINE,
+           width=max(2, int(3 * scale)))
+    singularity_core(img, cx, cy - 12 * scale, 10 * scale)
+    d = draw(img)
+    d.arc(s(*S(-13, -25, 13, 1)), start=200, end=290, fill=(255, 255, 255, 170),
+          width=max(1, int(2 * scale)) * SS)  # glass glint
+
+
+def singularity_grenade_item():
+    size = 128
+    img = new_canvas(size)
+    grenade_body(img, 60, 62, 1.35)
+    save(img, size, 'Things/Item/Equipment/BT_ErgonomicSingularityGrenade.png')
+
+
+def singularity_grenade_projectile():
+    size = 64
+    img = new_canvas(size)
+    grenade_body(img, 32, 33, 0.62)
+    save(img, size, 'Things/Projectile/BT_SingularityGrenade.png')
+
+
+def singularity_vortex():
+    """The singularity seen from above: magenta spiral arms winding into a
+    black core inside a bright accretion ring. Drawn spinning in game, so
+    it has no up."""
+    size = 256
+    img = new_canvas(size)
+    c = size / 2
+    # faint outer haze
+    glow(img, lambda g, col: g.ellipse(s(c - 110, c - 110, c + 110, c + 110), fill=col),
+         BS_GLOW, blur=18, alpha=70)
+    # spiral arms, fading toward the rim
+    arms = Image.new('RGBA', img.size, (0, 0, 0, 0))
+    ad = draw(arms)
+    for arm in range(4):
+        base = arm * math.pi / 2
+        for i in range(140):
+            t = i / 140
+            r = 18 + t * 100
+            a = base + t * 3.4
+            x, y = c + r * math.cos(a), c + r * math.sin(a)
+            width = 14 * (1 - t) + 3
+            alpha = int(230 * (1 - t) ** 1.2)
+            color = BS_LIGHT if i % 9 < 2 else BS_MID
+            ad.ellipse(s(x - width / 2, y - width / 2, x + width / 2, y + width / 2),
+                       fill=(*color[:3], alpha))
+    img.alpha_composite(arms.filter(ImageFilter.GaussianBlur(1.2 * SS)))
+    # accretion ring and the void
+    d = draw(img)
+    glow(img, lambda g, col: g.ellipse(s(c - 34, c - 34, c + 34, c + 34), fill=col),
+         BS_GLOW, blur=8, alpha=230)
+    d = draw(img)
+    circle(d, c, c, 26, outline=(*BS_CORE[:3], 255), width=5)
+    circle(d, c, c, 22, fill=VOID)
+    for k in range(10):  # sparks caught in the ring
+        a = k * 0.63
+        sparkle(d, c + 30 * math.cos(a), c + 30 * math.sin(a), 3 if k % 3 else 5)
+    save(img, size, 'Things/Mote/BT_SingularityVortex.png')
+
+
 if __name__ == '__main__':
     batshittium_item()
     transmogrifier()
@@ -606,3 +710,6 @@ if __name__ == '__main__':
     ballista_magazine()
     artificer()
     random_replicator()
+    singularity_grenade_item()
+    singularity_grenade_projectile()
+    singularity_vortex()

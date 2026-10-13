@@ -39,8 +39,11 @@ draw, hauling, ejection, room heating, and the self-destruct countdown,
 abort, detonation and aftermath (fires surviving the shockwave, secondary
 explosions inside the circle; with timing), the reactor's bolt barrage
 (every volley inside the radius; timed), damage triggering a self-destruct,
-an armed device destroyed by damage going off, and each device's
-pulverization blast (rock spewed, colonist stunned, bolts cooked off and
+an armed device destroyed by damage going off, a thrown Ergonomic
+Singularity Grenade (singularity opens, a wall is torn down and a stool
+uninstalled, a steel stack and a colonist are dragged in, it explodes and
+the surviving colonist gets the memory), and each device's pulverization
+blast (rock spewed, colonist stunned, bolts cooked off and
 none spilled, half-made bolts sprayed). Before the destructive tests the
 runner removes the other devices with DestroyMode.Vanish, so a random 5%
 damage trigger cannot set one off mid-test. The script reports those lines plus

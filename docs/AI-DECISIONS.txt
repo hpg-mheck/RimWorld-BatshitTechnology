@@ -131,3 +131,19 @@ unlocks nothing directly). The Ballista's player-facing name is Batshit
 Ballista; its defName stays BT_BatshittiumBallista so the playtest save
 keeps working. The Def validator now honours Class= on plain fields, as
 the game's loader does.
+2026-10-13 Claude: Ergonomic Singularity Grenade, to the spec from Matt
+"Breakpoint" Heck. It is a vanilla-style thrown weapon (equipped, reusable
+on a 6 s cooldown, like frag grenades) made at the Artificer, whose output
+field was generalized from "bolt" to "thing" (LoadAlias keeps old XML and
+saves working). The projectile derives from Projectile_Explosive because
+RimWorld requires that for thrown verbs with a forced-miss radius, and
+spawns a SingularityField instead of exploding. The field rips fixtures
+loose as its reach grows (minifiable: uninstalled via MakeMinified, which
+despawns without a death blast; others: DestroyMode.Deconstruct, leaving
+materials; plants destroyed; natural rock spared), drags pawns and items a
+cell at a time at a quadratically accelerating rate (Core.SingularityPull,
+unit tested; teleports with tweening for pawns, re-spawns for items),
+explodes at 5 s, and gives caught survivors a +30, 3-day memory labelled
+with one of 25 quips (Thought_Quip, now also the Brain Squeezer's base).
+Its weapon tag is BatshitSingularityGrenade so raiders never spawn with
+one.

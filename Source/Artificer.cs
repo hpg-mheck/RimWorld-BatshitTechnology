@@ -1,8 +1,9 @@
 // Batshit Technology - Batshittium Artificer.
 // An automated workbench: haulers keep it loaded with batshittium (vanilla
 // CompRefuelable), and while powered it turns one unit at a time into
-// Ballista bolts, dropped at its interaction spot for haulers to carry to
-// magazines. The player picks which researched bolt type it makes.
+// Ballista bolts or Ergonomic Singularity Grenades, dropped at its
+// interaction spot for haulers to carry off. The player picks which
+// researched output it makes.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -11,13 +12,14 @@ using RimWorld;
 
 namespace BatshitTechnology
 {
-    /// <summary>One bolt type the Artificer can make.</summary>
+    /// <summary>One thing the Artificer can make.</summary>
     public class ArtificerOutput
     {
-        /// <summary>The bolt item.</summary>
-        public ThingDef bolt;
+        /// <summary>The item made. (Before v0.8 it was always a bolt.)</summary>
+        [LoadAlias("bolt")]
+        public ThingDef thing;
 
-        /// <summary>Bolts made from one unit of batshittium.</summary>
+        /// <summary>Items made from one unit of batshittium.</summary>
         public int countPerUnit = 10;
 
         /// <summary>Research that unlocks this output.</summary>
@@ -49,9 +51,9 @@ namespace BatshitTechnology
                 yield return error;
             }
 
-            if (outputs.NullOrEmpty() || outputs.Any(o => o.bolt == null || o.countPerUnit < 1))
+            if (outputs.NullOrEmpty() || outputs.Any(o => o.thing == null || o.countPerUnit < 1))
             {
-                yield return "needs outputs, each with a bolt and a positive countPerUnit";
+                yield return "needs outputs, each with a thing and a positive countPerUnit";
             }
 
             var fuel = parentDef.GetCompProperties<CompProperties_Refuelable>();
@@ -62,7 +64,7 @@ namespace BatshitTechnology
         }
     }
 
-    /// <summary>Works batshittium into bolts while powered and loaded.</summary>
+    /// <summary>Works batshittium into bolts or grenades while powered and loaded.</summary>
     public class CompBatshittiumArtificer : ThingComp
     {
         private int progressTicks;
@@ -83,7 +85,7 @@ namespace BatshitTechnology
         /// first researched output, or null if none is.
         /// </summary>
         public ArtificerOutput Current =>
-            Available.FirstOrDefault(o => o.bolt == selectedBolt) ?? Available.FirstOrDefault();
+            Available.FirstOrDefault(o => o.thing == selectedBolt) ?? Available.FirstOrDefault();
 
         /// <summary>True when powered, loaded and something is researched.</summary>
         private bool CanWork =>
@@ -136,9 +138,9 @@ namespace BatshitTechnology
 
             progressTicks = 0;
             fuel.ConsumeFuel(1f);
-            Thing bolts = ThingMaker.MakeThing(output.bolt);
-            bolts.stackCount = output.countPerUnit;
-            GenPlace.TryPlaceThing(bolts, DropCell(), parent.Map, ThingPlaceMode.Near);
+            Thing made = ThingMaker.MakeThing(output.thing);
+            made.stackCount = output.countPerUnit;
+            GenPlace.TryPlaceThing(made, DropCell(), parent.Map, ThingPlaceMode.Near);
         }
 
         /// <summary>The interaction spot, or the building's cell.</summary>
@@ -153,10 +155,10 @@ namespace BatshitTechnology
             ArtificerOutput output = Current;
             if (output == null)
             {
-                return "Idle: research a bolt type to make";
+                return "Idle: research something for it to make";
             }
 
-            string making = $"Making {output.countPerUnit} {output.bolt.label} per unit";
+            string making = $"Making {output.countPerUnit} {output.thing.label} per unit";
             if (!CanWork)
             {
                 return making + " (idle: needs power and batshittium)";
@@ -181,18 +183,18 @@ namespace BatshitTechnology
             {
                 var command = new Command_Action
                 {
-                    defaultLabel = "Making: " + current.bolt.LabelCap,
-                    defaultDesc = "Switch the bolt type the Artificer makes.",
-                    icon = current.bolt.uiIcon,
+                    defaultLabel = "Making: " + current.thing.LabelCap,
+                    defaultDesc = "Switch what the Artificer makes.",
+                    icon = current.thing.uiIcon,
                     action = () =>
                     {
                         int next = (available.IndexOf(current) + 1) % available.Count;
-                        selectedBolt = available[next].bolt;
+                        selectedBolt = available[next].thing;
                     }
                 };
                 if (available.Count < 2)
                 {
-                    command.Disable("Research another bolt type first.");
+                    command.Disable("Research another output first.");
                 }
 
                 yield return command;
@@ -209,7 +211,7 @@ namespace BatshitTechnology
         }
 
         /// <summary>Selects an output (smoke test).</summary>
-        /// <param name="bolt">The bolt item to make.</param>
-        internal void Select(ThingDef bolt) => selectedBolt = bolt;
+        /// <param name="thing">The item to make.</param>
+        internal void Select(ThingDef thing) => selectedBolt = thing;
     }
 }

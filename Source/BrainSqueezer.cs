@@ -218,28 +218,9 @@ namespace BatshitTechnology
 
     /// <summary>
     /// The squeezing memory. Its label is the last thing the colonist said
-    /// in the squeezer.
+    /// in the squeezer (see Thought_Quip).
     /// </summary>
-    public class Thought_BrainSqueezed : Thought_Memory
+    public class Thought_BrainSqueezed : Thought_Quip
     {
-        private string line;
-
-        /// <summary>The monologue line shown as the label.</summary>
-        public string Line
-        {
-            get => line;
-            set => line = value;
-        }
-
-        /// <summary>The quoted line, or the Def's label if none was set.</summary>
-        public override string LabelCap =>
-            line.NullOrEmpty() ? base.LabelCap : $"“{line}”";
-
-        /// <summary>Saves and loads the line.</summary>
-        public override void ExposeData()
-        {
-            base.ExposeData();
-            Scribe_Values.Look(ref line, "line");
-        }
     }
 }

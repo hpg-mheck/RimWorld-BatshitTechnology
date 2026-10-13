@@ -16,6 +16,8 @@ Brain Squeezer: a chair colonists sit in for moderate recreation, muttering dist
 
 Batshit Ballista: volleys of up to 256 insanely inaccurate, terrifyingly destructive bolts, up to 325 tiles away, every five seconds. Painful (kinetic) and Really Painful (explosive) bolts come from an automated Artificer and feed in from chained magazines. Range and projectile count multiply its power draw, up to four reactors at full fire.
 
+Ergonomic Singularity Grenade: thrown, it drags everything within 10 tiles into a pile for five seconds, ripping furniture and walls loose, then explodes. Survivors find it remarkably comfortable.
+
 Everything blows up: damage can set off a self-destruct, and every other device pulverizes itself in its own way when destroyed.</description>
   <supportedVersions>
     <li>1.6</li>

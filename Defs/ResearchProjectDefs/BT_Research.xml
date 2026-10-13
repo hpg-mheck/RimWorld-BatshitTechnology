@@ -168,4 +168,18 @@
     <researchViewX>3.00</researchViewX>
     <researchViewY>5.00</researchViewY>
   </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>BT_Research_SingularityGrenade</defName>
+    <label>Ergonomic Singularity Grenade</label>
+    <description>Teach the Batshittium Artificer to make Ergonomic Singularity Grenades: one per unit of batshittium. Thrown, each opens a singularity that drags everything within 10 tiles together for five seconds and then explodes. Survivors rave about the comfort.</description>
+    <baseCost>1000</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>BT_Research_Artificer</li>
+    </prerequisites>
+    <tab>BT_BatshitTechnology</tab>
+    <researchViewX>3.00</researchViewX>
+    <researchViewY>6.00</researchViewY>
+  </ResearchProjectDef>
 </Defs>

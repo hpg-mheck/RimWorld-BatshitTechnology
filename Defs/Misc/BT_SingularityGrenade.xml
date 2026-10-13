@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- What survivors of an Ergonomic Singularity Grenade feel. The memory's label is one of these quips,
+       which the pawn also says out loud. -->
+  <ThoughtDef>
+    <defName>BT_ErgonomicallySingularized</defName>
+    <thoughtClass>BatshitTechnology.Thought_Quip</thoughtClass>
+    <durationDays>3</durationDays>
+    <stackLimit>1</stackLimit>
+    <stages>
+      <li>
+        <label>ergonomically singularized</label>
+        <description>I was dragged into a singularity and then it exploded, and it was the most comfortable thing that has ever happened to me.</description>
+        <baseMoodEffect>30</baseMoodEffect>
+      </li>
+    </stages>
+    <modExtensions>
+      <li Class="BatshitTechnology.MonologueExtension">
+        <lines>
+          <li>I can't believe how comfortable that was!</li>
+          <li>Wow, that was so ergonomic!</li>
+          <li>My lower back has never felt better.</li>
+          <li>Finally, lumbar support that understands me.</li>
+          <li>Every vertebra is exactly where it should be.</li>
+          <li>I was compressed to a point and it was lovely.</li>
+          <li>Ten out of ten. Would be singularized again.</li>
+          <li>Best my posture has been in years.</li>
+          <li>It cradled me. The explosion cradled me.</li>
+          <li>I feel aligned. Spiritually and spinally.</li>
+          <li>My wrists have stopped hurting. Everything has.</li>
+          <li>Somebody finally designed something for people.</li>
+          <li>Like a hug from the whole neighbourhood at once.</li>
+          <li>I think my spine just thanked me.</li>
+          <li>Is this what furniture feels like?</li>
+          <li>Gravity, but considerate.</li>
+          <li>I would like to leave a glowing review.</li>
+          <li>All my joints clicked into place on the way in.</li>
+          <li>I've been squeezed and I've been singularized. Singularized wins.</li>
+          <li>Can we do that again, but slower?</li>
+          <li>Like a massage from a black hole.</li>
+          <li>My chiropractor is going to be furious.</li>
+          <li>I didn't know being crushed could be so supportive.</li>
+          <li>Perfectly contoured. Every inch of me.</li>
+          <li>Get me the name of that grenade. I want to write it a letter.</li>
+        </lines>
+      </li>
+    </modExtensions>
+  </ThoughtDef>
+</Defs>

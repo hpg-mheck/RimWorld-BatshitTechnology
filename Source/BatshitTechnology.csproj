@@ -62,6 +62,7 @@
     <Compile Include="SelfDestruct.cs" />
     <Compile Include="SelfDestructAftermath.cs" />
     <Compile Include="Showcase.cs" />
+    <Compile Include="SingularityGrenade.cs" />
     <Compile Include="SmokeTest.cs" />
   </ItemGroup>
   <ItemGroup>

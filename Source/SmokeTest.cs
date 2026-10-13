@@ -118,6 +118,7 @@ namespace BatshitTechnology
             TestReactorBarrage(map, center);
             TestDamageTrigger(map, center);
             TestArmedDeviceDestroyed(map, center);
+            TestSingularityGrenade(map, center);
             TestDeathBlasts(map, center);
         }
 
@@ -498,6 +499,12 @@ namespace BatshitTechnology
             var comp = reactor.TryGetComp<CompBatshittiumReactor>();
             var plant = reactor.TryGetComp<CompPowerPlant>();
 
+            // A unit burns for a random 0.1 to 36 hours, and the tests before
+            // this one run for a couple of in-game hours, so about one run in
+            // twenty the first unit has already burned out. Top up first.
+            fuel.Refuel(fuel.Props.fuelCapacity - fuel.Fuel);
+            Tick(1);
+
             comp.EndBurnNow();
             Tick(3);
             Check("a finished burn spends one unit", fuel.Fuel == 1f, $"fuel {fuel.Fuel}");
@@ -682,6 +689,78 @@ namespace BatshitTechnology
                 aftermath.BoltsLaunched - launchedBefore == barrage.volleys * barrage.boltsPerVolley,
                 $"launched {aftermath.BoltsLaunched - launchedBefore}");
             Tick(300);
+        }
+
+        /// <summary>
+        /// A thrown Ergonomic Singularity Grenade opens a singularity that
+        /// rips a wall down and a stool loose, drags a steel stack and a
+        /// colonist toward it, explodes on time, and leaves the colonist (if
+        /// alive) with the ergonomic memory.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestSingularityGrenade(Map map, IntVec3 center)
+        {
+            IntVec3 at = Clamp(map, center + new IntVec3(-45, 0, -45));
+            PrepareGround(map, CellRect.CenteredOn(at, 14));
+            Thing steel = ThingMaker.MakeThing(ThingDefOf.Steel);
+            steel.stackCount = 30;
+            GenSpawn.Spawn(steel, at + new IntVec3(8, 0, 0), map);
+            Thing wall = GenSpawn.Spawn(
+                ThingMaker.MakeThing(ThingDefOf.Wall, ThingDefOf.WoodLog), at + new IntVec3(0, 0, 6), map);
+            Thing stool = GenSpawn.Spawn(
+                ThingMaker.MakeThing(DefDatabase<ThingDef>.GetNamed("Stool"), ThingDefOf.WoodLog),
+                at + new IntVec3(-5, 0, -4), map);
+            Pawn pawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(p => !p.Dead && !p.Downed);
+            if (pawn != null)
+            {
+                pawn.jobs.StopAll();
+                pawn.Position = at + new IntVec3(-7, 0, 3);
+                pawn.Notify_Teleported();
+            }
+
+            IntVec3 from = at + new IntVec3(11, 0, -2);
+            var grenade = (Projectile)GenSpawn.Spawn(
+                DefDatabase<ThingDef>.GetNamed("BT_Projectile_SingularityGrenade"), from, map);
+            grenade.Launch(null, from.ToVector3Shifted(), at, at, ProjectileHitFlags.IntendedTarget);
+            SingularityField field = null;
+            for (int i = 0; i < 300 && field == null; i++)
+            {
+                Tick(1);
+                field = map.listerThings.ThingsOfDef(BT_SingularityDefOf.BT_SingularityField)
+                    .OfType<SingularityField>().FirstOrDefault();
+            }
+
+            Check("a thrown singularity grenade opens a singularity", field != null);
+            if (field == null)
+            {
+                return;
+            }
+
+            IntVec3 eye = field.Position;
+            float steelBefore = steel.Position.DistanceTo(eye);
+            float pawnBefore = pawn?.Position.DistanceTo(eye) ?? 0f;
+            Tick(150);
+            Check("the singularity rips a wall down and a stool loose",
+                wall.Destroyed && !stool.Spawned && field.TornDown >= 1 && field.Uninstalled >= 1,
+                $"wall gone {wall.Destroyed}, stool spawned {stool.Spawned}, "
+                    + $"torn down {field.TornDown}, uninstalled {field.Uninstalled}");
+            float steelAfter = steel.Spawned ? steel.Position.DistanceTo(eye) : 0f;
+            float pawnAfter = pawn != null && pawn.Spawned ? pawn.Position.DistanceTo(eye) : 0f;
+            Check("the singularity drags items and pawns in",
+                steelAfter < steelBefore - 2f && (pawn == null || (pawnAfter < pawnBefore - 2f
+                    && field.CaughtCount >= 1)),
+                $"steel {steelBefore:F1}->{steelAfter:F1}, pawn {pawnBefore:F1}->{pawnAfter:F1}, "
+                    + $"caught {field.CaughtCount}");
+
+            int comforted = SingularityField.SurvivorsComforted;
+            Tick(200);
+            Check("the singularity explodes and closes", field.Destroyed && field.Exploded);
+            bool thought = pawn?.needs?.mood?.thoughts?.memories?.Memories
+                .Any(m => m.def.defName == "BT_ErgonomicallySingularized") ?? false;
+            Check("caught survivors feel ergonomically singularized",
+                pawn == null || pawn.Dead || (thought && SingularityField.SurvivorsComforted > comforted),
+                $"dead {pawn?.Dead}, thought {thought}");
         }
 
         /// <summary>
