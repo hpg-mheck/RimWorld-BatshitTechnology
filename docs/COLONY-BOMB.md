@@ -336,6 +336,26 @@ come out changed. Added by Matt "Breakpoint" Heck on 2026-10-13.
   reached, and the shelter marks everyone inside at that moment. Pawns
   who entered after the blast passed get nothing.
 
+### Showcase Demo
+
+When the bomb is built, the showcase (`docs/SHOWCASE.md`) gets a
+Colony Bomb demo after its existing ones. Its punchline, added by Matt
+"Breakpoint" Heck on 2026-10-13:
+
+- Two colonists stand just outside the danger radius, on the side
+  nearest the camera's resting point, a couple of tiles apart.
+- When the smoke has fully cleared, the camera pans down toward them,
+  but off-centre: the new town stays the main subject, with the pair near
+  the bottom of the frame and their speech bubbles in view.
+- Pawn 1 says "Holy shit!". A beat (about 1.5 s *(proposal)*). Pawn 2
+  says "I know, right?".
+- Vanilla's interaction bubbles show only icons, so the lines are drawn
+  as speech-style text above each pawn, long enough to read (about 3 s
+  each *(proposal)*). The log gets a capture cue, `[BT-SHOWCASE]
+  HOLYSHIT`.
+- The line is the operator's own, profanity included; the motif's
+  "funny, never cruel" rule is satisfied.
+
 ## Interactions and Edge Cases
 
 - **Destroyed mid-countdown:** the bomb follows the self-destruct rule; it

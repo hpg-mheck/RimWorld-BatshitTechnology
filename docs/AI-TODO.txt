@@ -42,6 +42,9 @@
   - [ ] Colony Bomb Terror-Joy: shelter survivors whose shelter the blast
     touched go violently insane for about 30 s, then enjoy about five
     minutes of cathartic joy (forcefield up or not).
+  - [ ] Showcase demo: when the smoke clears, the camera pans off-centre
+    to two colonists outside the radius ("Holy shit!" ... "I know,
+    right?"), keeping the new town the main subject.
 - [ ] Later: let pawns shoot from inside the Colony Deployment Shelter
   (never while its forcefield is up). Vanilla has no garrison mechanic.
 - [ ] Antiparticle Board: a new material, exactly what it sounds like: a
