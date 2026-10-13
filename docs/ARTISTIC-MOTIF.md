@@ -10,14 +10,15 @@ improvising.
 ## The Premise
 
 Batshit Technology starts from one question, posed by Matt "Breakpoint"
-Heck: *could we have the future sooner if we were willing to accept truly
-unhinged levels of danger?* Every device answers yes, and then shows the
-bill. Each one delivers something genuinely futuristic (limitless power,
-instant towns, matter from rock, comfort at gunpoint) years early, by
-skipping the boring parts: the safety margins, the containment, the
-second prototype. New material should come from the same question: what
-would arrive sooner if nobody minded the risk, and what does the risk
-look like when it lands?
+Heck: *could we have the future sooner, cheaper, or more entertainingly,
+if we were willing to accept truly unhinged levels of danger?* Every
+device answers yes, and then shows the bill. Each one delivers something
+genuinely futuristic (limitless power, instant towns, matter from rock,
+comfort at gunpoint) early, on the cheap, or with a show, by skipping the
+boring parts: the safety margins, the containment, the second prototype.
+New material should come from the same question: what would arrive
+sooner, cost less or be more fun if nobody minded the risk, and what does
+the risk look like when it lands?
 
 ## The Idea in One Line
 
