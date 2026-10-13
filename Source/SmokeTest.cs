@@ -121,6 +121,32 @@ namespace BatshitTechnology
             TestArmedDeviceDestroyed(map, center);
             TestSingularityGrenade(map, center);
             TestDeathBlasts(map, center);
+            TestNoErrorsLogged();
+        }
+
+        /// <summary>
+        /// Nothing in the whole run logged an error, or a warning about the
+        /// mod or about statically held assets. Read from RimWorld's own log
+        /// queue, because Player.log writes errors as plain lines with no
+        /// level and no stack trace (a "Tried to destroy non-destroyable
+        /// thing" error from clearing ground went unnoticed that way).
+        /// </summary>
+        private void TestNoErrorsLogged()
+        {
+            var bad = Log.Messages
+                .Where(m => m.type == LogMessageType.Error
+                    || (m.type == LogMessageType.Warning
+                        && (m.text.Contains("StaticConstructorOnStartup")
+                            || m.text.Contains("BatshitTechnology") || m.text.Contains("BT_"))))
+                .ToList();
+            foreach (LogMessage m in bad)
+            {
+                string firstLine = m.text.Split('\n')[0];
+                Log.Message($"[BT-SMOKE] LOGGED {m.type}: {firstLine}");
+            }
+
+            Check("nothing logged an error or a mod warning", bad.Count == 0,
+                $"{bad.Count} logged (listed above)");
         }
 
         /// <summary>The fuelled reactor produces 250 kW and is burning.</summary>
@@ -1055,7 +1081,9 @@ namespace BatshitTechnology
 
                 foreach (Thing t in c.GetThingList(map).ToList())
                 {
-                    if (!(t is Pawn))
+                    // Steam geysers and the like can't be destroyed; trying
+                    // logs an error.
+                    if (!(t is Pawn) && t.def.destroyable)
                     {
                         t.Destroy();
                     }

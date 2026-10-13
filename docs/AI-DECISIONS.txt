@@ -174,3 +174,14 @@ test (overnight session).
 - The vortex gained a fainter, larger outer layer spun the other way, and
   both layers throb four times, harder each time, in the final second
   (Core.SingularityPull.FinalPulse, unit tested).
+2026-10-13 Claude (later the same night): two more log problems found by
+watching the showcase. The debug log auto-opened over the grenade demo for
+"Tried to destroy non-destroyable thing SteamGeyser" (the showcase's and
+the smoke test's ground clearing destroyed everything in their areas,
+geysers included; they now skip !def.destroyable), and RimWorld warned
+that SingularityField held a Material in a static field outside a
+[StaticConstructorOnStartup] class (it now lives in BT_SingularityAssets).
+Player.log writes errors as plain lines without level or stack trace, so
+the runner's last check now reads RimWorld's own log queue (Log.Messages)
+and fails on any error, or any warning about the mod or about static
+assets, listing each one.

@@ -434,7 +434,9 @@ namespace BatshitTechnology
 
                 foreach (Thing t in c.GetThingList(map).ToList())
                 {
-                    if (!(t is Pawn))
+                    // Steam geysers and the like can't be destroyed; trying
+                    // logs an error (and pops the debug log over the demo).
+                    if (!(t is Pawn) && t.def.destroyable)
                     {
                         t.Destroy();
                     }

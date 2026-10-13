@@ -158,7 +158,9 @@ if (-not $done) { "  (no DONE line: timed out after $TimeoutSeconds s, or the ga
 
 # Errors: RimWorld logs errors and exceptions as plain lines; skip Unity's
 # stack-trace and file-location noise.
-$errorPattern = 'Exception|\bError\b|XML error|Config error|Could not (resolve|find|load)'
+# Also RimWorld's warning about statically held assets that are not loaded
+# at startup on the main thread: a texture held that way may never load.
+$errorPattern = 'Exception|\bError\b|XML error|Config error|Could not (resolve|find|load)|needs a StaticConstructorOnStartup'
 $tracePattern = '^\s*(at |\(Filename|UnityEngine\.|Verse\.Log:)'
 $modPattern = 'BT_|BatshitTechnology|RandomReplicator|Batshitt'
 # An error is the mod's if its own line or its stack trace (the "at ..."
@@ -168,7 +170,8 @@ $errors = @()
 $modErrors = @()
 for ($i = 0; $i -lt $lines.Count; $i++) {
   $line = $lines[$i]
-  if ($line -notmatch $errorPattern -or $line -match $tracePattern) { continue }
+  if ($line -notmatch $errorPattern -or $line -match $tracePattern -or
+      $line.StartsWith("[BT-SMOKE]")) { continue }  # the runner's own lines
   $trace = @()
   for ($j = $i + 1; $j -lt $lines.Count -and $lines[$j] -match $tracePattern; $j++) {
     $trace += $lines[$j]

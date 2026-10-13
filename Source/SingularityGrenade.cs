@@ -31,6 +31,21 @@ namespace BatshitTechnology
         }
     }
 
+    /// <summary>
+    /// The singularity's extra material, loaded at startup on the main
+    /// thread: RimWorld requires that of every static asset.
+    /// </summary>
+    [StaticConstructorOnStartup]
+    public static class BT_SingularityAssets
+    {
+        /// <summary>The texture of the vortex's outer, counter-rotating layer.</summary>
+        public const string OuterVortexPath = "Things/Mote/BT_SingularityVortexOuter";
+
+        /// <summary>The vortex's outer, counter-rotating layer.</summary>
+        public static readonly Material OuterVortex =
+            MaterialPool.MatFrom(OuterVortexPath, ShaderDatabase.Transparent);
+    }
+
     /// <summary>The singularity's settings, on its ThingDef.</summary>
     public class SingularityExtension : DefModExtension
     {
@@ -124,11 +139,6 @@ namespace BatshitTechnology
 
         /// <summary>How often it re-seizes the pawns in reach, in ticks.</summary>
         private const int GrabIntervalTicks = 15;
-
-        /// <summary>The outer, counter-rotating layer's texture.</summary>
-        private const string OuterTexPath = "Things/Mote/BT_SingularityVortexOuter";
-
-        private static Material outerMaterial; // loaded on first draw, on the main thread
 
         private Thing instigator;
         private int ticks;
@@ -507,13 +517,12 @@ namespace BatshitTechnology
 
             Vector3 pos = drawLoc;
             pos.y = AltitudeLayer.MoteOverhead.AltitudeFor();
-            outerMaterial ??= MaterialPool.MatFrom(OuterTexPath, ShaderDatabase.Transparent);
             float outer = size * 1.25f;
             Graphics.DrawMesh(
                 MeshPool.plane10,
                 Matrix4x4.TRS(pos - new Vector3(0f, 0.002f, 0f),
                     Quaternion.AngleAxis(turns * 0.6f * 360f, Vector3.up), new Vector3(outer, 1f, outer)),
-                outerMaterial, 0);
+                BT_SingularityAssets.OuterVortex, 0);
             Graphics.DrawMesh(
                 MeshPool.plane10,
                 Matrix4x4.TRS(pos, Quaternion.AngleAxis(-turns * 360f, Vector3.up), new Vector3(size, 1f, size)),

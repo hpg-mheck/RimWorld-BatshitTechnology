@@ -428,7 +428,7 @@ public sealed class XmlDefinitionTests
         Assert.Equal("BT_ErgonomicallySingularized", settings.Element("survivorThought")?.Value);
 
         // The vortex's outer, counter-rotating layer is loaded by path in code
-        // (SingularityField.OuterTexPath), so no Def points at it.
+        // (BT_SingularityAssets.OuterVortexPath), so no Def points at it.
         Assert.True(File.Exists(Path.Combine(
             FixturesDirectory, "Textures", "Things", "Mote", "BT_SingularityVortexOuter.png")));
 
