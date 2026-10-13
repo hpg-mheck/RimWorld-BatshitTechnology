@@ -36,7 +36,8 @@ into Mods, and starts a quick-test map. The -btsmoketest runner
 logs [BT-SMOKE] PASS/FAIL lines: reactor output and burn cycle, power
 connection, Transmogrifier bills, replication, refrigeration and its power
 draw, hauling, ejection, room heating, and the self-destruct countdown,
-abort and detonation (with timing). The script reports those lines plus
+abort, detonation and aftermath (fires surviving the shockwave, secondary
+explosions inside the circle; with timing). The script reports those lines plus
 every error in the game log and exits 1 on any failure or mod error. Use
 -KeepOpen to look around afterwards, or -Showcase to skip the tests and
 build a running demo base instead (Source/Showcase.cs), with sound on.

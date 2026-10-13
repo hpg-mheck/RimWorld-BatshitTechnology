@@ -190,9 +190,13 @@ colony pays the listed cost.
   ten-second countdown shows in the inspect pane, with a hissing alarm,
   camera shake and a flashing blast ring visible even when the replicator is
   not selected. Pawns within 25 tiles who are not drafted run away.
-- At zero: a Bomb explosion of radius 75, plus an 80 percent chance to start
-  a fire in every cell of that radius. The device and its stored food are
-  destroyed.
+- At zero: a Bomb explosion of radius 75. Fires follow its shockwave out,
+  with an 80 percent chance per cell of that radius, lit just behind the
+  wave (a vanilla Bomb wave puts out any fire it touches). Secondary
+  explosions (incendiary bursts, small blasts and the occasional big one)
+  go off at random inside the expanding circle, 15 per second, and keep
+  going for four seconds after the wave reaches the edge. The device and
+  its stored food are destroyed.
 - **Cancel self-destruct order** withdraws the order before anyone arms it.
   **Abort self-destruct** stops a running countdown.
 - It never triggers on its own; it only arms after an explicit player
@@ -220,6 +224,10 @@ All values are XML. The replicator's are in
 | selfDestructFireChance        | 0.8       | per-cell ignite chance        |
 | selfDestructFireSize          | 0.3       | size of each started fire     |
 | selfDestructFleeRadius        | 25        | pawns this close flee         |
+| selfDestructSecondariesPerSecond | 15     | secondary explosions per s    |
+| selfDestructAftershockSeconds | 4         | secondaries after the wave    |
+| selfDestructSecondaryInnerFraction | 0.2  | closest, as a share of wave r |
+| selfDestructSecondaries       | 3 kinds   | damage, radius, odds, fire    |
 
 The storage tab's default priority and filter are under
 `<building><defaultStorageSettings>` in the same file.
@@ -274,7 +282,10 @@ motif.
   Really Painful bolts, the Ballista Magazine (edge-chained feeding), the
   automated Batshittium Artificer, and five research projects under
   Batshittium Arcana.
-- **v0.8**: renamed from Random Replicator to Batshit Technology and moved
+- **v0.8**: the self-destruct's fires now survive its own shockwave and
+  follow it out, with secondary explosions inside the circle; the Random
+  Replicator has its own sprite; docs/ARTISTIC-MOTIF.md. Also renamed from
+  Random Replicator to Batshit Technology and moved
   to its own repository, history included. New package ID
   `breakpoint8088.BatshitTechnology`; def names now start with `BT_`
   (the replicator itself is `BT_RandomReplicator`), and the code namespace

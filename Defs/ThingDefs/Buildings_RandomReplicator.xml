@@ -89,6 +89,36 @@
         <selfDestructFireChance>0.8</selfDestructFireChance>
         <selfDestructFireSize>0.3</selfDestructFireSize>
         <selfDestructFleeRadius>25</selfDestructFleeRadius>
+        <!-- Aftermath: fires follow the blast wave out, and secondary
+             explosions go off inside the expanding circle, then keep
+             going for a few seconds. Avoid plain Bomb damage here: its
+             explosions put out every fire they touch. BombSuper looks
+             the same and leaves fires burning. -->
+        <selfDestructSecondariesPerSecond>15</selfDestructSecondariesPerSecond>
+        <selfDestructAftershockSeconds>4</selfDestructAftershockSeconds>
+        <selfDestructSecondaryInnerFraction>0.2</selfDestructSecondaryInnerFraction>
+        <selfDestructSecondaries>
+          <li> <!-- incendiary bursts -->
+            <damageDef>Flame</damageDef>
+            <radius>2.9~4.9</radius>
+            <weight>5</weight>
+            <chanceToStartFire>0.8</chanceToStartFire>
+          </li>
+          <li> <!-- small blasts -->
+            <damageDef>BombSuper</damageDef>
+            <damage>40</damage>
+            <radius>1.9~3.9</radius>
+            <weight>4</weight>
+            <chanceToStartFire>0.5</chanceToStartFire>
+          </li>
+          <li> <!-- the occasional big one -->
+            <damageDef>BombSuper</damageDef>
+            <damage>80</damage>
+            <radius>5.9~7.9</radius>
+            <weight>1</weight>
+            <chanceToStartFire>0.5</chanceToStartFire>
+          </li>
+        </selfDestructSecondaries>
       </li>
     </comps>
     <tickerType>Normal</tickerType>

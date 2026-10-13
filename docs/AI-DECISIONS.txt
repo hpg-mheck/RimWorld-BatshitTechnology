@@ -97,3 +97,15 @@ refrigerated compartment, dispensing hatch, "?" screen, guarded
 self-destruct button), replacing the borrowed vanilla Infinite
 Chemreactor; a new XML test keeps every mod thing on mod art. New palette
 entries: FROST_* for refrigeration and DANGER_RED.
+2026-10-13 Claude: Self-destruct aftermath, after Matt "Breakpoint" Heck
+found the blast "just sort of a shockwave". Root cause: in 1.6 a Bomb
+explosion destroys every Fire it touches (DamageWorker.ExplosionDamageThing),
+and the old code lit the fire blanket at detonation, so the expanding wave
+put it out. MapComponent_SelfDestructAftermath now lights the same fires
+(same chance and size) three ticks behind the wave front, using vanilla's
+timing (1.5 ticks per tile at speed 1), and sets off secondary explosions
+at 15 per second inside the expanding circle and for 4 s after. The
+secondaries are XML entries (Flame bursts, BombSuper at 40 and 80 damage);
+BombSuper looks like Bomb but is not caught by the fire check. Timing and
+sampling live in Core.BlastSchedule with unit tests. The aftermath is saved
+with the map.

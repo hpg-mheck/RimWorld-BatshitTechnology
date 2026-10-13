@@ -20,4 +20,4 @@ covered instead by: Def validation against the real game assembly
 (Tools/validate-defs.ps1), the XML regression tests, and the in-game smoke
 test (Tools/smoke-test.ps1). Pure logic lives in BatshitTechnology.Core with
 unit tests (WeightedSelector, ReactorHeat, MonologuePicker, BallistaPower,
-MagazineNetwork).
+MagazineNetwork, BlastSchedule).

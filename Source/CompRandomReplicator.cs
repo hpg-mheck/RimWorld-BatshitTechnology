@@ -108,6 +108,27 @@ namespace BatshitTechnology
         /// <summary>Pawns this close run during the countdown.</summary>
         public float selfDestructFleeRadius = 25f;
 
+        /// <summary>
+        /// Secondary explosions per second, from the blast until the
+        /// aftershocks end. See MapComponent_SelfDestructAftermath.
+        /// </summary>
+        public float selfDestructSecondariesPerSecond = 15f;
+
+        /// <summary>
+        /// Seconds the secondary explosions continue after the blast wave
+        /// reaches its full radius.
+        /// </summary>
+        public float selfDestructAftershockSeconds = 4f;
+
+        /// <summary>
+        /// Secondaries land no closer to the centre than this fraction of
+        /// the wave's current radius (0 = anywhere inside it).
+        /// </summary>
+        public float selfDestructSecondaryInnerFraction = 0.2f;
+
+        /// <summary>The kinds of secondary explosion; empty means none.</summary>
+        public List<SecondaryExplosion> selfDestructSecondaries;
+
         [Unsaved] private List<WeightedOption<ThingDef>> cachedFoodOptions;
 
         /// <summary>Binds these properties to their comp class.</summary>
@@ -203,6 +224,29 @@ namespace BatshitTechnology
                 yield return "selfDestructRadius and selfDestructFleeRadius "
                     + "must not exceed the engine maximum of "
                     + $"{GenRadial.MaxRadialPatternRadius:F1}";
+            }
+
+            if (selfDestructSecondariesPerSecond < 0f
+                || selfDestructAftershockSeconds < 0f)
+            {
+                yield return "selfDestructSecondariesPerSecond and "
+                    + "selfDestructAftershockSeconds cannot be negative";
+            }
+
+            if (selfDestructSecondaryInnerFraction < 0f
+                || selfDestructSecondaryInnerFraction > 1f)
+            {
+                yield return "selfDestructSecondaryInnerFraction must be "
+                    + "between 0 and 1";
+            }
+
+            foreach (SecondaryExplosion kind in
+                selfDestructSecondaries ?? Enumerable.Empty<SecondaryExplosion>())
+            {
+                foreach (string error in kind.ConfigErrors())
+                {
+                    yield return error;
+                }
             }
         }
     }
@@ -651,8 +695,9 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Destroys the device and its stored food, then sets off the blast
-        /// and the fires.
+        /// Destroys the device and its stored food, then sets off the blast;
+        /// the aftermath map component follows it out with fires and
+        /// secondary explosions.
         /// </summary>
         private void Detonate()
         {
@@ -669,15 +714,11 @@ namespace BatshitTechnology
                 center, map, radius, DamageDefOf.Bomb, parent,
                 Props.selfDestructDamage);
 
-            // Blanket ignite: high chance to light each cell in the radius
-            foreach (IntVec3 c in GenRadial.RadialCellsAround(center, radius, true))
-            {
-                if (c.InBounds(map) && Rand.Chance(Props.selfDestructFireChance))
-                {
-                    FireUtility.TryStartFireIn(
-                        c, map, Props.selfDestructFireSize, null);
-                }
-            }
+            // The Bomb wave destroys every fire it touches, so fires lit now
+            // would be snuffed as it passes. The aftermath lights them just
+            // behind the wave instead, and adds the secondary explosions.
+            map.GetComponent<MapComponent_SelfDestructAftermath>()
+                ?.Begin(center, parent.def);
         }
 
         /// <summary>This map's countdown overlay component.</summary>
@@ -889,7 +930,8 @@ namespace BatshitTechnology
                     + "self-destruct at its interaction spot. Once armed, it "
                     + $"counts down {Props.selfDestructSeconds:0.#} seconds, "
                     + $"then detonates: a ~{Props.selfDestructRadius:0}-tile "
-                    + "blast with widespread fires. Pawns within "
+                    + "blast, fires racing out behind the shockwave and a "
+                    + "few seconds of secondary explosions. Pawns within "
                     + $"{Props.selfDestructFleeRadius:0} tiles flee during the "
                     + "countdown. Stored food is destroyed.",
                 icon = BT_Textures.ArmSelfDestruct,

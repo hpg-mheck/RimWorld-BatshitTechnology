@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using BatshitTechnology.Core;
 using Verse;
 using RimWorld;
 using Verse.AI;
@@ -512,21 +513,57 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// A full countdown destroys the replicator. Also times the blast
-        /// and the fires that follow, as a performance check.
+        /// A full countdown destroys the replicator; fires survive the blast
+        /// wave out to its edge, and secondary explosions go off inside the
+        /// circle until the aftershocks end. Also times the blast and its
+        /// aftermath, as a performance check.
         /// </summary>
         /// <param name="replicator">The replicator.</param>
         private void TestDetonation(Thing replicator)
         {
+            Map map = replicator.Map;
+            IntVec3 center = replicator.Position;
             var comp = replicator.TryGetComp<CompRandomReplicator>();
+            var props = comp.Props;
+            var aftermath = map.GetComponent<MapComponent_SelfDestructAftermath>();
+            int firedBefore = aftermath.SecondariesFired;
             comp.ArmSelfDestruct();
             var watch = Stopwatch.StartNew();
-            Tick(Mathf.RoundToInt(comp.Props.selfDestructSeconds * 60f) + 10);
+            Tick(Mathf.RoundToInt(props.selfDestructSeconds * 60f) + 10);
             long countdownMs = watch.ElapsedMilliseconds;
             Check("the countdown ends in detonation", replicator.Destroyed);
+            Check("an aftermath follows the blast", aftermath.Active);
+
+            // Before v0.8 the wave put out every fire lit at detonation.
+            watch.Restart();
+            int waveTicks = BlastSchedule.WaveTicks(props.selfDestructRadius, 1d);
+            Tick(waveTicks);
+            float half = props.selfDestructRadius / 2f;
+            var fires = map.listerThings.ThingsOfDef(ThingDefOf.Fire)
+                .Where(f => f.Position.InHorDistOf(center, props.selfDestructRadius))
+                .ToList();
+            int outerFires = fires.Count(f => !f.Position.InHorDistOf(center, half));
+            Check("fires survive the shockwave out to its edge",
+                outerFires >= 100,
+                $"fires in radius {fires.Count}, beyond half radius {outerFires}");
+
+            int aftershockTicks = Mathf.RoundToInt(props.selfDestructAftershockSeconds * 60f);
+            Tick(aftershockTicks + 30);
+            long aftermathMs = watch.ElapsedMilliseconds;
+            int fired = aftermath.SecondariesFired - firedBefore;
+            int expected = Mathf.FloorToInt(
+                props.selfDestructSecondariesPerSecond * (waveTicks + aftershockTicks) / 60f);
+            Check("secondary explosions go off inside the blast circle",
+                fired >= expected * 0.8f
+                    && aftermath.MaxSecondaryDistance <= props.selfDestructRadius + 1f,
+                $"fired {fired} of ~{expected}, farthest {aftermath.MaxSecondaryDistance:F1}");
+            Check("the aftermath ends", !aftermath.Active);
+
             watch.Restart();
             Tick(600);
             Log.Message($"[BT-SMOKE] TIMING countdown+blast {countdownMs} ms; "
+                + $"wave+aftershocks {aftermathMs} ms ({fired} secondaries, "
+                + $"{aftermath.FiresStarted} fires); "
                 + $"next 600 ticks of fire {watch.ElapsedMilliseconds} ms");
         }
 
