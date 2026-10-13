@@ -38,8 +38,9 @@ destination; a miss into solid rock blasts a landing hole first.
   while it is landed or hovering low *(proposal)*. Both can fire their
   ranged weapons from it, from its position and altitude. No pilot is
   needed *(proposal)*: it flies itself.
-  - The same "shoot from inside" mechanism is backlogged for the Colony
-    Deployment Shelter, so it is built once and shared.
+  - Shooting from it uses a general "firing positions" component, a
+    thing pawns can shoot out of, backlogged in docs/AI-TODO.txt and
+    shared with the Colony Deployment Shelter.
 - **Size and art** *(proposal)*: about 3 by 2 tiles landed. Drawn per the
   motif: a riveted steel gondola under a gasbag, with batshittium as the
   lifting agent and the one focal glow, a faint magenta through the

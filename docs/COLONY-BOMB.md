@@ -265,9 +265,10 @@ scale raids with colony wealth. That is the catch, and it is intended.
   disturbing =\*FOOMPF!\*= effect: no corpse, no gear, nothing left.
   Pawns already inside are safe. The float-menu order stays available,
   with a warning in its label *(proposal)*.
-- Pawns inside cannot shoot. Shooting from inside is future work. Vanilla
-  has no garrison mechanic, so it is not easy. It would never be allowed
-  while the forcefield is up.
+- Pawns inside cannot shoot. Shooting from inside is future work, through
+  the general "firing positions" component backlogged in
+  `docs/AI-TODO.txt` (shared with the Batshit Blimp). It would never be
+  allowed while the forcefield is up.
 
 ### The Forcefield
 

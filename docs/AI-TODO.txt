@@ -45,8 +45,20 @@
   - [ ] Showcase demo: when the smoke clears, the camera pans off-centre
     to two colonists outside the radius ("Holy shit!" ... "I know,
     right?"), keeping the new town the main subject.
-- [ ] Later: let pawns shoot from inside the Colony Deployment Shelter
-  (never while its forcefield is up). Vanilla has no garrison mechanic.
+- [ ] A general "firing positions" component: a thing that holds pawns
+  and lets them shoot their own ranged weapons out of it, with their own
+  skill, from its position, subject to the holder's rules. Vanilla has no
+  garrison mechanic. Matt "Breakpoint" Heck agreed on 2026-10-13 that
+  "thing pawns can shoot out of" should be generalized. Users so far:
+  - the Batshit Blimp's two passengers (with the altitude accuracy
+    factor; docs/BATSHIT-BLIMP.md);
+  - later, the Colony Deployment Shelter (never while its forcefield is
+    up; docs/COLONY-BOMB.md).
+  Shape (proposal): a ThingComp (CompFiringPositions) with capacity and a
+  CanFire hook the holder overrides; a proxy verb per occupant that
+  borrows the occupant's equipped verb, so damage, range, cooldown and
+  skill come from the pawn; occupants listed as gizmos for targeting.
+  Prefer no Harmony (see the Harmony policy in AI-DECISIONS).
 - [ ] Antiparticle Board: a new material, exactly what it sounds like: a
   raw, shoddy, low-quality antimatter matrix. Requested by Matt
   "Breakpoint" Heck on 2026-10-13. Proposals, pending his answers (see
