@@ -87,6 +87,7 @@ $uiScale = if ($forViewing) { '2' } else { '1' }
   <runInBackground>True</runInBackground>
   <devMode>True</devMode>
   <pauseOnError>False</pauseOnError>
+  <automaticPauseMode>Never</automaticPauseMode>
   <langFolderName>English</langFolderName>
 </PrefsData>
 "@ | Set-Content -Encoding UTF8 (Join-Path $config 'Prefs.xml')

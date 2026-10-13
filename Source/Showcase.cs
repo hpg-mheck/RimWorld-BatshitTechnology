@@ -4,8 +4,10 @@
 // a working demo base: a fuelled reactor powering a stocked replicator, the
 // Transmogrifier with a bill and rock chunks, a colonist in the Brain
 // Squeezer, the Artificer making bolts, and a Ballista with chained,
-// loaded magazines firing explosive volleys at open ground. Then it leaves
-// the game running.
+// loaded magazines firing explosive volleys at open ground. A second
+// replicator, alone in the most open far corner, arms its self-destruct
+// five seconds later with the camera on it, so the blast and its aftermath
+// play out well clear of the base. Then it leaves the game running.
 
 using System.Linq;
 using Verse;
@@ -75,11 +77,15 @@ namespace BatshitTechnology
 
             map.powerNetManager.UpdatePowerNetsAndConnections_First();
             SendColonistToSqueezer(map, squeezer);
-            Find.CameraDriver.JumpToCurrentMapLoc(center);
+            Thing doomed = BuildSelfDestructDemo(map, center);
+            Find.CameraDriver.JumpToCurrentMapLoc(doomed.Position);
+            Find.CameraDriver.SetRootSize(MaxCameraSize);
             Find.TickManager.CurTimeSpeed = TimeSpeed.Normal;
             Messages.Message(
-                "Batshit Technology showcase: everything is built and running. "
-                    + "Select things to see their buttons and status.",
+                "Batshit Technology showcase: this lone replicator arms its "
+                    + "self-destruct in five seconds. The demo base is at the "
+                    + "map's centre; select things there to see their buttons "
+                    + "and status.",
                 MessageTypeDefOf.PositiveEvent, false);
             // Tools/smoke-test.ps1 waits for this line before maximizing.
             Log.Message("[BT-SHOWCASE] READY");
@@ -113,6 +119,87 @@ namespace BatshitTechnology
             target.x = System.Math.Min(target.x, map.Size.x - 10);
             ballista.OrderAttack(new LocalTargetInfo(target));
         }
+
+        /// <summary>
+        /// Distance from the base to the self-destruct demo, along both axes:
+        /// about 106 tiles, clear of the 75-tile blast and the base's own
+        /// half-width.
+        /// </summary>
+        private const int DemoOffset = 75;
+
+        /// <summary>The camera's widest zoom (CameraMapConfig.sizeRange.max).</summary>
+        private const float MaxCameraSize = 60f;
+
+        /// <summary>
+        /// Game ticks between the base being ready and the demo arming: time
+        /// for the window to maximize and the viewer to find the rings.
+        /// </summary>
+        private const int ArmDelayTicks = 300;
+
+        private static Thing pendingDemo;
+        private static int armAtTick;
+
+        /// <summary>
+        /// Called every game tick by the runner; arms the self-destruct demo
+        /// when its moment comes.
+        /// </summary>
+        internal static void Tick()
+        {
+            if (pendingDemo == null || Find.TickManager.TicksGame < armAtTick)
+            {
+                return;
+            }
+
+            if (pendingDemo.Spawned)
+            {
+                pendingDemo.TryGetComp<CompRandomReplicator>().ArmSelfDestruct();
+            }
+
+            pendingDemo = null;
+        }
+
+        /// <summary>
+        /// A replicator alone on a small pad in the far corner with the most
+        /// open ground, selected so its blast rings show, and due to arm its
+        /// self-destruct after <see cref="ArmDelayTicks"/>. Fog is cleared so
+        /// the whole blast can be watched.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="baseCenter">The demo base's centre.</param>
+        /// <returns>The replicator.</returns>
+        private static Thing BuildSelfDestructDemo(Map map, IntVec3 baseCenter)
+        {
+            IntVec3 spot = new[]
+                {
+                    new IntVec3(-DemoOffset, 0, DemoOffset),
+                    new IntVec3(DemoOffset, 0, DemoOffset),
+                    new IntVec3(-DemoOffset, 0, -DemoOffset),
+                    new IntVec3(DemoOffset, 0, -DemoOffset),
+                }
+                .Select(offset => baseCenter + offset)
+                .Where(c => CellRect.CenteredOn(c, 3).InBounds(map))
+                .OrderByDescending(c => OpenGround(map, c))
+                .First();
+            map.fogGrid.ClearAllFog();
+            Clear(map, CellRect.CenteredOn(spot, 2));
+            Thing replicator = Spawn(map, "BT_RandomReplicator", spot);
+            Find.Selector.ClearSelection();
+            Find.Selector.Select(replicator, playSound: false);
+            pendingDemo = replicator;
+            armAtTick = Find.TickManager.TicksGame + ArmDelayTicks;
+            return replicator;
+        }
+
+        /// <summary>
+        /// Open, unroofed, standable cells near a spot: where a blast and its
+        /// fires have the most to show.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="spot">The candidate centre.</param>
+        /// <returns>How many open cells lie within 20 tiles.</returns>
+        private static int OpenGround(Map map, IntVec3 spot) =>
+            GenRadial.RadialCellsAround(spot, 20f, true)
+                .Count(c => c.InBounds(map) && c.Standable(map) && !c.Roofed(map));
 
         /// <summary>Starts a free colonist on a session in the squeezer.</summary>
         /// <param name="map">The map.</param>

@@ -37,6 +37,9 @@ namespace BatshitTechnology
         {
         }
 
+        /// <summary>Lets the showcase run its timed steps.</summary>
+        public override void GameComponentTick() => Showcase.Tick();
+
         /// <summary>
         /// Once per game, after the map has settled for a couple of
         /// seconds, runs the test and quits.

@@ -58,7 +58,10 @@ To see everything at once without touching your own saves or mod list, run
 RimWorld on a quick-test map with an isolated data folder and builds a
 working demo base: reactor, stocked replicator, Transmogrifier with a bill,
 a colonist in the Brain Squeezer, the Artificer, and a Ballista firing
-explosive volleys from chained magazines.
+explosive volleys from chained magazines. The camera starts on a lone
+replicator in the most open far corner, which arms its self-destruct five
+seconds in, well clear of the base. The window opens maximized at 2x UI
+scale.
 
 ## Research
 
