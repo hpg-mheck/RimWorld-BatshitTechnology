@@ -156,6 +156,21 @@ namespace BatshitTechnology
             CellRect.FromLimits(ScaleX(map, 45), ScaleZ(map, 150), ScaleX(map, 60), ScaleZ(map, 177));
 
         /// <summary>
+        /// Where to look for AnyRim, in order: its own window, then the
+        /// north-west half of the map (x 45..100, z 120..177 on the 250-tile
+        /// quick-test map, scaled). The keep-aways still hold everywhere.
+        /// One map had an insect hive close enough to rule out the whole
+        /// first window.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <returns>The windows, best first.</returns>
+        internal static List<CellRect> AnyRimWindows(Map map) => new List<CellRect>
+        {
+            AnyRimWindow(map),
+            CellRect.FromLimits(ScaleX(map, 45), ScaleZ(map, 120), ScaleX(map, 100), ScaleZ(map, 177)),
+        };
+
+        /// <summary>
         /// What AnyRim keeps away from: 10 tiles from the base's cleared
         /// square, 15 from the grenade clearing, and the demo-corner reach
         /// from the north-east and south-east pads, so that those two stay
@@ -190,9 +205,18 @@ namespace BatshitTechnology
             tourAtTick = -1;
             try
             {
-                AnyRimBuildReport report = AnyRim.BuildBest(
-                    map, AnyRim.DefaultSeed, AnyRimWindow(map), AnyRimPreferredSite(map),
-                    AnyRimKeepAways(baseCenter));
+                AnyRimBuildReport report = new AnyRimBuildReport();
+                foreach (CellRect window in AnyRimWindows(map))
+                {
+                    report = AnyRim.BuildBest(
+                        map, AnyRim.DefaultSeed, window, AnyRimPreferredSite(map),
+                        AnyRimKeepAways(baseCenter));
+                    if (report.Anchor.IsValid)
+                    {
+                        break;
+                    }
+                }
+
                 MapComponent_AnyRim record = map.GetComponent<MapComponent_AnyRim>();
                 if (report.Anchor.IsValid && record != null && record.Built
                     && report.Plan != null)

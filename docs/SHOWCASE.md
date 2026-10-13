@@ -446,8 +446,12 @@ The quick-test map is random, so the town finds its own ground:
   - natural rock 4, thick rock roof 2, thin roof 1, other ruins 1;
   - 10 per tile of distance from the preferred spot.
   
-  The cheapest wins. If none qualifies, the showcase logs
-  `[BT-SHOWCASE] AnyRim skipped` and carries on without it.
+  The cheapest wins. If none qualifies (one map had an insect hive
+  close enough to rule out the whole window), the search widens to the
+  north-west half of the map, x 45..100 and z 120..177, with the same
+  rules. If that fails too, the showcase logs `[BT-SHOWCASE] AnyRim
+  skipped` and carries on without it. The smoke test then tries the
+  whole map, since it tests the town rather than the showcase's site.
 - **Levelling the town and its 4-tile firebreak.** Only the cells the
   town occupies are touched: each part grown by the firebreak, and the
   taper cells actually laid. The empty land inside the town's bounding

@@ -167,6 +167,12 @@ namespace BatshitTechnology
         /// <summary>Where the bolts leave from (the device's true centre).</summary>
         public Vector3 origin;
 
+        /// <summary>
+        /// The stand-in that launches the bolts (see <see cref="BoltOrigin"/>);
+        /// made on the first tick if a save from before it existed has none.
+        /// </summary>
+        public BoltOrigin launcher;
+
         /// <summary>Volleys launched so far.</summary>
         public int volleysFired;
 
@@ -182,6 +188,11 @@ namespace BatshitTechnology
                 return false;
             }
 
+            if (launcher == null || launcher.Destroyed)
+            {
+                launcher = BoltOrigin.Place(map, center, source);
+            }
+
             int ticks = Find.TickManager.TicksGame - startTick;
             while (volleysFired < barrage.volleys
                 && ticks >= volleysFired * barrage.volleyIntervalTicks)
@@ -191,7 +202,7 @@ namespace BatshitTechnology
                 for (int i = 0; i < barrage.boltsPerVolley; i++)
                 {
                     if (BoltLauncher.TryLaunchInAnnulus(
-                        barrage.projectile, map, center, origin, props.blastRadius, inner,
+                        launcher, barrage.projectile, map, center, origin, props.blastRadius, inner,
                         out float distance))
                     {
                         owner.BoltsLaunched++;
@@ -209,6 +220,7 @@ namespace BatshitTechnology
             base.ExposeData();
             Scribe_Values.Look(ref origin, "origin");
             Scribe_Values.Look(ref volleysFired, "volleysFired");
+            Scribe_References.Look(ref launcher, "launcher");
         }
     }
 

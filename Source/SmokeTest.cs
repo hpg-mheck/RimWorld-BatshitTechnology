@@ -662,9 +662,23 @@ namespace BatshitTechnology
             AnyRimBuildReport report;
             try
             {
-                report = AnyRim.BuildBest(
-                    map, AnyRim.DefaultSeed, Showcase.AnyRimWindow(map),
-                    Showcase.AnyRimPreferredSite(map), Showcase.AnyRimKeepAways(map.Center));
+                // The showcase's windows first, then anywhere on the map:
+                // this test is about the town, and an infested north-west
+                // (one map had an insect hive there) is the showcase's
+                // documented reason to skip it, not a fault.
+                var windows = Showcase.AnyRimWindows(map);
+                windows.Add(CellRect.WholeMap(map));
+                report = new AnyRimBuildReport();
+                foreach (CellRect window in windows)
+                {
+                    report = AnyRim.BuildBest(
+                        map, AnyRim.DefaultSeed, window,
+                        Showcase.AnyRimPreferredSite(map), Showcase.AnyRimKeepAways(map.Center));
+                    if (report.Anchor.IsValid)
+                    {
+                        break;
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -1135,6 +1149,36 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// Spawns wild animals in a ring of spots across a blast's radius,
+        /// for checks that need creatures under the bolts.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The blast's centre.</param>
+        /// <param name="radius">The blast's radius.</param>
+        /// <returns>The animals spawned (fewer where no cell was standable).</returns>
+        private static List<Pawn> SpawnWildAnimalsAround(Map map, IntVec3 center, float radius)
+        {
+            var animals = new List<Pawn>();
+            PawnKindDef kind = DefDatabase<PawnKindDef>.GetNamedSilentFail("Muffalo")
+                ?? DefDatabase<PawnKindDef>.AllDefs.First(k => k.RaceProps.Animal);
+            for (int i = 0; i < 24; i++)
+            {
+                float angle = i * 15f;
+                float distance = radius * (0.2f + (0.7f * (i % 4) / 3f));
+                IntVec3 spot = center + (Vector3Utility.FromAngleFlat(angle) * distance).ToIntVec3();
+                if (!spot.InBounds(map)
+                    || !CellFinder.TryFindRandomCellNear(spot, map, 4, c => c.Standable(map), out IntVec3 cell))
+                {
+                    continue;
+                }
+
+                animals.Add((Pawn)GenSpawn.Spawn(PawnGenerator.GeneratePawn(kind, null), cell, map));
+            }
+
+            return animals;
+        }
+
+        /// <summary>
         /// Damage can trigger a self-destruct: hits on a reactor (1 damage
         /// each, so it survives) trigger it within a few hundred, and the
         /// result can still be aborted.
@@ -1347,15 +1391,34 @@ namespace BatshitTechnology
                 t => AddBolts(((Building_BatshittiumBallista)t).InternalMagazine, explosive, 16));
 
             // Magazine: up to the cap cooks off, the rest are pulverized.
+            // Half the bolts are painful ones, which fly as bullets, and wild
+            // animals stand around it: vanilla makes an animal flee from the
+            // launcher of a bullet that lands near it (Notify_ClamorImpact),
+            // which threw a NullReferenceException while cook-off bolts had
+            // no launcher. Seen in the showcase, when AnyRim's Ballista yard
+            // went up beside the pens.
             at = Clamp(map, center + new IntVec3(0, 0, -45));
             PrepareGround(map, CellRect.CenteredOn(at, 10));
             launched = aftermath.BoltsLaunched;
             loose = LooseBolts(map);
+            var animals = SpawnWildAnimalsAround(map, at, 25f);
+            var mark = ErrorMark();
             KillAndCheck(map, aftermath, "BT_BallistaMagazine", at,
                 "a destroyed magazine cooks off its cap and pulverizes the rest",
                 () => aftermath.BoltsLaunched - launched == 160 && LooseBolts(map) <= loose,
                 () => $"launched {aftermath.BoltsLaunched - launched}, loose {loose}->{LooseBolts(map)}",
-                t => AddBolts(((Building_BallistaMagazine)t).Storage, explosive, 300));
+                t =>
+                {
+                    AddBolts(((Building_BallistaMagazine)t).Storage, explosive, 150);
+                    AddBolts(((Building_BallistaMagazine)t).Storage, BoltDef("BT_BoltPainful"), 150);
+                });
+            Tick(240); // let the bolts land among the animals
+            Check("cook-off bolts landing near animals log no errors", !NewErrorSince(mark),
+                $"an error was logged ({animals.Count} animals around the magazine)");
+            foreach (Pawn animal in animals.Where(a => a.Spawned))
+            {
+                animal.Destroy(DestroyMode.Vanish);
+            }
 
             // Artificer: a few half-made bolts fly.
             at = Clamp(map, center + new IntVec3(45, 0, 45));

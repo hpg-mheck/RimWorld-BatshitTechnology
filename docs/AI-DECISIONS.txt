@@ -244,3 +244,16 @@ asked for (docs/SHOWCASE.md). Decisions:
   critical stockpile and magazines pulling the colony's bolts into town,
   residents starving within days, and the clearing touching the whole
   bounding rectangle; all fixed before release.
+2026-10-13 Claude: a showcase run (Matt "Breakpoint" Heck playing in it)
+logged NullReferenceExceptions from Pawn_MindState.StartFleeingBecauseOf
+PawnAction. Vanilla makes an animal flee from the launcher of a bullet-
+class projectile that lands near it, and the bolts a destroyed magazine
+or Ballista cooks off (and the reactor's barrage) were launched with no
+launcher. Every such bolt now has one: BoltOrigin (BT_BoltOrigin), an
+invisible ethereal thing that stands where the device blew up, goes by
+its name, and removes itself after a minute; the barrage aftermath saves
+its own by reference. The smoke runner's magazine cook-off now loads
+painful (bullet-class) bolts among animals; the check failed on the old
+code with the same exception, and passes now. (A first draft of the fix
+called base.TickRare(), which Entity implements as throw
+NotImplementedException; the runner caught that too.)

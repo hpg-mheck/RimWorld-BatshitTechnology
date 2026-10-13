@@ -8,6 +8,7 @@
 // - Detonation_BoltCookOff: a Ballista's or Magazine's bolts cook off.
 // - Detonation_MoltenSpray: the Artificer sprays fire and half-made bolts.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using BatshitTechnology.Core;
@@ -233,6 +234,7 @@ namespace BatshitTechnology
                 center = center,
                 source = device.def,
                 origin = device.TrueCenter(),
+                launcher = BoltOrigin.Place(map, center, device.def),
             });
         }
 
@@ -266,6 +268,12 @@ namespace BatshitTechnology
         /// Launches one projectile at a random cell in an annulus around a
         /// centre, retrying a few times if the cell is off the map.
         /// </summary>
+        /// <param name="launcher">
+        /// Who fired it: never null. Vanilla makes animals flee from the
+        /// launcher of a projectile that lands near them
+        /// (Pawn_MindState.Notify_ClamorImpact), and throws if there is none.
+        /// A device that blew itself up passes its <see cref="BoltOrigin"/>.
+        /// </param>
         /// <param name="projectileDef">The projectile.</param>
         /// <param name="map">The map.</param>
         /// <param name="center">The annulus's centre.</param>
@@ -274,10 +282,16 @@ namespace BatshitTechnology
         /// <param name="innerFraction">Inner radius as a fraction of the outer.</param>
         /// <param name="distance">How far from the centre it was aimed.</param>
         /// <returns>True if a projectile was launched.</returns>
+        /// <exception cref="ArgumentNullException">No launcher.</exception>
         public static bool TryLaunchInAnnulus(
-            ThingDef projectileDef, Map map, IntVec3 center, Vector3 origin,
+            Thing launcher, ThingDef projectileDef, Map map, IntVec3 center, Vector3 origin,
             float outer, float innerFraction, out float distance)
         {
+            if (launcher == null)
+            {
+                throw new ArgumentNullException(nameof(launcher));
+            }
+
             for (int attempt = 0; attempt < 4; attempt++)
             {
                 var (x, z) = BlastSchedule.PointInAnnulus(outer, innerFraction, Rand.Value, Rand.Value);
@@ -288,7 +302,7 @@ namespace BatshitTechnology
                 }
 
                 var projectile = (Projectile)GenSpawn.Spawn(projectileDef, center, map);
-                projectile.Launch(null, origin, target, target, ProjectileHitFlags.All);
+                projectile.Launch(launcher, origin, target, target, ProjectileHitFlags.All);
                 distance = (target - center).LengthHorizontal;
                 return true;
             }
@@ -570,11 +584,12 @@ namespace BatshitTechnology
 
             MapComponent_SelfDestructAftermath aftermaths = Aftermaths(map);
             float inner = Mathf.Clamp01(2f / throwRadius);
+            BoltOrigin origin = BoltOrigin.Place(map, center, device.def);
             foreach (ThingDef bolt in bolts.InRandomOrder().Take(maxBolts))
             {
                 ThingDef projectile = bolt.GetModExtension<BoltExtension>()?.projectile;
                 if (projectile != null && BoltLauncher.TryLaunchInAnnulus(
-                    projectile, map, center, device.TrueCenter(), throwRadius, inner,
+                    origin, projectile, map, center, device.TrueCenter(), throwRadius, inner,
                     out float distance) && aftermaths != null)
                 {
                     aftermaths.BoltsLaunched++;
@@ -640,10 +655,11 @@ namespace BatshitTechnology
 
             MapComponent_SelfDestructAftermath aftermaths = Aftermaths(map);
             int count = bolts.RandomInRange;
+            BoltOrigin origin = BoltOrigin.Place(map, center, device.def);
             for (int i = 0; i < count; i++)
             {
                 if (BoltLauncher.TryLaunchInAnnulus(
-                    boltProjectile, map, center, device.TrueCenter(), throwRadius,
+                    origin, boltProjectile, map, center, device.TrueCenter(), throwRadius,
                     Mathf.Clamp01(2f / throwRadius), out float distance) && aftermaths != null)
                 {
                     aftermaths.BoltsLaunched++;
@@ -657,5 +673,71 @@ namespace BatshitTechnology
         /// <returns>The phrase.</returns>
         public override string Describe(float radius) =>
             "a spray of molten batshittium and half-made bolts";
+    }
+
+    /// <summary>Defs the detonation code refers to directly.</summary>
+    [DefOf]
+    public static class BT_DetonationDefOf
+    {
+        /// <summary>The invisible stand-in that launches a dead device's bolts.</summary>
+        public static ThingDef BT_BoltOrigin;
+
+        /// <summary>Binds the fields when RimWorld loads its defs.</summary>
+        static BT_DetonationDefOf() => DefOfHelper.EnsureInitializedInCtor(typeof(BT_DetonationDefOf));
+    }
+
+    /// <summary>
+    /// An invisible stand-in for a Batshit device that has just blown itself
+    /// up: the launcher of the bolts it flings. Vanilla makes an animal flee
+    /// from the launcher of a projectile that lands nearby
+    /// (Pawn_MindState.Notify_ClamorImpact), and with no launcher that threw
+    /// a NullReferenceException, once seen in the showcase when the town
+    /// reactor's barrage fell on AnyRim's pens. It stands where the device
+    /// stood, goes by the device's name in logs, and removes itself once
+    /// every bolt has long since landed.
+    /// </summary>
+    public class BoltOrigin : Thing
+    {
+        /// <summary>Game ticks it lasts: a minute, far past the last bolt's flight.</summary>
+        public const int LifetimeTicks = 3600;
+
+        private int expiresAtTick;
+        private ThingDef source;
+
+        /// <summary>Spawns a stand-in for a device.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="cell">Where the device stood.</param>
+        /// <param name="source">The device's def, for its name.</param>
+        /// <returns>The stand-in, spawned.</returns>
+        public static BoltOrigin Place(Map map, IntVec3 cell, ThingDef source)
+        {
+            var origin = (BoltOrigin)ThingMaker.MakeThing(BT_DetonationDefOf.BT_BoltOrigin);
+            origin.source = source;
+            origin.expiresAtTick = Find.TickManager.TicksGame + LifetimeTicks;
+            return (BoltOrigin)GenSpawn.Spawn(origin, cell, map);
+        }
+
+        /// <summary>Named after the device it stands in for.</summary>
+        public override string LabelNoCount => source?.label ?? base.LabelNoCount;
+
+        /// <summary>
+        /// Removes itself once its time is up. (No base call: Entity's
+        /// TickRare throws NotImplementedException by design.)
+        /// </summary>
+        public override void TickRare()
+        {
+            if (Spawned && Find.TickManager.TicksGame >= expiresAtTick)
+            {
+                Destroy();
+            }
+        }
+
+        /// <summary>Saves its expiry and the device it stands in for.</summary>
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Values.Look(ref expiresAtTick, "expiresAtTick");
+            Scribe_Defs.Look(ref source, "source");
+        }
     }
 }

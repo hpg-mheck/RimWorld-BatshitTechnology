@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+
+  <!-- Stands where a Batshit device blew itself up, as the launcher of its
+       bolts (Source/Detonations.cs, BoltOrigin). Invisible; gone in a
+       minute. -->
+  <ThingDef>
+    <defName>BT_BoltOrigin</defName>
+    <label>self-destruct</label>
+    <description>Where a Batshit device stood when it blew itself up, and where its bolts came from. It cannot be seen, selected or harmed, and it is gone within the minute, which is more than can be said for the surroundings.</description>
+    <thingClass>BatshitTechnology.BoltOrigin</thingClass>
+    <category>Ethereal</category>
+    <tickerType>Rare</tickerType>
+    <drawerType>None</drawerType>
+    <altitudeLayer>MetaOverlays</altitudeLayer>
+    <useHitPoints>false</useHitPoints>
+    <selectable>false</selectable>
+    <rotatable>false</rotatable>
+  </ThingDef>
+
+</Defs>
