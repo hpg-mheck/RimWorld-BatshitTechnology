@@ -51,9 +51,13 @@ Each session has a 5% chance of going wrong. When it does:
     properties *(proposal: a longsword's stats with a mirrored look)*;
   - a ranged weapon becomes an **Agonizer**, a short-range weapon doing
     low damage and inflicting psychic distress.
-- **Who it fights for:** *(proposal)* the duplicate arrives hostile, as
-  its own small raid of one, and can be downed, captured and recruited
-  like any other enemy. See Open Questions.
+- **Who it fights for:** an enemy faction, of course (specified
+  2026-10-13). The duplicate arrives hostile, as its own raid of one, and
+  can be downed, captured and recruited like any other enemy.
+  *(Proposal:)* the enemy is the mod's own hidden, permanently hostile
+  faction, "the other side of the glass". It is created on demand the
+  first time a mirror misfires, so older saves need no new world, with
+  vanilla's hidden hostile ancients as the fallback.
 
 ### Inverse Morality and Psychology (first draft)
 
@@ -126,8 +130,8 @@ check confirms it renders on women.
 
 ## Open Questions
 
-1. Is the duplicate hostile (proposed), a new colonist, or a neutral
-   visitor who leaves?
+1. Which enemy faction: the mod's own hidden hostile faction (proposed),
+   or an existing enemy such as the pirates?
 2. The trait-inversion table: is the first draft above right in spirit?
 3. Agonizer numbers: about 6 tiles, 4 damage, a minute of pain and a
    mood debuff?

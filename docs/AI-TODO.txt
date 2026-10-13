@@ -116,7 +116,8 @@
   mirror-universe duplicate: inverse morality and psychology, inverse
   facial hair regardless of gender, melee weapon swapped for a Mirror
   Sword, ranged for an Agonizer (short range, low damage, psychic
-  distress), to an original 1960s-style orchestral sci-fi sting.
+  distress), to an original 1960s-style orchestral sci-fi sting. The
+  duplicate belongs to an enemy faction.
 
 ## Test justifications
 
