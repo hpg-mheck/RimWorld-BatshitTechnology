@@ -107,6 +107,8 @@
   per-bomb adjustable radii once Dial-A-Yield is researched; built and
   repaired autonomously by the Tractor Barn on production bills
   (proposed). Shares the generalized implosion with the Colony Bomb.
+  Pawns and animals flee an armed bomb (a mod flee job giver, added to
+  the think trees by XML patch), unless too close or in a mental state.
 
 ## Test justifications
 

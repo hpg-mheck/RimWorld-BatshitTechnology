@@ -42,6 +42,34 @@ bomb when it finds them.
   the motif: a sputtering miniature vortex that sucks in its own parts,
   and nothing else, before popping.
 
+### Everyone Else Runs
+
+Added by Matt "Breakpoint" Heck on 2026-10-13: most pawns and critters
+are smart enough to flee from an armed or firing Tractor Bomb, unless
+they are already too close, or berserk, rabid, enraged and the like.
+
+- **The vanilla flee is too short.** Vanilla already makes pawns sprint
+  from an explosive that is about to go off
+  (`JobGiver_FleePotentialExplosion`, through
+  `Pawn_MindState.knownExploder`), but only to 9 tiles, short of the
+  10-tile pull. It also applies only to humanlike-intelligence pawns.
+- **A mod flee job giver.** *(Proposal:)* a `JobGiver_FleeTractorBomb`
+  inserted into the Humanlike and Animal think trees by an XML patch, not
+  Harmony.
+  - When an emplaced bomb arms, every pawn that can see it and stands
+    within its pull radius plus 8 tiles sprints to a cell outside that
+    distance.
+  - Animals count, as "critters" requires.
+  - It sits below the mental-state branch of the think tree, so pawns
+    who are berserk, manhunting (rabid or enraged), or otherwise out of
+    their minds never flee. Neither do downed pawns that cannot crawl, or
+    pawns under a forced player order.
+- **"Already too close"** *(proposal)*: a pawn inside the bomb's blast
+  radius when it arms freezes rather than flees. Once the pull begins,
+  everyone inside the pull radius is caught anyway, as with the grenade.
+- **Dial-A-Yield:** the flee distance follows the bomb's dialled pull
+  radius.
+
 ## Tractor Bomb Dial-A-Yield
 
 A further research project. Once it is researched, each Tractor Bomb has
@@ -85,3 +113,5 @@ production bills. *(Proposal:)* use production bills, the vanilla way:
 6. Does a patrolling Tractor Bomb stay inside the home area or roam the
    whole map? The specification says the map; the home area would keep it
    out of trouble.
+7. "Already too close": is it inside the blast radius (proposed), or
+   inside the pull radius, where fleeing is futile once the pull starts?
