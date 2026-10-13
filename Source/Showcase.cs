@@ -134,6 +134,15 @@ namespace BatshitTechnology
         private const float MaxCameraSize = 60f;
 
         /// <summary>
+        /// The camera's zoom during a countdown: close enough to see the
+        /// warning band around the device.
+        /// </summary>
+        private const float CountdownCameraSize = 22f;
+
+        /// <summary>The demo device counting down under the camera, if any.</summary>
+        private static Thing watching;
+
+        /// <summary>
         /// Game ticks between the base being ready and the first demo arming:
         /// time for the window to maximize and the viewer to find the rings.
         /// </summary>
@@ -154,6 +163,13 @@ namespace BatshitTechnology
         /// </summary>
         internal static void Tick()
         {
+            // Pull back to take in the whole blast when it goes off.
+            if (watching != null && watching.Destroyed)
+            {
+                watching = null;
+                Find.CameraDriver.SetRootSize(MaxCameraSize);
+            }
+
             for (int i = pendingDemos.Count - 1; i >= 0; i--)
             {
                 (Thing device, int armAt) = pendingDemos[i];
@@ -168,11 +184,14 @@ namespace BatshitTechnology
                     continue;
                 }
 
+                CompSelfDestruct comp = device.TryGetComp<CompSelfDestruct>();
+                MoveColonistsClear(device, comp.Props.blastRadius + 8f);
                 Find.CameraDriver.JumpToCurrentMapLoc(device.Position);
-                Find.CameraDriver.SetRootSize(MaxCameraSize);
+                Find.CameraDriver.SetRootSize(CountdownCameraSize);
                 Find.Selector.ClearSelection();
                 Find.Selector.Select(device, playSound: false);
-                device.TryGetComp<CompSelfDestruct>().Arm();
+                watching = device;
+                comp.Arm();
             }
         }
 
@@ -203,6 +222,7 @@ namespace BatshitTechnology
             map.fogGrid.ClearAllFog();
             int now = Find.TickManager.TicksGame;
             pendingDemos.Clear();
+            watching = null;
 
             Clear(map, CellRect.CenteredOn(corners[0], 2));
             Thing replicator = Spawn(map, "BT_RandomReplicator", corners[0]);
@@ -217,6 +237,30 @@ namespace BatshitTechnology
             Find.Selector.ClearSelection();
             Find.Selector.Select(replicator, playSound: false);
             return replicator;
+        }
+
+        /// <summary>
+        /// Showcase only: colonists who wandered into a demo's blast radius
+        /// are moved back to the base, so the demo kills no one.
+        /// </summary>
+        /// <param name="device">The demo device about to arm.</param>
+        /// <param name="radius">How far out counts as in danger.</param>
+        private static void MoveColonistsClear(Thing device, float radius)
+        {
+            Map map = device.Map;
+            foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned.ToList())
+            {
+                if (!pawn.Position.InHorDistOf(device.Position, radius)
+                    || !CellFinder.TryFindRandomCellNear(
+                        map.Center, map, 8, c => c.Standable(map), out IntVec3 cell))
+                {
+                    continue;
+                }
+
+                pawn.jobs?.StopAll();
+                pawn.Position = cell;
+                pawn.Notify_Teleported();
+            }
         }
 
         /// <summary>
