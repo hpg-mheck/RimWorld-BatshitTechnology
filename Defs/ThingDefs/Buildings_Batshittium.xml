@@ -23,7 +23,7 @@
       <Mass>40</Mass>
     </statBases>
     <altitudeLayer>Building</altitudeLayer>
-    <fillPercent>0.7</fillPercent>
+    <fillPercent>1</fillPercent> <!-- impassable: must block shots fully -->
     <size>(2,2)</size>
     <passability>Impassable</passability>
     <designationCategory>Production</designationCategory>
@@ -69,11 +69,14 @@
     <rotatable>false</rotatable>
     <altitudeLayer>Building</altitudeLayer>
     <passability>Impassable</passability>
-    <fillPercent>0.9</fillPercent>
+    <fillPercent>1</fillPercent> <!-- impassable: must block shots fully -->
     <castEdgeShadows>true</castEdgeShadows>
     <tickerType>Normal</tickerType>
     <designationCategory>Power</designationCategory>
     <minifiedDef>MinifiedThing</minifiedDef>
+    <thingCategories> <!-- minifiable buildings need one -->
+      <li>BuildingsPower</li>
+    </thingCategories>
     <terrainAffordanceNeeded>Medium</terrainAffordanceNeeded>
     <costList>
       <Steel>250</Steel>

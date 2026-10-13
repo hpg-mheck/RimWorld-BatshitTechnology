@@ -268,6 +268,32 @@ namespace RandomReplicator
             parent.Map?.designationManager.DesignationOn(
                 parent, RR_DesignationDefOf.RR_SelfDestruct);
 
+        // ===== Test and dev hooks (the smoke test and DEV gizmos) =====
+
+        /// <summary>The refrigeration toggle.</summary>
+        internal bool Refrigeration
+        {
+            get => refrigeration;
+            set => refrigeration = value;
+        }
+
+        /// <summary>The auto-eject toggle.</summary>
+        internal bool AutoEject
+        {
+            get => autoEject;
+            set => autoEject = value;
+        }
+
+        /// <summary>Replicates immediately and restarts the timer.</summary>
+        internal void ReplicateNow()
+        {
+            Replicate();
+            ResetTimer();
+        }
+
+        /// <summary>Drops all stored food, as the Eject all button does.</summary>
+        internal void EjectAllNow() => EjectAll();
+
         // ===== Lifecycle =====
 
         /// <summary>
@@ -761,6 +787,14 @@ namespace RandomReplicator
             }
 
             yield return SelfDestructGizmo();
+            if (DebugSettings.godMode)
+            {
+                yield return new Command_Action
+                {
+                    defaultLabel = "DEV: Replicate now",
+                    action = ReplicateNow
+                };
+            }
         }
 
         /// <summary>Eject, auto-eject and refrigeration controls.</summary>

@@ -10,8 +10,13 @@
     <category>Building</category>
     <designationCategory>Production</designationCategory>
     <minifiedDef>MinifiedThing</minifiedDef>
+    <thingCategories> <!-- minifiable buildings need one -->
+      <li>BuildingsProduction</li>
+    </thingCategories>
     <size>(2, 2)</size>
     <passability>Impassable</passability>
+    <!-- Impassable player buildings must block shots and sight fully -->
+    <fillPercent>1</fillPercent>
     <terrainAffordanceNeeded>Medium</terrainAffordanceNeeded>
     <!-- Ejected food drops here, and pawns stand here to arm the self-destruct -->
     <hasInteractionCell>true</hasInteractionCell>

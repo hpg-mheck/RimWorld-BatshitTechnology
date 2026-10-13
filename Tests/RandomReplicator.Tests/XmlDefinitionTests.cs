@@ -232,6 +232,51 @@ public sealed class XmlDefinitionTests
         Assert.Empty(missing);
     }
 
+    /// <summary>
+    /// Regression (found by the in-game smoke test): RimWorld's config check
+    /// rejects impassable, player-buildable buildings that can be shot or
+    /// seen over, so each needs fillPercent 1.
+    /// </summary>
+    [Fact(DisplayName = "Impassable buildable buildings block shots fully")]
+    public void ImpassableBuildings_should_have_full_fill()
+    {
+        var offenders = AllThingDefs()
+            .Where(d => d.Element("passability")?.Value == "Impassable"
+                && d.Element("designationCategory") != null
+                && d.Element("fillPercent")?.Value != "1")
+            .Select(DefName);
+
+        Assert.Empty(offenders);
+    }
+
+    /// <summary>
+    /// Regression (found by the in-game smoke test): a minifiable building
+    /// needs a thing category for its minified form. BenchBase supplies one.
+    /// </summary>
+    [Fact(DisplayName = "Minifiable buildings have a thing category")]
+    public void MinifiableBuildings_should_have_a_thing_category()
+    {
+        var offenders = AllThingDefs()
+            .Where(d => d.Element("minifiedDef") != null
+                && d.Element("thingCategories") == null
+                && d.Attribute("ParentName")?.Value != "BenchBase")
+            .Select(DefName);
+
+        Assert.Empty(offenders);
+    }
+
+    /// <summary>Every ThingDef across the Defs files.</summary>
+    /// <returns>The ThingDef elements.</returns>
+    private static IEnumerable<XElement> AllThingDefs() =>
+        AllDefDocuments().SelectMany(
+            d => d.Root?.Elements("ThingDef") ?? Enumerable.Empty<XElement>());
+
+    /// <summary>A def element's defName, for failure messages.</summary>
+    /// <param name="def">The def element.</param>
+    /// <returns>Its defName, or "?".</returns>
+    private static string DefName(XElement def) =>
+        def.Element("defName")?.Value ?? "?";
+
     /// <summary>Finds the replicator's CompProperties_RandomReplicator node.</summary>
     /// <returns>The comp element.</returns>
     private static XElement ReplicatorComp() =>

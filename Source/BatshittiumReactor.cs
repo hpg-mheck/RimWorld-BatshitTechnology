@@ -102,6 +102,40 @@ namespace RandomReplicator
         private bool Running =>
             burnTicksLeft > 0 && FlickUtility.WantsToBeOn(parent);
 
+        /// <summary>Ticks left in the current burn (smoke test and dev).</summary>
+        internal int BurnTicksLeft => burnTicksLeft;
+
+        /// <summary>
+        /// Ends the current burn on the next tick, spending its unit (smoke
+        /// test and DEV gizmo).
+        /// </summary>
+        internal void EndBurnNow()
+        {
+            if (burnTicksLeft > 1)
+            {
+                burnTicksLeft = 1;
+            }
+        }
+
+        /// <summary>A DEV-mode button to end the current burn.</summary>
+        /// <returns>The comp's gizmos.</returns>
+        public override IEnumerable<Gizmo> CompGetGizmosExtra()
+        {
+            foreach (Gizmo g in base.CompGetGizmosExtra())
+            {
+                yield return g;
+            }
+
+            if (DebugSettings.godMode && burnTicksLeft > 0)
+            {
+                yield return new Command_Action
+                {
+                    defaultLabel = "DEV: End burn now",
+                    action = EndBurnNow
+                };
+            }
+        }
+
         /// <summary>Caches the refuelable comp once spawned.</summary>
         /// <param name="respawningAfterLoad">True when loading a save.</param>
         public override void PostSpawnSetup(bool respawningAfterLoad)
