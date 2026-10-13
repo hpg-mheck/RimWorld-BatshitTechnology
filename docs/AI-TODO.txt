@@ -117,7 +117,8 @@
   facial hair regardless of gender, melee weapon swapped for a Mirror
   Sword, ranged for an Agonizer (short range, low damage, psychic
   distress), to an original 1960s-style orchestral sci-fi sting. The
-  duplicate belongs to an enemy faction.
+  duplicate belongs to an enemy faction, and must be capturable and,
+  eventually, recruitable like any other pawn.
 
 ## Test justifications
 

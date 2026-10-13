@@ -58,6 +58,13 @@ Each session has a 5% chance of going wrong. When it does:
   faction, "the other side of the glass". It is created on demand the
   first time a mirror misfires, so older saves need no new world, with
   vanilla's hidden hostile ancients as the fallback.
+- **Capture and recruitment are a requirement** (operator, 2026-10-13):
+  it must be possible, in principle, to capture and eventually recruit a
+  mirror pawn like any other pawn. The duplicate therefore goes through
+  vanilla's prisoner rules unchanged: it has resistance and will like an
+  ordinary raider (its pawn kind sets both, as humanlike kinds must),
+  nothing about its faction blocks imprisonment, and once recruited it
+  is a colonist like any other, inverse traits, goatee and all.
 
 ### Inverse Morality and Psychology (first draft)
 
@@ -123,10 +130,15 @@ check confirms it renders on women.
     the activation roll.
   - XML tests: the building, both weapons, the hediff and the sound
     defs.
-  - Smoke checks: a session grants recreation; a forced activation
-    spawns one hostile duplicate with the inverted traits, the inverted
-    beard (tested on a woman too) and the swapped weapon; the Agonizer's
-    hit applies its hediff; nothing logs an error.
+  - Smoke checks:
+    - a session grants recreation;
+    - a forced activation spawns one hostile duplicate with the inverted
+      traits, the inverted beard (tested on a woman too) and the swapped
+      weapon;
+    - the duplicate can be downed, taken prisoner and recruited, and
+      joins the colony;
+    - the Agonizer's hit applies its hediff;
+    - nothing logs an error.
 
 ## Open Questions
 
