@@ -47,6 +47,7 @@ Matt "Breakpoint" Heck:
     base game plus an Ideology layer, open to every pawn whatever their
     ideoligion; stage and seating sizes are minimums; injuries mild to
     moderate; Relax Historical Accuracy is a checkbox on the Center Stage
-    marker. Still open: must chairs face the stage; an outdoor stage's
-    drag radius; the injury and buff numbers; research and costs; and
-    disco music before the sound pipeline exists.
+    marker; outdoors the drag is capped at 15 tiles, and trees go
+    flying. Still open: must chairs face the stage; the injury and buff
+    numbers; research and costs; and disco music before the sound
+    pipeline exists.

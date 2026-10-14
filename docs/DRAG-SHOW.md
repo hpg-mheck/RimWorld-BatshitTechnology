@@ -89,7 +89,15 @@ physics. Text follows the motif's rule: funny, never cruel.
 
   It is mild: a slower drag, and pawns are set down rather than stunned.
 - **If the stage is outdoors,** "the room" is the whole outdoors, so the
-  drag is limited to a radius *(proposal: 15 tiles)* in that case.
+  drag is capped at 15 tiles (decided 2026-10-13).
+- **Trees absolutely go flying** (specified 2026-10-13), indoors or out:
+  - *(Proposal:)* every tree in reach is uprooted and tumbles through the
+    air to center stage, drawn with its own sprite and spinning as it
+    goes.
+  - It lands with a thud as its wood (the tree's harvest yield), giving
+    a mild knock to anything it lands on.
+  - Grass and small plants are simply flattened, as the singularity
+    grenade does.
 - **Sound:** disco music needs the mod's sound pipeline (backlogged for
   the Colony Bomb). It must be an original composition in the style.
   Until then the show runs with a vanilla sound or none.
@@ -116,10 +124,9 @@ physics. Text follows the motif's rule: funny, never cruel.
 ## Open Questions
 
 1. Must the chairs face the stage? (Sizes are minimums: answered.)
-2. An outdoor stage: limit the drag to a radius (15 tiles proposed)?
-3. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
+2. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
    damage right, with a recreation boost and a short good-mood memory?
-4. Research and costs: which project unlocks it, and what do the stage
+3. Research and costs: which project unlocks it, and what do the stage
    tiles, markers and the two outfits cost? The chairs are 5 steel.
-5. Disco music before the sound pipeline exists: silence, a vanilla
+4. Disco music before the sound pipeline exists: silence, a vanilla
    stand-in, or wait for the pipeline?
