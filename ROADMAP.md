@@ -125,8 +125,8 @@ repairs bombs on its own. Everyone with sense runs.
     `docs/SHOWCASE.md`, "The Directed Tour"): it takes the camera, shows
     one major feature at a time with on-screen commentary, and the
     Tractor Bomb gets its own scene, ending on the twin bombs in a
-    junkyard ("Two tractors are better than one."). Then the README, the decisions log,
-    and a merge into `trunk`.
+    junkyard ("Two tractors are better than one."). Then the README, the
+    decisions log, and a merge into `trunk`.
 
 ### Done When
 
