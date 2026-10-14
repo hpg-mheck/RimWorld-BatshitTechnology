@@ -2267,14 +2267,19 @@ namespace BatshitTechnology
                     + $"+{TractorBombDeathVortex.Pops - pops}, others untouched "
                     + $"{untouched}");
 
-            // Shot off its wheels: it cannot move, so it is wrecked.
+            // Three wheels gone, cleanly (shooting them off spills damage
+            // into the chassis, which kills it anyway): it cannot move, so
+            // it must be wrecked rather than left downed.
             Pawn crippled = SpawnTestRobot(map, center + new IntVec3(8, 0, 0));
             foreach (BodyPartRecord wheel in crippled.health.hediffSet
                 .GetNotMissingParts()
                 .Where(p => p.def.defName == "BT_TractorWheel").Take(3).ToList())
             {
-                crippled.TakeDamage(new DamageInfo(
-                    DamageDefOf.Blunt, 999f, 999f, hitPart: wheel));
+                if (!crippled.Dead)
+                {
+                    crippled.health.AddHediff(
+                        HediffDefOf.MissingBodyPart, wheel);
+                }
             }
 
             Tick(2);
