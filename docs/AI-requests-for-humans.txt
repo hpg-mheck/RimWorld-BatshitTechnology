@@ -51,6 +51,6 @@ Matt "Breakpoint" Heck:
     flying; chairs should face the stage but it is not enforced. Still
     open: the injury and buff numbers; research and costs; Batshittium
     Monofilament's exact stats (slightly better than hyperweave; about
-    10% proposed), the show bonus, the Extruder's yield, and whether it
-    works for all fabric items. (Music: available party music now,
-    original disco with the sound pipeline: answered.)
+    10% proposed) and the show bonus. (Answered: party music now and
+    original disco with the sound pipeline; a 1:25 Extruder yield;
+    monofilament for all fabric items.)

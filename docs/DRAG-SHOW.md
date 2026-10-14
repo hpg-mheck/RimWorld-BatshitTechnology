@@ -54,16 +54,16 @@ Specified 2026-10-13:
     sharp armour 2.2, blunt 0.6, heat 3.15, insulation 29 and 29, beauty
     factor 6.
   - Its market value is set to match.
-  - Like any fabric, it works for all fabric apparel, not just these
-    two.
+  - Like any fabric, it works for every fabric item, not just these two
+    (decided 2026-10-13).
   - On the two outfits it also gives the show a bonus: an emcee in
     monofilament makes a better show. That means more recreation for the
     audience, and a higher quality score when Ideology's ritual layer is
     active.
 - **The Extruder.**
-  - It turns batshittium into monofilament, about 1 batshittium to 25
-    monofilament, with power and work. It is staffed like a normal bench
-    (crafting), unlike the Artificer.
+  - It turns batshittium into monofilament, 1 batshittium to 25
+    monofilament (decided 2026-10-13), with power and work. It is staffed
+    like a normal bench (crafting), unlike the Artificer *(proposal)*.
   - Its art follows the motif: a steel chassis drawing a glowing magenta
     thread from a batshittium porthole onto a spool.
 - **The look.** Things made from monofilament carry a faint magenta
@@ -181,8 +181,6 @@ Specified 2026-10-13:
    damage right, with a recreation boost and a short good-mood memory?
 2. Research and costs: which project unlocks the show, and what do the
    stage tiles, markers and the two outfits cost? The chairs are 5 steel.
-3. Batshittium Monofilament (slightly better than hyperweave: answered):
-   about 10% better per stat, plus a show bonus for the emcee's outfit?
-   What are the Extruder's inputs and yield (1 batshittium to 25
-   monofilament proposed)? Usable for every fabric item, as any fabric
-   is, or only these outfits?
+3. Batshittium Monofilament (slightly better than hyperweave, 1:25 from
+   batshittium, all fabric items: answered): about 10% better per stat,
+   plus a show bonus for the emcee's outfit?
