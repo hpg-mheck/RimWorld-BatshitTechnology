@@ -19,8 +19,13 @@ namespace BatshitTechnology.Showcases
     /// </summary>
     public static class ShowcaseLog
     {
-        /// <summary>The prefix of every API cue.</summary>
-        public const string Prefix = "[SHOWCASE]";
+        /// <summary>
+        /// The prefix of every API cue. It carries the host mod's tag
+        /// while the API lives inside Batshit Technology, so capture
+        /// tooling waits on one vocabulary ("[BT-SHOWCASE] READY" and so
+        /// on); a framework mod split out later gets a prefix of its own.
+        /// </summary>
+        public const string Prefix = "[BT-SHOWCASE]";
 
         /// <summary>Writes one cue: the prefix, a word, and details.</summary>
         /// <param name="cue">The cue word, such as SCENE or END.</param>
@@ -115,6 +120,13 @@ namespace BatshitTechnology.Showcases
         public IReadOnlyList<NarrationRecord> NarrationLog => said;
 
         /// <summary>
+        /// Gets a value indicating whether narration lines are still
+        /// waiting to be said (outcome lines with a delay, say, after the
+        /// last scene ended).
+        /// </summary>
+        internal bool HasQueuedNarration => queued.Count > 0;
+
+        /// <summary>
         /// Starts the worker on a map. Called by the API; mods override
         /// <see cref="Setup"/> instead.
         /// </summary>
@@ -140,6 +152,16 @@ namespace BatshitTechnology.Showcases
             {
                 Tick();
             }
+        }
+
+        /// <summary>
+        /// Says the narration lines that have come due, without ticking
+        /// the worker. Called by the API after the showcase has finished,
+        /// so lines queued at its end are still said.
+        /// </summary>
+        internal void SayDueNarration()
+        {
+            SayDueLines();
         }
 
         /// <summary>

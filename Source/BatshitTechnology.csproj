@@ -78,6 +78,23 @@
     <Compile Include="SingularityGrenade.cs" />
     <Compile Include="SmokeTest.cs" />
   </ItemGroup>
+  <!-- The Showcase API (docs/SHOWCASE-API.md): its own namespace,
+       BatshitTechnology.Showcases, free of Batshit-specific code so it
+       can be split out into a framework mod later. -->
+  <ItemGroup>
+    <Compile Include="Showcases\Dialog_ModShowcases.cs" />
+    <Compile Include="Showcases\Dialog_ShowcaseDetails.cs" />
+    <Compile Include="Showcases\Dialog_ShowcaseMods.cs" />
+    <Compile Include="Showcases\GameComponent_ShowcaseSession.cs" />
+    <Compile Include="Showcases\ShowcaseDef.cs" />
+    <Compile Include="Showcases\ShowcaseDirector.cs" />
+    <Compile Include="Showcases\ShowcaseLauncher.cs" />
+    <Compile Include="Showcases\ShowcaseLibrary.cs" />
+    <Compile Include="Showcases\ShowcaseScene.cs" />
+    <Compile Include="Showcases\ShowcaseTexts.cs" />
+    <Compile Include="Showcases\ShowcaseWindow.cs" />
+    <Compile Include="Showcases\ShowcaseWorker.cs" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference
         Include="BatshitTechnology.Core\BatshitTechnology.Core.csproj" />
@@ -101,6 +118,10 @@
     </None>
     <None Include="..\Defs\**\*.*">
       <Link>Defs\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Languages\**\*.*">
+      <Link>Languages\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
     <None Include="..\Textures\**\*.*">

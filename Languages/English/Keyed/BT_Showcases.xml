@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Showcase API's text (docs/SHOWCASE-API.md): the main menu's
+  Showcases button, its three windows, and the caption bar and messages
+  of a running showcase. Written per docs/ARTISTIC-MOTIF.md, "Words":
+  plain, accurate UI labels, with the deadpan reserved for the moments
+  the player is told what the showcase did to their afternoon. Each value
+  stays on one line, as the game shows line breaks literally; \n makes
+  one. XmlDefinitionTests checks that every key the code uses is here,
+  and that every key here is used.
+-->
+<LanguageData>
+  <!-- Level 1: the mods that offer showcases. -->
+  <BT_Showcases_ModsTitle>Showcases</BT_Showcases_ModsTitle>
+  <BT_Showcases_ModsIntro>Each showcase runs in a fresh, throwaway colony.</BT_Showcases_ModsIntro>
+  <BT_Showcases_ModsSaves>Showcase games never autosave. Your saves are untouched.</BT_Showcases_ModsSaves>
+  <BT_Showcases_NoneLoaded>No loaded mod offers a showcase.</BT_Showcases_NoneLoaded>
+  <BT_Showcases_UnknownMod>Unknown mod</BT_Showcases_UnknownMod>
+  <BT_Showcases_CountOne>1 showcase</BT_Showcases_CountOne>
+  <BT_Showcases_CountMany>{0} showcases</BT_Showcases_CountMany>
+
+  <!-- Level 2: one mod's showcases. -->
+  <BT_Showcases_ModTitle>Showcases: {0}</BT_Showcases_ModTitle>
+  <BT_Showcases_Minutes>About {0} min</BT_Showcases_Minutes>
+  <BT_Showcases_Requires>Requires {0}.</BT_Showcases_Requires>
+  <BT_Showcases_FactsPair>{0}  ·  {1}</BT_Showcases_FactsPair>
+  <BT_Showcases_NeedsMods>Unavailable: needs {0}, which is not active.</BT_Showcases_NeedsMods>
+  <BT_Showcases_FlagLine>{0} ({1}): {2}</BT_Showcases_FlagLine>
+  <BT_Showcases_FlaggedMany>{0} of your mods are flagged. See the details.</BT_Showcases_FlaggedMany>
+  <BT_Showcases_Severity_Concern>concern</BT_Showcases_Severity_Concern>
+  <BT_Showcases_Severity_Warning>warning</BT_Showcases_Severity_Warning>
+  <BT_Showcases_Severity_KnownIncompatibility>known incompatibility</BT_Showcases_Severity_KnownIncompatibility>
+  <BT_Showcases_Severity_Fatal>fatal</BT_Showcases_Severity_Fatal>
+
+  <!-- Level 3: one showcase's details. -->
+  <BT_Showcases_Back>Back</BT_Showcases_Back>
+  <BT_Showcases_Start>Start</BT_Showcases_Start>
+  <BT_Showcases_StartTip>Run this showcase in a fresh, throwaway game. Your saves are safe.</BT_Showcases_StartTip>
+  <BT_Showcases_FatalLine>{0}: {1}</BT_Showcases_FatalLine>
+  <BT_Showcases_Refused>Start refused. This showcase is known to break with:\n{0}</BT_Showcases_Refused>
+  <BT_Showcases_ForceStart>Force start</BT_Showcases_ForceStart>
+  <BT_Showcases_ForceTip>Start it anyway, for testing or to reproduce the crash.</BT_Showcases_ForceTip>
+  <BT_Showcases_ForceConfirm>{0}\n\nStart anyway? Saves are safe. The game may not be.</BT_Showcases_ForceConfirm>
+  <BT_Showcases_RefusedMissing>That showcase is no longer loaded.</BT_Showcases_RefusedMissing>
+  <BT_Showcases_RefusedInGame>Showcases start from the main menu.</BT_Showcases_RefusedInGame>
+  <BT_Showcases_RefusedBusy>The game is busy. Try again in a moment.</BT_Showcases_RefusedBusy>
+
+  <!-- A running showcase: the caption bar and its messages. -->
+  <BT_Showcases_CaptionPattern>{0} of {1}: {2}</BT_Showcases_CaptionPattern>
+  <BT_Showcases_Skip>Skip</BT_Showcases_Skip>
+  <BT_Showcases_SkipTip>Skip to the next scene.</BT_Showcases_SkipTip>
+  <BT_Showcases_Stop>Stop</BT_Showcases_Stop>
+  <BT_Showcases_StopTip>End the showcase here. The camera is yours, and so is the colony.</BT_Showcases_StopTip>
+  <BT_Showcases_Stopped>Showcase stopped. The colony is yours, as are its consequences.</BT_Showcases_Stopped>
+  <BT_Showcases_Finished>This concludes the showcase. The colony is yours. Please remain calm.</BT_Showcases_Finished>
+</LanguageData>

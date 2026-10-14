@@ -257,3 +257,36 @@ painful (bullet-class) bolts among animals; the check failed on the old
 code with the same exception, and passes now. (A first draft of the fix
 called base.TickRare(), which Entity implements as throw
 NotImplementedException; the runner caught that too.)
+2026-10-14 Claude: Showcase API, slice 3000 (the game side). Decisions:
+- One showcase window is open at a time: moving between the three levels
+  replaces the window, so Back returns one level and Escape (which closes
+  the open window) closes the whole menu, as specified.
+- Force start (a confirmed second button beside Start, for a fatal flag
+  only) is offered in dev mode or when the game was started with
+  -showcaseforce. -showcaseforce also lets -showcase=<defName> start a
+  showcase flagged fatal. Missing requirements cannot be forced.
+- The caption bar is drawn at the top centre, just below the colonist
+  bar, not at the bottom as SHOWCASE.md proposed: the bottom holds the
+  gizmos of the subject the director selects, the inspect pane and the
+  main buttons, and a bar there would cover them and take their clicks
+  (GameComponentOnGUI runs before the window stack).
+- Autosave is suppressed without Harmony: the session resets the
+  autosaver's private ticksSinceSave counter by reflection every tick,
+  before Autosaver.AutosaverTick runs in TickManager.DoSingleTick, so it
+  never reaches the shortest interval (0.05 days). If RimWorld renames the
+  field, the session warns once. Nothing about the session is saved, so
+  a showcase game the player chooses to save loads as an ordinary game.
+- The launcher repeats vanilla's dev Quick Test (a "GeneratingMap" long
+  event running Root_Play.SetupForQuickTestPlay, then
+  PageUtility.InitGameStart), setting the def's map size and, when it
+  names a biome, a random valid tile of that biome (else the random tile,
+  logged). The request is tied to the Game object it generated, so a
+  failed generation can never turn the player's next real colony into a
+  showcase.
+- Log cues keep the [BT-SHOWCASE] prefix while the API lives in this mod,
+  so capture tooling has one vocabulary: LAUNCH, GAME, START, READY,
+  SCENE, END, SKIPPED, SKIP, FINISHED, STOPPED, FAILED, REFUSED, BIOME.
+  READY is now the API's, logged once the worker is set up.
+- Keyed strings are prefixed BT_Showcases_ and live in
+  Languages/English/Keyed/BT_Showcases.xml; a framework mod split out
+  later renames them.

@@ -139,3 +139,22 @@ side (Source/AnyRim.cs, AnyRimResidents.cs including
 JobGiver_AnyRimSeekSafeTemperature, MapComponent_AnyRim.cs, and the
 Showcase hooks) needs a live map, so it is covered by the smoke runner's
 TestAnyRim checks and by the showcase's TOUR capture instead.
+
+The Showcase API follows the same split. Its rules are Core code with unit
+tests: grouping by mod, requirements, compatibility and the launch
+decision, the scene sequencer and beat schedule, narration, the caption
+text and caption-bar layout, and the Force-start and command-line rules
+(ShowcaseCatalogueTests, ShowcaseLaunchPolicyTests, SceneSequencerTests,
+ShowcaseTextTests, CaptionBarLayoutTests, ShowcaseStartRulesTests). Its
+keyed text is pinned by ShowcaseXmlTests. The game side (Source/Showcases:
+the director, the session component, the library, the launcher and the
+three menu windows) drives the camera, the window stack and game
+generation, which exist only in a running game; it is covered by the
+-Showcase run reaching READY, and gets in-game checks in slice 6000 of
+phase 4000 (ROADMAP.md).
+- [ ] Showcase API slice 6000: in-game checks that the main menu shows the
+  Showcases button, that the three windows open and list Batshit
+  Technology's showcase, that -showcase=<defName> starts a game whose
+  autosave counter stays at zero, and that a director-driven showcase
+  (a test def with two scenes) runs SCENE, END and FINISHED in order.
+  Each check proved to fail on broken code first.
