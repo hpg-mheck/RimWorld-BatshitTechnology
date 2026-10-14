@@ -1712,16 +1712,23 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Drafts a colonist, holding fire, and stands it near a spot.
+        /// Drafts a colonist, holding fire, and stands it on a spot (or near
+        /// it, if the spot is no good).
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="p">The colonist.</param>
         /// <param name="spot">Where to stand it.</param>
         private static void HoldColonist(Map map, Pawn p, IntVec3 spot)
         {
-            if (!CellFinder.TryFindRandomCellNear(
-                spot, map, 10, c => c.Standable(map) && !c.Fogged(map),
-                out IntVec3 cell))
+            // On the spot itself where it can stand: a colonist meant to be
+            // inside a pull radius must not land up to ten tiles away (the
+            // protest check passed by luck until this was exact).
+            IntVec3 cell = spot;
+            if (!(spot.InBounds(map) && spot.Standable(map)
+                && !spot.Fogged(map))
+                && !CellFinder.TryFindRandomCellNear(
+                    spot, map, 10, c => c.Standable(map) && !c.Fogged(map),
+                    out cell))
             {
                 cell = spot;
             }
