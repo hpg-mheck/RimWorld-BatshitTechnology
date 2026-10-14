@@ -290,3 +290,20 @@ NotImplementedException; the runner caught that too.)
 - Keyed strings are prefixed BT_Showcases_ and live in
   Languages/English/Keyed/BT_Showcases.xml; a framework mod split out
   later renames them.
+2026-10-14 Claude: Showcase API, slice 4000 (the main-menu button). The
+mod's first and only Harmony patch is a postfix on
+OptionListingUtility.DrawOptionListing (ShowcaseMenuButton, Harmony id
+breakpoint8088.BatshitTechnology.Showcases). It acts only on the main
+menu's own column: in the Entry scene, on a list with no web links that
+ends with vanilla's Quit to OS (Root.Shutdown), recognised by its action
+rather than its translated label. The button goes at the bottom, below
+Quit to OS, as proposed. The same postfix acts once on
+-showcase=<defName>, because it runs exactly when the menu is ready for
+input (no long event, no dialog); with -quicktest, which skips the menu,
+the session adopts the command line's showcase on the quick-test map
+instead. Harmony types appear only inside one never-inlined method, so a
+missing Harmony is caught and logged instead of breaking the class.
+About.xml depends on brrainz.harmony (Workshop item 2009463077) and loads
+after it; Tools/smoke-test.ps1 finds Harmony by packageId among the local
+mods and Workshop items and lists it first, before Core, as Harmony's own
+About.xml asks.

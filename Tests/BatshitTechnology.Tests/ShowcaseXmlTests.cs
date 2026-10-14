@@ -141,6 +141,63 @@ public sealed class ShowcaseXmlTests
         }
     }
 
+    /// <summary>
+    /// The mod depends on the Harmony mod, with links the Mods page can
+    /// follow, and loads after it: the Showcases button's patch needs
+    /// 0Harmony.dll, which the Harmony mod supplies and this mod never
+    /// ships.
+    /// </summary>
+    [Fact(DisplayName = "About.xml depends on and loads after Harmony")]
+    public void About_should_depend_on_and_load_after_harmony()
+    {
+        XElement root = XDocument.Load(Path.Combine(FixturesDirectory, "About.xml")).Root
+            ?? throw new InvalidOperationException("About.xml has no root.");
+        List<XElement> dependencies = root.Element("modDependencies")
+            ?.Elements("li").ToList() ?? new List<XElement>();
+        XElement harmony = Assert.Single(dependencies);
+
+        Assert.Equal("brrainz.harmony", harmony.Element("packageId")?.Value);
+        Assert.Equal("Harmony", harmony.Element("displayName")?.Value);
+        Assert.Equal(
+            "steam://url/CommunityFilePage/2009463077",
+            harmony.Element("steamWorkshopUrl")?.Value);
+        Assert.StartsWith(
+            "https://",
+            harmony.Element("downloadUrl")?.Value ?? string.Empty,
+            StringComparison.Ordinal);
+        Assert.Equal(
+            new[] { "brrainz.harmony" },
+            root.Element("loadAfter")?.Elements("li").Select(e => e.Value).ToArray());
+    }
+
+    /// <summary>
+    /// The Showcases button is the mod's one Harmony patch: one class
+    /// creates a Harmony instance, with an id under the mod's package id,
+    /// and nothing else patches.
+    /// </summary>
+    [Fact(DisplayName = "The Showcases button is the mod's only Harmony patch")]
+    public void Harmony_should_patch_only_the_menu_button()
+    {
+        string source = Path.Combine(FixturesDirectory, "Source");
+        List<string> patching = Directory
+            .EnumerateFiles(source, "*.cs", SearchOption.AllDirectories)
+            .Where(f => Regex.IsMatch(
+                File.ReadAllText(f),
+                @"new\s+Harmony\s*\(|\[HarmonyPatch|\.PatchAll\s*\("))
+            .Select(Path.GetFileName)
+            .Select(n => n!)
+            .ToList();
+        string button = File.ReadAllText(
+            Path.Combine(source, "Showcases", "ShowcaseMenuButton.cs"));
+
+        Assert.Equal(new[] { "ShowcaseMenuButton.cs" }, patching);
+        Assert.Contains(
+            "HarmonyId = \"breakpoint8088.BatshitTechnology.",
+            button,
+            StringComparison.Ordinal);
+        Assert.Single(Regex.Matches(button, @"\.Patch\s*\("));
+    }
+
     /// <summary>The keyed file's entries.</summary>
     /// <returns>The key elements.</returns>
     private static IEnumerable<XElement> KeyedEntries()

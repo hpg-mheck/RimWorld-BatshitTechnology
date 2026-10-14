@@ -10,6 +10,9 @@
   and that every key here is used.
 -->
 <LanguageData>
+  <!-- The main menu. -->
+  <BT_Showcases_MenuButton>Showcases</BT_Showcases_MenuButton>
+
   <!-- Level 1: the mods that offer showcases. -->
   <BT_Showcases_ModsTitle>Showcases</BT_Showcases_ModsTitle>
   <BT_Showcases_ModsIntro>Each showcase runs in a fresh, throwaway colony.</BT_Showcases_ModsIntro>

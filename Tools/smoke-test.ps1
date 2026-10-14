@@ -44,8 +44,8 @@ if (Test-Path $link) {
   "Linked $link -> $ModRoot"
 }
 
-# 2. Isolated config: Core, the installed DLCs and this mod; muted,
-# windowed, running in the background, dev mode on.
+# 2. Isolated config: Harmony, Core, the installed DLCs and this mod;
+# muted, windowed, running in the background, dev mode on.
 $config = Join-Path $DataFolder 'Config'
 New-Item -ItemType Directory -Force $config | Out-Null
 $version = (Get-Content (Join-Path $RimWorld 'Version.txt') -TotalCount 1).Trim()
@@ -59,13 +59,32 @@ $expansions = Get-ChildItem (Join-Path $RimWorld 'Data') -Directory |
   % { ([xml](Get-Content (Join-Path $_.FullName 'About\About.xml') -Raw)).ModMetaData.packageId.ToLower() }
 $aboutXml = [xml](Get-Content (Join-Path $ModRoot 'About\About.xml') -Raw)
 $modId = $aboutXml.ModMetaData.packageId.ToLower()
+# Harmony (brrainz.harmony) is a hard dependency: it supplies 0Harmony.dll
+# for the main menu's Showcases button. Find it by packageId among the
+# local mods and the Steam Workshop items, and load it first, before Core,
+# as its own About.xml asks (loadBefore Ludeon.RimWorld).
+$harmonyId = 'brrainz.harmony'
+$modDirs = @(Get-ChildItem (Join-Path $RimWorld 'Mods') -Directory -ErrorAction SilentlyContinue)
+$workshop = Join-Path $RimWorld '..\..\workshop\content\294100'
+if (Test-Path $workshop) { $modDirs += @(Get-ChildItem $workshop -Directory) }
+$harmony = $modDirs | ? {
+  $about = Join-Path $_.FullName 'About\About.xml'
+  if (-not (Test-Path $about)) { return $false }
+  try { ([xml](Get-Content $about -Raw)).ModMetaData.packageId -eq $harmonyId }
+  catch { $false }
+} | Select-Object -First 1
+if (-not $harmony) {
+  throw "Harmony ($harmonyId) is not installed. Subscribe to Steam Workshop " +
+    "item 2009463077, or put the Harmony mod in RimWorld's Mods folder."
+}
+"Harmony: $($harmony.FullName)"
 $li = { param($ids) ($ids | % { "    <li>$_</li>" }) -join "`n" }
 @"
 <?xml version="1.0" encoding="utf-8"?>
 <ModsConfigData>
   <version>$version</version>
   <activeMods>
-$(& $li (@('ludeon.rimworld') + $expansions + $modId))
+$(& $li (@($harmonyId, 'ludeon.rimworld') + $expansions + $modId))
   </activeMods>
   <knownExpansions>
 $(& $li $expansions)
