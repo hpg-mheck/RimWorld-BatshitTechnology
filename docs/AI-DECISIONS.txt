@@ -336,3 +336,78 @@ the caption's measured width. An earlier run logged STOPPED about twenty
 seconds after READY and then closed; nothing in the code stops a
 showcase except the Stop button, so it was most likely pressed by the
 person watching (unconfirmed).
+2026-10-14 Claude: Showcase API, slice 6000 (smoke checks). The smoke
+runner checks the API last, in a new file, Source/SmokeTestShowcases.cs
+(GameComponent_SmokeTest is now partial). Choices:
+- Test showcases are made in code and added to DefDatabase<ShowcaseDef>
+  under this mod's content pack, beside BT_Showcase, so the menus list
+  them as a mod's own; they are removed afterwards through DefDatabase's
+  private Remove (RimWorld 1.6.4871), and a check fails if any is left. An
+  XML test pins that no def file names one.
+- The session gained two internal seams, AdoptForTest (make the running
+  game a showcase game and begin at once) and ReleaseForTest (make it an
+  ordinary game again), so the runner can run a showcase in its own game.
+  Players never reach them. The windows, the session, the director and the
+  menu button gained read-only state for the checks (frames painted,
+  postfix calls and buttons drawn, Harmony's listing of the mod's patches,
+  endings, the closing message's tick) and the methods their buttons now
+  call (OpenGroup, OpenShowcase, Back), so the checks drive the same code
+  a click does.
+- Some checks need real frames: painting, the main menu, Escape. After the
+  synchronous checks the game is paused and a list of frame steps runs,
+  each in a frame update or in a repaint event; DONE waits for them, for
+  120 seconds at most. Event.Use() is never called on a repaint event:
+  Escape is a real key-down event made current while
+  WindowStack.Notify_PressedCancel runs, as the window stack does for a
+  player.
+- The main menu cannot be shown in a quick-test game, so the runner draws
+  vanilla's own options off screen through
+  MainMenuDrawer.DoMainMenuControls, with Current.ProgramState set to
+  Entry for that one call and restored in a finally block; the patched
+  DrawOptionListing then sees vanilla's real main-menu column and its web
+  links. Exactly one button must be added. The same call in the Playing
+  state (the in-game menu) must add none.
+- "Autosave restored after" is read as: suppression belongs to the
+  showcase game only. A stopped or finished showcase game still never
+  autosaves; once the game is ordinary again (as a showcase game the
+  player saved loads), the autosaver counts every tick, and the player's
+  autosave interval is unchanged, because suppression never touches Prefs.
+  The session writes nothing into a save (checked with
+  Scribe.saver.DebugOutputFor).
+- The save-folder check compares every file's size and write time in
+  GenFilePaths.SavedGamesFolderPath before the checks and 30 frames after
+  the last showcase, so a queued autosave would have been written by then.
+- The final log scan no longer counts the runner's own FAIL warnings a
+  second time when they name a BT_ def. Tools/smoke-test.ps1 now reads
+  RimWorld 1.6's "[Ref 9E9A3C82]" line between an error and its stack
+  trace as part of the trace, and counts the [BT-SHOWCASE] prefix as the
+  mod's: a sabotaged caption-bar error had been reported as "0 mentioning
+  this mod" (the runner's own scan still failed the run).
+- Sabotage: eight sabotaged builds, each confirmed to compile with a newer
+  DLL, made every new check fail. A: a second patch owned by the mod's
+  Harmony id (only-patch check); the button drawn twice (main menu,
+  exactly one); closeOnCancel off (Escape); OpenShowcase without its
+  availability guard (greyed row opens); no autosave suppression (never
+  autosaves, stopped game, save folder: Autosave-1.rws and Autosave-2.rws
+  were written). B: Evaluate ignoring force (verdicts match Core, Force
+  overrides); Skip a no-op (Skip); the director's Stop leaving its
+  sequencer running (Stop); every option list taken for the main menu
+  (in-game menu gets none); Back from a mod's showcases only closing (Back
+  to mods). C: ToEntry without requirements and flags, order reversed
+  (verdicts, fatal refused, missing unavailable, concern warns, listing
+  order); the session saving its showcase (writes nothing into a save). D:
+  the caption bar throwing (caption bar paints); Start never enabled
+  (BT_Showcase's details); suppression only while running (stopped game);
+  suppression by setting the autosave interval (setting unchanged); Back
+  from details going to the mods window (Back to the mod). E: no camera
+  moves (cut shot); no selection (subject); the caption numbered from the
+  wrong scene (caption); no FINISHED cue (cues in order); the closing
+  message not waiting for the last lines (narration); Force start never
+  offered (fatal details); a window logging an error (windows log no
+  error); the runner leaving its test showcases loaded (removed again). F:
+  scenes never timing out (timeout); nothing greyed out (mod's window);
+  Force start offered for any showcase that cannot start (missing offers
+  neither). G: the button opening nothing (opens the mods window). H:
+  BT_Showcase renamed in XML (BT_Showcase loaded); a def file naming a
+  test showcase (the new XML test). All edits were reverted with git
+  checkout and the clean code rebuilt.

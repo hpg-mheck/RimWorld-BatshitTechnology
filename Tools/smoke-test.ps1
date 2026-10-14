@@ -187,7 +187,12 @@ if (-not $done) { "  (no DONE line: timed out after $TimeoutSeconds s, or the ga
 # at startup on the main thread: a texture held that way may never load.
 $errorPattern = 'Exception|\bError\b|XML error|Config error|Could not (resolve|find|load)|needs a StaticConstructorOnStartup'
 $tracePattern = '^\s*(at |\(Filename|UnityEngine\.|Verse\.Log:)'
-$modPattern = 'BT_|BatshitTechnology|RandomReplicator|Batshitt'
+# RimWorld 1.6 writes a "[Ref 9E9A3C82]" line between an error and its
+# stack trace; it belongs to the trace.
+$refPattern = '^\[Ref [0-9A-F]+\]\s*$'
+# The mod's names, and the Showcase API's log prefix, which its own errors
+# carry.
+$modPattern = 'BT_|BatshitTechnology|RandomReplicator|Batshitt|\[BT-SHOWCASE\]'
 # An error is the mod's if its own line or its stack trace (the "at ..."
 # lines that follow) mentions the mod: "Exception ticking MinifiedThing123"
 # names no mod, but its trace runs through BatshitTechnology code.
@@ -196,9 +201,11 @@ $modErrors = @()
 for ($i = 0; $i -lt $lines.Count; $i++) {
   $line = $lines[$i]
   if ($line -notmatch $errorPattern -or $line -match $tracePattern -or
+      $line -match $refPattern -or
       $line.StartsWith("[BT-SMOKE]")) { continue }  # the runner's own lines
   $trace = @()
-  for ($j = $i + 1; $j -lt $lines.Count -and $lines[$j] -match $tracePattern; $j++) {
+  for ($j = $i + 1; $j -lt $lines.Count -and
+       ($lines[$j] -match $tracePattern -or $lines[$j] -match $refPattern); $j++) {
     $trace += $lines[$j]
   }
   $errors += $line

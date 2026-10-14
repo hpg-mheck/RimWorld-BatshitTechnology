@@ -138,16 +138,27 @@ step 12.
 
 ## Tests
 
-*(Proposals:)*
-- **Core unit tests:** scene sequencing, grouping showcases by mod, and
-  requirement checks.
-- **XML tests:** every `ShowcaseDef`'s fields, narration keys, and
-  preview images.
-- **Smoke:**
-  - the main menu shows the button;
-  - the three windows open and list Batshit Technology's showcase;
-  - `-showcase=<defName>` starts a game that runs the tour to its end,
-    with no logged errors.
+- **Core unit tests:** scene sequencing, grouping showcases by mod,
+  requirement and compatibility checks, the launch decision, the caption
+  and its bar's layout, and the Force-start and command-line rules.
+- **XML tests:** every `ShowcaseDef`'s fields, the keyed text and the
+  keys the code uses, preview images, the Harmony dependency, and that
+  the smoke runner's test showcases are never shipped.
+- **Smoke** (`Source/SmokeTestShowcases.cs`, with test showcases made in
+  code; details in `docs/AI-TESTING-STRATEGY.txt`):
+  - the button is the mod's only Harmony patch, and vanilla's main menu
+    gets exactly one Showcases option while the in-game menu gets none;
+  - the three windows open, list Batshit Technology and its showcases,
+    grey out one missing a mod with the reason, refuse a fatal flag while
+    offering Force start, and honour Back and Escape;
+  - verdicts in game match Core's;
+  - a directed test showcase runs through its scenes, Skip, a timeout
+    and Stop, with its cues and narration in order;
+  - a showcase game never autosaves, an ordinary one does, and the save
+    folder gains no files.
+- **Showcase run:** `Tools/smoke-test.ps1 -Showcase` starts BT_Showcase
+  through the main menu with `-showcase=BT_Showcase` and waits for
+  `[BT-SHOWCASE] READY`.
 
 ## Decisions
 
