@@ -124,4 +124,18 @@
     <Error Text="RimWorld not found at '$(RIMWORLD_DIR)'. Set the
 RIMWORLD_DIR environment variable to your RimWorld install folder." />
   </Target>
+  <!-- Validates every Def against the game and the assembly just built
+       (Tools\validate-defs.ps1, Windows PowerShell 5.1, a few seconds).
+       In RimWorld 1.6 an unresolvable Class= drops the whole Def at load,
+       so a problem fails the build. Skip with -p:SkipDefValidation=true. -->
+  <Target Name="ValidateDefs"
+          AfterTargets="Build"
+          Condition="'$(SkipDefValidation)' != 'true' And '$(OS)' == 'Windows_NT'">
+    <Exec Command="powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\Tools\validate-defs.ps1&quot; -RimWorld &quot;$(RIMWORLD_DIR)&quot; -Assembly &quot;$(TargetPath)&quot; -MSBuild"
+          IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="ValidateDefsExitCode" />
+    </Exec>
+    <Error Condition="'$(ValidateDefsExitCode)' != '0'"
+           Text="Def validation failed (Tools\validate-defs.ps1); see the errors above. Skip once with -p:SkipDefValidation=true." />
+  </Target>
 </Project>
