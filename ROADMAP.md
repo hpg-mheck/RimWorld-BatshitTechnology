@@ -99,21 +99,35 @@ repairs bombs on its own. Everyone with sense runs.
         active pull: a direction toward each centre, scaled by that
         pull's current rate. Each drag step moves it one cell along the
         net direction, at the net rate.
+      - **Random bias jitter** (requested 2026-10-13): every pull
+        calculation includes a little random bias, so that things do not
+        cleanly stall in the middle; the slight noise pushes them one way
+        or the other. *(Proposal:)*
+        - Each caught thing gets a small, persistent bias of its own (a
+          few degrees and a few per cent).
+        - Every step adds a fresh flicker of noise on top.
+        - At a balance point, the bias decides which pull wins.
+        - The noise is never large enough to point a thing away from a
+          lone pull.
       - **The emergent effects:**
         - tug-of-war across the overlap;
-        - things stalling and jittering at the balance point between
-          two equal pulls, hovering in the junk;
+        - things wobbling at the balance point between two equal pulls,
+          then tipping off it toward one bomb or the other;
         - a sudden lurch toward the survivor when one pull ends.
       - **Stretching:** a pawn held between two strong pulls takes a
         little extra stretching damage, the stronger the opposing pulls,
         the worse. *(Optional; it is a joke about spaghettification.)*
-      - **One pull alone** takes exactly today's path: the same steps,
-        rates and checks. The existing single-bomb and grenade smoke
-        checks must pass unchanged, and a Core unit test proves the
-        superposition of one pull equals the single pull, step for step.
+      - **One pull alone** keeps today's expected results: things only
+        ever approach the centre, nothing is lost or shoved away, and
+        everything is gathered in the same time. With jitter the exact
+        cell-by-cell path may differ slightly. The existing single-bomb
+        and grenade smoke checks must pass unchanged, and Core unit tests
+        prove that one jittered pull never moves anything away from its
+        centre.
       - **More tests:**
-        - Core: two equal pulls cancel at their midpoint, and net
-          directions round to grid steps;
+        - Core: two equal pulls cancel at their midpoint without
+          jitter, and with it a thing at the midpoint always tips off
+          within a few steps; net directions round to grid steps;
         - smoke: in the twin-bomb junkyard, nothing is lost, nothing
           moves against the net pull, things in the overlap end in a
           pile or at a balance point, and nothing logs an error.
