@@ -1077,3 +1077,20 @@ $script:currentFile in its patch loop, so -MSBuild blames the patch file
 and not the last Defs file, and prints the file name only outside
 -MSBuild; and smoke-test.ps1 waits 900 s by default, for the two sets of
 checks together.
+
+2026-10-14 Claude: Tractor Bomb slice 12000, step 2: two small additions
+to the Showcase API, for the directed tour (docs/SHOWCASE-API.md, "The
+Def"). G1: ShowcaseScene.UnavailableReason (null by default) lets a
+scene decline a map. The director drops declined scenes after Attach and
+before building the SceneSequencer, so the caption's "i of N" counts only
+the scenes that run, and logs "SKIPPED <key>: <reason>" as a message:
+declining is expected on random maps and must not open the dev log. A
+check that throws is an error, and the scene is dropped. G2: the
+protected ShowcaseScene.Beat(moment, shot, select) calls an internal
+ShowcaseDirector.RunBeat, which logs "BEAT <key> <moment>", selects the
+subject, frames the shot from the focus as it is now, and narrates the
+moment; it does nothing once stopped or from a scene not running. A beat
+reuses the director's private Frame and Narrate rather than adding a
+camera-follow API. The smoke runner's directed test showcase gained a
+fifth, declining scene and a beat; a sabotage run (no filter, and no
+Narrate in RunBeat) failed the caption, cue and narration checks.

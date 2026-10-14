@@ -58,8 +58,28 @@ namespace BatshitTechnology
         /// <summary>Whether <see cref="End"/> throws.</summary>
         public bool throwInEnd;
 
+        /// <summary>
+        /// Why the scene declines to run, or null (it runs).
+        /// </summary>
+        public string unavailableReason;
+
+        /// <summary>
+        /// The scene's own tick on which it plays the beat
+        /// <see cref="beatMoment"/>; negative for none.
+        /// </summary>
+        public int beatAtTick = -1;
+
+        /// <summary>The moment of the beat it plays, if any.</summary>
+        public string beatMoment;
+
+        /// <summary>How many of its own ticks this run has had.</summary>
+        private int ticksRun;
+
         /// <summary>Gets the thing the scene is about, or null.</summary>
         public override Thing Subject => subject;
+
+        /// <summary>Gets why the scene declines to run, or null.</summary>
+        public override string UnavailableReason => unavailableReason;
 
         /// <summary>Sets the scene up, or throws if told to.</summary>
         /// <exception cref="InvalidOperationException">
@@ -67,16 +87,25 @@ namespace BatshitTechnology
         /// </exception>
         public override void Setup()
         {
+            ticksRun = 0;
             ThrowIf(throwInSetup, "Setup");
         }
 
-        /// <summary>Runs a tick, or throws if told to.</summary>
+        /// <summary>
+        /// Runs a tick, playing the beat when its tick comes, or throws if
+        /// told to.
+        /// </summary>
         /// <exception cref="InvalidOperationException">
         /// Thrown when <see cref="throwInTick"/> is set.
         /// </exception>
         public override void Tick()
         {
             ThrowIf(throwInTick, "Tick");
+            ticksRun++;
+            if (ticksRun == beatAtTick && !beatMoment.NullOrEmpty())
+            {
+                Beat(beatMoment);
+            }
         }
 
         /// <summary>Whether the scene's action has played out.</summary>
@@ -696,10 +725,13 @@ namespace BatshitTechnology
         /// <summary>
         /// Makes the directed test showcase: "opening" completes after 30
         /// ticks, with a cut shot; "waiting" never finishes, so it is
-        /// skipped, and it selects the subject; "timeout" never finishes
-        /// and times out after 40 ticks; "closing" completes after 20 ticks
-        /// and says its last line 30 ticks later. Narration covers each
-        /// outcome, including lines that must never be said.
+        /// skipped, and it selects the subject and plays the beat "poke" on
+        /// its second tick; "timeout" never finishes and times out after
+        /// 40 ticks; "unavailable" declines to run (gap G1), so it is
+        /// dropped and the caption counts four scenes, not five; "closing"
+        /// completes after 20 ticks and says its last line 30 ticks later.
+        /// Narration covers each outcome, including lines that must never
+        /// be said.
         /// </summary>
         /// <param name="pack">The mod it is listed under.</param>
         /// <returns>The def.</returns>
@@ -723,6 +755,8 @@ namespace BatshitTechnology
                 timeoutTicks = 600,
                 neverDone = true,
                 subject = showcaseSubject,
+                beatAtTick = 2,
+                beatMoment = "poke",
             };
             waiting.shots.Add(new ShowcaseShot { atTick = 0, zoom = CutShotZoom, pan = false });
             var timeout = new SmokeShowcaseScene
@@ -734,6 +768,15 @@ namespace BatshitTechnology
                 neverDone = true,
                 selectSubject = false,
             };
+            var unavailable = new SmokeShowcaseScene
+            {
+                key = "unavailable",
+                title = "Unavailable scene",
+                minTicks = 0,
+                timeoutTicks = 600,
+                unavailableReason = "smoke",
+                selectSubject = false,
+            };
             var closing = new ShowcaseScene
             {
                 key = "closing",
@@ -742,7 +785,8 @@ namespace BatshitTechnology
                 timeoutTicks = 600,
                 selectSubject = false,
             };
-            def.scenes.AddRange(new[] { opening, waiting, timeout, closing });
+            def.scenes.AddRange(
+                new[] { opening, waiting, timeout, unavailable, closing });
             def.narration.AddRange(new[]
             {
                 Line("opening", "start", 0, "Smoke narration: opening."),
@@ -750,9 +794,11 @@ namespace BatshitTechnology
                 Line("opening", "stopped", 0, "Smoke narration: opening stopped."),
                 Line("opening", "stopped", 10, "Smoke narration: queued at the stop, never said."),
                 Line("waiting", "start", 0, "Smoke narration: waiting."),
+                Line("waiting", "poke", 0, "Smoke narration: waiting poked."),
                 Line("waiting", "skipped", 0, "Smoke narration: waiting skipped."),
                 Line("waiting", "completed", 0, "Smoke narration: waiting never completes."),
                 Line("timeout", "timedOut", 0, "Smoke narration: timeout timed out."),
+                Line("unavailable", "start", 0, "Smoke narration: never said."),
                 Line("closing", "completed", 30, "Smoke narration: closing, said late."),
             });
             return def;
@@ -950,7 +996,8 @@ namespace BatshitTechnology
                 showcaseSubject == null
                     ? "no subject could be placed"
                     : $"selected: {string.Join(", ", Find.Selector.SelectedObjects)}");
-            Check("the caption reads 2 of 4: Waiting scene",
+            Check("the caption reads 2 of 4: Waiting scene (a declined "
+                    + "scene is not counted)",
                 director.Caption == "2 of 4: Waiting scene",
                 $"'{director.Caption}'");
 
@@ -973,15 +1020,18 @@ namespace BatshitTechnology
             List<string> cues = ShowcaseCuesSince(mark);
             var expectedCues = new[]
             {
-                "GAME " + DirectorShowcase, "START " + DirectorShowcase, "READY",
+                "GAME " + DirectorShowcase, "START " + DirectorShowcase,
+                "SKIPPED unavailable: smoke", "READY",
                 "SCENE opening", "END opening completed",
-                "SCENE waiting", "SKIP " + DirectorShowcase, "END waiting skipped",
+                "SCENE waiting", "BEAT waiting poke",
+                "SKIP " + DirectorShowcase, "END waiting skipped",
                 "SCENE timeout", "END timeout timedOut",
                 "SCENE closing", "END closing completed",
                 "FINISHED " + DirectorShowcase,
             };
             Check("the director runs its scenes to FINISHED, logging each cue "
-                    + "in order",
+                    + "in order: a declined scene is SKIPPED before READY, "
+                    + "and a beat logs BEAT",
                 cues.SequenceEqual(expectedCues), string.Join(" | ", cues));
 
             List<NarrationRecord> said = director.NarrationLog.ToList();
@@ -990,13 +1040,14 @@ namespace BatshitTechnology
                 "Smoke narration: opening.",
                 "Smoke narration: opening completed.",
                 "Smoke narration: waiting.",
+                "Smoke narration: waiting poked.",
                 "Smoke narration: waiting skipped.",
                 "Smoke narration: timeout timed out.",
                 "Smoke narration: closing, said late.",
             };
             int lastLine = said.Count > 0 ? said[said.Count - 1].Tick : -1;
-            Check("narration says each scene's lines for how it ended, then "
-                    + "the closing message",
+            Check("narration says each scene's lines for how it ended and "
+                    + "for its beat, then the closing message",
                 said.Select(r => r.Text).SequenceEqual(expectedLines)
                     && showcaseSession.FarewellTick > lastLine,
                 $"said: {string.Join(" | ", said.Select(r => $"{r.Tick}: {r.Text}"))}; "

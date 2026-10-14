@@ -160,6 +160,16 @@ namespace BatshitTechnology.Showcases
             }
         }
 
+        /// <summary>
+        /// Gets why the scene cannot run on this map ("no hostile
+        /// faction"), or null when it can. The director asks once, after
+        /// attaching the scene and before the tour starts; a declined
+        /// scene is dropped with a SKIPPED cue (a message, not an error)
+        /// and is not counted in the caption's "2 of 8". The base scene
+        /// always runs.
+        /// </summary>
+        public virtual string UnavailableReason => null;
+
         /// <summary>Gets the scene's timing, for the sequencer.</summary>
         public SceneTiming Timing =>
             new SceneTiming(minTicks, timeoutTicks, settleTicks);
@@ -200,6 +210,23 @@ namespace BatshitTechnology.Showcases
         /// </summary>
         /// <returns>True when the scene may end.</returns>
         public virtual bool IsDone() => true;
+
+        /// <summary>
+        /// Plays a beat: a moment the scene reaches through an event
+        /// rather than a fixed tick (the bomb is planted, the volley
+        /// begins). The director logs "BEAT key moment", selects the
+        /// subject, frames <paramref name="shot"/> from the focus as it
+        /// is now (its <c>atTick</c> is ignored), and says the def's lines
+        /// for that moment. Nothing happens once the tour has stopped or
+        /// while this scene is not the one running.
+        /// </summary>
+        /// <param name="moment">The narration moment, such as "blast".</param>
+        /// <param name="shot">The camera move, or null to leave it.</param>
+        /// <param name="select">Whether to select the subject.</param>
+        /// <returns>True if the beat played.</returns>
+        protected bool Beat(
+            string moment, ShowcaseShot shot = null, bool select = true) =>
+            director != null && director.RunBeat(this, moment, shot, select);
 
         /// <summary>
         /// Called once when the scene ends, however it ended.

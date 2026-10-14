@@ -208,9 +208,27 @@ A scene (`ShowcaseScene`, or a subclass named with `Class="..."`) has a
 (true), and `shots`. A shot has `atTick`, an `offset` (from the scene's
 focus, or the map's centre with `fromMapCenter`), a `zoom` (8 to 80,
 default 24), and either a glide (`pan`, the default, over `panSeconds`,
-0.6) or a cut. Subclasses override `Subject`, `Setup`, `Tick`, `IsDone`,
-`End` and `OutcomeKey`; a scene holding mutable state overrides
-`CloneForRun`.
+0.6) or a cut. Subclasses override `Subject`, `UnavailableReason`,
+`Setup`, `Tick`, `IsDone`, `End` and `OutcomeKey`; a scene holding
+mutable state overrides `CloneForRun`.
+
+Two hooks were added for the directed tour (phase 3000, slice 12000):
+
+- **Declining a scene (gap G1).** `UnavailableReason` is null by
+  default. A scene that cannot run on this map (no hostile faction, no
+  pad) returns why. The director asks each scene once, after attaching
+  it and before building the sequencer, and drops the ones that decline,
+  logging `SKIPPED <key>: <reason>` as a message, not an error. The
+  caption counts only the scenes that run ("2 of 7", not "2 of 8"). A
+  check that throws is logged as an error and the scene is dropped.
+- **Beats (gap G2).** Shots are timed from a scene's start; an event
+  (the bomb is planted, the volley begins) is not. A scene calls the
+  protected `Beat(moment, shot, select)`: the director logs `BEAT <key>
+  <moment>`, selects the subject (unless `select` is false), frames the
+  shot from the scene's focus as it is now (its `atTick` is ignored),
+  and narrates that moment, so a scene's lines can name its beats. A
+  beat does nothing once the tour has stopped, or from a scene that is
+  not the one running.
 
 ### The Worker, the Director and the Session
 
@@ -304,6 +322,9 @@ API's errors and warnings carry the same prefix, but are not cues.
   `stopped`, `failed`, or the scene's own outcome key.
 - `SKIPPED <key>: set-up failed`: a scene's set-up threw; it never
   began.
+- `SKIPPED <key>: <reason>`: before `READY`, a scene declined the map
+  (`UnavailableReason`); it is not counted.
+- `BEAT <key> <moment>`: a scene played a beat.
 - `SKIP <def>`: the viewer pressed Skip.
 - `FINISHED <def>`: the showcase played out.
 - `STOPPED <def>`: the viewer pressed Stop, or the worker failed while
@@ -343,6 +364,9 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
     and hands a request only to its own game;
   - a directed test showcase runs through its scenes, Skip, a timeout
     and Stop, with its cues and narration in order and no API warning;
+    its fifth scene declines (`SKIPPED unavailable: smoke` before
+    `READY`, and the caption still reads "2 of 4"), and its waiting
+    scene plays a beat (`BEAT waiting poke`, with that moment's line);
     scenes that throw are logged once each and the tour goes on; a cut
     right after a glide holds;
   - god mode is lent only in dev mode and given back on every way out;
