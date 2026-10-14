@@ -191,8 +191,9 @@ audio section in the same change.
 ### The Implosion
 
 The same pull as the Ergonomic Singularity Grenade, over the bomb's
-radius. The singularity's pull code would be extracted into a reusable
-implosion that both use:
+radius. The singularity's pull has been extracted into a reusable
+implosion, `Implosion` (`Source/Implosion.cs`), built for the Tractor
+Bomb, which both use:
 
 - Pawns and animals are seized at once and dragged in, held stunned.
 - Items are dragged one cell at a time and pile at the centre, merging
@@ -203,8 +204,8 @@ implosion that both use:
 - Natural rock and overhead mountain roof within the radius are blasted
   away, so that the town gets level ground *(proposal)*.
 - It starts suddenly but slowly and accelerates. It ends when a full pass
-  moves nothing, with a cap of 20 s for large radii *(proposal)*. Then
-  comes the THPPPT.
+  moves nothing (the implosion's `Settled`), with a cap of 20 s for large
+  radii *(proposal)*. Then comes the THPPPT.
 - Anything the rules protect is left alone: an active Colony Deployment
   Shelter, things that cannot be destroyed (steam geysers), and the map
   edge.
@@ -378,7 +379,9 @@ Colony Bomb demo after its existing ones. Its punchline, added by Matt
 1. **Shared groundwork:**
    - the AnyRim town generator, with size and quality tiers (in progress
      for the showcase);
-   - a reusable implosion extracted from the singularity field;
+   - a reusable implosion extracted from the singularity field (done
+     for the Tractor Bomb; it does not yet blast natural rock or
+     mountain roof);
    - the `BatshitImmunity` check wired into every existing effect;
    - the audio pipeline (`make_sounds.py`, SoundDefs, and a motif audio
      section).

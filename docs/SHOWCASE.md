@@ -49,6 +49,139 @@ game below real time, which is why capture tools wait for log cues.
 Before each self-destruct arms, colonists within its blast radius plus 8
 are moved back to the base, so no demo kills a colonist.
 
+## The Directed Tour (planned)
+
+Requested by Matt "Breakpoint" Heck on 2026-10-13, to be built with the
+Tractor Bomb's showcase work (`ROADMAP.md`). Today's showcase runs its
+demos on a timer and moves the camera now and then. The tour takes
+ownership of the camera, directs the action, and shows one major feature
+at a time, explaining as it goes.
+
+- **A director.** A small state machine runs scenes in order. Each scene
+  sets up, frames the camera, says what is happening, runs, and waits for
+  the action to finish (an aftermath ending, a pull completing, the smoke
+  settling) rather than a fixed delay. Then the next begins.
+- **Commentary.** Pop-up comments as game events: vanilla messages, with
+  look targets so a click jumps to the subject. They are written in the
+  motif's deadpan voice (`docs/ARTISTIC-MOTIF.md`). *(Proposal:)* each
+  chapter also gets a short caption bar at the bottom of the screen
+  ("2 of 8: The Batshittium Reactor").
+- **The camera.** The tour moves and zooms it for every beat, framing the
+  subject, and pulls back for anything with a big radius.
+- **Scenes** *(proposal, in order)*:
+  1. The demo base, one device at a time: reactor, Random Replicator,
+     Transmogrifier, Brain Squeezer, Artificer, each selected, so its
+     buttons and inspect text show.
+  2. The Batshit Ballista and its magazines, firing a volley.
+  3. The Random Replicator's self-destruct.
+  4. The Batshittium Reactor's self-destruct.
+  5. The Tractor Bomb: the barn builds one, it patrols, finds a staged
+     enemy party, protests if a colonist strays too close, emplaces with
+     its tires flipping flat, counts down, pulls, and blows. Those too
+     close to run make peace with their impending doom.
+  6. AnyRim, street by street, and then the Ergonomic Singularity
+     Grenade, in the town's own pest-control incident (below). This
+     replaces the junk-pile grenade demo west of the base.
+  7. "The showcase is yours": the director lets go of the camera.
+- **Log cues.** Each scene logs `[BT-SHOWCASE] SCENE <name>` for capture
+  tooling, replacing the ad hoc cues above (which stay until then).
+- **Letting go.** The player can end the tour early *(proposal: a
+  "Skip tour" button on the caption bar)*; the director then stops
+  moving the camera and leaves everything running.
+
+### The Story *(draft)*
+
+Requested by Matt "Breakpoint" Heck on 2026-10-13: a narrative to tie the
+showcase together. The tour is a 1950s industrial film, the kind that
+gave the world "Duck and Cover" and "The House in the Middle", in which a
+cheerful narrator presents the future, in reels.
+
+**Living Better with Batshittium.** *A Batshit Technology Public
+Information Film.* The caption bar reads like a title card throughout.
+
+- **The narrator** is warm, confident and on message. He is the motif's
+  deadpan, spoken aloud. As the reels go by his reassurances grow
+  shorter, and in the final reels they are mostly about remaining calm.
+  He never breaks the fourth wall, and he never admits anything is wrong.
+- **The cast** is the colony, introduced as "our volunteer family". The
+  grenade's volunteer is "a valued member of the family". AnyRim's
+  residents are "our neighbours". Captions name colonists by their real
+  names.
+- **The premise** is the arc. The film opens on the byline's first three
+  promises (sooner, cheaper, funnier) and closes, once the evidence is in,
+  on the fourth (and ludicrously dangerous).
+
+Reels and sample narration (final lines are written with the scenes):
+
+1. **Reel 1: Power for the Modern Colony.** The reactor. "Two hundred and
+   fifty thousand watts from a single unit of batshittium. Clean,
+   abundant, and only occasionally hot enough to cook the kitchen."
+2. **Reel 2: The Kitchen of Tomorrow.** The Random Replicator. "A
+   different dinner every time. Your family will never know what's for
+   supper, and neither will you."
+3. **Reel 3: Rocks Into Riches.** The Transmogrifier. "Every rock on
+   your land is a fortune waiting to be transmogrified."
+4. **Reel 4: Leisure, Scientifically Applied.** The Brain Squeezer. "A
+   firm, reassuring squeeze for the overworked mind."
+5. **Reel 5: Home Defence.** The Artificer and the Batshit Ballista.
+   "Sixteen bolts, one volley, and a neighbourhood with very few
+   complaints."
+6. **Reel 6: When Devices Retire.** The replicator's and the reactor's
+   self-destructs. "Every Batshit device knows when to step aside.
+   Please step aside also."
+7. **Reel 7: The Tractor of Tomorrow.** The Tractor Bomb. "The Tractor
+   Barn builds it. The tractor finds the problem. The problem is
+   resolved." Those too close are "making peace with their impending
+   doom", and the narrator explains that this is normal.
+8. **Reel 8: A Typical Rim Community.** AnyRim, street by street, and the
+   Survival Town history it comes from. "Every home in AnyRim is a
+   proving ground. So is every neighbour."
+9. **Reel 9: Comfort Is a Weapon.** The Ergonomic Singularity Grenade,
+   shown in AnyRim (specified by Matt "Breakpoint" Heck on 2026-10-13):
+   an over-enthusiastic security guard deals with a rabid raccoon...
+   unfortunately. The incident is described below.
+10. **The End.** The sign-off card: "The Future: Sooner. Cheaper. Funnier.
+    And ludicrously dangerous." Then: "This concludes our presentation.
+    The colony is yours. Please remain calm." The director lets go of
+    the camera.
+
+### Reel 9: The Raccoon Incident *(draft)*
+
+AnyRim's ninth resident is the security guard of AnyRim Savings & Loan,
+which until now had nobody in it: **Ned "Overkill" Lessly** (read it
+aloud) *(proposal)*. He carries an Ergonomic Singularity Grenade "for
+emergencies", stands at the bank door, and takes pests seriously.
+
+1. **The setup.** The camera finds Ned at the bank. A raccoon wanders onto
+   Main Street, foaming slightly: it is in vanilla's manhunter state,
+   which is RimWorld's rabid. "Every community has its pests. In AnyRim,
+   pest control is in the capable hands of Ned Lessly, AnyRim Savings &
+   Loan Security."
+2. **The incident.** The raccoon goes for a neighbour, most likely
+   Constance in her lawn chair. Ned throws the grenade at it, in the
+   middle of Main Street. "Ned believes in a proportionate response."
+3. **The consequences.** The singularity takes the raccoon, the lawn
+   chairs, the neighbours in reach, the street furniture and, very
+   possibly, Ned. Survivors get the grenade's comfort and its quips
+   ("Wow, that was so ergonomic!"), and the census does the rest: "AnyRim
+   census revised to 6. The sign has been updated. Please remain calm."
+4. **The verdict.** The narrator reads the result rather than a script:
+   - If the raccoon survived: "The raccoon has been reassured."
+   - If it died: "The raccoon will not be troubling anyone."
+   - Either way: "AnyRim thanks Ned for his service. Unfortunately."
+
+Implementation notes *(proposals)*: Ned is a regular AnyRim resident
+(the Ancients faction) with the grenade equipped; the director orders
+his throw directly, as the current demo orders the grenadier's. The
+raccoon is a vanilla Raccoon put into the manhunter mental state and
+spawned at the street's south end, so its target is predictable.
+
+*(Proposals:)* the reels map onto the scenes above (Reels 1 to 5 are the
+demo base and the Ballista); the narrator's lines live in XML so they
+can be translated and tested, as the Brain Squeezer's monologues do; and
+a future Colony Bomb reel ends the film with "Holy shit!" and "I know,
+right?".
+
 ## Safety Rules
 
 - **Demo corners keep away from AnyRim.** The replicator's reach,
