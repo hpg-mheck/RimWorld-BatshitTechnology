@@ -46,7 +46,8 @@ that the engineering is earnest and the purpose is unhinged.
   get one white specular highlight at the upper left.
 - **Glow.** Light sources are a soft Gaussian halo drawn on its own layer
   under the lit object (`glow()` in the generator). Glow is reserved for
-  batshittium, screens and status lights.
+  batshittium, screens and status lights, and for the events a showcase
+  preview shows (see "Showcase Previews").
 - **Production.** Art is drawn procedurally by `Tools/make_textures.py` at
   four times its final size and downsampled with Lanczos filtering, for
   clean anti-aliased edges. Hand-drawn replacements must keep each file's
@@ -79,6 +80,7 @@ reuse them by name rather than inventing near-duplicates.
 | Cushioning | `CUSHION`, `CUSHION_DARK` | 118, 96, 138; 88, 68, 106 |
 | A singularity's core | `VOID` | 14, 6, 22 |
 | Open ground (previews only) | `SOIL`, `SOIL_DARK` | 78, 72, 64; 58, 53, 48 |
+| Blast core (previews only) | `BLAST_CORE` | 255, 236, 200 |
 
 Colour rules:
 
@@ -199,8 +201,11 @@ Showcases menu. Previews follow the sprites' rules, with these additions:
 - **Show what happens.** A preview shows the showcase's events, not just
   its props: a countdown is the self-destruct warning band
   (`SELF_DESTRUCT_AMBER` inside `SELF_DESTRUCT_RED`), a volley lands as
-  hazard-yellow bursts, a singularity is the vortex sprite. Magenta still
-  means batshittium only.
+  hazard-yellow bursts, a singularity is the vortex sprite. Events that
+  give off light in the game may carry a soft `glow()` halo in their own
+  colour: the countdown band in `SELF_DESTRUCT_AMBER`, and each blast in
+  `HAZARD` around a hot `BLAST_CORE` centre. Magenta still means
+  batshittium only.
 - **No words.** Text in a picture cannot be translated; the menu gives
   the title.
 - **Read at a glance.** Check it at full size and downsampled to 64 px

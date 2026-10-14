@@ -4,10 +4,17 @@ RimWorld-style top-down art drawn procedurally: dark outlines, flat steel shadin
 glow for anything batshittium. These are placeholders to build and playtest with; replace any PNG
 with hand-drawn art at the same path and size.
 
-Requires Pillow (pip install pillow). Run from anywhere:  python Tools/make_textures.py
+Requires Pillow, pinned in Tools/requirements.txt (pip install -r Tools/requirements.txt).
+Run from anywhere:
+
+    python Tools/make_textures.py                     # every texture
+    python Tools/make_textures.py showcase_preview    # only the named ones
+
+Unknown names are refused, before anything is drawn, with a usage line and exit status 2.
 """
 import math
 import os
+import sys
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
@@ -730,6 +737,7 @@ SOIL = (78, 72, 64, 255)             # open ground around a preview's pad
 SOIL_DARK = (58, 53, 48, 255)
 SELF_DESTRUCT_AMBER = (255, 158, 26, 255)  # CompSelfDestruct's warning band
 SELF_DESTRUCT_RED = (255, 26, 15, 255)
+BLAST_CORE = (255, 236, 200, 255)    # a blast's hot centre, in previews only
 
 
 def new_wide_canvas(w, h):
@@ -786,7 +794,7 @@ def showcase_preview():
             s(bx - br, by - br, bx + br, by + br), fill=c),
             (HAZARD[0], HAZARD[1], HAZARD[2]), blur=4, alpha=200)
         d = draw(img)
-        circle(d, bx, by, br * 0.45, fill=(255, 236, 200, 255))
+        circle(d, bx, by, br * 0.45, fill=BLAST_CORE)
     # south-west: AnyRim's roofs
     for hx, hy, hw, hh in ((26, 206, 40, 30), (76, 214, 34, 26), (30, 248, 30, 24),
                            (72, 250, 44, 28)):
@@ -827,28 +835,55 @@ def showcase_preview():
     print('wrote', os.path.relpath(path, os.path.dirname(TEXTURES)))
 
 
-if __name__ == '__main__':
-    # With names (python Tools/make_textures.py showcase_preview), make only
-    # those, leaving every other texture as it is.
-    import sys
-    if len(sys.argv) > 1:
-        for name in sys.argv[1:]:
-            globals()[name]()
-        sys.exit(0)
-    batshittium_item()
-    transmogrifier()
-    reactor()
-    brain_squeezer()
+def bolts():
+    """The Ballista's bolts, plain and explosive, as items and in flight."""
     for explosive in (False, True):
         bolt_item(explosive)
         bolt_projectile(explosive)
-    ballista_base()
-    ballista_top()
-    ballista_magazine()
-    artificer()
-    random_replicator()
-    singularity_grenade_item()
-    singularity_grenade_projectile()
-    singularity_vortex()
-    singularity_vortex_outer()
-    showcase_preview()
+
+
+# Every texture generator, by the name the command line takes, in the order
+# a full run makes them. showcase_preview stays last: it is composed from
+# the sprites the others draw.
+GENERATORS = {
+    'batshittium_item': batshittium_item,
+    'transmogrifier': transmogrifier,
+    'reactor': reactor,
+    'brain_squeezer': brain_squeezer,
+    'bolts': bolts,
+    'ballista_base': ballista_base,
+    'ballista_top': ballista_top,
+    'ballista_magazine': ballista_magazine,
+    'artificer': artificer,
+    'random_replicator': random_replicator,
+    'singularity_grenade_item': singularity_grenade_item,
+    'singularity_grenade_projectile': singularity_grenade_projectile,
+    'singularity_vortex': singularity_vortex,
+    'singularity_vortex_outer': singularity_vortex_outer,
+    'showcase_preview': showcase_preview,
+}
+
+
+def main(argv):
+    """Makes the named textures in the order given, or every texture.
+
+    argv: generator names from the command line; empty means all of them.
+    Every name is checked before anything is drawn, so a typo never leaves
+    some textures regenerated and others not. Returns the exit status: 0,
+    or 2 for an unknown name, after printing a usage line and the valid
+    names to stderr.
+    """
+    names = list(argv)
+    unknown = [n for n in names if n not in GENERATORS]
+    if unknown:
+        print('unknown texture generator: ' + ', '.join(unknown), file=sys.stderr)
+        print('usage: python Tools/make_textures.py [name ...]', file=sys.stderr)
+        print('names: ' + ', '.join(sorted(GENERATORS)), file=sys.stderr)
+        return 2
+    for name in names or list(GENERATORS):
+        GENERATORS[name]()
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
