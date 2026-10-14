@@ -49,6 +49,45 @@ game below real time, which is why capture tools wait for log cues.
 Before each self-destruct arms, colonists within its blast radius plus 8
 are moved back to the base, so no demo kills a colonist.
 
+## The Directed Tour (planned)
+
+Requested by Matt "Breakpoint" Heck on 2026-10-13, to be built with the
+Tractor Bomb's showcase work (`ROADMAP.md`). Today's showcase runs its
+demos on a timer and moves the camera now and then. The tour takes
+ownership of the camera, directs the action, and shows one major feature
+at a time, explaining as it goes.
+
+- **A director.** A small state machine runs scenes in order. Each scene
+  sets up, frames the camera, says what is happening, runs, and waits for
+  the action to finish (an aftermath ending, a pull completing, the smoke
+  settling) rather than a fixed delay. Then the next begins.
+- **Commentary.** Pop-up comments as game events: vanilla messages, with
+  look targets so a click jumps to the subject. They are written in the
+  motif's deadpan voice (`docs/ARTISTIC-MOTIF.md`). *(Proposal:)* each
+  chapter also gets a short caption bar at the bottom of the screen
+  ("2 of 8: The Batshittium Reactor").
+- **The camera.** The tour moves and zooms it for every beat, framing the
+  subject, and pulls back for anything with a big radius.
+- **Scenes** *(proposal, in order)*:
+  1. The demo base, one device at a time: reactor, Random Replicator,
+     Transmogrifier, Brain Squeezer, Artificer, each selected, so its
+     buttons and inspect text show.
+  2. The Batshit Ballista and its magazines, firing a volley.
+  3. The Random Replicator's self-destruct.
+  4. The Batshittium Reactor's self-destruct.
+  5. The Ergonomic Singularity Grenade.
+  6. The Tractor Bomb: the barn builds one, it patrols, finds a staged
+     enemy party, protests if a colonist strays too close, emplaces with
+     its tires flipping flat, counts down, pulls, and blows. Those too
+     close to run make peace with their impending doom.
+  7. AnyRim, street by street.
+  8. "The showcase is yours": the director lets go of the camera.
+- **Log cues.** Each scene logs `[BT-SHOWCASE] SCENE <name>` for capture
+  tooling, replacing the ad hoc cues above (which stay until then).
+- **Letting go.** The player can end the tour early *(proposal: a
+  "Skip tour" button on the caption bar)*; the director then stops
+  moving the camera and leaves everything running.
+
 ## Safety Rules
 
 - **Demo corners keep away from AnyRim.** The replicator's reach,

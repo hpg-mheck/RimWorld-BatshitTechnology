@@ -83,8 +83,11 @@ repairs bombs on its own. Everyone with sense runs.
         berserk ones don't;
       - the interlock, Dial-A-Yield and repair docking work;
       - nothing logs an error.
-12. **Showcase and docs.** A Tractor Bomb demo, the README, the decisions
-    log, and a merge into `trunk`.
+12. **Showcase and docs.** The showcase becomes a directed tour (see
+    `docs/SHOWCASE.md`, "The Directed Tour"): it takes the camera, shows
+    one major feature at a time with on-screen commentary, and the
+    Tractor Bomb gets its own scene. Then the README, the decisions log,
+    and a merge into `trunk`.
 
 ### Done When
 
