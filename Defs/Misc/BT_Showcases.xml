@@ -11,7 +11,8 @@
        scenes over the demo base Source/Showcase.cs builds, run by
        BatshitTourDirector. The keys and narration moments follow Core's
        TourScript; TourXmlTests hold the two together. Narration is The
-       Story's voice: deadpan, one line, at most 96 characters. Start
+       Story's voice: deadpan, one line, at most 120 characters (raised
+       from 96 for the operator's stampede volley line, 2026-10-14). Start
        lines wait 90 ticks, so the previous scene's outcome lands first. -->
   <BatshitTechnology.Showcases.ShowcaseDef>
     <defName>BT_Showcase</defName>
@@ -126,14 +127,14 @@
       <li><scene>defence</scene><when>volley</when>
         <text>Sixteen bolts, one volley, and a neighbourhood with very few complaints.</text></li>
       <li><scene>defence</scene><when>completed</when>
-        <text>That patch of ground will not be troubling anyone again.</text></li>
+        <text>Note that the area now meets local lawn care standards.</text></li>
       <!-- stampede -->
       <li><scene>stampede</scene><when>start</when><delayTicks>90</delayTicks>
         <text>Not every visitor calls ahead.</text></li>
       <li><scene>stampede</scene><when>herd</when>
         <text>A herd of boomalopes has taken a keen interest in the family.</text></li>
       <li><scene>stampede</scene><when>volley</when>
-        <text>Two hundred and fifty-six bolts. One volley. A firm but neighbourly no.</text></li>
+        <text>Two hundred fifty-six largely inaccurate—but highly explosive—Ballista bolts make for a firm, but neighborly, "No."</text></li>
       <li><scene>stampede</scene><when>stragglers</when>
         <text>A few guests have stayed on. The Ballista will see them out.</text></li>
       <li><scene>stampede</scene><when>aftermath</when>

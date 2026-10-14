@@ -16,13 +16,13 @@ namespace BatshitTechnology.Tests;
 /// Defs/Misc/BT_Showcases.xml, against Core's <see cref="TourScript"/>:
 /// its director, its scenes (keys, classes, titles, timing and zooms) and
 /// its narration (every moment covered, nothing unknown, and every line
-/// in The Story's voice: one line, at most 96 characters, no exclamation
+/// in The Story's voice: one line, at most 120 characters, no exclamation
 /// and no word that breaks the fourth wall).
 /// </summary>
 public sealed class TourXmlTests
 {
     /// <summary>The longest narration line, in characters.</summary>
-    private const int MaxLineLength = 96;
+    private const int MaxLineLength = 120;
 
     /// <summary>The longest scene title the caption bar is laid out for.</summary>
     private const int MaxTitleLength = 32;
@@ -168,7 +168,7 @@ public sealed class TourXmlTests
     }
 
     /// <summary>
-    /// Every line is in the narrator's voice: one line, at most 96
+    /// Every line is in the narrator's voice: one line, at most 120
     /// characters, no exclamation mark, and no word about the software.
     /// </summary>
     [Fact(DisplayName = "Tour lines are short, calm and stay in the film")]

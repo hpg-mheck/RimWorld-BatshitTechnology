@@ -182,6 +182,79 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
+        /// Measures a line as the overlay would draw it on a screen of a
+        /// given width in UI units (a 3840-pixel screen at 2x UI scale is
+        /// 1,920): the font size it fits at, the lines it wraps to, and
+        /// any character the font has no glyph for. Layout is measured in
+        /// UI units, so the UI scale changes how sharp the text is, not
+        /// where it wraps. Call it from inside OnGUI (the smoke runner).
+        /// </summary>
+        /// <param name="text">The line.</param>
+        /// <param name="screenWidth">The screen's width in UI units.</param>
+        /// <returns>
+        /// The font size, the number of lines, and the characters with no
+        /// glyph (empty when all have one).
+        /// </returns>
+        internal static (int Size, int Lines, string Missing) Probe(
+            string text, float screenWidth)
+        {
+            GUIStyle s = Style();
+            float width = NarrationOverlayLayout.TextWidth(screenWidth);
+            Content.text = text ?? string.Empty;
+            int size = resizable
+                ? NarrationOverlayLayout.FitFontSize(
+                    mediumSize, z => LinesAt(s, z, width))
+                : mediumSize;
+            s.fontSize = resizable ? size : 0;
+            float line = s.lineHeight;
+            int lines = line > 0f
+                ? Math.Max(1, Mathf.RoundToInt(s.CalcHeight(Content, width) / line))
+                : 1;
+            return (size, lines, MissingGlyphs(s.font, Content.text, size));
+        }
+
+        /// <summary>
+        /// The characters of a line a font cannot draw, each once. Spaces
+        /// and other blanks are not checked (they have no glyph to draw).
+        /// </summary>
+        /// <param name="font">The font, or null.</param>
+        /// <param name="text">The line.</param>
+        /// <param name="size">The size it is drawn at.</param>
+        /// <returns>The characters with no glyph; empty when all have one.</returns>
+        private static string MissingGlyphs(Font font, string text, int size)
+        {
+            if (font == null)
+            {
+                return "(no font)";
+            }
+
+            if (font.dynamic)
+            {
+                font.RequestCharactersInTexture(text, size);
+            }
+
+            var missing = new List<char>();
+            foreach (char c in text)
+            {
+                if (char.IsWhiteSpace(c) || missing.Contains(c))
+                {
+                    continue;
+                }
+
+                bool drawn = font.dynamic
+                    ? font.GetCharacterInfo(c, out CharacterInfo info, size)
+                        && info.advance > 0
+                    : font.HasCharacter(c);
+                if (!drawn)
+                {
+                    missing.Add(c);
+                }
+            }
+
+            return new string(missing.ToArray());
+        }
+
+        /// <summary>
         /// The overlay's style: vanilla's Medium label, centred, wrapping,
         /// white, without rich text (whose colours would tint the shadow).
         /// </summary>

@@ -116,6 +116,16 @@ public static class Stampede
         new[] { (8, 20), (12, 30), (16, 45) };
 
     /// <summary>
+    /// How far north of the base's row a band may be slid along the east
+    /// edge, tried in order, when rock or water closes the edge level with
+    /// the base. North only: the tractor yard's candidates all lie south
+    /// of the base (<see cref="TourStagePlanner.DefaultYardOffsets"/>), and
+    /// a herd from the south-east would bring the volley down on it.
+    /// </summary>
+    public static IReadOnlyList<int> BandSlides { get; } =
+        new[] { 0, 35, 70 };
+
+    /// <summary>
     /// The band on the map's east edge, level with the base, where the
     /// herd enters, clipped to the map and kept
     /// <see cref="EdgeMargin"/> from its edges.
@@ -125,7 +135,22 @@ public static class Stampede
     /// <param name="step">Which of <see cref="BandSizes"/> to use.</param>
     /// <returns>The band; empty (not valid) on a map too small for it.</returns>
     /// <exception cref="ArgumentOutOfRangeException">An unknown step.</exception>
-    public static Box Band(Box map, Cell baseCentre, int step)
+    public static Box Band(Box map, Cell baseCentre, int step) =>
+        Band(map, baseCentre, step, 0);
+
+    /// <summary>
+    /// A band on the map's east edge, slid north or south of the base's
+    /// row, clipped to the map and kept <see cref="EdgeMargin"/> from its
+    /// edges.
+    /// </summary>
+    /// <param name="map">The map's cells.</param>
+    /// <param name="baseCentre">The demo base's centre.</param>
+    /// <param name="step">Which of <see cref="BandSizes"/> to use.</param>
+    /// <param name="slide">Tiles north (negative: south) of the base's
+    /// row.</param>
+    /// <returns>The band; empty (not valid) when it falls off the map.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">An unknown step.</exception>
+    public static Box Band(Box map, Cell baseCentre, int step, int slide)
     {
         if (step < 0 || step >= BandSizes.Count)
         {
@@ -133,11 +158,39 @@ public static class Stampede
         }
 
         (int depth, int half) = BandSizes[step];
+        int row = baseCentre.Z + slide;
         int maxX = map.MaxX - EdgeMargin;
         int minX = Math.Max(map.MinX + EdgeMargin, maxX - depth + 1);
-        int minZ = Math.Max(map.MinZ + EdgeMargin, baseCentre.Z - half);
-        int maxZ = Math.Min(map.MaxZ - EdgeMargin, baseCentre.Z + half);
+        int minZ = Math.Max(map.MinZ + EdgeMargin, row - half);
+        int maxZ = Math.Min(map.MaxZ - EdgeMargin, row + half);
         return new Box(minX, minZ, maxX, maxZ);
+    }
+
+    /// <summary>
+    /// Every band the herd may enter in, best first: each size level with
+    /// the base, widest last, then each size slid along the edge by
+    /// <see cref="BandSlides"/>. Bands that fall off the map, or repeat
+    /// one already offered, are left out.
+    /// </summary>
+    /// <param name="map">The map's cells.</param>
+    /// <param name="baseCentre">The demo base's centre.</param>
+    /// <returns>The bands.</returns>
+    public static IReadOnlyList<Box> Bands(Box map, Cell baseCentre)
+    {
+        var bands = new List<Box>();
+        foreach (int slide in BandSlides)
+        {
+            for (int step = 0; step < BandSizes.Count; step++)
+            {
+                Box band = Band(map, baseCentre, step, slide);
+                if (band.IsValid && !bands.Contains(band))
+                {
+                    bands.Add(band);
+                }
+            }
+        }
+
+        return bands;
     }
 
     /// <summary>
@@ -270,14 +323,35 @@ public static class Stampede
     }
 
     /// <summary>
+    /// The shortest range vanilla's turret ring cannot draw: a selected
+    /// turret rings its range below 90 tiles, but the radial pattern the
+    /// ring is drawn from ends at 79.8 (GenRadial.MaxRadialPatternRadius),
+    /// so a range from 80 to 89 logs an error every frame it is selected.
+    /// </summary>
+    public const int UndrawableRingFrom = 80;
+
+    /// <summary>
+    /// The range from which vanilla's turret stops drawing its ring (the
+    /// Ballista draws a plain circle instead).
+    /// </summary>
+    public const int RinglessFrom = 90;
+
+    /// <summary>
     /// The Ballista range to set for a target at a distance: whole tiles,
-    /// one over the distance, within the selectable limits.
+    /// one over the distance, within the selectable limits, and never
+    /// from <see cref="UndrawableRingFrom"/> to just under
+    /// <see cref="RinglessFrom"/>, which becomes <see cref="RinglessFrom"/>.
     /// </summary>
     /// <param name="distance">Tiles to the target.</param>
     /// <returns>The range.</returns>
-    public static int RangeFor(double distance) =>
-        Math.Max(BallistaPower.MinRange, Math.Min(
+    public static int RangeFor(double distance)
+    {
+        int range = Math.Max(BallistaPower.MinRange, Math.Min(
             BallistaPower.MaxRange, (int)Math.Ceiling(distance) + 1));
+        return range >= UndrawableRingFrom && range < RinglessFrom
+            ? RinglessFrom
+            : range;
+    }
 
     /// <summary>
     /// The spot that covers the most others within a radius: where a

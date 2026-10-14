@@ -50,6 +50,13 @@ namespace BatshitTechnology
         public int holdTicks = 420;
 
         /// <summary>
+        /// The least time from a volley to the aftermath's beat, in ticks:
+        /// the volley's line (115 characters) reads for 8.25 s on the
+        /// narration overlay, and the aftermath's line would replace it.
+        /// </summary>
+        public int lineHoldTicks = 510;
+
+        /// <summary>
         /// How long after <see cref="volleyTick"/> the scene waits for the
         /// first volley before it gives up and sends the herd home.
         /// </summary>
@@ -70,6 +77,11 @@ namespace BatshitTechnology
         /// How often the scene checks that it is still raining.
         /// </summary>
         private const int RainCheckTicks = 250;
+
+        /// <summary>
+        /// How often the scene logs why the first volley is still waiting.
+        /// </summary>
+        private const int WaitNoteTicks = 600;
 
         /// <summary>The weather's full transition, in ticks.</summary>
         private const int WeatherTransitionTicks = 4000;
@@ -205,9 +217,11 @@ namespace BatshitTechnology
                     return "this game has no boomalopes";
                 }
 
-                return EntryCells(Map, Stage.BaseCentre, HerdPlanned).Count > 0
+                return EntryCells(Map, Stage.BaseCentre, HerdPlanned,
+                        out string note).Count > 0
                     ? null
-                    : "no open ground on the east edge reaches the base";
+                    : "no open ground on the east edge reaches the base "
+                        + $"({note})";
             }
         }
 
@@ -225,33 +239,67 @@ namespace BatshitTechnology
         /// <param name="herd">The herd's size.</param>
         /// <returns>The cells.</returns>
         internal static List<IntVec3> EntryCells(
-            Map map, IntVec3 baseCentre, int herd)
+            Map map, IntVec3 baseCentre, int herd) =>
+            EntryCells(map, baseCentre, herd, out _);
+
+        /// <summary>
+        /// The open cells on the east edge the herd can enter on, with a
+        /// note of the best band's counts when none has enough.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="baseCentre">The demo base's centre.</param>
+        /// <param name="herd">The herd's size.</param>
+        /// <param name="note">
+        /// The band used, or the best band's standable cells and those of
+        /// them that reach the base, against the cells needed.
+        /// </param>
+        /// <returns>The cells; empty when no band has enough.</returns>
+        internal static List<IntVec3> EntryCells(
+            Map map, IntVec3 baseCentre, int herd, out string note)
         {
             var cells = new List<IntVec3>();
+            note = "no map";
             if (map == null || !baseCentre.IsValid)
             {
                 return cells;
             }
 
+            int bestStandable = 0;
+            int bestReaching = -1;
+            Box best = default;
+
             var bounds = new Box(0, 0, map.Size.x - 1, map.Size.z - 1);
             TraverseParms parms = TraverseParms.For(
                 TraverseMode.PassDoors, Danger.Deadly);
-            for (int step = 0; step < Stampede.BandSizes.Count; step++)
+            foreach (Box band in Stampede.Bands(bounds, AnyRim.ToCell(baseCentre)))
             {
-                Box band = Stampede.Band(bounds, AnyRim.ToCell(baseCentre), step);
-                cells = CellRect.FromLimits(band.MinX, band.MinZ, band.MaxX, band.MaxZ)
+                List<IntVec3> standable = CellRect
+                    .FromLimits(band.MinX, band.MinZ, band.MaxX, band.MaxZ)
                     .Cells
-                    .Where(c => c.InBounds(map) && c.Standable(map)
-                        && map.reachability.CanReach(
-                            c, baseCentre, PathEndMode.Touch, parms))
+                    .Where(c => c.InBounds(map) && c.Standable(map))
+                    .ToList();
+                cells = standable
+                    .Where(c => map.reachability.CanReach(
+                        c, baseCentre, PathEndMode.Touch, parms))
                     .ToList();
                 if (cells.Count >= Stampede.CellsNeeded(herd))
                 {
+                    note = $"band {band}";
                     cells.Shuffle();
                     return cells;
                 }
+
+                if (cells.Count > bestReaching)
+                {
+                    bestReaching = cells.Count;
+                    bestStandable = standable.Count;
+                    best = band;
+                }
             }
 
+            note = $"best band {best}: {bestStandable} of {best.Area} cells "
+                + $"standable, {bestReaching} reach the base, "
+                + $"{Stampede.CellsNeeded(herd)} needed";
             return new List<IntVec3>();
         }
 
@@ -273,7 +321,7 @@ namespace BatshitTechnology
             aftermathAt = -1;
             boltsSeen = Building_BatshittiumBallista.BoltsFired;
             toSpawn = HerdPlanned;
-            entry = EntryCells(Map, Stage.BaseCentre, toSpawn);
+            entry = EntryCells(Map, Stage.BaseCentre, toSpawn, out string band);
             look = entry.Count > 0
                 ? new IntVec3(
                     (int)entry.Average(c => c.x) - 12, 0,
@@ -291,7 +339,7 @@ namespace BatshitTechnology
             StartRain();
             GatherColonists();
             Log.Message($"{ShowcaseLog.Prefix} stampede: herd {toSpawn} on "
-                + $"{entry.Count} cells; grid {GridNote(ballista)}");
+                + $"{entry.Count} cells of {band}; grid {GridNote(ballista)}");
         }
 
         /// <summary>
@@ -361,7 +409,8 @@ namespace BatshitTechnology
             int removed = 0;
             foreach (Pawn p in herd ?? new List<Pawn>())
             {
-                if (p != null && !p.Dead && !p.Destroyed)
+                // Those that walked off the edge have already left.
+                if (p != null && !p.Dead && !p.Destroyed && p.Spawned)
                 {
                     p.Destroy(DestroyMode.Vanish);
                     removed++;
@@ -380,7 +429,7 @@ namespace BatshitTechnology
 
             Log.Message($"{ShowcaseLog.Prefix} stampede ended {ending}: "
                 + $"{Dead()} of {herd?.Count ?? 0} dead, volleys "
-                + $"[{string.Join(", ", Volleys)}], {removed} sent home, "
+                + $"[{string.Join(", ", Volleys)}], {removed} removed alive, "
                 + $"{fires} fires put out");
         }
 
@@ -444,8 +493,14 @@ namespace BatshitTechnology
             List<Pawn> alive = Living();
             if (volleys.Count == 0)
             {
-                if (alive.Count == 0 || !Alive(ballista)
-                    || Elapsed >= volleyTick + giveUpTicks)
+                bool givingUp = Elapsed >= volleyTick + giveUpTicks;
+                if (Elapsed >= volleyTick
+                    && ((Elapsed - volleyTick) % WaitNoteTicks == 0 || givingUp))
+                {
+                    NoteWait(ballista, alive, givingUp);
+                }
+
+                if (alive.Count == 0 || !Alive(ballista) || givingUp)
                 {
                     // Nothing left to shoot, nothing to shoot with, or a
                     // grid that never powered the volley: the herd goes.
@@ -462,16 +517,54 @@ namespace BatshitTechnology
                 return;
             }
 
+            // A cleanup the grid never powers gives up as the first does.
             bool canFire = Alive(ballista)
-                && BoltsFor(ballista) >= cleanupBolts;
+                && BoltsFor(ballista) >= cleanupBolts
+                && now < lastVolleyAt + giveUpTicks;
             if (alive.Count == 0 || volleys.Count >= Stampede.MaxVolleys || !canFire)
             {
-                Aftermath(now);
+                // Let the last volley's line be read before the next.
+                if (now >= lastVolleyAt + lineHoldTicks)
+                {
+                    Aftermath(now);
+                }
             }
             else if (ballista.CooldownTicksLeft <= 0)
             {
                 TryCleanup(ballista, alive);
             }
+        }
+
+        /// <summary>
+        /// Logs why the first volley is still waiting (or has given up):
+        /// where the herd is and how fast it comes, and what the grid and
+        /// the magazines can give.
+        /// </summary>
+        /// <param name="ballista">The Ballista.</param>
+        /// <param name="alive">The boomalopes standing.</param>
+        /// <param name="givingUp">Whether the scene is giving up.</param>
+        private void NoteWait(
+            Building_BatshittiumBallista ballista, List<Pawn> alive, bool givingUp)
+        {
+            Spot? centre = Centre(alive);
+            string herdNote = centre.HasValue && Alive(ballista)
+                ? $"herd centre ({centre.Value.X:0},{centre.Value.Z:0}), "
+                    + $"{Spot.Of(AnyRim.ToCell(ballista.Position)).DistanceTo(centre.Value):0} "
+                    + $"tiles off, moving {Velocity(centre.Value).Length * GenTicks.TicksPerRealSecond:0.0} "
+                    + "tiles a second"
+                : "no herd standing";
+            int hunting = alive.Count(p => p.MentalStateDef != null
+                && p.MentalStateDef.IsAggro);
+            string jobs = string.Join(", ", alive
+                .GroupBy(p => p.CurJobDef?.defName ?? "none")
+                .OrderByDescending(g => g.Count())
+                .Take(3)
+                .Select(g => $"{g.Key} {g.Count()}"));
+            Log.Message($"{ShowcaseLog.Prefix} stampede: "
+                + (givingUp ? "gave up on" : "still waiting for")
+                + $" the volley at scene tick {Elapsed}: {alive.Count} "
+                + $"standing ({hunting} manhunting; jobs {jobs}), "
+                + $"{herdNote}; grid {GridNote(ballista)}");
         }
 
         /// <summary>
@@ -488,11 +581,17 @@ namespace BatshitTechnology
             }
 
             Spot from = Spot.Of(AnyRim.ToCell(ballista.Position));
+            Spot velocity = Velocity(centre.Value);
             Spot aim = Stampede.Lead(
-                from, centre.Value, Velocity(centre.Value), ballista.BoltTilesPerTick);
+                from, centre.Value, velocity, ballista.BoltTilesPerTick);
             int reach = Reach(ballista, Stampede.MoneyShotBolts);
             if (reach > 0 && from.DistanceTo(aim) <= reach)
             {
+                Log.Message($"{ShowcaseLog.Prefix} stampede: herd centre "
+                    + $"({centre.Value.X:0},{centre.Value.Z:0}), "
+                    + $"{from.DistanceTo(centre.Value):0} tiles off, moving "
+                    + $"{velocity.Length * GenTicks.TicksPerRealSecond:0.0} "
+                    + "tiles a second");
                 Order(ballista, aim, Stampede.MoneyShotBolts);
             }
         }
@@ -548,7 +647,7 @@ namespace BatshitTechnology
             Log.Message($"{ShowcaseLog.Prefix} stampede: volley "
                 + $"{volleys.Count + 1} of {bolts} ordered at scene tick "
                 + $"{Elapsed}, {distance:0} tiles to ({cell.x},{cell.z}); "
-                + $"{Living().Count} alive; grid {GridNote(ballista)}");
+                + $"{Living().Count} standing; grid {GridNote(ballista)}");
             if (!impact.IsValid)
             {
                 impact = cell;
@@ -604,7 +703,7 @@ namespace BatshitTechnology
 
             aftermathAt = Elapsed;
             Log.Message($"{ShowcaseLog.Prefix} stampede: aftermath at scene "
-                + $"tick {Elapsed}; {Living().Count} alive, "
+                + $"tick {Elapsed}; {Living().Count} standing, "
                 + $"{Map.listerThings.ThingsOfDef(ThingDefOf.Fire).Count} fires");
             if (Alive(Stage.Ballista))
             {
@@ -626,6 +725,11 @@ namespace BatshitTechnology
         /// <param name="p">The boomalope.</param>
         private void SendHome(Pawn p)
         {
+            if (p == null || p.Dead || !p.Spawned || p.Downed)
+            {
+                return;
+            }
+
             p.mindState?.mentalStateHandler?.Reset();
             IntVec3 exit = new IntVec3(Map.Size.x - 1, 0, p.Position.z);
             if (p.jobs != null && CellFinder.TryFindRandomCellNear(
@@ -851,10 +955,16 @@ namespace BatshitTechnology
             }
         }
 
-        /// <summary>The herd's living members.</summary>
-        /// <returns>The boomalopes alive and on the map.</returns>
+        /// <summary>
+        /// The herd's members still on their feet: alive, on the map and
+        /// not downed. A downed boomalope is no threat to aim at, and it
+        /// cannot walk home (pathing while downed is an error); the end
+        /// removes it with the rest.
+        /// </summary>
+        /// <returns>The boomalopes standing.</returns>
         private List<Pawn> Living() =>
-            herd?.Where(p => p != null && !p.Dead && p.Spawned).ToList()
+            herd?.Where(p => p != null && !p.Dead && p.Spawned && !p.Downed)
+                .ToList()
             ?? new List<Pawn>();
 
         /// <summary>How many of the herd are dead.</summary>

@@ -21,6 +21,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Xml;
+using BatshitTechnology.Core;
 using BatshitTechnology.Showcases;
 using LudeonTK;
 using RimWorld;
@@ -1479,6 +1480,7 @@ namespace BatshitTechnology
             new FrameStep("caption bar check", false, CheckCaptionBar),
             new FrameStep("narration lines", false, SayOverlayLines),
             new FrameStep("narration replaced", false, CheckOverlayReplaced),
+            new FrameStep("narration fits at 4K", true, CheckNarrationFits),
             new FrameStep("glide then cut", false, StartGlideThenCut),
             new FrameStep("cut holds", false, CheckCutHolds),
             new FrameStep("main menu draw", true, CheckMenuButtonDraws),
@@ -1628,6 +1630,70 @@ namespace BatshitTechnology
                     + $"{waited:0.0} s; waiting "
                     + $"{string.Join(" | ", overlay.WaitingLines)}; painted "
                     + $"{painted} frames; failed {showcaseSession.NarrationFailed}");
+            return true;
+        }
+
+        /// <summary>
+        /// The screen the narration overlay is checked for, in UI units: a
+        /// 3840 by 2160 screen at 2x UI scale (the operator's).
+        /// </summary>
+        private const float FourKAt2xWidth = 3840f / 2f;
+
+        /// <summary>
+        /// Every narration line of every showcase, measured inside a repaint
+        /// as the overlay draws it on a 3840-pixel screen at 2x UI scale:
+        /// each must wrap to at most two lines at the Medium size or more,
+        /// and the font must have a glyph for each of its characters (the
+        /// em dash among them). Logs the stampede's volley line's size.
+        /// </summary>
+        /// <returns>True: the check runs in one frame.</returns>
+        private bool CheckNarrationFits()
+        {
+            var problems = new List<string>();
+            int lines = 0;
+            int smallest = int.MaxValue;
+            foreach (ShowcaseDef def in DefDatabase<ShowcaseDef>.AllDefs)
+            {
+                foreach (ShowcaseNarrationLine line in def.narration
+                    ?? new List<ShowcaseNarrationLine>())
+                {
+                    if (line?.text == null)
+                    {
+                        continue;
+                    }
+
+                    (int size, int wraps, string missing) =
+                        NarrationOverlayDrawer.Probe(line.text, FourKAt2xWidth);
+                    lines++;
+                    smallest = Math.Min(smallest, size);
+                    if (wraps > NarrationOverlayLayout.MaxLines
+                        || size < NarrationOverlayDrawer.MediumSize
+                        || missing.Length > 0)
+                    {
+                        problems.Add($"{def.defName} {line.scene}/{line.when}: "
+                            + $"{wraps} lines at size {size}"
+                            + (missing.Length > 0
+                                ? $", no glyph for [{missing}]"
+                                : string.Empty));
+                    }
+
+                    if (line.scene == TourScript.Stampede && line.when == "volley")
+                    {
+                        Log.Message("[BT-SMOKE] NOTE narration at 3840x2160, 2x: "
+                            + $"the stampede's volley line ({line.text.Length} "
+                            + $"characters) fits {wraps} lines at size {size} "
+                            + $"(Medium {NarrationOverlayDrawer.MediumSize}), "
+                            + $"glyphs missing [{missing}]");
+                    }
+                }
+            }
+
+            Check("every narration line fits the overlay in two lines at "
+                    + "3840x2160 and 2x UI scale, with a glyph for every character",
+                lines > 0 && problems.Count == 0,
+                $"{lines} lines measured, smallest size "
+                    + $"{(lines > 0 ? smallest : 0)}; "
+                    + string.Join("; ", problems));
             return true;
         }
 

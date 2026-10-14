@@ -64,6 +64,36 @@ public sealed class StampedeTests
     }
 
     /// <summary>
+    /// The bands come level with the base first, widest last, then slid
+    /// north only (away from the tractor yard's southern candidates);
+    /// none repeats, and all stay on the east edge of the map.
+    /// </summary>
+    [Fact(DisplayName = "Bands come level first, then slide north, all on the edge")]
+    public void Bands_should_come_level_first_then_slide_north()
+    {
+        IReadOnlyList<Box> bands = Stampede.Bands(Map250, Base);
+
+        Assert.Equal(Stampede.Band(Map250, Base, 0), bands[0]);
+        Assert.Equal(Stampede.Band(Map250, Base, 1), bands[1]);
+        Assert.Equal(Stampede.Band(Map250, Base, 2), bands[2]);
+        Assert.Equal(bands.Count, new HashSet<Box>(bands).Count);
+        Assert.All(bands, b =>
+        {
+            Assert.Equal(249 - Stampede.EdgeMargin, b.MaxX);
+            Assert.True(b.MinZ >= Base.Z - 45, $"{b} reaches south");
+            Assert.True(b.MaxZ <= 249 - Stampede.EdgeMargin);
+        });
+        Assert.All(Stampede.BandSlides, slide => Assert.True(slide >= 0));
+        Box north = Stampede.Band(Map250, Base, 0, 35);
+        Assert.Equal(Base.Z + 35 - 20, north.MinZ);
+        Assert.Contains(north, bands);
+
+        // Near the north edge a slid band falls off the map and is left out.
+        var high = new Cell(125, 240);
+        Assert.All(Stampede.Bands(Map250, high), b => Assert.True(b.IsValid));
+    }
+
+    /// <summary>
     /// The herd's size is held to the operator's bounds, and the cells it
     /// needs round up.
     /// </summary>
@@ -152,12 +182,18 @@ public sealed class StampedeTests
 
     /// <summary>
     /// The range set is one tile over the target's distance, rounded up,
-    /// within the Ballista's limits.
+    /// within the Ballista's limits, and skips the ranges whose ring
+    /// vanilla cannot draw (80 to 89 become 90).
     /// </summary>
-    [Fact(DisplayName = "RangeFor sets one tile over, within the limits")]
+    [Fact(DisplayName = "RangeFor sets one tile over, skipping undrawable rings")]
     public void Range_should_be_one_tile_over_within_limits()
     {
         Assert.Equal(76, Stampede.RangeFor(74.2));
+        Assert.Equal(79, Stampede.RangeFor(78));
+        Assert.Equal(90, Stampede.RangeFor(78.5));
+        Assert.Equal(90, Stampede.RangeFor(86));
+        Assert.Equal(90, Stampede.RangeFor(88.9));
+        Assert.Equal(91, Stampede.RangeFor(89.5));
         Assert.Equal(BallistaPower.MinRange, Stampede.RangeFor(2));
         Assert.Equal(BallistaPower.MaxRange, Stampede.RangeFor(900));
     }
