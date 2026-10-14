@@ -1,7 +1,8 @@
-# Engineering Change Request: Clarify Knack Naming: Short Topics, Context in Directories
+# Engineering Change Request: Name Knacks Without Repeating Their Path
 
 - ECR ID: `BT-ECR-2026-009`
-- Request revision: 1
+- Request revision: 2 (revision 1 is preserved in this repository's
+  commit `200fa4b`)
 - Source project or origin namespace: Batshit Technology (`BT`)
 - Target project: FieldManual
 - Target canonical locator:
@@ -12,8 +13,8 @@
 - Drafted: 2026-10-14
 - Submitted: 2026-10-14, as pull request
   Hard-Problems-Group-LLC/FieldManual#1
-- Submitted-content digest: branch `knacks/from-batshit-technology`
-  at commit `d354450`
+- Submitted-content digest: revision 1 at `d354450`; revision 2 at
+  `d5af082`, both on branch `knacks/from-batshit-technology`
 - Source lifecycle: Open
 - Target handling status as reported: Open pull request, awaiting
   review
@@ -24,8 +25,9 @@
   BT-ECR-2026-007, which were renamed to follow it
 - Origin and provenance: the operator, reviewing the pull request for
   BT-ECR-2026-001 to 007, found some names too long and asked for a better
-  directory structure and clearer guidance (2026-10-14); drafted by Claude
-  Code for the operator.
+  directory structure and clearer guidance (2026-10-14); after revision 1,
+  returned the pull request because file names still repeated their path.
+  Drafted by Claude Code for the operator.
 
 ## Submitted Request
 
@@ -34,60 +36,64 @@ material change must be resubmitted.
 
 ### Problem And Source Impact
 
-The authoring guide's naming rules fix the pattern (`<topic>.overview`,
-`<topic>.api[.<subsystem>][.<Language>]`, `<topic>.knack/`) but say nothing
-about how long a topic or subsystem token should be, or when to use
-subdirectories. Because every file in a fileset repeats its topic, long
-topics multiply: the first draft of the knacks in BT-ECR-2026-001 to 007 had
-names such as
-`integrating-unverified-agent-work.api.instructions.knack.md` (59
-characters) and
-`closed-assembly-inspection.api.reflection.PowerShell.knack.md` (61), and
-topics that repeated their area (`windows/windows-agent-isolation`).
-Without guidance, each writer chooses differently, and areas grow flat
-lists of long, prefixed names.
+The authoring guide named fileset files `<topic>.overview.knack.md` and
+`<topic>.api[.<subsystem>][.<Language>].knack.md` inside a
+`<topic>.knack/` directory. Every file therefore repeats its directory, and
+the topic appears two or three times in one path:
+`knacks/windows/shells.knack/shells.api.PowerShell.knack.md`. The first
+draft of the knacks in BT-ECR-2026-001 to 007 reached 133-character paths,
+such as
+`knacks/software-engineering/procedural-generation/procedural-sprite-generation.knack/procedural-sprite-generation.api.Python.knack.md`.
+Revision 1 of this request shortened topics but kept the pattern. The
+operator's rule is that a knack's full path should make its purpose and
+scope clear without repeating anything, because paths otherwise grow very
+long.
 
 ### Requested Outcome
 
-Add a "Short Names, Context in Directories" subsection to "Naming and
-Layout" in `knacks/authoring-guide.md`, saying:
+Revise "Naming and Layout" in `knacks/authoring-guide.md` to say:
 
-- choose the shortest topic that is unambiguous in its directory, usually
-  one to three words, and do not repeat what the path already says;
-- keep subsystem tokens to a word or two;
-- aim for file names of about 40 characters or fewer, a language tag
-  allowing a little more;
-- give topics that share a qualifier (platform, product, tool) a subarea
-  directory instead of a shared prefix, and split an area into subareas
-  once it holds more topics than a reader can scan, roughly eight;
-- file a knack where a reader would look for its subject, not where its
-  author found it; and
-- give every directory level a `README.md` index.
+- a single-document knack is `<topic>.knack.md`;
+- a fileset is a directory named for its topic, without a `.knack`
+  suffix, holding `overview.knack.md` and companions named for their part
+  only, `<part>[.<Language>].knack.md`; the `api.` token is dropped;
+- no path component is repeated in any name beneath it;
+- because a topic appears once, it is named for clarity, using no word the
+  path already supplies;
+- topics sharing a qualifier get a subarea directory; a knack is filed
+  where readers look for its subject; every area directory has a
+  `README.md`, and a fileset's overview indexes its companions; and
+- older filesets in the previous pattern are renamed when next revised.
 
 ### Acceptance Criteria
 
-- The guide states the rules above with examples.
-- The knacks of BT-ECR-2026-001 to 007 follow them: after renaming on the
-  same branch, the longest new file name is 54 characters (a companion with
-  a language tag) and most are 25 to 41, against 61 and mostly 40 to 59
-  before.
+- The guide states the rule with examples.
+- The knacks of BT-ECR-2026-001 to 007 follow it: their full paths run 35
+  to 78 characters, with no component repeated, and every relative link
+  resolves.
 
 ### Non-Goals
 
-- Renaming existing stock knacks outside BT-ECR-2026-001 to 007.
-- Changing the file-name pattern itself.
+- Renaming existing filesets outside BT-ECR-2026-001 to 007 in this
+  change (`UI/terminal/terminal-ui-design.knack/`,
+  `virtualization/virtualbox-control.knack/`,
+  `AI/OpenAI/codex-app-server.knack/`); the guide schedules them for their
+  next revision.
 
 ### Constraints And Risks
 
-- Short topics rely on their directories for meaning; a file copied out of
-  its tree loses context. The overview's title and "When to Load" section
-  carry the full subject, so the file still reads correctly.
+- A file read outside its directory (`PowerShell.knack.md`) loses its
+  context; its title and "When to Load" section must carry the full
+  subject.
+- Links into renamed filesets from other repositories break; the pull
+  request rewrites every link inside FieldManual and the supplemental
+  RimWorld pack.
 
 ### Evidence At Submission
 
-- Commit `9300fb0` adds the subsection; commit `d354450` applies it to the
-  new knacks, rewriting and checking every relative link (551, none
-  broken). Both are on the branch `knacks/from-batshit-technology`.
+- Revision 1: commits `9300fb0` and `d354450`. Revision 2: commit
+  `d5af082`, which rewrites the guide's section, renames the new knacks,
+  and rewrites and checks every relative link (565, none broken).
 
 ## Source Tracking
 
@@ -103,8 +109,15 @@ None needed; the change travels with the knacks' pull request.
 - 2026-10-14 — Submitted, revision 1, as pull request
   Hard-Problems-Group-LLC/FieldManual#1 from branch
   `knacks/from-batshit-technology` at `d354450`.
+- 2026-10-14 — Revision 2 sent: pull request FieldManual#1 updated to
+  `d5af082`.
 
 ### Discussion And Amendments
+
+- 2026-10-14 — Revision 2. The operator returned FieldManual#1: file names
+  still repeated their path. The requested rule changed materially (no
+  `.knack` directory suffix, no topic or `api.` prefix in file names), so
+  the request was revised rather than amended.
 
 ### Target Disposition
 

@@ -106,8 +106,17 @@ until the knacks are available from the FieldManual submodule.
 - 2026-10-14 — Submitted, revision 1, as pull request
   Hard-Problems-Group-LLC/FieldManual#1 from branch
   `knacks/from-batshit-technology` at `d354450`.
+- 2026-10-14 — Pull request FieldManual#1 updated to `d5af082` after the
+  operator's review.
 
 ### Discussion And Amendments
+
+- 2026-10-14 — The operator returned FieldManual#1 because file names repeated
+  their path. Under BT-ECR-2026-009 revision 2 the files were renamed in
+  `d5af082`: no `.knack` directory suffix, and no topic or `api.` prefix in
+  file names. The knacks are now at
+  `knacks/AI/Anthropic/claude-code/windows/`. Their content is unchanged; the
+  request stands as submitted.
 
 ### Target Disposition
 
