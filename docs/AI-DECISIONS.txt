@@ -411,3 +411,30 @@ runner checks the API last, in a new file, Source/SmokeTestShowcases.cs
   BT_Showcase renamed in XML (BT_Showcase loaded); a def file naming a
   test showcase (the new XML test). All edits were reverted with git
   checkout and the clean code rebuilt.
+2026-10-14 Claude: Showcase API, slice 7000 (verification), on d960d4b. A
+full rebuild: 0 warnings, 0 errors, and no 0Harmony.dll in Assemblies/.
+Tools/validate-defs.ps1: 0 problems. 307 unit and XML tests pass. 13
+Python tests pass with Pillow (the 3 preview tests skip without it). Two
+consecutive smoke runs passed 114 of 114 checks each (79 before slice
+6000), with no mod errors; the only error-shaped log lines were Mono's two
+routine "Fallback handler could not load library" lines. Runs earlier in
+the session, while slice 6000 was built, also failed old checks on map
+noise seen before on other maps: the brain squeezer's colonist never sat
+down (twice), and three of AnyRim's lamps were unpowered (once).
+Tools/smoke-test.ps1 -Showcase went from the main menu through LAUNCH,
+GAME, START, ANYRIM and READY (25 seconds after launch) to THROW, TOUR and
+FINISHED, with no error-shaped lines and an empty save folder; the game,
+our own, was then closed.
+Also seen in game (RimWorld 1.6.4871, default XML loader): a def whose
+comp names a class that does not exist is dropped whole. The log reads
+"Exception loading def from file Probe.xml: System.ArgumentException:
+Could not find type named BTClassProbe.NoSuchCompProperties from node <li
+Class="BTClassProbe.NoSuchCompProperties" />" (thrown by
+Verse.DirectXmlToObjectNew.ResolveTypeForNode), and a def that refers to
+it then logs "Could not resolve cross-reference: No Verse.ThingDef named
+BTProbe_UnresolvedClass found to give to Verse.ThingDefCountClass (1x
+null)"; a control def in the same file loaded. This confirms the knack
+pack's [decomp] claim (rimworld-modding, Defs and XML, "Class Attributes")
+by observation. The probe was a scratch mod, linked into Mods for one
+isolated launch with Core only, then unlinked; nothing of it was
+committed.

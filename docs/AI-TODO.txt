@@ -169,3 +169,11 @@ checks (Source/SmokeTestShowcases.cs; docs/AI-TESTING-STRATEGY.txt).
   screen, Force start's confirmation dialog, a def's biome preference
   and a map size other than 250, and the -quicktest plus -showcase=
   fallback. Worth a look by Matt "Breakpoint" Heck, or a capture run.
+- [ ] Offer the FieldManual-RimWorld knack pack three lessons from phase
+  4000, slices 6000 and 7000 (docs/AI-DECISIONS.txt): RimWorld 1.6 puts a
+  "[Ref XXXXXXXX]" line between a logged error and its stack trace, which
+  breaks a harness that reads the trace as the lines straight after the
+  error; an unresolvable Class= dropping the whole def is now observed in
+  game, not only [decomp]; and in-game checks of menus and windows can run
+  as frame steps (a menu drawn off screen with the program state set for
+  one call; Escape as a real key-down event made current).
