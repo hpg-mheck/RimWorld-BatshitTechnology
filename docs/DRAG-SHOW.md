@@ -82,14 +82,35 @@ Specified 2026-10-13:
   other entertainment.
 - **Costs** *(proposals; they stand unless changed)*:
   - Event Stage: 4 wood per tile.
-  - Center Stage marker: 20 wood and 2 batshittium (it powers the
-    magenta stage lights).
+  - Center Stage marker: made of **Gaffer Tape** and batshittium
+    (specified 2026-10-13); *proposal:* 10 gaffer tape and 2
+    batshittium, the batshittium powering the magenta stage lights.
   - House Seats marker: 10 wood.
   - Shitty Folding Chair: 5 steel (as specified).
   - Prom Dress: 80 fabric.
   - Luchador Onesie: 60 fabric.
 - **The Extruder** comes with Batshittium Lore, as specified, since
   monofilament is useful well beyond the show.
+
+### Gaffer Tape and the Junk Drawer
+
+Specified 2026-10-13:
+
+- **Gaffer Tape** is a new item, made at the **Junk Drawer** from cloth
+  and any raw food.
+- **The Junk Drawer** is a 1 by 1 wooden cabinet with no technology
+  requirement: no research, buildable from the first day.
+
+*(Proposals:)*
+
+- **Gaffer Tape recipe:** 10 cloth and 5 raw food make 10 gaffer tape.
+  The food is better not explained. The recipe accepts any raw food,
+  as vanilla's "any raw food" ingredient filters do.
+- **The Junk Drawer** is crafted like a bench (25 wood) and staffed for
+  crafting. It is entirely mundane: no batshittium and no glow, just a
+  scuffed wooden drawer that does not quite close. That makes it the
+  one mod building drawn without the motif's magenta.
+- **Gaffer Tape art:** a roll of matte black tape with a torn end.
 
 ## The Show
 

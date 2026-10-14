@@ -144,6 +144,9 @@
   the floor. The two outfits take any fabric, but Batshittium
   Monofilament (a new fabric from a new Batshittium Extruder, unlocked
   by Batshittium Lore) improves results.
+  - [ ] Gaffer Tape (from cloth and any raw food) made at the Junk
+    Drawer, a 1x1 wooden cabinet with no technology requirement; the
+    Center Stage marker is made of gaffer tape and batshittium.
   - [ ] Later, with the sound pipeline: an original disco track for the
     Drag Show, replacing the borrowed party music.
 
