@@ -43,3 +43,9 @@ Matt "Breakpoint" Heck:
    existing one); is the trait-inversion
    table right in spirit; Agonizer numbers; research and cost; and
    should the duplicate's name be marked?
+10. The Drag Show (docs/DRAG-SHOW.md, "Open Questions"): Core gatherings
+    or an Ideology ritual; exact or minimum stage and seating sizes, and
+    whether chairs must face the stage; where the "Relax Historical
+    Accuracy" checkbox lives; an outdoor stage's drag radius; how mild
+    "mild" is; research and costs; and disco music before the sound
+    pipeline exists.

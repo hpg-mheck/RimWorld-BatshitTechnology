@@ -130,6 +130,16 @@
   eventually, recruitable like any other pawn. Allegiance is mirrored:
   an enemy prisoner gazing into a mirror in its cell produces a free,
   friendly duplicate, and the two fight at once.
+- [ ] The Drag Show (docs/DRAG-SHOW.md), requested by Matt "Breakpoint"
+  Heck on 2026-10-13: a ritual on an Event Stage (a 2x5 rectangle of
+  wooden tiles with a Center Stage marker) before an Event Seating block
+  of 5x5 Shitty Folding Chairs (5 steel, very uncomfortable) with a House
+  Seats marker. A male emcee in a Prom Dress or a female emcee in a
+  Luchador Onesie (or anyone, with "Relax Historical Accuracy") waits on
+  stage until two thirds of the seats fill. Then come magenta lights,
+  disco and dancing, and then a mild singularity drags everyone and
+  everything loose in the room to center stage (mild injuries, a mild
+  recreation buff; structure untouched).
 
 ## Test justifications
 

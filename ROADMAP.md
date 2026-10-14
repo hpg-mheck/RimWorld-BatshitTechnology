@@ -139,6 +139,10 @@ In recommended order, each on its own branch:
    "Holy shit!" and "I know, right?".
 3. **Mirror Mirror** (`feature/mirror-mirror`, `docs/MIRROR-MIRROR.md`):
    the recreation mirror and its mirror-universe duplicates.
+3a. **The Drag Show** (`feature/drag-show`, `docs/DRAG-SHOW.md`): a
+    ritual whose audience is dragged, literally, to center stage. It
+    needs the sound pipeline (for disco), the shared implosion (with a
+    room-limited, furniture-only setting), and new apparel art.
 4. **Antiparticle Board** (`feature/antiparticle-board`): the material
    and its research chain, Substandard Advanced Materials and Awkward
    Secrets of the Universe.
