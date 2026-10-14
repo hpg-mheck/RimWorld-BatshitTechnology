@@ -10,11 +10,15 @@
   on `04bcec5`
 - Request owner: Matt "Breakpoint" Heck
 - Drafted: 2026-10-14
-- Submitted: Not yet submitted
-- Submitted-content digest: Not yet recorded
+- Submitted: 2026-10-14, as pull request
+  Hard-Problems-Group-LLC/FieldManual#1
+- Submitted-content digest: branch `knacks/from-batshit-technology`
+  at commit `d354450`
 - Source lifecycle: Open
-- Target handling status as reported: Not submitted
-- Target intake ID or authoritative reference: None
+- Target handling status as reported: Open pull request, awaiting
+  review
+- Target intake ID or authoritative reference:
+  https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1
 - Sensitivity and reuse classification: Public; stock reusable guidance
   with no project-specific content
 - Related, duplicate, or superseded ECR IDs: siblings, one per knack area:
@@ -100,6 +104,9 @@ until the knacks are available from the FieldManual submodule.
 ### Transport And Receipt Log
 
 - 2026-10-14 — Drafted locally; not yet submitted.
+- 2026-10-14 — Submitted, revision 1, as pull request
+  Hard-Problems-Group-LLC/FieldManual#1 from branch
+  `knacks/from-batshit-technology` at `d354450`.
 
 ### Discussion And Amendments
 
