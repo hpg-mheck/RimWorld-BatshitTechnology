@@ -1,0 +1,109 @@
+# Engineering Change Request: Add agent-orchestration knacks from a multi-agent build
+
+- ECR ID: `BT-ECR-2026-006`
+- Request revision: 1
+- Source project or origin namespace: Batshit Technology (`BT`)
+- Target project: FieldManual
+- Target canonical locator:
+  https://github.com/Hard-Problems-Group-LLC/FieldManual
+- Target component, version, or revision: `knacks/AI/agent-orchestration/`,
+  drafted on `04bcec5`
+- Request owner: Matt "Breakpoint" Heck
+- Drafted: 2026-10-14
+- Submitted: Not yet submitted
+- Submitted-content digest: Not yet recorded
+- Source lifecycle: Open
+- Target handling status as reported: Not submitted
+- Target intake ID or authoritative reference: None
+- Sensitivity and reuse classification: Public; stock reusable guidance
+  with no project-specific content
+- Related, duplicate, or superseded ECR IDs: siblings, one per knack area:
+  BT-ECR-2026-001, BT-ECR-2026-002, BT-ECR-2026-003, BT-ECR-2026-004,
+  BT-ECR-2026-005, BT-ECR-2026-007
+- Origin and provenance: drafted by Claude Code agents for the
+  operator from the source project's session transcripts, records and git
+  history, then reviewed for consistency, links and neutrality.
+
+## Submitted Request
+
+Freeze this section after first transport. Preserve a prior revision when a
+material change must be resubmitted.
+
+### Problem And Source Impact
+
+`staged-verification` covers ordering checks, but not the failures seen when
+several agents build one product: commits that swept another agent's
+uncommitted edits, checks that passed vacuously, review findings that did not
+survive a skeptic, and work from an agent that could not build or run what it
+wrote (invented near-miss APIs, tests pinning invalid values, merges seconds
+after commit).
+
+### Requested Outcome
+
+- Add four hierarchies: `shared-checkout-subagents`,
+  `proving-checks-can-fail`, `adversarial-review` and
+  `integrating-unverified-agent-work` (13 files, about 17,700 words),
+  cross-linked with `staged-verification`.
+- Update the area README.
+
+The proposed files are commit `127d883` on the local branch
+`knacks/from-batshit-technology` of a FieldManual checkout, based on
+`04bcec5`. The branch is not pushed; it will be offered as a pull request when
+the operator approves.
+
+### Acceptance Criteria
+
+- Every file follows `knacks/authoring-guide.md`: naming, a `<topic>.knack/`
+  hierarchy with an overview near 1,250 words and companions of at most 2,500,
+  load triggers, sharp edges, a checklist and sources.
+- All relative links resolve, including links into the other areas added by
+  sibling ECRs (merge them together, or adjust the links).
+- No project, client or person names, no workstation paths, and no
+  credentials; examples are fictional.
+- Version-sensitive claims carry a review date and are labelled as documented,
+  observed or inferred.
+- The area README and `knacks/README.md` index every topic and companion.
+
+### Non-Goals
+
+- Project-specific guidance: game-specific material goes to the supplemental
+  pack hpg-mheck/FieldManual-RimWorld instead.
+- Changes to FieldManual's standards, templates or bootstrap.
+
+### Constraints And Risks
+
+- Several claims are observed on one Windows 11 workstation (build 26300) in
+  October 2026 and are labelled as such; they may not hold on other builds or
+  editions.
+- The knacks cross-link each other across the seven sibling ECRs; accepting
+  only some of them leaves links to adjust.
+- Tools change quickly (Claude Code, Visual Studio, the Sandbox app, Steam);
+  each file carries a review date so stale guidance can be found.
+
+### Evidence At Submission
+
+- Git behaviours (commit by path, rebase refusals, autostash, worktree rules,
+  `index.lock` contention) were reproduced in a scratch repository.
+- Sabotage runs in the source project exposed several vacuous checks; 8 of 9
+  behavioural sabotage runs logged no error, so a clean log is no test.
+- An adversarial review workflow produced 21 findings, of which skeptic
+  verifiers confirmed 19 and refuted 2.
+
+## Source Tracking
+
+After first transport, maintain this section as an append-only history.
+
+### Local Mitigation
+
+Batshit Technology keeps the same lessons in its own records (`docs/AI-*.txt`)
+until the knacks are available from the FieldManual submodule.
+
+### Transport And Receipt Log
+
+- 2026-10-14 — Drafted locally; not yet submitted.
+
+### Discussion And Amendments
+
+### Target Disposition
+
+### Source Closure
