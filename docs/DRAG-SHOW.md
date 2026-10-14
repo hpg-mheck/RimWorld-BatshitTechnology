@@ -145,9 +145,16 @@ Specified 2026-10-13:
     a mild knock to anything it lands on.
   - Grass and small plants are simply flattened, as the singularity
     grenade does.
-- **Sound:** disco music needs the mod's sound pipeline (backlogged for
-  the Colony Bomb). It must be an original composition in the style.
-  Until then the show runs with a vanilla sound or none.
+- **Sound** (decided 2026-10-13): the show uses the party music already
+  available, and its own disco comes later.
+  - Core has no party music, but Ideology's dance-party rituals do. With
+    Ideology active, the show plays one of its upbeat ritual music
+    sustainers *(proposal: the techist style, the most disco-adjacent;
+    checked by ear)*, referenced so that the def still loads without
+    the DLC.
+  - Without Ideology, the show runs on the game's own music.
+  - An original disco track is backlogged for the sound pipeline (see
+    `ROADMAP.md`), and replaces the stand-in when it exists.
 - **Dancing:** a lively sway and bob drawn on the emcee, unless a vanilla
   dance animation suits.
 - **Art,** per the motif:
@@ -179,5 +186,3 @@ Specified 2026-10-13:
    What are the Extruder's inputs and yield (1 batshittium to 25
    monofilament proposed)? Usable for every fabric item, as any fabric
    is, or only these outfits?
-4. Disco music before the sound pipeline exists: silence, a vanilla
-   stand-in, or wait for the pipeline?

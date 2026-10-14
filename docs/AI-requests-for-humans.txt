@@ -52,5 +52,5 @@ Matt "Breakpoint" Heck:
     open: the injury and buff numbers; research and costs; Batshittium
     Monofilament's exact stats (slightly better than hyperweave; about
     10% proposed), the show bonus, the Extruder's yield, and whether it
-    works for all fabric items; and disco music before the sound
-    pipeline exists.
+    works for all fabric items. (Music: available party music now,
+    original disco with the sound pipeline: answered.)

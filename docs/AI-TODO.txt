@@ -144,6 +144,8 @@
   the floor. The two outfits take any fabric, but Batshittium
   Monofilament (a new fabric from a new Batshittium Extruder, unlocked
   by Batshittium Lore) improves results.
+  - [ ] Later, with the sound pipeline: an original disco track for the
+    Drag Show, replacing the borrowed party music.
 
 ## Test justifications
 

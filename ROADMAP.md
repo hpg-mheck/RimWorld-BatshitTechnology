@@ -126,7 +126,9 @@ In recommended order, each on its own branch:
    button is the mod's first, approved Harmony patch.
 1. **Sound pipeline** (`feature/audio`): `Tools/make_sounds.py`,
    SoundDefs, and an audio section in the motif. Needed by the Colony
-   Bomb and Mirror Mirror.
+   Bomb and Mirror Mirror. Once it works, it also makes the Drag Show's
+   original disco track, which replaces the party music the show uses
+   until then.
 2. **Colony Bomb family and Colony Deployment Shelter**
    (`feature/colony-bomb`, `docs/COLONY-BOMB.md`). Groundwork first:
    - town size and quality tiers for the AnyRim generator;
