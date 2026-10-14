@@ -203,6 +203,23 @@ public static class PullSuperposition
     public const double MaxScale = MaxBiasScale + MaxFlickerScale;
 
     /// <summary>
+    /// How hard opposing pulls must strain against each other before they
+    /// stretch a pawn held between them, in cells per second of pull that
+    /// cancels out (<see cref="Tension"/>): two pulls head on, each at a
+    /// quarter of the Tractor Bomb's end rate.
+    /// </summary>
+    public const double StretchTension = 6;
+
+    /// <summary>
+    /// Opposing pull, in cells per second beyond
+    /// <see cref="StretchTension"/>, per point of stretching damage.
+    /// </summary>
+    public const double StretchTensionPerDamage = 6;
+
+    /// <summary>The most damage one stretch does.</summary>
+    public const int MaxStretchDamage = 4;
+
+    /// <summary>
     /// The largest turn applied, in degrees, whatever a caller passes.
     /// </summary>
     private const double TurnLimit = 20;
@@ -500,6 +517,71 @@ public static class PullSuperposition
             case 6: return (0, -1);
             default: return (1, -1);
         }
+    }
+
+    /// <summary>
+    /// How hard the pulls on a thing strain against each other: the sum of
+    /// their strengths less the size of what they add up to, in cells per
+    /// second. Nothing for one pull alone, or several pulling the same way;
+    /// twice the rate of each for two equal pulls head on. A pull whose
+    /// centre the thing sits on holds it against the rest, up to its own
+    /// rate, and strains as hard as it holds. What stretches a pawn
+    /// (<see cref="StretchDamage"/>).
+    /// </summary>
+    /// <param name="x">The thing's x.</param>
+    /// <param name="z">The thing's z.</param>
+    /// <param name="pulls">The pulls it feels.</param>
+    /// <returns>The opposing strength, never negative.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="pulls"/> is null.
+    /// </exception>
+    public static double Tension(
+        int x, int z, IReadOnlyList<PullSource> pulls)
+    {
+        Check(pulls, null);
+        double pulling = 0;
+        double holding = 0;
+        foreach (PullSource pull in pulls)
+        {
+            if (pull.CenterX != x || pull.CenterZ != z)
+            {
+                pulling += SafeRate(pull.Rate);
+            }
+            else
+            {
+                holding += SafeRate(pull.Rate);
+            }
+        }
+
+        var (nx, nz) = Direction(x, z, pulls, null, turn: false);
+        double net = Math.Sqrt((nx * nx) + (nz * nz));
+        double held = Math.Min(holding, net);
+        return Math.Max(0, pulling - net + (2 * held));
+    }
+
+    /// <summary>
+    /// The damage one stretch does to a pawn held between pulls: none
+    /// until they strain past <see cref="StretchTension"/>, then a point
+    /// per <see cref="StretchTensionPerDamage"/> beyond it, rounded up, at
+    /// most <see cref="MaxStretchDamage"/>. Two Tractor Bombs head on at
+    /// full pull do three a stretch.
+    /// </summary>
+    /// <param name="tension">
+    /// The opposing strength (<see cref="Tension"/>); NaN counts as none.
+    /// </param>
+    /// <returns>
+    /// The damage, from 0 to <see cref="MaxStretchDamage"/>.
+    /// </returns>
+    public static int StretchDamage(double tension)
+    {
+        if (double.IsNaN(tension) || !(tension > StretchTension))
+        {
+            return 0;
+        }
+
+        double points = Math.Ceiling(
+            (tension - StretchTension) / StretchTensionPerDamage);
+        return (int)Math.Min(MaxStretchDamage, points);
     }
 
     /// <summary>

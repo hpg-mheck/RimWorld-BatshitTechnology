@@ -8,7 +8,9 @@
 // shoved, nothing may move against the net pull, a pawn any pull holds
 // stays held, things in the overlap must end in a pile or at a balance
 // point, both bombs must go off, and neither pull may run past its eight
-// seconds. Then two bombs planted four tiles apart, both pulling: one is
+// seconds; a pawn held between the two strong pulls must be stretched
+// (and none that never was). Then two bombs planted four tiles apart, both
+// pulling: one is
 // hit, goes off, and its blast sets off the other, with no pull outliving
 // its bomb. The hostiles roll how they react, as always (a third flee, a
 // third hesitate, a third ignore), so the army partly scatters; the rolls
@@ -205,6 +207,34 @@ namespace BatshitTechnology
                 watch.Unheld.Count == 0 && watch.HeldChecks >= 100,
                 $"{watch.Unheld.Count} lapses in {watch.HeldChecks} checks: "
                     + string.Join("; ", watch.Unheld.Take(6)));
+            var unstretched = new List<string>();
+            int stretched = 0;
+            foreach (Pawn p in army)
+            {
+                int marks = p.health?.hediffSet?.hediffs.Count(h =>
+                    h.def == BT_ImplosionDefOf.BT_StretchMark) ?? 0;
+                int strained = watch.StrainedTicks(p);
+                stretched += marks > 0 ? 1 : 0;
+                if (strained >= 120 && marks == 0)
+                {
+                    unstretched.Add($"{p.LabelShort} strained {strained} "
+                        + "ticks, no stretch mark");
+                }
+                else if (marks > 0 && !watch.EverNearStrain(p))
+                {
+                    unstretched.Add($"{p.LabelShort} has {marks} stretch "
+                        + "marks, never strained");
+                }
+            }
+
+            Log.Message($"[BT-SMOKE] NOTE twin bombs stretched {stretched} "
+                + $"of {army.Count} raiders; stretches this session "
+                + $"{MapComponent_Implosions.Stretches}");
+            Check("a pawn held between strong opposing pulls is stretched, "
+                    + "and only then",
+                unstretched.Count == 0 && stretched >= 1,
+                $"{stretched} stretched: "
+                    + string.Join("; ", unstretched.Take(6)));
             Check("things in the twin overlap end in a pile or at a balance "
                     + "point",
                 watch.Overlap >= 5 && watch.Stranded.Count == 0
@@ -540,6 +570,9 @@ namespace BatshitTechnology
             private readonly Dictionary<Thing, (int Tick, string Why)>
                 restedAt = new Dictionary<Thing, (int Tick, string Why)>();
             private readonly HashSet<Thing> overlap = new HashSet<Thing>();
+            private readonly Dictionary<Pawn, int> strained =
+                new Dictionary<Pawn, int>();
+            private readonly HashSet<Pawn> nearStrain = new HashSet<Pawn>();
             private Dictionary<ThingDef, int> totals;
             private bool endJudged;
 
@@ -628,6 +661,23 @@ namespace BatshitTechnology
                     && ended.TryGetValue(b, out int e)
                     ? e - s
                     : -1;
+
+            /// <summary>
+            /// Ticks a pawn spent under both pulls straining hard enough
+            /// to stretch it.
+            /// </summary>
+            /// <param name="p">The pawn.</param>
+            /// <returns>The ticks.</returns>
+            public int StrainedTicks(Pawn p) =>
+                strained.TryGetValue(p, out int n) ? n : 0;
+
+            /// <summary>
+            /// Whether a pawn was ever under pulls straining nearly hard
+            /// enough to stretch it.
+            /// </summary>
+            /// <param name="p">The pawn.</param>
+            /// <returns>True if it was.</returns>
+            public bool EverNearStrain(Pawn p) => nearStrain.Contains(p);
 
             /// <summary>How many pawns a bomb's pull caught.</summary>
             /// <param name="b">The bomb.</param>
@@ -935,11 +985,41 @@ namespace BatshitTechnology
                         overlap.Add(t);
                     }
 
+                    if (t is Pawn p)
+                    {
+                        NoteStrain(p, pulls);
+                    }
+
                     string why = overlap.Contains(t) ? Rest(t, pulls) : null;
                     if (why != null)
                     {
                         restedAt[t] = (now, why);
                     }
+                }
+            }
+
+            /// <summary>
+            /// Notes how hard the pulls on a pawn strain against each
+            /// other now (Core's PullSuperposition.Tension).
+            /// </summary>
+            /// <param name="p">The pawn.</param>
+            /// <param name="pulls">The pulls running.</param>
+            private void NoteStrain(Pawn p, List<Implosion> pulls)
+            {
+                IntVec3 at = p.Position;
+                double tension = PullSuperposition.Tension(at.x, at.z, pulls
+                    .Where(i => at.InHorDistOf(i.Center, i.PullRadius))
+                    .Select(i => new PullSource(
+                        i.Center.x, i.Center.z, i.CurrentRate, i.Seed))
+                    .ToList());
+                if (tension > PullSuperposition.StretchTension - 1)
+                {
+                    nearStrain.Add(p);
+                }
+
+                if (PullSuperposition.StretchDamage(tension) >= 1)
+                {
+                    strained[p] = StrainedTicks(p) + 1;
                 }
             }
 

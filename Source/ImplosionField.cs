@@ -9,7 +9,9 @@
 // with a fresh flicker per step from RimWorld's Rand), so nothing stalls
 // cleanly between equal pulls. The maths is Core's PullSuperposition; one
 // implosion alone drags exactly as it always did: things only approach its
-// centre, at its rate, and are never shoved or lost.
+// centre, at its rate, and are never shoved or lost. A pawn held between
+// strong opposing pulls is stretched a little once a second (BT_Stretch,
+// a stretch mark), the harder they strain the worse: spaghettification.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +21,25 @@ using Verse;
 
 namespace BatshitTechnology
 {
+    /// <summary>The implosions' defs.</summary>
+    [DefOf]
+    public static class BT_ImplosionDefOf
+    {
+        /// <summary>
+        /// What opposing pulls do to a pawn held between them.
+        /// </summary>
+        public static DamageDef BT_Stretch;
+
+        /// <summary>The injury stretching leaves.</summary>
+        public static HediffDef BT_StretchMark;
+
+        /// <summary>Lets RimWorld bind the fields above at load.</summary>
+        static BT_ImplosionDefOf()
+        {
+            DefOfHelper.EnsureInitializedInCtor(typeof(BT_ImplosionDefOf));
+        }
+    }
+
     /// <summary>
     /// The drag of every implosion on its map. Implosions hand it their
     /// pull each tick (<see cref="Pull"/>); the first to do so in a game
@@ -44,6 +65,12 @@ namespace BatshitTechnology
     /// </remarks>
     public class MapComponent_Implosions : MapComponent
     {
+        /// <summary>
+        /// How often a pawn held between strong opposing pulls is
+        /// stretched, in ticks: once a second.
+        /// </summary>
+        public const int StretchIntervalTicks = Implosion.TicksPerSecond;
+
         /// <summary>RimWorld's Rand, for the flicker of noise.</summary>
         private static readonly IUnitRandom Noise = new RandSource();
 
@@ -84,6 +111,12 @@ namespace BatshitTechnology
         /// (diagnostics).
         /// </summary>
         public static int Superposed { get; private set; }
+
+        /// <summary>
+        /// Pawns stretched between opposing pulls this session, a stretch
+        /// at a time (diagnostics).
+        /// </summary>
+        public static int Stretches { get; private set; }
 
         /// <summary>A map's field.</summary>
         /// <param name="map">The map.</param>
@@ -336,6 +369,15 @@ namespace BatshitTechnology
             }
 
             clock.Seen = now;
+            if (t is Pawn held && acting.Count > 1)
+            {
+                Stretch(held, clock, strongest, now);
+                if (!held.Spawned)
+                {
+                    return; // stretched to death
+                }
+            }
+
             clock.Rate = PullSuperposition.NetRate(at.x, at.z, pulls, biases);
             int due = BlastSchedule.DueThisTick(
                 ref clock.Pending, clock.Rate, Implosion.TicksPerSecond);
@@ -380,6 +422,39 @@ namespace BatshitTechnology
 
             clock.LastTry = now;
             clock.LastMoved = moved;
+        }
+
+        /// <summary>
+        /// Stretches a pawn held between opposing pulls, at most once a
+        /// second, by however much they strain against each other
+        /// (<see cref="PullSuperposition.StretchDamage"/>): nothing under
+        /// pulls that mostly agree. Armour does not help.
+        /// </summary>
+        /// <param name="pawn">The pawn, under more than one pull.</param>
+        /// <param name="clock">Its clock, which times its stretches.</param>
+        /// <param name="strongest">The strongest pull on it, blamed.</param>
+        /// <param name="now">The game tick.</param>
+        private void Stretch(
+            Pawn pawn, ThingPull clock, Implosion strongest, int now)
+        {
+            if (now < clock.NextStretch)
+            {
+                return;
+            }
+
+            IntVec3 at = pawn.Position;
+            int damage = PullSuperposition.StretchDamage(
+                PullSuperposition.Tension(at.x, at.z, pulls));
+            if (damage <= 0)
+            {
+                return;
+            }
+
+            clock.NextStretch = now + StretchIntervalTicks;
+            Stretches++;
+            pawn.TakeDamage(new DamageInfo(
+                BT_ImplosionDefOf.BT_Stretch, damage,
+                instigator: strongest.Instigator));
         }
 
         /// <summary>
@@ -514,6 +589,11 @@ namespace BatshitTechnology
 
             /// <summary>Whether it has felt two pulls at once.</summary>
             public bool Superposed;
+
+            /// <summary>
+            /// The first tick it may be stretched again, if it is a pawn.
+            /// </summary>
+            public int NextStretch;
         }
 
         /// <summary>RimWorld's Rand as a source of uniform numbers.</summary>

@@ -399,6 +399,57 @@ public sealed class PullSuperpositionTests
     }
 
     /// <summary>
+    /// Opposing strength: none under one pull, or two pulling the same
+    /// way; twice each rate for two equal pulls head on, anywhere on the
+    /// line between them, a pull's own centre included (it holds the thing
+    /// against the other); something in between off that line; and none
+    /// where the other pull has no strength.
+    /// </summary>
+    [Fact(DisplayName = "Tension is the pull that cancels out")]
+    public void Tension_should_be_the_cancelled_pull()
+    {
+        var lone = new[] { new PullSource(0, 0, EndRate, 1) };
+        Assert.Equal(0d, PullSuperposition.Tension(7, -3, lone), 9);
+        PullSource[] sameWay =
+        {
+            new PullSource(10, 0, EndRate, 1), new PullSource(20, 0, 6, 2),
+        };
+        Assert.Equal(0d, PullSuperposition.Tension(0, 0, sameWay), 9);
+        PullSource[] headOn = EqualPulls();
+        Assert.Equal(24d, PullSuperposition.Tension(0, 0, headOn), 9);
+        Assert.Equal(24d, PullSuperposition.Tension(-4, 0, headOn), 9);
+        double off = PullSuperposition.Tension(0, 6, headOn);
+        Assert.InRange(off, 0.1, 23.9);
+        Assert.Equal(24d, PullSuperposition.Tension(-10, 0, headOn), 9);
+        Assert.Equal(0d, PullSuperposition.Tension(-10, 0,
+            new[] { headOn[0], new PullSource(10, 0, 0, 2) }), 9);
+    }
+
+    /// <summary>
+    /// Stretching damage: none up to the threshold, a point per six cells
+    /// a second of opposing pull beyond it, rounded up, and never more
+    /// than the cap; two Tractor Bombs head on at full pull do three.
+    /// </summary>
+    /// <param name="tension">The opposing strength.</param>
+    /// <param name="damage">The damage expected.</param>
+    [Theory(DisplayName = "Stretching damage scales with the opposing pull")]
+    [InlineData(0, 0)]
+    [InlineData(-5, 0)]
+    [InlineData(double.NaN, 0)]
+    [InlineData(6, 0)]
+    [InlineData(6.01, 1)]
+    [InlineData(12, 1)]
+    [InlineData(12.5, 2)]
+    [InlineData(24, 3)]
+    [InlineData(120, 4)]
+    [InlineData(double.PositiveInfinity, 4)]
+    public void StretchDamage_should_scale_with_tension(
+        double tension, int damage)
+    {
+        Assert.Equal(damage, PullSuperposition.StretchDamage(tension));
+    }
+
+    /// <summary>
     /// Nonsense in: no pulls give no step and no rate; a rate that is not
     /// a number, or negative, counts as none; jitter that is not a number
     /// counts as none; a random source past 1 is clamped; missing input

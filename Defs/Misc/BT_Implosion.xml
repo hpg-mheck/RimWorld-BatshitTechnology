@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Stretching (ROADMAP.md, "Multi-bomb physics"): a pawn held between
+       two strong opposing implosions (Source/ImplosionField.cs) takes a
+       little of this once a second, scaled by how hard the pulls strain
+       against each other (Core's PullSuperposition.StretchDamage: none
+       below 6 cells a second of opposing pull, three for two Tractor
+       Bombs head on). It is a joke about spaghettification. Armour does
+       not help: there is no armour category. -->
+  <DamageDef>
+    <defName>BT_Stretch</defName>
+    <label>stretching</label>
+    <workerClass>DamageWorker_AddInjury</workerClass>
+    <externalViolence>true</externalViolence>
+    <deathMessage>{0} has been spaghettified.</deathMessage>
+    <hediff>BT_StretchMark</hediff>
+    <hediffSolid>Crack</hediffSolid>
+    <harmAllLayersUntilOutside>true</harmAllLayersUntilOutside>
+  </DamageDef>
+
+  <HediffDef ParentName="InjuryBase">
+    <defName>BT_StretchMark</defName>
+    <label>stretch mark</label>
+    <labelNoun>a stretch mark</labelNoun>
+    <description>Tissue pulled longer than it was ever meant to go, by two tractor beams that could not agree which way it belonged. It heals like a bruise and looks worse.</description>
+    <comps>
+      <li Class="HediffCompProperties_TendDuration">
+        <labelTendedWell>bandaged</labelTendedWell>
+        <labelTendedWellInner>sutured</labelTendedWellInner>
+        <labelSolidTendedWell>set</labelSolidTendedWell>
+      </li>
+      <li Class="HediffCompProperties_Infecter">
+        <infectionChance>0.05</infectionChance>
+      </li>
+      <li Class="HediffCompProperties_GetsPermanent">
+        <permanentLabel>stretch scar</permanentLabel>
+      </li>
+    </comps>
+    <injuryProps>
+      <painPerSeverity>0.0125</painPerSeverity>
+      <averagePainPerSeverityPermanent>0.00625</averagePainPerSeverityPermanent>
+      <bleedRate>0.005</bleedRate>
+      <canMerge>true</canMerge>
+      <destroyedLabel>Pulled off</destroyedLabel>
+      <destroyedOutLabel>Pulled out</destroyedOutLabel>
+    </injuryProps>
+  </HediffDef>
+</Defs>
