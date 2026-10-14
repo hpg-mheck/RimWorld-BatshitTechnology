@@ -1094,3 +1094,30 @@ reuses the director's private Frame and Narrate rather than adding a
 camera-follow API. The smoke runner's directed test showcase gained a
 fifth, declining scene and a beat; a sabotage run (no filter, and no
 Narrate in RunBeat) failed the caption, cue and narration checks.
+
+2026-10-14 Claude: Tractor Bomb slice 12000, step 3: the tour's stage
+geometry and staging. Core gained TourScript (the eight scenes in order,
+their beats and outcomes, read by the scene classes, the XML and the
+tests), TourStagePlanner, and the tractor layouts as data
+(TwinJunkyardLayout, SingleTractorLayout, and TractorPlanting, which
+predicts where a robot plants from its sight, 45, and its stop). The
+planner chooses the tractor yard and the self-destruct pads together,
+because a pad's blast reaches 87.6 tiles and the barn stands in the yard
+from the start; every keep-away goes through one Clears(Box, KeepAway),
+and AnyRim through TownSite.Clears. A pad's reach is measured from the
+device's own cell, as the old corner rule measured it: measured from its
+cleared square, the south-west yard would have ruled out the south-east
+pad by 3 tiles. The showcase now takes its pads from the plan
+(Showcase.StagePlan keeps it for the tour). Source/TractorStaging.cs holds
+the staging the smoke runner and the tour share: LevelGround (which
+replaces the smoke runner's PrepareGround and the showcase's Clear),
+ClearYard (the old ClearTractorStage without moving colonists), SpawnBarn,
+SpawnRobot, SpawnArmy (armed or not, stunned or not), BuildJunkyard (from
+Core's layout), Heal and Refresh. The twin, barn and chain smoke checks
+guard the extraction. The single-tractor layout's stray stands at (0,6)
+from the yard's centre, about seven tiles from where the robot is
+predicted to plant, (-1,-1), so inside its pull and the robot protests;
+the plan said "+6 z" without naming the origin. The first smoke run
+after the extraction planted the twins at (118,125) and (132,125), 14.0
+apart, the cells TractorPlanting predicts (7 tiles either side of the
+army's centre).

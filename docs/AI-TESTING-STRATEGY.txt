@@ -10,7 +10,10 @@ run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
 - Core library logic: WeightedSelector, ReactorHeat, and whatever else
   moves into BatshitTechnology.Core, including the multi-bomb physics
   (PullSuperposition, with property-style tests over many seeds through
-  its seedable SeededUnitRandom).
+  its seedable SeededUnitRandom), and the directed tour's script, stage
+  planner and tractor layouts (TourScriptTests, TourStagePlannerTests,
+  TractorLayoutTests: the yard and pads keep their distances, the twin
+  pulls overlap, the barn stands beyond pull plus blast).
 - XML regression tests over Defs/, About and Textures/: the corrected v0.2
   values (so those bugs cannot return), research, recipes, the reactor,
   every BT_ cross-reference, every mod texture path, and two RimWorld

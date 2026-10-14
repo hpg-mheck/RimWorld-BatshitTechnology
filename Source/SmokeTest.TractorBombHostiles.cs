@@ -212,8 +212,8 @@ namespace BatshitTechnology
                 PawnKindDefOf.Drifter, enemy, forceGenerateNewPawn: true,
                 dontGiveWeapon: true));
             GenSpawn.Spawn(p, at, map);
-            Refresh(p);
-            Heal(p);
+            TractorStaging.Refresh(p);
+            TractorStaging.Heal(p);
             return p;
         }
     }

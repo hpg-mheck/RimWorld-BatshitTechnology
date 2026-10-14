@@ -50,7 +50,7 @@ namespace BatshitTechnology
         private void TestTractorBarnBuilds(Map map, IntVec3 center)
         {
             ClearTractorStage(map, center);
-            Building_TractorBarn barn = SpawnTestBarn(map, center);
+            Building_TractorBarn barn = TractorStaging.SpawnBarn(map, center);
             IntVec3 door = barn.InteractionCell;
             List<Thing> parts =
                 SpawnRobotParts(map, door + new IntVec3(8, 0, -2));
@@ -143,11 +143,11 @@ namespace BatshitTechnology
         private void TestTractorBarnUntilX(Map map, IntVec3 center)
         {
             ClearTractorStage(map, center);
-            Building_TractorBarn barn = SpawnTestBarn(map, center);
+            Building_TractorBarn barn = TractorStaging.SpawnBarn(map, center);
             IntVec3 door = barn.InteractionCell;
             Building_TractorBomb planted = PlantTestBomb(
                 map, Clamp(map, center + new IntVec3(-28, 0, 26)), 600f);
-            Pawn patrol = SpawnTestRobot(map, center + new IntVec3(-12, 0, -14));
+            Pawn patrol = TractorStaging.SpawnRobot(map, center + new IntVec3(-12, 0, -14));
             Tick(40); // the planted bomb's tyres go down
             int robots = Robots(map).Count();
             int plantedCount = PlantedBombs(map).Count();
@@ -225,9 +225,9 @@ namespace BatshitTechnology
         private void TestTractorBarnRepair(Map map, IntVec3 center)
         {
             ClearTractorStage(map, center);
-            Building_TractorBarn barn = SpawnTestBarn(map, center);
+            Building_TractorBarn barn = TractorStaging.SpawnBarn(map, center);
             CompRefuelable hopper = barn.RepairHopper;
-            Pawn robot = SpawnTestRobot(map, center + new IntVec3(14, 0, 9));
+            Pawn robot = TractorStaging.SpawnRobot(map, center + new IntVec3(14, 0, 9));
             BreakRobot(robot);
             float healthBefore =
                 robot.health.summaryHealth.SummaryHealthPercent;
@@ -296,21 +296,6 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Spawns a player's Tractor Barn with its repair hopper full, its
-        /// door facing south.
-        /// </summary>
-        /// <param name="map">The map.</param>
-        /// <param name="at">Its centre.</param>
-        /// <returns>The barn.</returns>
-        private static Building_TractorBarn SpawnTestBarn(Map map, IntVec3 at)
-        {
-            var barn = (Building_TractorBarn)Spawn(map, "BT_TractorBarn", at);
-            CompRefuelable hopper = barn.RepairHopper;
-            hopper?.Refuel(hopper.Props.fuelCapacity);
-            return barn;
-        }
-
-        /// <summary>
         /// Spawns one robot's parts in three stacks near a spot: 60 steel,
         /// 3 components and 5 batshittium.
         /// </summary>
@@ -363,7 +348,7 @@ namespace BatshitTechnology
             }
 
             GenSpawn.Spawn(p, spot, map);
-            Refresh(p);
+            TractorStaging.Refresh(p);
             p.workSettings.EnableAndInitialize();
             foreach (WorkTypeDef work in DefDatabase<WorkTypeDef>.AllDefs)
             {

@@ -221,6 +221,15 @@ right?".
   skips the reactor demo, and its opening message says so.
 - **AnyRim keeps away from the base and the grenade range:** at least 10
   tiles from the base's cleared square and 15 from the grenade clearing.
+- **The tractor yard and the pads are planned together** (Core's
+  `TourStagePlanner`, slice 12000). The yard, 65 by 29 tiles, keeps 18
+  tiles (a robot's default pull plus 8) from the base square, the grenade
+  clearing and every part of AnyRim; its candidates lie south-west, south
+  and south-east of the base. Each pad keeps 87.6 tiles from AnyRim and
+  from the yard, measured from the device's own cell. The first yard that
+  leaves two pads wins; failing that, the one that leaves the most. Every
+  keep-away goes through one rule, `Clears(Box, KeepAway)`, and AnyRim
+  through `TownSite.Clears`.
 - **Fire cannot walk in.** A fire spreads to adjacent cells or throws a
   spark two cells. AnyRim is ringed by a 4-tile firebreak of bare ground,
   and its roads are non-flammable. Its own lawns and wooden houses burn

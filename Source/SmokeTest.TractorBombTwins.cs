@@ -99,8 +99,10 @@ namespace BatshitTechnology
         private void TestTractorBombTwinJunkyard(Map map, IntVec3 center)
         {
             ClearTractorStage(map, center);
-            HashSet<ThingDef> junkDefs = BuildJunkyard(map, center);
-            List<Pawn> army = SpawnTwinArmy(map, center);
+            HashSet<ThingDef> junkDefs = TractorStaging.BuildJunkyard(map, center);
+            List<Pawn> army = TractorStaging.SpawnArmy(
+                map, center, TwinJunkyardLayout.Army, armed: true,
+                stunned: true);
             int explosions = Building_TractorBomb.Explosions;
             List<Building_TractorBomb> bombs = DriveInTwinBombs(map, center);
             if (bombs.Count < 2 || army.Count < 12)
@@ -321,168 +323,6 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Lays out the junkyard round the army: steel slag and rock
-        /// chunks, loose stacks, small shelves (crates) of items, and
-        /// ancient crates, none on the robots' road in or where they plant.
-        /// </summary>
-        /// <param name="map">The map.</param>
-        /// <param name="center">The middle of the army.</param>
-        /// <returns>
-        /// The item defs laid out, whose totals must hold through the
-        /// pulls.
-        /// </returns>
-        private static HashSet<ThingDef> BuildJunkyard(
-            Map map, IntVec3 center)
-        {
-            ThingDef slag = DefDatabase<ThingDef>.GetNamed("ChunkSlagSteel");
-            ThingDef rock = DefDatabase<ThingDef>.GetNamedSilentFail(
-                "ChunkGranite") ?? DefDatabase<ThingDef>.AllDefs.First(
-                d => d.thingCategories?.Contains(
-                    ThingCategoryDefOf.StoneChunks) == true);
-            var defs = new HashSet<ThingDef>();
-            void Lay(ThingDef def, int x, int z, int count)
-            {
-                IntVec3 c = center + new IntVec3(x, 0, z);
-                if (!c.InBounds(map) || !c.Standable(map)
-                    || c.GetFirstItem(map) != null)
-                {
-                    return;
-                }
-
-                Thing item = ThingMaker.MakeThing(def);
-                item.stackCount = Mathf.Clamp(count, 1, def.stackLimit);
-                GenSpawn.Spawn(item, c, map);
-                defs.Add(def);
-            }
-
-            foreach (var (x, z) in new[]
-            {
-                (-9, -5), (-8, 4), (-6, -3), (-5, 6), (-2, -6), (2, 6),
-                (5, -6), (6, 3), (8, -4), (9, 5), (-1, 6), (1, -6),
-            })
-            {
-                Lay(slag, x, z, 1);
-            }
-
-            foreach (var (x, z) in new[]
-            {
-                (-7, -6), (-4, 5), (0, -5), (0, 5), (4, -5), (7, 6),
-                (-2, 3), (2, -3),
-            })
-            {
-                Lay(rock, x, z, 1);
-            }
-
-            foreach (var (def, x, z, count) in new[]
-            {
-                (ThingDefOf.Steel, -9, 3, 30),
-                (ThingDefOf.Plasteel, -6, 3, 10),
-                (ThingDefOf.Cloth, -4, -5, 20), (ThingDefOf.Steel, 6, -3, 30),
-                (ThingDefOf.Cloth, 2, 2, 20), (ThingDefOf.Jade, 5, 4, 10),
-                (ThingDefOf.Uranium, 9, -3, 10),
-                (ThingDefOf.ComponentIndustrial, -2, -2, 5),
-                (ThingDefOf.Steel, 0, 3, 25),
-                (ThingDefOf.Plasteel, 0, -3, 10),
-            })
-            {
-                Lay(def, x, z, count);
-            }
-
-            // Crates of items: small shelves, three stacks on each, which
-            // the pulls rip loose from under their stacks.
-            ThingDef shelf = DefDatabase<ThingDef>.GetNamedSilentFail(
-                "ShelfSmall");
-            foreach (var (x, z) in new[] { (-5, -3), (5, 2), (-1, -5) })
-            {
-                IntVec3 c = center + new IntVec3(x, 0, z);
-                if (shelf == null || c.GetFirstItem(map) != null)
-                {
-                    continue;
-                }
-
-                GenSpawn.Spawn(ThingMaker.MakeThing(shelf, ThingDefOf.Steel),
-                    c, map);
-                foreach (var (def, count) in new[]
-                {
-                    (ThingDefOf.Plasteel, 10), (ThingDefOf.Jade, 8),
-                    (ThingDefOf.ComponentIndustrial, 4),
-                })
-                {
-                    Thing item = ThingMaker.MakeThing(def);
-                    item.stackCount = count;
-                    GenSpawn.Spawn(item, c, map);
-                    defs.Add(def);
-                }
-            }
-
-            ThingDef crate = DefDatabase<ThingDef>.GetNamedSilentFail(
-                "AncientCrate");
-            foreach (var (x, z) in new[] { (-7, 3), (3, 6), (7, -5) })
-            {
-                IntVec3 c = center + new IntVec3(x, 0, z);
-                if (crate != null && c.GetFirstItem(map) == null)
-                {
-                    GenSpawn.Spawn(ThingMaker.MakeThing(crate), c, map);
-                }
-            }
-
-            return defs;
-        }
-
-        /// <summary>
-        /// Fourteen armed raiders of a hostile faction among the junk,
-        /// holding position round the middle (a defend-point lord that
-        /// never flees), stunned until both bombs have planted.
-        /// </summary>
-        /// <param name="map">The map.</param>
-        /// <param name="center">The middle of the army.</param>
-        /// <returns>The raiders, spawned.</returns>
-        private static List<Pawn> SpawnTwinArmy(Map map, IntVec3 center)
-        {
-            var army = new List<Pawn>();
-            Faction enemy = Find.FactionManager.RandomEnemyFaction(
-                allowNonHumanlike: false);
-            PawnKindDef kind = DefDatabase<PawnKindDef>.GetNamedSilentFail(
-                "Mercenary_Gunner") ?? PawnKindDefOf.Drifter;
-            ThingDef rifle = DefDatabase<ThingDef>.GetNamedSilentFail(
-                "Gun_AssaultRifle");
-            if (enemy == null)
-            {
-                return army;
-            }
-
-            foreach (var (x, z) in new[]
-            {
-                (-4, 0), (4, 0), (-3, -3), (-3, 3), (3, -3), (3, 3),
-                (-1, -4), (-1, 4), (1, -4), (1, 4), (-2, 1), (2, -1),
-                (0, 2), (0, -2),
-            })
-            {
-                Pawn p = PawnGenerator.GeneratePawn(new PawnGenerationRequest(
-                    kind, enemy, forceGenerateNewPawn: true,
-                    mustBeCapableOfViolence: true));
-                GenSpawn.Spawn(p, center + new IntVec3(x, 0, z), map);
-                if (p.equipment != null && p.equipment.Primary == null
-                    && rifle != null)
-                {
-                    p.equipment.AddEquipment(
-                        (ThingWithComps)ThingMaker.MakeThing(rifle));
-                }
-
-                Refresh(p);
-                Heal(p);
-                p.stances.stunner.StunFor(
-                    100000, null, addBattleLog: false, showMote: false);
-                army.Add(p);
-            }
-
-            LordMaker.MakeNewLord(enemy, new LordJob_DefendPoint(
-                center, wanderRadius: 2f, defendRadius: 6f,
-                addFleeToil: false), map, army);
-            return army;
-        }
-
-        /// <summary>
         /// Two Nosy robots drive in from either side of the army and plant
         /// themselves; their countdowns are held at half a minute meanwhile
         /// (the def's range is restored at once), and each bomb's hostile
@@ -511,10 +351,10 @@ namespace BatshitTechnology
                     settings.countdownSeconds = new FloatRange(30f, 30f);
                 }
 
-                foreach (int x in new[] { -28, 28 })
+                foreach (Cell offset in TwinJunkyardLayout.DriveIn)
                 {
-                    Pawn robot =
-                        SpawnTestRobot(map, center + new IntVec3(x, 0, 0));
+                    Pawn robot = TractorStaging.SpawnRobot(
+                        map, TractorStaging.At(center, offset));
                     robot.TryGetComp<CompTractorBomb>().Disposition =
                         TractorBombDisposition.Nosy;
                     robots.Add(robot);

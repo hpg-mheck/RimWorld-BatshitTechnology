@@ -159,7 +159,7 @@ namespace BatshitTechnology
         {
             IntVec3 center = map.Center;
             SilenceStoryteller(map);
-            PrepareGround(map, CellRect.CenteredOn(center, 14));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(center, 14));
 
             Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
             var fuel = reactor.TryGetComp<CompRefuelable>();
@@ -465,7 +465,7 @@ namespace BatshitTechnology
             // Fed and rested first: a hungry or tired colonist breaks off
             // recreation, and the squeeze needs a 600-tick sit for its
             // effects (one run saw the memory and the calm missing).
-            Refresh(pawn);
+            TractorStaging.Refresh(pawn);
             pawn.needs.joy.CurLevel = 0.2f;
             int mutteredBefore = JobDriver_UseBrainSqueezer.MonologuesShown;
             JobDef useSqueezer = BT_BrainSqueezerDefOf.BT_UseBrainSqueezer;
@@ -787,7 +787,7 @@ namespace BatshitTechnology
         private void TestMinifiedDevicesTick(Map map, IntVec3 center)
         {
             IntVec3 at = Clamp(map, center + new IntVec3(30, 0, -30));
-            PrepareGround(map, CellRect.CenteredOn(at, 18));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 18));
             var packages = new List<Thing>();
             string[] devices =
             {
@@ -1351,7 +1351,7 @@ namespace BatshitTechnology
         /// <param name="center">Where to build the reactor.</param>
         private void TestReactorBarrage(Map map, IntVec3 center)
         {
-            PrepareGround(map, CellRect.CenteredOn(center, 3));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(center, 3));
             Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
             var comp = reactor.TryGetComp<CompSelfDestruct>();
             var barrage = (Detonation_BoltBarrage)comp.Props.detonation;
@@ -1416,7 +1416,7 @@ namespace BatshitTechnology
         /// <param name="center">Where to build the reactor.</param>
         private void TestDamageTrigger(Map map, IntVec3 center)
         {
-            PrepareGround(map, CellRect.CenteredOn(center, 3));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(center, 3));
             Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
             var comp = reactor.TryGetComp<CompSelfDestruct>();
             int before = CompSelfDestruct.DamageTriggers;
@@ -1442,7 +1442,7 @@ namespace BatshitTechnology
         /// <param name="center">Where to build the reactor.</param>
         private void TestArmedDeviceDestroyed(Map map, IntVec3 center)
         {
-            PrepareGround(map, CellRect.CenteredOn(center, 3));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(center, 3));
             Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
             var comp = reactor.TryGetComp<CompSelfDestruct>();
             var barrage = (Detonation_BoltBarrage)comp.Props.detonation;
@@ -1469,7 +1469,7 @@ namespace BatshitTechnology
         private void TestSingularityGrenade(Map map, IntVec3 center)
         {
             IntVec3 at = Clamp(map, center + new IntVec3(-45, 0, -45));
-            PrepareGround(map, CellRect.CenteredOn(at, 14));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 14));
             Thing steel = ThingMaker.MakeThing(ThingDefOf.Steel);
             steel.stackCount = 30;
             GenSpawn.Spawn(steel, at + new IntVec3(8, 0, 0), map);
@@ -1584,7 +1584,7 @@ namespace BatshitTechnology
         private void TestImplosionGathers(Map map, IntVec3 center)
         {
             IntVec3 at = Clamp(map, center + new IntVec3(45, 0, -45));
-            PrepareGround(map, CellRect.CenteredOn(at, 14));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 14));
             var loose = new List<Thing>();
             foreach (var (def, x, z) in new[]
             {
@@ -1825,33 +1825,12 @@ namespace BatshitTechnology
         /// <param name="stage">The stage's middle.</param>
         private static void ClearTractorStage(Map map, IntVec3 stage)
         {
-            PrepareGround(map, CellRect.CenteredOn(stage, TractorStageRadius));
-            foreach (IntVec3 c in CellRect.CenteredOn(stage, TractorStageRadius))
-            {
-                if (c.InBounds(map))
-                {
-                    map.fogGrid.Unfog(c);
-                }
-            }
-
-            foreach (Thing fire in map.listerThings.ThingsOfDef(ThingDefOf.Fire)
-                .ToList())
-            {
-                fire.Destroy();
-            }
-
+            TractorStaging.ClearYard(
+                map, CellRect.CenteredOn(stage, TractorStageRadius));
             IntVec3 hold = Clamp(map, stage + new IntVec3(0, 0, 70));
             foreach (Pawn p in map.mapPawns.AllPawnsSpawned.ToList())
             {
-                bool near = p.Position.InHorDistOf(
-                    stage, TractorStageRadius + 25);
-                if (p.HostileTo(Faction.OfPlayer)
-                    || (near && p.RaceProps.Animal && p.Faction == null)
-                    || p.TryGetComp<CompTractorBomb>() != null)
-                {
-                    p.Destroy(DestroyMode.Vanish);
-                }
-                else if (p.IsColonist && !p.Dead)
+                if (p.IsColonist && !p.Dead)
                 {
                     HoldColonist(map, p, hold);
                 }
@@ -1937,14 +1916,6 @@ namespace BatshitTechnology
             return hostile;
         }
 
-        /// <summary>A fresh player robot, exactly where asked.</summary>
-        /// <param name="map">The map.</param>
-        /// <param name="at">Where to put it.</param>
-        /// <returns>The robot, spawned.</returns>
-        private static Pawn SpawnTestRobot(Map map, IntVec3 at) =>
-            (Pawn)GenSpawn.Spawn(
-                TractorBombUtility.MakeRobot(Faction.OfPlayer), at, map);
-
         /// <summary>
         /// Ticks until a robot has emplaced, or a cap passes, noting when it
         /// was ready and when its bomb appeared.
@@ -1984,7 +1955,7 @@ namespace BatshitTechnology
         private void TestTractorBombRobot(Map map, IntVec3 center)
         {
             ClearTractorStage(map, center);
-            Pawn robot = SpawnTestRobot(map, center);
+            Pawn robot = TractorStaging.SpawnRobot(map, center);
             var comp = robot.TryGetComp<CompTractorBomb>();
             Tick(30);
             Check("a tractor bomb is a player robot of its own race",
@@ -2048,7 +2019,7 @@ namespace BatshitTechnology
                 area[c] = true;
             }
 
-            Pawn robot = SpawnTestRobot(map, pen.CenterCell);
+            Pawn robot = TractorStaging.SpawnRobot(map, pen.CenterCell);
             robot.playerSettings.AreaRestrictionInPawnCurrentMap = area;
             var visited = new HashSet<IntVec3>();
             int outside = 0;
@@ -2092,7 +2063,7 @@ namespace BatshitTechnology
         private void TestTractorBombHunt(Map map, IntVec3 center)
         {
             ClearTractorStage(map, center);
-            Pawn robot = SpawnTestRobot(map, center + new IntVec3(-25, 0, 0));
+            Pawn robot = TractorStaging.SpawnRobot(map, center + new IntVec3(-25, 0, 0));
             robot.TryGetComp<CompTractorBomb>().Disposition =
                 TractorBombDisposition.Cautious;
             Pawn quarry = SpawnStunnedHostile(map, center + new IntVec3(12, 0, 0));
@@ -2243,7 +2214,7 @@ namespace BatshitTechnology
             foreach (KeyValuePair<TractorBombDisposition, float> want in expected)
             {
                 ClearTractorStage(map, center);
-                Pawn robot = SpawnTestRobot(map, center + new IntVec3(-25, 0, 0));
+                Pawn robot = TractorStaging.SpawnRobot(map, center + new IntVec3(-25, 0, 0));
                 var comp = robot.TryGetComp<CompTractorBomb>();
                 if (want.Key == TractorBombDisposition.Moderate)
                 {
@@ -2296,7 +2267,7 @@ namespace BatshitTechnology
         private void TestTractorBombProtest(Map map, IntVec3 center)
         {
             ClearTractorStage(map, center);
-            Pawn robot = SpawnTestRobot(map, center + new IntVec3(-6, 0, 0));
+            Pawn robot = TractorStaging.SpawnRobot(map, center + new IntVec3(-6, 0, 0));
             robot.TryGetComp<CompTractorBomb>().Disposition =
                 TractorBombDisposition.Cautious;
             Pawn colonist = TestColonist(
@@ -2661,8 +2632,8 @@ namespace BatshitTechnology
                 PawnKindDefOf.Colonist, Faction.OfPlayer,
                 forceGenerateNewPawn: true, dontGiveWeapon: true));
             GenSpawn.Spawn(p, spot, map);
-            Refresh(p);
-            Heal(p);
+            TractorStaging.Refresh(p);
+            TractorStaging.Heal(p);
             return p;
         }
 
@@ -2686,25 +2657,9 @@ namespace BatshitTechnology
                 fixedBiologicalAge: adult + 1f,
                 fixedChronologicalAge: adult + 1f));
             GenSpawn.Spawn(p, spot, map);
-            Refresh(p);
-            Heal(p);
+            TractorStaging.Refresh(p);
+            TractorStaging.Heal(p);
             return p;
-        }
-
-        /// <summary>
-        /// Rids a fresh pawn of whatever ailments it was generated with (a
-        /// bad back, a missing toe, frailty), so how far it runs in a
-        /// countdown depends on its legs, not on luck. A sabotage-free
-        /// run once failed the flee check by 0.7 tiles on a muffalo.
-        /// </summary>
-        /// <param name="p">The pawn.</param>
-        private static void Heal(Pawn p)
-        {
-            foreach (Hediff h in p.health.hediffSet.hediffs
-                .Where(h => h.def.isBad).ToList())
-            {
-                p.health.RemoveHediff(h);
-            }
         }
 
         /// <summary>
@@ -2715,29 +2670,6 @@ namespace BatshitTechnology
         private static string Legs(Pawn p) =>
             $"moving {p.health.capacities.GetLevel(PawnCapacityDefOf.Moving):P0}"
             + $", {p.ageTracker.CurLifeStage.defName}";
-
-        /// <summary>
-        /// Tops up a pawn's rest, food and joy, so it neither lies down to
-        /// sleep (a sleeping pawn sees nothing) nor wanders off to eat.
-        /// </summary>
-        /// <param name="p">The pawn.</param>
-        private static void Refresh(Pawn p)
-        {
-            if (p.needs?.rest != null)
-            {
-                p.needs.rest.CurLevel = 1f;
-            }
-
-            if (p.needs?.food != null)
-            {
-                p.needs.food.CurLevel = p.needs.food.MaxLevel;
-            }
-
-            if (p.needs?.joy != null)
-            {
-                p.needs.joy.CurLevel = 1f;
-            }
-        }
 
         /// <summary>
         /// Whether a pawn is running from, or frozen by, a bomb.
@@ -2797,7 +2729,7 @@ namespace BatshitTechnology
             Find.ResearchManager.FinishProject(
                 BT_TractorBombDefOf.BT_Research_TractorBombDialAYield,
                 doCompletionDialog: false, doCompletionLetter: false);
-            Pawn robot = SpawnTestRobot(map, center + new IntVec3(-6, 0, 0));
+            Pawn robot = TractorStaging.SpawnRobot(map, center + new IntVec3(-6, 0, 0));
             var comp = robot.TryGetComp<CompTractorBomb>();
             comp.Disposition = TractorBombDisposition.Cautious;
             var sliders = comp.CompGetGizmosExtra()
@@ -2872,7 +2804,7 @@ namespace BatshitTechnology
         private void TestTractorBombDeath(Map map, IntVec3 center)
         {
             ClearTractorStage(map, center);
-            Pawn robot = SpawnTestRobot(map, center);
+            Pawn robot = TractorStaging.SpawnRobot(map, center);
             IntVec3 at = robot.Position;
             Thing steel = ThingMaker.MakeThing(ThingDefOf.Steel);
             steel.stackCount = 20;
@@ -2913,7 +2845,7 @@ namespace BatshitTechnology
             // Three wheels gone, cleanly (shooting them off spills damage
             // into the chassis, which kills it anyway): it cannot move, so
             // it must be wrecked rather than left downed.
-            Pawn crippled = SpawnTestRobot(map, center + new IntVec3(8, 0, 0));
+            Pawn crippled = TractorStaging.SpawnRobot(map, center + new IntVec3(8, 0, 0));
             foreach (BodyPartRecord wheel in crippled.health.hediffSet
                 .GetNotMissingParts()
                 .Where(p => p.def.defName == "BT_TractorWheel").Take(3).ToList())
@@ -2949,7 +2881,7 @@ namespace BatshitTechnology
 
             // Transmogrifier: rock chunks thrown out.
             IntVec3 at = Clamp(map, center + new IntVec3(-45, 0, 0));
-            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 10));
             int chunksBefore = Chunks(map, at);
             KillAndCheck(map, aftermath, "BT_BatshittiumTransmogrifier", at,
                 "the transmogrifier spews rock when destroyed",
@@ -2958,7 +2890,7 @@ namespace BatshitTechnology
 
             // Brain Squeezer: a colonist nearby is stunned.
             at = Clamp(map, center + new IntVec3(45, 0, 0));
-            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 10));
             Pawn pawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(p => !p.Dead && !p.Downed);
             if (pawn != null)
             {
@@ -2974,7 +2906,7 @@ namespace BatshitTechnology
 
             // Ballista: its internal magazine cooks off.
             at = Clamp(map, center + new IntVec3(0, 0, 45));
-            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 10));
             int launched = aftermath.BoltsLaunched;
             int loose = LooseBolts(map); // earlier tests may have left some
             KillAndCheck(map, aftermath, "BT_BatshittiumBallista", at,
@@ -2991,7 +2923,7 @@ namespace BatshitTechnology
             // no launcher. Seen in the showcase, when AnyRim's Ballista yard
             // went up beside the pens.
             at = Clamp(map, center + new IntVec3(0, 0, -45));
-            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 10));
             launched = aftermath.BoltsLaunched;
             loose = LooseBolts(map);
             var animals = SpawnWildAnimalsAround(map, at, 25f);
@@ -3015,7 +2947,7 @@ namespace BatshitTechnology
 
             // Artificer: a few half-made bolts fly.
             at = Clamp(map, center + new IntVec3(45, 0, 45));
-            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 10));
             launched = aftermath.BoltsLaunched;
             KillAndCheck(map, aftermath, "BT_BatshittiumArtificer", at,
                 "a destroyed artificer sprays half-made bolts",
@@ -3024,7 +2956,7 @@ namespace BatshitTechnology
 
             // Tractor Barn: its spare tyres stampede out.
             at = Clamp(map, center + new IntVec3(-45, 0, -45));
-            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 10));
             int tyres = aftermath.TyresLaunched;
             KillAndCheck(map, aftermath, "BT_TractorBarn", at,
                 "a destroyed tractor barn flings its spare tyres",
@@ -3089,33 +3021,6 @@ namespace BatshitTechnology
             new IntVec3(
                 Mathf.Clamp(c.x, 12, map.Size.x - 13), 0,
                 Mathf.Clamp(c.z, 12, map.Size.z - 13));
-
-        /// <summary>Clears a square to concrete with nothing on it.</summary>
-        /// <param name="map">The map.</param>
-        /// <param name="rect">The area to clear.</param>
-        private static void PrepareGround(Map map, CellRect rect)
-        {
-            foreach (IntVec3 c in rect)
-            {
-                if (!c.InBounds(map))
-                {
-                    continue;
-                }
-
-                foreach (Thing t in c.GetThingList(map).ToList())
-                {
-                    // Steam geysers and the like can't be destroyed; trying
-                    // logs an error.
-                    if (!(t is Pawn) && t.def.destroyable)
-                    {
-                        t.Destroy();
-                    }
-                }
-
-                map.terrainGrid.SetTerrain(c, TerrainDefOf.Concrete);
-                map.roofGrid.SetRoof(c, null);
-            }
-        }
 
         /// <summary>Spawns a player-owned building.</summary>
         /// <param name="map">The map.</param>

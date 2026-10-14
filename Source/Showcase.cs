@@ -55,7 +55,8 @@ namespace BatshitTechnology
             // that would otherwise follow the player into their own games.
             FinishResearch();
             IntVec3 center = map.Center;
-            Clear(map, CellRect.CenteredOn(center, 16));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(
+                center, TourStagePlanner.BaseHalfSize));
 
             Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
             reactor.TryGetComp<CompRefuelable>().Refuel(2f);
@@ -166,9 +167,18 @@ namespace BatshitTechnology
         /// The tiles a demo corner's self-destruct can reach, counting the
         /// fires and secondary blasts it starts (the replicator's 83.6, the
         /// larger of the two), plus a 4-tile margin. docs/SHOWCASE.md,
-        /// "Safety Rules".
+        /// "Safety Rules". Core's planner holds the number.
         /// </summary>
-        internal const double DemoCornerReach = 87.6;
+        internal const double DemoCornerReach =
+            TourStagePlanner.DemoCornerReach;
+
+        /// <summary>
+        /// Where the tour stages its dangerous scenes on this map: the
+        /// tractor yard and the self-destruct pads, chosen together by
+        /// Core's <see cref="TourStagePlanner"/> once AnyRim stands. Null
+        /// before the first build.
+        /// </summary>
+        internal static TourStagePlan StagePlan { get; private set; }
 
         /// <summary>The quick-test map's size, which the doc's numbers assume.</summary>
         private const float DocMapSize = 250f;
@@ -482,8 +492,9 @@ namespace BatshitTechnology
         /// <summary>
         /// Two lone devices on small pads in the far corners with the most
         /// open ground, among the corners that every part of AnyRim (as
-        /// built) clears by <see cref="DemoCornerReach"/> tiles, the rule
-        /// the site search applied (<see cref="TownSite.Clears"/>): a
+        /// built) and the tractor yard clear by
+        /// <see cref="DemoCornerReach"/> tiles; Core's planner chooses the
+        /// pads and the yard together (<see cref="StagePlan"/>): a
         /// Random Replicator, armed after <see cref="ArmDelayTicks"/>, then
         /// a Batshittium Reactor, armed after the replicator's blast has
         /// played out. The replicator is selected first so its blast rings
@@ -499,19 +510,9 @@ namespace BatshitTechnology
         /// </returns>
         private static Thing BuildSelfDestructDemo(Map map, IntVec3 baseCenter, out int demos)
         {
-            List<IntVec3> corners = new[]
-                {
-                    new IntVec3(-DemoOffset, 0, DemoOffset),
-                    new IntVec3(DemoOffset, 0, DemoOffset),
-                    new IntVec3(-DemoOffset, 0, -DemoOffset),
-                    new IntVec3(DemoOffset, 0, -DemoOffset),
-                }
-                .Select(offset => baseCenter + offset)
-                .Where(c => CellRect.CenteredOn(c, 3).InBounds(map))
-                .Where(c => anyRimPlan == null || TownSite.Clears(
-                    anyRimPlan, AnyRim.ToCell(anyRimAnchor), AnyRim.ToBox(CellRect.SingleCell(c)),
-                    DemoCornerReach))
-                .OrderByDescending(c => OpenGround(map, c))
+            StagePlan = PlanStage(map, baseCenter);
+            List<IntVec3> corners = StagePlan.Pads
+                .Select(c => new IntVec3(c.X, 0, c.Z))
                 .ToList();
             demos = Math.Min(corners.Count, 2);
             map.fogGrid.ClearAllFog();
@@ -522,7 +523,8 @@ namespace BatshitTechnology
             Thing replicator = null;
             if (corners.Count > 0)
             {
-                Clear(map, CellRect.CenteredOn(corners[0], 2));
+                TractorStaging.LevelGround(
+                    map, CellRect.CenteredOn(corners[0], 2));
                 replicator = Spawn(map, "BT_RandomReplicator", corners[0]);
                 pendingDemos.Add((replicator, now + ArmDelayTicks));
                 Find.Selector.ClearSelection();
@@ -530,24 +532,63 @@ namespace BatshitTechnology
             }
             else
             {
-                Log.Warning("[BT] Showcase: no demo corner is clear of AnyRim; no self-destructs.");
+                Log.Warning("[BT] Showcase: no demo corner is clear of "
+                    + $"AnyRim and the yard; no self-destructs "
+                    + $"({StagePlan.Note}).");
             }
 
             if (corners.Count > 1)
             {
-                Clear(map, CellRect.CenteredOn(corners[1], 2));
+                TractorStaging.LevelGround(
+                    map, CellRect.CenteredOn(corners[1], 2));
                 Thing reactor = Spawn(map, "BT_BatshittiumReactor", corners[1]);
                 pendingDemos.Add((reactor, now + ArmDelayTicks + SecondDemoDelayTicks));
             }
             else if (corners.Count == 1)
             {
-                Log.Message("[BT-SHOWCASE] only one demo corner clears AnyRim; reactor demo skipped");
+                Log.Message("[BT-SHOWCASE] only one demo corner clears "
+                    + "AnyRim and the yard; reactor demo skipped");
             }
 
             int throwAt = now + ArmDelayTicks + SecondDemoDelayTicks + GrenadeDemoDelayTicks;
             BuildGrenadeDemo(map, baseCenter, throwAt);
             tourAtTick = anyRimPlan != null ? throwAt + TourDelayTicks : -1;
             return replicator;
+        }
+
+        /// <summary>
+        /// Plans the tractor yard and the self-destruct pads: the pad
+        /// corners are offered in order of open ground, and the planner
+        /// keeps every pad <see cref="DemoCornerReach"/> from AnyRim (as
+        /// built) and from the yard. A missing yard is logged as a
+        /// message; the tractor scenes then decline.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="baseCenter">The demo base's centre.</param>
+        /// <returns>The plan.</returns>
+        private static TourStagePlan PlanStage(Map map, IntVec3 baseCenter)
+        {
+            List<Cell> padOrder = TourStagePlanner.DefaultPadOffsets
+                .OrderByDescending(o => OpenGround(
+                    map, baseCenter + new IntVec3(o.X, 0, o.Z)))
+                .ToList();
+            var input = new TourStageInput(
+                new Box(0, 0, map.Size.x - 1, map.Size.z - 1),
+                AnyRim.ToCell(baseCenter))
+            {
+                Town = anyRimPlan,
+                TownAnchor = anyRimPlan != null
+                    ? AnyRim.ToCell(anyRimAnchor)
+                    : default,
+                PadOffsets = padOrder,
+            };
+            TourStagePlan plan = TourStagePlanner.Plan(input);
+            if (plan.Yard == null)
+            {
+                Log.Message($"[BT-SHOWCASE] no tractor yard: {plan.Note}");
+            }
+
+            return plan;
         }
 
         /// <summary>
@@ -604,8 +645,11 @@ namespace BatshitTechnology
             throwAtTick = -1; // set below once a grenadier is ready
             grenadier = null; // never an earlier game's pawns
             volunteer = null;
-            grenadeTarget = baseCenter + new IntVec3(-25, 0, 0);
-            Clear(map, CellRect.CenteredOn(grenadeTarget, 13));
+            grenadeTarget = baseCenter + new IntVec3(
+                TourStagePlanner.GrenadeOffset.X, 0,
+                TourStagePlanner.GrenadeOffset.Z);
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(
+                grenadeTarget, TourStagePlanner.GrenadeHalfSize));
             ThingDef stool = DefDatabase<ThingDef>.GetNamedSilentFail("Stool");
             foreach (IntVec3 offset in new[]
             {
@@ -753,33 +797,6 @@ namespace BatshitTechnology
             {
                 Find.ResearchManager.FinishProject(
                     project, doCompletionDialog: false, doCompletionLetter: false);
-            }
-        }
-
-        /// <summary>Clears a square to concrete, keeping pawns.</summary>
-        /// <param name="map">The map.</param>
-        /// <param name="rect">The area.</param>
-        private static void Clear(Map map, CellRect rect)
-        {
-            foreach (IntVec3 c in rect)
-            {
-                if (!c.InBounds(map))
-                {
-                    continue;
-                }
-
-                foreach (Thing t in c.GetThingList(map).ToList())
-                {
-                    // Steam geysers and the like can't be destroyed; trying
-                    // logs an error (and pops the debug log over the demo).
-                    if (!(t is Pawn) && t.def.destroyable)
-                    {
-                        t.Destroy();
-                    }
-                }
-
-                map.terrainGrid.SetTerrain(c, TerrainDefOf.Concrete);
-                map.roofGrid.SetRoof(c, null);
             }
         }
 

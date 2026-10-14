@@ -177,8 +177,9 @@ public static class SingleTractorLayout
         TwinJunkyardLayout.Cells((8, 0), (9, 1), (9, -1), (10, 0));
 
     /// <summary>
-    /// Where the stray colonist stands: six tiles north of the planting
-    /// spot, inside the pull, so the robot protests.
+    /// Where the stray colonist stands: about seven tiles from where the
+    /// robot is predicted to plant, (-1,-1), so inside its pull and the
+    /// robot protests.
     /// </summary>
     public static readonly Cell Stray = new(0, 6);
 
