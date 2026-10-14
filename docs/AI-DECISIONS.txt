@@ -303,3 +303,89 @@ Scribe_Deep; SingularityField is its first host. Decisions:
 - A new smoke check hosts an implosion directly in the runner, with the
   Tractor Bomb's 10 tiles in to 1.5, so the groundwork is tested before
   the bomb exists.
+2026-10-13 Claude: Tractor Bomb steps 3, 4, 5, 7, 9 and 10 (research,
+the robot, the emplaced bomb, Dial-A-Yield, the robot's death, art).
+docs/TRACTOR-BOMB.md, "As Built", has the details. Decisions:
+- Research defNames follow the house pattern, BT_Research_TractorBomb
+  (1,500) and BT_Research_TractorBombDialAYield (1,000), to the right of
+  the grenade. The robot's race and pawn kind take BT_TractorBomb.
+- The robot is a pawn of its own race with its own flesh type
+  (BT_TractorSteel, not organic). RaceProperties.IsMechanoid compares the
+  flesh type with vanilla's Mechanoid, so it is not a mechanoid and
+  Biotech's mechanitor, bandwidth, overseer and energy rules never apply;
+  not organic means not an animal, no pain, no bleeding, no tending.
+  ToolUser intelligence, as the mechanoids and Odyssey's drones have:
+  every vanilla need is filtered out by intelligence, food type or rest.
+  The smoke test confirms, with every DLC active: not a mechanoid, not a
+  colony mech, not an animal or a colonist, no needs, no mood, no
+  mechanitor. Its pawn kind wrecks it rather than leaving it downed and
+  sends no "Death" letter; it has no corpse.
+- Allowed area: every player pawn has vanilla's per-pawn allowed areas
+  (Pawn_PlayerSettings), but vanilla only offers the menu for colonists,
+  animals and mechs, so the robot has its own "Patrol:" button that opens
+  vanilla's own area menu for the whole selection. A robot never leaves
+  its area: its approach cell must be inside it.
+- Mind: a main think tree (hunt, else patrol) and a constant tree that
+  runs the hunt every half second to break off a patrol. "Can see" means
+  within 45 tiles, in line of sight and explored ground, and a real
+  threat (Pawn.ThreatDisabled rules out downed, dormant and invisible
+  pawns, and trader carriers). The approach goes to the reachable cell
+  nearest the robot within 15 tiles of the nearest such hostile and
+  looks again every half second.
+- Protest: decided once, when it is ready to emplace; "colonist" is
+  Pawn.IsColonist (free or enslaved). Three seconds, a TrapArm click
+  every half second (vanilla, until the sound pipeline) and a lamp glow
+  blinking red and yellow, then it emplaces regardless.
+- Emplacing takes the robot off the map and discards it, as vanilla does
+  for a Gauranlen dryad returning to its tree, and spawns the bomb facing
+  the same way. The tyre flip is three drawn frames over 30 ticks.
+- The countdown band: CompSelfDestruct's pulsing band is now
+  CountdownWarningBand (Source/CountdownWarning.cs), and the map overlay
+  draws any ICountdownWarning, so the self-destructs and the Tractor Bomb
+  share one band. The self-destructs look exactly as before.
+- The planted bomb lets pawns and items pass over it (PassThroughOnly),
+  so its cell is part of the pile: nine stacks within 1.5 tiles. Stacks
+  beyond nine that cannot merge wait about 2 tiles out, inside the 5-tile
+  blast; they never pile past the cell limit (the open question in
+  AI-TODO). It takes no damage, cannot be deconstructed or claimed, and
+  is IImplosionProof (a new marker the implosion honours), so a
+  neighbour's pull does not tear it down to nothing.
+- The explosion is Bomb damage, 65, as the grenade's; the cap is half
+  again the drag time (450 ticks).
+- Dial-A-Yield: whole tiles (Core.TractorBombYield). The sliders are
+  vanilla's Gizmo_Slider; with several bombs selected, one slider sets
+  them all. A planted bomb may be dialled until its pull starts. Before
+  the project is researched a bomb uses 10 and 5, whatever was dialled.
+- The death is a spectacle only: a vortex thing draws the robot's six
+  parts (Core.DeathVortexMath) bursting out and spiralling back in, then
+  pops. It touches nothing.
+- Temporary production: a bill at vanilla's machining table with a
+  RecipeWorker that drives a robot out beside the crafter. The Artificer
+  could not carry it: it takes no bills and is fed only batshittium. The
+  barn replaces it (AI-TODO).
+- Seams for the next steps: TractorBombUtility.ArmedBombs(map) and
+  Building_TractorBomb.IsArmed, PullRadius, BlastRadius and
+  TicksUntilImplosion for the flee step; TractorBombUtility.MakeRobot,
+  SpawnRobot and CountOnMap for the barn.
+- Robots are drawn straight top-down, like the mod's buildings, in three
+  facings from one layout (the generator's Frame); the motif now says so
+  and adds tyres, emitters and rubber.
+- Flakes, investigated: "Not enough squares to get to radius 329" was
+  ours (the Ballista was ai_combatDangerous, and raiders' avoid grid
+  spans a turret's range plus 4, past the engine's radial limit); the
+  Ballista is no longer combatDangerous, and a smoke check that
+  regenerates the avoid grid at 325 tiles failed with that error first.
+  The Artificer's "+0 bolts" and the implosion's "then settles" were map
+  noise (hauling and firing; pawns walking into the reach), and the
+  runner now counts carried and fired bolts, quiets the map, and
+  silences the storyteller for the run.
+- Proving the new smoke checks: sabotage runs broke each behaviour in
+  turn (several breaks a run, chosen not to mask one another). They
+  caught weak checks, all fixed: the protest and
+  recipe checks passed vacuously once every colonist had died in the
+  earlier blasts (now a fresh colonist stands in), the protest's
+  colonist could land outside the pull radius (now placed exactly), and
+  the armed check compared IsArmed with itself (now it must be unarmed
+  while deploying and armed while counting down). The run that broke
+  only the protest also caught the blast check judging the raider before
+  the explosion's wave reached it; it now waits half a second.

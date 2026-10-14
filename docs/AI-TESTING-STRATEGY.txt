@@ -51,7 +51,33 @@ also hosts the shared implosion (Source/Implosion.cs) directly, as the
 Tractor Bomb will: everything within 10 tiles ends within 1.5 of its
 centre, some of it by slipping sideways into the pile; it reports itself
 gathered before its time is up, then settled; nothing is shoved away or
-lost. The script counts an error as the mod's when its line or its stack
+lost. The Tractor Bomb (TestTractorBomb, with the destructive tests)
+runs on a stage cleared at the map's middle, with fires out, hostiles
+gone and every colonist drafted well away: the robot is its own race
+(not a mechanoid, no needs or mood, an allowed area, a sensible inspect
+pane, no sliders before Dial-A-Yield); it patrols inside a 15 by 15
+area; the temporary recipe drives one out; a robot spots a stunned
+raider 37 tiles off, emplaces within 15 tiles at once, and its bomb is
+armed only once its 3-5 s countdown starts, pulls eleven unmergeable
+stacks and a second raider to within 1.5 tiles or into the blast,
+leaves things beyond its pull alone, and explodes over 5 tiles; a
+colonist four tiles off delays emplacing by three seconds, then it
+emplaces anyway; Dial-A-Yield gives two groupable, clamped sliders and
+a 4-tile pull and 3-tile blast change what is caught; and a killed
+robot's vortex pops without touching anything, as does one that loses
+its wheels. Unit tests cover its pure logic (TractorBombYield,
+TractorBombTiming, DeathVortexMath). Each new check was proved by a run
+that broke its behaviour first.
+
+The runner silences the storyteller at the start, so no raid lands in
+the middle of a check (one raid sent pirates round a long-range Ballista
+and probably spent the Artificer's bolts), and quiets the map (fires
+out, hostiles gone, colonists drafted) before the implosion check. It
+counts bolts in pawns' hands and pockets, and bolts fired, when it
+checks the Artificer, and regenerates the raiders' avoid grid with a
+325-tile Ballista to catch the radial-limit error.
+
+The script counts an error as the mod's when its line or its stack
 trace mentions the mod. As its last check the runner reads RimWorld's own
 log queue and fails on any error (or any warning about the mod or about
 statically held assets) logged during the run, since Player.log does not

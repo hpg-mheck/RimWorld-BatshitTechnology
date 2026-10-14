@@ -3,7 +3,9 @@
 Status: specified, being built on branch `feature/tractor-bomb` (see
 `ROADMAP.md`). Specified by Matt "Breakpoint" Heck on 2026-10-13, who
 answered every open question the same day. A few smaller details are
-still marked *(proposal)*; they stand unless he says otherwise.
+still marked *(proposal)*; they stand unless he says otherwise. Roadmap
+steps 2 to 5, 7, 9 and 10 are built (see "As Built" below); the flee
+step (6) and the Tractor Barn (8) are next.
 
 ## The Tractor Bomb
 
@@ -20,16 +22,16 @@ bomb when it finds them.
   an area to fence it in.
 - **Approach:** when it finds any, it moves to within 15 tiles of them.
   "Hostile forces" means pawns hostile to the player that it can see; it
-  retargets if they move before it has emplaced *(proposal)*.
+  retargets if they move before it has emplaced (built).
 - **Emplacement:** it permanently emplaces itself, becoming a fixed bomb
   that cannot move again. The tires flip out flat over about half a second
-  *(proposal)*.
+  (built).
 - **Protest:** if a colonist is inside its pull radius when it is ready to
   emplace, it beeps and flashes in protest. After three extra seconds,
   too bad: it emplaces anyway.
   - The flashing is a lamp on the tractor blinking red and yellow.
   - The beeps use a vanilla sound until the mod's sound pipeline exists
-    *(proposals)*.
+    (built, with vanilla's `TrapArm` click).
 - **Countdown:** 3 to 5 seconds (rolled), under the shared self-destruct
   warning band, yellow-orange then red, as the motif requires of every
   countdown.
@@ -43,7 +45,7 @@ bomb when it finds them.
 - **Cost:** 60 steel, 3 components and 5 batshittium per bomb.
   Expendable should feel expendable.
 
-Implementation *(proposals)*:
+Implementation (proposed, then built; see "As Built"):
 
 - **As a pawn:** a player-owned robot of its own race, with no needs and
   no mood, running its own think tree: patrol, acquire a target, approach,
@@ -61,10 +63,11 @@ Implementation *(proposals)*:
   radius of 10 and a gather radius of 1.5. The emplaced bomb owns it,
   ticks it and saves it, and explodes as soon as it reports everything
   `AllGathered` or `Settled` (nothing more can move), or at a cap of its
-  own (*proposal:* half again its drag time).
-  - The pile holds one item stack per cell: nine within 1.5 tiles, or
-    eight if the bomb's own building blocks the centre. Any more stacks
-    wait just outside, and the bomb goes off once they settle.
+  own: half again its drag time (built).
+  - The pile holds one item stack per cell: nine within 1.5 tiles, since
+    the planted bomb lets things pass over it. Any more stacks wait just
+    outside, the bomb goes off once they settle, and its blast catches
+    them (built).
 
 ### Everyone Else Runs
 
@@ -127,6 +130,83 @@ A further research project, after Tractor Bomb. Once it is researched,
 each Tractor Bomb has two sliders, independent of each other: its
 tractor-beam (pull) radius, 3 to 20 tiles, and its blast radius, 2 to 10
 tiles. The defaults stay 10 and 5.
+
+## As Built
+
+Built on 2026-10-13 (roadmap steps 3, 4, 5, 7, 9 and 10). Where the
+build settled a detail, it is recorded here; the decisions log
+(`docs/AI-DECISIONS.txt`) has the reasons.
+
+- **Research.** `BT_Research_TractorBomb` (1,500) follows the Ergonomic
+  Singularity Grenade; `BT_Research_TractorBombDialAYield` (1,000)
+  follows it. Both sit to the grenade's right on the Batshit Technology
+  tab.
+- **The robot** (`Source/TractorBomb.cs`, `TractorBombAI.cs`;
+  `Defs/ThingDefs/Pawns_TractorBomb.xml`). Race and pawn kind
+  `BT_TractorBomb`, with a flesh type of its own (`BT_TractorSteel`):
+  not a mechanoid, an animal or a humanlike, so no mechanitor, bandwidth
+  or overseer rules apply even with Biotech, and it has no needs, no
+  mood and no corpse. ToolUser, as vanilla's mechanoids and Odyssey's
+  drones are. Its body is a chassis with a control unit, an engine, four
+  wheels and the emitter; losing three wheels wrecks it rather than
+  leaving it downed. It moves at 3.6 tiles a second.
+  - **Patrol:** walks to random reachable spots within 30 tiles, inside
+    its allowed area. The area is vanilla's per-pawn allowed area, which
+    every player pawn has; since vanilla shows that menu only for
+    colonists, animals and mechs, the robot has its own "Patrol:" button
+    that opens vanilla's area menu (Unrestricted, any area, Manage
+    areas) for the whole selection.
+  - **Hunt:** it sees a hostile pawn within 45 tiles in line of sight,
+    in explored ground, standing and a real threat (not downed, dormant
+    or invisible). It drives to the reachable cell nearest itself that
+    is within 15 tiles of the nearest one, inside its area; it never
+    leaves its area to chase. It looks again every half second,
+    following or switching targets.
+  - **Protest:** decided once, when it is ready: a colonist (free or
+    enslaved) inside its pull radius. Three seconds of a beep every half
+    second (vanilla's `TrapArm` click, for now) and a lamp on its control
+    box blinking red and yellow six times a second, then it emplaces.
+  - **Emplacing** takes the robot off the map for good, as a Gauranlen
+    dryad returning to its tree is, and spawns the bomb facing the way
+    the robot did.
+  - **Inspect pane:** its yield, its patrol area, its job ("patrolling",
+    "closing in on ...", "protesting ...") and any protest timer; Health
+    and Log tabs.
+  - **Building one** is temporary: a bill, "assemble tractor bomb", at
+    vanilla's machining table (60 steel, 3 components, 5 batshittium,
+    3,000 work) whose robot drives out beside the crafter. The Artificer
+    takes no bills (it is fed batshittium only), so the machining table
+    stands in until the barn.
+- **The emplaced bomb** (`Source/TractorBombEmplaced.cs`). Its tyres flip
+  flat in half a second (three drawn frames), then it rolls a countdown
+  of 3 to 5 seconds, every tick equally likely, under the shared warning
+  band (`CountdownWarningBand`, shared with the self-destructs) and its
+  rings. The implosion pulls at the bomb's pull radius, gathers to 1.5
+  tiles, drags at the grenade's rates and rips fixtures loose as the
+  grenade does; the bomb explodes (Bomb damage, 65) as soon as
+  everything is gathered or settled, or at 450 ticks.
+  - **The pile:** pawns and items pass over the planted bomb, like
+    sandbags, so its own cell is part of the pile: nine item stacks fit
+    within 1.5 tiles, pawns without limit. Stacks beyond nine that cannot
+    merge wait just outside, about 2 tiles out, and the 5-tile blast
+    catches them. The smoke test stages eleven such stacks.
+  - **It cannot be stopped:** it takes no damage, cannot be
+    deconstructed or claimed, and no other implosion rips it loose.
+- **Dial-A-Yield.** Whole tiles: tractor beam 3 to 20, blast 2 to 10.
+  Each robot has the two sliders, and so does a planted bomb until its
+  pull starts; with several selected, one slider sets them all. Before
+  the project is researched a bomb uses 10 and 5, whatever was dialled.
+- **The death** (`Source/TractorBombDeath.cs`). Its six parts (four
+  tyres, a piece of the hood, the emitter) burst out up to about 2 tiles,
+  hang, and spiral back into a sputtering vortex over about two seconds;
+  then it pops. Nothing else is touched. There is no corpse and no
+  "Death" letter, only a message.
+- **For the next steps.** The flee step finds armed bombs with
+  `TractorBombUtility.ArmedBombs(map)` (armed means counting down or
+  imploding: `Building_TractorBomb.IsArmed`) and reads each one's
+  `PullRadius`, `BlastRadius` and `TicksUntilImplosion`. The barn makes
+  robots with `TractorBombUtility.MakeRobot` or `SpawnRobot`, and counts
+  a faction's bombs, planted ones included, with `CountOnMap`.
 
 ## The Tractor Barn
 
