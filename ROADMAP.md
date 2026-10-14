@@ -113,6 +113,23 @@ All open questions were answered on 2026-10-13 (details in
 - **Looks:** a little farm tractor with a magenta tractor-beam emitter;
   its tires flip out flat when it emplaces.
 
+Decided after the core build (2026-10-13), to apply alongside the barn in
+step 8:
+
+- **Disposition,** a per-bomb setting governing how close the robot
+  drives before planting:
+  - **Cautious:** stops 15 tiles out, as first written.
+  - **Moderate** *(proposed default)*: stops at 15 tiles or one tile
+    inside its pull radius, whichever is nearer, so a target standing
+    still is caught.
+  - **Nosy:** drives right up, to a few tiles.
+  
+  Dial-A-Yield moves the Moderate stop with the pull.
+- **Planted bombs are damageable:** damage during the countdown cuts it
+  short, and the bomb goes off where it stands.
+- **The machining-table stopgap** for assembling robots stays until the
+  barn replaces it.
+
 ## Next
 
 In recommended order, each on its own branch:
