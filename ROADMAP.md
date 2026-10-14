@@ -83,8 +83,10 @@ repairs bombs on its own. Everyone with sense runs.
         berserk ones don't;
       - the interlock, Dial-A-Yield and repair docking work;
       - **twin bombs** (requested 2026-10-13): two Tractor Bombs
-        approach one hostile from opposite directions in the middle of
-        a junkyard, so their fields overlap. The checks:
+        approach a hostile army from opposite directions in the middle
+        of a junkyard, so their fields overlap. *(Proposal:)* a raid's
+        worth of armed hostiles, a dozen or more, holding position
+        among the junk. The checks:
         - nothing is lost;
         - nothing ping-pongs between the two pulls forever;
         - both bombs go off;
