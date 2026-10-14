@@ -641,3 +641,13 @@ after the core build; docs/TRACTOR-BOMB.md, "As Built"). Decisions:
   feeds and rests its colonist before the squeeze: a hungry or tired
   colonist breaks off recreation before the 600-tick sit its effects
   need, which failed one run.
+2026-10-13 Claude: smoke runner robustness, found while proving the
+Tractor Barn work (about thirty runs). The AnyRim power check's failure
+detail now names the power nets, the town reactor's state, conduits
+lost since the build and fires in the town (it failed three times: a
+lamp on a second net with no generator while the reactor made 250 kW).
+The runner no longer crashes when the Random Replicator has vanished
+before its detonation test (seen once, nothing logged): a check fails
+with what is known and a fresh replicator stands in, so the rest of the
+run is still tested. Both are logged in docs/AI-KNOWN-ISSUES.txt for
+whoever next works on AnyRim and the self-destructs.

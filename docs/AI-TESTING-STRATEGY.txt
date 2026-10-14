@@ -153,6 +153,9 @@ blasts would reach it. The town's geometry is unit tested in Core
 (TownPlanTests, TownSiteTests and others), including a catalogue check
 against RimWorld's own Defs where the game is installed.
 
+If the Random Replicator has gone before its detonation test, a check
+fails saying how, and a fresh one stands in so the run continues.
+
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
 PowerNetManager.UpdatePowerNetsAndConnections_First). Destructive

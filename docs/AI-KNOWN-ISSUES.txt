@@ -48,29 +48,54 @@
   - The runner also silences the storyteller for the whole run, so no
     raid or other incident lands mid-check, and notes any hostiles
     present at the start (none so far).
-- Smoke flakes still unexplained, each seen once on 2026-10-13 and not
-  since (the checks now report more when they fail):
-  - "AnyRim's devices and lamps are powered": five standing lamps on a
-    net with 0 W surplus, apparently cut off from the town reactor.
+- Smoke flakes still unexplained (the checks now report more when they
+  fail):
+  - "AnyRim's devices and lamps are powered": one to five standing lamps
+    on a power net with 0 W surplus, cut off from the town reactor. Seen
+    once before the Tractor Barn work, then three times in about thirty
+    runs during it, at sites where it passed on other runs, so it is not
+    the site alone. The check now names the nets: the reactor was
+    producing 250 kW and the town's consumers sat on two nets, one of
+    them with no generator. It also lists conduits lost since the build
+    and fires in the town, to tell a broken plan from a conduit
+    destroyed after it (not yet seen with those). AnyRim runs before any
+    Tractor Bomb code.
   - "the colonist sat in the squeezer": the colonist's job ended before
     it reached the chair, twelve tiles off, before any Tractor Bomb code
-    ran.
+    ran. Once more (2026-10-13) it sat but left before the 600 ticks its
+    effects need; the check now feeds and rests the colonist first and
+    reports how long it sat.
+  - The Random Replicator was gone, with nothing logged, when its
+    detonation test began, after AnyRim, and the runner crashed (once in
+    about thirty runs). The runner now fails a check saying how it went
+    (destroyed, held, hit points, fires near it) and carries on with a
+    fresh replicator.
 - "AnyRim builds at a scored site" failed once (2026-10-13) on a map
   with an insect hive and eight hostile insects: the site rules keep the
   town away from hostiles, and with the map's edges, geysers and a void
   monolith no site anywhere qualified. That is the site search working
   as designed on an unlucky map, not a fault; rerun.
 - The Tractor Bomb (docs/TRACTOR-BOMB.md, "As Built"):
-  - It stops 15 tiles from its target but pulls only 10, as specified,
-    so a target that stands still escapes the pull (a question for Matt
-    "Breakpoint" Heck in docs/AI-requests-for-humans.txt).
-  - A planted bomb cannot be damaged or stopped.
+  - A Cautious robot stops 15 tiles from its target but pulls only 10,
+    so a target that stands still escapes; Moderate, the default, stops
+    inside the pull.
+  - A planted bomb cannot be stopped: a hit only starts its pull, or sets
+    off its blast, at once.
   - The protest beep is vanilla's TrapArm click until the sound pipeline
     exists.
-  - Bombs are assembled at the machining table until the Tractor Barn.
   - Robots appear in no vanilla list (colonist bar, animals or mechs
-    tab): find them on the map. They are not repaired until the barn's
-    docking repair.
+    tab): find them on the map.
+  - The Tractor Barn takes no new bill while its repair hopper is empty
+    (a vanilla work table with a refuelable comp refuses bills then), so
+    the hopper always refills and cannot be switched off. A build
+    already under way finishes.
+  - One robot docks at a barn at a time; another below half health keeps
+    patrolling and tries again after each patrol leg.
+  - A pawn that has run past a bomb's reach may wander back into it
+    before the pull (a muffalo did, in the smoke test); it runs again on
+    its next think if it can see the bomb.
+  - A hostile that rolls "ignore" keeps attacking even inside the blast
+    radius, and the pull takes it if it is in reach: by design.
   - Its sprites are top-down like the mod's buildings, not the
     three-quarter view of vanilla pawns, so a tractor turning east shows
     its side from above.

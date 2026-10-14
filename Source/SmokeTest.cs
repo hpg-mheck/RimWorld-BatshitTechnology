@@ -127,6 +127,8 @@ namespace BatshitTechnology
             // quietly first: a 5% damage roll on the reactor would otherwise
             // set off its barrage in the middle of the replicator's blast.
             ClearDevicesExcept(map, replicator);
+            replicator = StillStanding(
+                map, replicator, center + new IntVec3(-5, 0, 0));
             TestDetonation(replicator);
             TestReactorBarrage(map, center);
             TestDamageTrigger(map, center);
@@ -930,8 +932,19 @@ namespace BatshitTechnology
                 : $"reactor output {reactor.TryGetComp<CompPowerPlant>()?.PowerOutput ?? -1f:F0} W, "
                     + $"burn {reactor.TryGetComp<CompBatshittiumReactor>()?.BurnTicksLeft ?? -1}, "
                     + $"fuel {fuel?.Fuel ?? -1f:F1}, on {FlickUtility.WantsToBeOn(reactor)}";
+            // A conduit lost since the build, or fire in the town, would
+            // explain a lamp cut off from the reactor's net.
+            var lostConduits = plan.Placements
+                .Where(p => (cold || !p.OnlyIfCold) && p.Def.Contains("Conduit")
+                    && !SpawnedAsPlanned(map, anchor, p, record))
+                .Select(p => AnyRim.ToMap(anchor, p.At).ToString())
+                .ToList();
+            int fires = map.listerThings.ThingsOfDef(ThingDefOf.Fire)
+                .Count(f => nearby.Contains(f.Position));
             Check("AnyRim's devices and lamps are powered", consumers.Length > 0 && unpowered.Count == 0,
-                $"{unpowered.Count} of {consumers.Length} unpowered on {nets} nets ({reactorState}), e.g. "
+                $"{unpowered.Count} of {consumers.Length} unpowered on {nets} nets ({reactorState}; "
+                    + $"conduits lost since the build {lostConduits.Count} "
+                    + $"[{string.Join(" ", lostConduits.Take(4))}], fires in town {fires}), e.g. "
                     + string.Join(", ", unpowered.Take(3).Select(t =>
                         $"{t.def.defName} at {t.Position} ({PowerDetail(t)})")));
 
@@ -1159,6 +1172,37 @@ namespace BatshitTechnology
             {
                 t.Destroy(DestroyMode.Vanish);
             }
+        }
+
+        /// <summary>
+        /// The replicator for the detonation test: the one the run built,
+        /// if it still stands. If not, a check fails saying how it went,
+        /// and a fresh one stands in so the rest of the run is still
+        /// tested. (One run on 2026-10-13 found it gone, with nothing
+        /// logged, after AnyRim, and the runner then crashed.)
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="replicator">The run's replicator.</param>
+        /// <param name="at">Where it stood.</param>
+        /// <returns>A standing replicator.</returns>
+        private Thing StillStanding(Map map, Thing replicator, IntVec3 at)
+        {
+            bool standing = replicator != null && replicator.Spawned
+                && !replicator.Destroyed;
+            Check("the replicator stands until its detonation test", standing,
+                $"destroyed {replicator?.Destroyed}, spawned {replicator?.Spawned}, "
+                    + $"held by {replicator?.ParentHolder?.GetType().Name ?? "nothing"}, "
+                    + $"hit points {replicator?.HitPoints}, fires near it "
+                    + map.listerThings.ThingsOfDef(ThingDefOf.Fire)
+                        .Count(f => f.Position.InHorDistOf(at, 6f)));
+            if (standing)
+            {
+                return replicator;
+            }
+
+            Thing fresh = Spawn(map, "BT_RandomReplicator", at);
+            WaitForPower(fresh);
+            return fresh;
         }
 
         /// <summary>
