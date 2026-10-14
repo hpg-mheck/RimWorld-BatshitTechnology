@@ -72,6 +72,15 @@ public static class TourScript
     /// <summary>The grenade scene's outcome when the volunteer dies.</summary>
     public const string VolunteerLost = "volunteerLost";
 
+    /// <summary>The grenade's beat: thrown with a volunteer in the pile.</summary>
+    public const string Thrown = "thrown";
+
+    /// <summary>
+    /// The grenade's beat when no colonist was left to volunteer, so the
+    /// pile is empty; it stands for <see cref="Thrown"/>.
+    /// </summary>
+    public const string ThrownAlone = "thrownAlone";
+
     /// <summary>The scenes, in running order.</summary>
     public static IReadOnlyList<TourSceneScript> Scenes { get; } =
         new[]
@@ -82,7 +91,7 @@ public static class TourScript
             Scene(RetireReactor, "blast"),
             Scene(AnyRim, "sign", "street", "homes"),
             new TourSceneScript(
-                Grenade, new[] { "thrown" },
+                Grenade, new[] { Thrown, ThrownAlone },
                 new[] { VolunteerSurvived, VolunteerLost }),
             Scene(Tractor, "barn", "delivered", "spotted", "protest",
                 "emplaced", "doom", "pull", "blast"),
@@ -128,6 +137,52 @@ public static class TourScript
             && scene.Moments.Concat(scene.Outcomes).Concat(ApiMoments)
                 .Contains(when, StringComparer.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// The beats a scene may complete without, because the world decides
+    /// them: the tractor's "doom" needs a raider to freeze in place, and
+    /// the grenade plays one of its two throws.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string[]> Optional =
+        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            [Tractor] = new[] { "doom" },
+            [Grenade] = new[] { ThrownAlone },
+        };
+
+    /// <summary>
+    /// The beats a scene that completed must have played (the tour
+    /// verifier's beat check). The device parade's beats depend on the
+    /// devices standing, so the verifier asks that scene instead.
+    /// </summary>
+    /// <param name="key">The scene's key.</param>
+    /// <returns>The required moments; empty for an unknown scene.</returns>
+    public static IReadOnlyList<string> RequiredMoments(string? key)
+    {
+        TourSceneScript? scene = For(key);
+        if (scene == null)
+        {
+            return Array.Empty<string>();
+        }
+
+        string[] optional = Optional.TryGetValue(scene.Key, out string[]? o)
+            ? o
+            : Array.Empty<string>();
+        return scene.Moments
+            .Where(m => !optional.Contains(m, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    /// <summary>
+    /// The required moment a played beat stands for: an empty-pile throw
+    /// stands for the throw; any other beat for itself.
+    /// </summary>
+    /// <param name="moment">The beat played.</param>
+    /// <returns>The moment it covers.</returns>
+    public static string? StandsFor(string? moment) =>
+        string.Equals(moment, ThrownAlone, StringComparison.OrdinalIgnoreCase)
+            ? Thrown
+            : moment;
 
     /// <summary>A scene with beats and no outcomes of its own.</summary>
     /// <param name="key">The key.</param>

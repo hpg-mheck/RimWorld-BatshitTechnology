@@ -46,9 +46,11 @@ namespace BatshitTechnology
         private int tourWaitTicks;
 
         /// <summary>
-        /// Gets a value indicating whether this run verifies the tour.
+        /// Whether this run verifies the tour; read once, because the
+        /// command line cannot change and GameComponentTick checks it
+        /// every tick in every game.
         /// </summary>
-        private static bool TourVerifying =>
+        private static readonly bool TourVerifying =
             GenCommandLine.CommandLineArgPassed(TourVerifyFlag);
 
         /// <summary>
@@ -203,26 +205,164 @@ namespace BatshitTechnology
                 $"{watch.FactsChecked} checked; "
                     + string.Join("; ", watch.FactFailures));
 
-            // 3. Captions "i of N: title", N counting only scenes that run.
-            List<string> wantedCaptions = director.Scenes
-                .Select((s, i) => $"{i + 1} of {run.Count}: {s.title}").ToList();
+            // The unforced declines must be explained by the stage itself.
+            List<string> unjustified = skipped
+                .Where(k => !TourScene.SkippedForTest.Contains(k))
+                .Select(k => (Key: k, Why: DeclineUnjustified(director, k)))
+                .Where(x => x.Why != null)
+                .Select(x => $"{x.Key}: {x.Why} (said: "
+                    + cues.FirstOrDefault(c => c.Cue == "SKIPPED"
+                        && c.Key == x.Key).Detail + ")")
+                .ToList();
+            Check("tour: every unforced decline is justified by the stage",
+                unjustified.Count == 0, string.Join("; ", unjustified));
+
+            // 2b. Every scene that completed played its beats.
+            List<string> beatGaps = BeatGaps(director, cues);
+            Check("tour: every completed scene played its beats",
+                beatGaps.Count == 0, string.Join("; ", beatGaps));
+
+            // 3. Captions "i of N: title", worked out without the director:
+            // the script's order, less the forced and the declined, with
+            // the def's titles.
+            List<string> runKeys = TourScript.Keys
+                .Where(k => !TourScene.SkippedForTest.Contains(k)
+                    && !skipped.Contains(k))
+                .ToList();
+            Dictionary<string, string> titles = (director.def?.scenes
+                    ?? new List<ShowcaseScene>())
+                .Where(s => s?.key != null)
+                .GroupBy(s => s.key)
+                .ToDictionary(g => g.Key, g => g.First().title);
+            List<string> wantedCaptions = runKeys
+                .Select((k, i) => $"{i + 1} of {runKeys.Count}: "
+                    + (titles.TryGetValue(k, out string t) ? t : k))
+                .ToList();
             Check("tour: captions read 'i of N: title'",
                 watch.Captions.SequenceEqual(wantedCaptions)
-                    && run.Count == TourScript.Keys.Count - skipped.Count,
-                $"saw [{string.Join(" | ", watch.Captions)}]");
+                    && run.SequenceEqual(runKeys),
+                $"saw [{string.Join(" | ", watch.Captions)}]; wanted "
+                    + $"[{string.Join(" | ", wantedCaptions)}]");
 
             // 4. Narration in cue order, with targets.
             string narrationProblem = NarrationProblem(director, cues);
             Check("tour: narration follows the cues", narrationProblem == null,
                 narrationProblem);
 
-            // 5. No colonist dies but the volunteer.
+            // 5. No colonist dies but the volunteer, during the grenade.
             List<string> lost = watch.Deaths
                 .Where(d => !d.Volunteer)
                 .Select(d => $"{d.Name} during {d.Scene}").ToList();
             Check("tour: no colonist dies but the volunteer", lost.Count == 0,
                 $"{watch.Colonists} colonists; lost [{string.Join(", ", lost)}]"
                     + $"; volunteer deaths {watch.Deaths.Count(d => d.Volunteer)}");
+        }
+
+        /// <summary>
+        /// Why a scene that declined on its own should not have, judged
+        /// from the stage and the planner's plan rather than by asking the
+        /// scene (whose reason is what is under test).
+        /// </summary>
+        /// <param name="director">The tour's director.</param>
+        /// <param name="key">The scene that declined.</param>
+        /// <returns>Null when the stage explains it, else why not.</returns>
+        private static string DeclineUnjustified(
+            BatshitTourDirector director, string key)
+        {
+            TourStage stage = director.Stage;
+            Map map = director.Map;
+            if (stage == null || map == null)
+            {
+                return null; // no stage at all: every scene may decline
+            }
+
+            switch (key)
+            {
+                case TourScript.Home:
+                    return new[] { stage.Reactor, stage.Replicator,
+                            stage.Transmogrifier, stage.Squeezer }.Any(Standing)
+                        ? "the base's devices stand" : null;
+                case TourScript.Defence:
+                    return Standing(stage.Ballista) && stage.BallistaTarget.IsValid
+                        ? "the Ballista stands with a target" : null;
+                case TourScript.RetireReplicator:
+                case TourScript.RetireReactor:
+                    int pad = director.def?.scenes?.OfType<SelfDestructScene>()
+                        .FirstOrDefault(s => s.key == key)?.pad ?? -1;
+                    Thing device = pad >= 0 && pad < (stage.Pads?.Count ?? 0)
+                        ? stage.Pads[pad] : null;
+                    return Standing(device)
+                        && device.TryGetComp<CompSelfDestruct>() != null
+                        ? $"pad {pad}'s device stands" : null;
+                case TourScript.AnyRim:
+                    return stage.HasAnyRim
+                        && map.GetComponent<MapComponent_AnyRim>()?.Built == true
+                        ? "AnyRim stands" : null;
+                case TourScript.Grenade:
+                    return stage.GrenadeTarget.IsValid
+                        && map.mapPawns.FreeColonistsSpawned.Any(p =>
+                            !p.Dead && !p.Downed && !p.InMentalState)
+                        ? "a pile and an able colonist" : null;
+                case TourScript.Tractor:
+                case TourScript.Twins:
+                    if (Showcase.StagePlan?.Yard != null && !stage.Yard.HasValue)
+                    {
+                        return "the planner placed a yard the stage lost";
+                    }
+
+                    return Showcase.StagePlan?.Yard != null
+                        && Find.FactionManager.RandomEnemyFaction(
+                            allowNonHumanlike: false) != null
+                        ? "a yard and a hostile faction" : null;
+                default:
+                    return "no rule explains this scene declining";
+            }
+        }
+
+        /// <summary>Whether a thing stands on the map.</summary>
+        /// <param name="t">The thing, or null.</param>
+        /// <returns>True if spawned and not destroyed.</returns>
+        private static bool Standing(Thing t) =>
+            t != null && t.Spawned && !t.Destroyed;
+
+        /// <summary>
+        /// The beats each completed scene should have played and did not:
+        /// the device parade's planned devices, else the script's required
+        /// moments (an empty-pile throw stands for the throw).
+        /// </summary>
+        /// <param name="director">The tour's director.</param>
+        /// <param name="cues">The tour's cues.</param>
+        /// <returns>One entry per scene with missing beats.</returns>
+        private static List<string> BeatGaps(
+            BatshitTourDirector director,
+            List<(string Cue, string Key, string Detail)> cues)
+        {
+            var gaps = new List<string>();
+            for (int i = 0; i < director.Scenes.Count
+                && i < director.Endings.Count; i++)
+            {
+                if (director.Endings[i] != SceneEnd.Completed)
+                {
+                    continue; // check 2 reports it
+                }
+
+                ShowcaseScene scene = director.Scenes[i];
+                IReadOnlyList<string> required = scene is DeviceParadeScene d
+                    ? d.PlannedMoments
+                    : TourScript.RequiredMoments(scene.key);
+                var played = new HashSet<string>(cues
+                    .Where(c => c.Cue == "BEAT" && c.Key == scene.key)
+                    .Select(c => TourScript.StandsFor(c.Detail?.Split(' ')[0])));
+                List<string> missing =
+                    required.Where(m => !played.Contains(m)).ToList();
+                if (missing.Count > 0)
+                {
+                    gaps.Add($"{scene.key}: beats missing "
+                        + $"[{string.Join(", ", missing)}]");
+                }
+            }
+
+            return gaps;
         }
 
         /// <summary>
@@ -365,6 +505,9 @@ namespace BatshitTechnology
             /// <summary>Implosions first seen during this scene.</summary>
             private int implosionsInScene;
 
+            /// <summary>The grenade's volunteer once cast, or null.</summary>
+            private Pawn volunteerSeen;
+
             /// <summary>Starts watching a tour that is READY.</summary>
             /// <param name="director">The tour's director.</param>
             /// <param name="now">The current tick.</param>
@@ -443,6 +586,11 @@ namespace BatshitTechnology
                     }
                 }
 
+                if (showing is GrenadeScene cast && cast.Volunteer != null)
+                {
+                    volunteerSeen = cast.Volunteer;
+                }
+
                 foreach (Pawn p in colonists.Keys.ToList())
                 {
                     if (colonists[p])
@@ -461,16 +609,30 @@ namespace BatshitTechnology
                     colonists[p] = true;
                     bool volunteer = current is GrenadeScene g
                         && ReferenceEquals(g.Volunteer, p);
+
+                    // The volunteer's death is excused only during the
+                    // grenade (GrenadeScene.End heals a survivor), but a
+                    // later one is labelled so its cause is plain.
+                    string role = !volunteer && ReferenceEquals(p, volunteerSeen)
+                        ? "the volunteer, " : string.Empty;
                     lastSeen.TryGetValue(p, out string last);
-                    Deaths.Add(($"{p.LabelShort} (last: {last ?? "unseen"})",
+                    string hurt = string.Join(", ", p.health?.hediffSet?.hediffs?
+                        .Where(h => h?.def != null && h.def.isBad)
+                        .Select(h => h.def.defName).Distinct().Take(5)
+                        ?? Enumerable.Empty<string>());
+                    last = $"{last ?? "unseen"}; "
+                        + (p.Destroyed && !p.Dead ? "vanished" : "dead")
+                        + $"; hediffs [{hurt}]";
+                    Deaths.Add(($"{p.LabelShort} ({role}last: {last})",
                         current?.key ?? "between scenes", volunteer));
                 }
             }
 
             /// <summary>
-            /// The world facts at a scene's end: pads gone and the
-            /// aftermath idle; 16 bolts spent; one more implosion; and the
-            /// tractors' explosions (and superposed pulls for the twins).
+            /// The world facts at a scene's end: no bolt fired outside the
+            /// volley; pads gone and the aftermath idle; 16 bolts spent; one
+            /// more implosion; and the tractors' explosions (and superposed
+            /// pulls for the twins).
             /// </summary>
             /// <param name="scene">The scene that ended.</param>
             /// <param name="ending">How it ended.</param>
@@ -482,6 +644,13 @@ namespace BatshitTechnology
                 }
 
                 Map map = Director.Map;
+                if (!(scene is BallistaVolleyScene))
+                {
+                    int stray = Building_BatshittiumBallista.BoltsFired - boltsAtStart;
+                    Fact(scene, $"the Ballista held its fire ({stray} bolts)",
+                        stray == 0);
+                }
+
                 switch (scene)
                 {
                     case SelfDestructScene pad:

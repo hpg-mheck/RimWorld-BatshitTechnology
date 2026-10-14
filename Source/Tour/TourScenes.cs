@@ -197,6 +197,13 @@ namespace BatshitTechnology
         /// <summary>Gets the device on screen.</summary>
         public override Thing Subject => Alive(shown) ? shown : null;
 
+        /// <summary>
+        /// Gets the beats this run planned at setup, one per device that
+        /// stood then (the tour verifier requires each of them).
+        /// </summary>
+        internal IReadOnlyList<string> PlannedMoments =>
+            parade?.Select(p => p.Moment).ToList() ?? new List<string>();
+
         /// <summary>Gets why the scene cannot run: the base has no device.</summary>
         protected override string WhyUnavailable =>
             Devices().Count > 0 ? null : "the base has no devices";
@@ -363,16 +370,18 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Clears the Ballista's target and shortens its range to the
-        /// least, so it never reaches the tractor yard's raiders.
+        /// Holds the Ballista's fire: no target of its own, its range at
+        /// the least, then its ordered target cleared (in that order, so
+        /// the turret's immediate search on clearing finds nothing).
         /// </summary>
         /// <param name="ballista">The Ballista, or null.</param>
         private static void HoldFire(Building_BatshittiumBallista ballista)
         {
             if (Alive(ballista))
             {
-                ballista.OrderAttack(LocalTargetInfo.Invalid);
+                ballista.AutoTargetHeld = true;
                 ballista.SetRange(BallistaPower.MinRange);
+                ballista.OrderAttack(LocalTargetInfo.Invalid);
             }
         }
     }
@@ -632,9 +641,14 @@ namespace BatshitTechnology
         [Unsaved]
         private Pawn volunteer;
 
+        /// <summary>Whether the volunteer was dead or downed at the end.</summary>
+        [Unsaved]
+        private bool volunteerLost;
+
         /// <summary>
-        /// Gets the volunteer cast at the throw, or null before it (the
-        /// tour verifier excuses only this colonist's death).
+        /// Gets the volunteer cast at the throw, or null before it or when
+        /// no colonist was left to volunteer (the tour verifier excuses
+        /// this colonist's death during this scene only).
         /// </summary>
         public Pawn Volunteer => volunteer;
 
@@ -663,6 +677,7 @@ namespace BatshitTechnology
             thrownAt = -1;
             grenadier = null;
             volunteer = null;
+            volunteerLost = false;
         }
 
         /// <summary>Orders the throw; plays the beat once it flies.</summary>
@@ -685,7 +700,10 @@ namespace BatshitTechnology
             if (ordered && thrownAt < 0 && (GrenadeInFlight() || Landed()))
             {
                 thrownAt = Elapsed;
-                BeatOnce("thrown", Shot(22f), select: false);
+                BeatOnce(
+                    volunteer != null ? TourScript.Thrown : TourScript.ThrownAlone,
+                    Shot(22f),
+                    select: false);
             }
         }
 
@@ -699,7 +717,8 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Stands the grenadier down and takes the grenade back, so no
-        /// colonist throws it at the tractor scenes' raiders.
+        /// colonist throws it at the tractor scenes' raiders; heals a
+        /// volunteer who lived.
         /// </summary>
         /// <param name="ending">How it ended.</param>
         public override void End(SceneEnd ending)
@@ -716,11 +735,22 @@ namespace BatshitTechnology
             {
                 grenadier.drafter.Drafted = false;
             }
+
+            // The director asks OutcomeKey after End, so the volunteer's
+            // fate is fixed here, before healing. A volunteer who lived is
+            // healed, so a later death of theirs is the tour's fault and
+            // not the grenade bleeding them out off camera.
+            volunteerLost = volunteer != null
+                && (volunteer.Dead || volunteer.Destroyed || volunteer.Downed);
+            if (volunteer != null && !volunteer.Dead && !volunteer.Destroyed)
+            {
+                TractorStaging.Heal(volunteer);
+            }
         }
 
         /// <summary>
         /// The volunteer's fate when the scene completed, if there was a
-        /// volunteer; the API's moment otherwise.
+        /// volunteer (lost if dead or downed); the API's moment otherwise.
         /// </summary>
         /// <param name="ending">How it ended.</param>
         /// <returns>The narration moment.</returns>
@@ -731,7 +761,9 @@ namespace BatshitTechnology
                 return base.OutcomeKey(ending);
             }
 
-            return volunteer.Dead
+            // A volunteer knocked flat is "comforted. Completely." too; the
+            // survivor's line is for one still standing (fixed in End).
+            return volunteerLost
                 ? TourScript.VolunteerLost
                 : TourScript.VolunteerSurvived;
         }

@@ -62,9 +62,10 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Clears a yard for the Tractor Bomb: level and unfogged, no fire
-        /// anywhere on the map, no hostiles and no robots anywhere, and no
-        /// wild animals near it. Colonists are left where they are; the
-        /// caller moves them.
+        /// anywhere on the map, no hostiles (never the player's own pawns,
+        /// even berserk ones) and no robots anywhere, and no wild animals
+        /// near it. Colonists are left where they are; the caller moves
+        /// them.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="yard">The yard.</param>
@@ -89,7 +90,13 @@ namespace BatshitTechnology
             float near = Mathf.Max(yard.Width, yard.Height) / 2 + AnimalMargin;
             foreach (Pawn p in map.mapPawns.AllPawnsSpawned.ToList())
             {
-                if (p.HostileTo(Faction.OfPlayer)
+                // The player's own pawns (colonists, slaves, animals,
+                // prisoners and guests) are never removed, even when a
+                // mental state, a prison break or a rebellion makes them
+                // HostileTo the player (a berserk colonist is).
+                bool ours = p.Faction == Faction.OfPlayer
+                    || p.HostFaction == Faction.OfPlayer;
+                if ((!ours && p.HostileTo(Faction.OfPlayer))
                     || (p.RaceProps.Animal && p.Faction == null
                         && p.Position.InHorDistOf(centre, near))
                     || p.TryGetComp<CompTractorBomb>() != null)

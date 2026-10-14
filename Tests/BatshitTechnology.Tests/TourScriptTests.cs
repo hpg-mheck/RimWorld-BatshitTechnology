@@ -61,7 +61,11 @@ public sealed class TourScriptTests
     {
         TourSceneScript grenade = TourScript.For("GRENADE")!;
         Assert.Equal(
-            new[] { "start", "thrown", "completed", "volunteerSurvived", "volunteerLost" },
+            new[]
+            {
+                "start", "thrown", "thrownAlone", "completed",
+                "volunteerSurvived", "volunteerLost",
+            },
             grenade.NarratedMoments());
         Assert.Equal(
             new[] { TourScript.Grenade },
@@ -83,5 +87,28 @@ public sealed class TourScriptTests
         Assert.False(TourScript.Knows("twins", "bogus"));
         Assert.False(TourScript.Knows("bogus", "start"));
         Assert.Null(TourScript.For(null));
+    }
+
+    /// <summary>
+    /// A completed scene must play every beat but the ones the world
+    /// decides: the tractor's doom and the grenade's empty-pile throw,
+    /// which stands for the throw.
+    /// </summary>
+    [Fact(DisplayName = "RequiredMoments leaves out only the world's beats")]
+    public void RequiredMoments_should_leave_out_only_optional_beats()
+    {
+        Assert.Equal(
+            new[] { "barn", "delivered", "spotted", "protest", "emplaced",
+                "pull", "blast" },
+            TourScript.RequiredMoments("tractor"));
+        Assert.Equal(new[] { "thrown" }, TourScript.RequiredMoments("grenade"));
+        Assert.Equal(
+            new[] { "planted", "pull", "blast" },
+            TourScript.RequiredMoments("twins"));
+        Assert.Equal(
+            TourScript.For("home")!.Moments, TourScript.RequiredMoments("home"));
+        Assert.Empty(TourScript.RequiredMoments("bogus"));
+        Assert.Equal("thrown", TourScript.StandsFor("thrownAlone"));
+        Assert.Equal("pull", TourScript.StandsFor("pull"));
     }
 }

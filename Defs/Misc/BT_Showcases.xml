@@ -94,6 +94,8 @@
       <!-- home -->
       <li><scene>home</scene><when>start</when><delayTicks>90</delayTicks>
         <text>Living Better with Batshittium. A Batshit Technology public information film.</text></li>
+      <li><scene>home</scene><when>start</when><delayTicks>120</delayTicks>
+        <text>The future, delivered sooner, cheaper and funnier.</text></li>
       <li><scene>home</scene><when>reactor</when>
         <text>Two hundred and fifty thousand watts from a single unit of batshittium.</text></li>
       <li><scene>home</scene><when>replicator</when>
@@ -143,6 +145,8 @@
         <text>Comfort is the finest defence of all.</text></li>
       <li><scene>grenade</scene><when>thrown</when>
         <text>A valued member of the family has volunteered.</text></li>
+      <li><scene>grenade</scene><when>thrownAlone</when>
+        <text>The family has declined to volunteer. The demonstration proceeds regardless.</text></li>
       <li><scene>grenade</scene><when>volunteerSurvived</when>
         <text>Our volunteer reports feeling very supported.</text></li>
       <li><scene>grenade</scene><when>volunteerLost</when>

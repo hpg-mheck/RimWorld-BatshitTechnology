@@ -30,6 +30,13 @@ namespace BatshitTechnology
     public partial class GameComponent_SmokeTest : GameComponent
     {
         private const string Flag = "btsmoketest";
+
+        /// <summary>
+        /// Whether this is a -btsmoketest run; read once, because
+        /// GameComponentUpdate checks it every frame in every game.
+        /// </summary>
+        private static readonly bool SmokeTesting =
+            GenCommandLine.CommandLineArgPassed(Flag);
         private const string KeepOpenFlag = "btsmoketestkeep";
         private const int SettleFrames = 120;
 
@@ -86,7 +93,7 @@ namespace BatshitTechnology
 
             if (Current.ProgramState != ProgramState.Playing
                 || Find.CurrentMap == null
-                || !GenCommandLine.CommandLineArgPassed(Flag))
+                || !SmokeTesting)
             {
                 return;
             }
@@ -2326,6 +2333,7 @@ namespace BatshitTechnology
             var mark = ErrorMark();
             TestTractorBombRunAndFreeze(map, center);
             TestTractorBombMentalStatesStay(map, center);
+            TestClearYardSparesBerserkColonist(map, center);
             TestTractorBombPullTakesARunner(map, center);
             Check("running from tractor bombs logs no errors",
                 !NewErrorSince(mark), "an error was logged (see the log)");
@@ -2435,6 +2443,32 @@ namespace BatshitTechnology
 
             CheckPullTakesOver(bomb, frozen, frozeToTheEnd, "frozen colonist");
             RemoveTestPawns(runner, critter, frozen);
+        }
+
+        /// <summary>
+        /// Clearing a tractor yard removes hostiles map-wide, but never the
+        /// player's own pawns: a berserk colonist outside the yard (whom
+        /// HostileTo calls hostile) is still there afterwards.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestClearYardSparesBerserkColonist(Map map, IntVec3 center)
+        {
+            Pawn berserker = FreshColonist(map, center + new IntVec3(0, 0, 12));
+            bool berserk = berserker.mindState.mentalStateHandler
+                .TryStartMentalState(
+                    MentalStateDefOf.Berserk, forced: true, forceWake: true,
+                    transitionSilently: true);
+            bool hostile = berserker.HostileTo(Faction.OfPlayer);
+            TractorStaging.ClearYard(map, CellRect.CenteredOn(center, 3));
+            Check("clearing a yard spares a berserk colonist",
+                berserk && hostile && berserker.Spawned && !berserker.Destroyed,
+                $"berserk {berserk}, hostile {hostile}, spawned "
+                    + $"{berserker.Spawned}, destroyed {berserker.Destroyed}");
+            if (!berserker.Destroyed)
+            {
+                RemoveTestPawns(berserker);
+            }
         }
 
         /// <summary>

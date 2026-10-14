@@ -129,22 +129,31 @@ public sealed class TourStagePlannerTests
     }
 
     /// <summary>
-    /// AnyRim near a pad drops that pad: the town is measured part by part,
-    /// as its site search measured it.
+    /// AnyRim near a pad drops that pad and only that pad: the town is
+    /// measured part by part, as its site search measured it. A control
+    /// plan without the town keeps both pads, so AnyRim is the reason.
     /// </summary>
     [Fact(DisplayName = "A pad within reach of AnyRim is dropped")]
     public void Plan_should_drop_a_pad_near_AnyRim()
     {
         TownPlan town = TownPlan.AnyRim(1, TownPalette.For(TownQuality.Medium));
         Cell north = Base + new Cell(-75, 75);
-        TourStagePlan plan = TourStagePlanner.Plan(new TourStageInput(Map250, Base)
-        {
-            Town = town,
-            TownAnchor = north + new Cell(0, -30),
-            YardOffsets = new[] { new Cell(45, -55) },
-            PadOffsets = new[] { new Cell(-75, 75), new Cell(75, 75), new Cell(-75, -75) },
-        });
-        Assert.DoesNotContain(north, plan.Pads);
+        Cell east = Base + new Cell(75, 75);
+        TourStagePlan control = TourStagePlanner.Plan(Input(null));
+        TourStagePlan plan = TourStagePlanner.Plan(Input(town));
+        Assert.Equal(new[] { north, east }, control.Pads);
+        Assert.Equal(new[] { east }, plan.Pads);
+        Assert.NotNull(plan.Yard);
+
+        // The input both plans share, with or without the town.
+        TourStageInput Input(TownPlan? withTown) =>
+            new TourStageInput(Map250, Base)
+            {
+                Town = withTown,
+                TownAnchor = north + new Cell(0, -30),
+                YardOffsets = new[] { new Cell(45, -55) },
+                PadOffsets = new[] { new Cell(-75, 75), new Cell(75, 75) },
+            };
     }
 
     /// <summary>

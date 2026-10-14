@@ -166,8 +166,9 @@ namespace BatshitTechnology
 
         /// <summary>
         /// A Ballista with three chained magazines of explosive bolts, set
-        /// for 16-bolt volleys, holding its fire: its range is the least
-        /// it allows, so it never reaches the tractor yard's raiders, and
+        /// for 16-bolt volleys, holding its fire: it picks no target of
+        /// its own (AutoTargetHeld; its least range alone would still let
+        /// it fire at a hostile 6 to 10 tiles off, inside the base), and
         /// it has no target until the defence scene orders one.
         /// </summary>
         /// <param name="map">The map.</param>
@@ -193,6 +194,7 @@ namespace BatshitTechnology
             ballista.SetAmmo(explosive);
             ballista.SetCount(16);
             ballista.SetRange(BallistaPower.MinRange);
+            ballista.AutoTargetHeld = true; // fires only when ordered
             target = center + new IntVec3(60, 0, 0);
             target.x = System.Math.Min(target.x, map.Size.x - 10);
             return ballista;

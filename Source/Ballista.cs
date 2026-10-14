@@ -94,6 +94,7 @@ namespace BatshitTechnology
         private int selectedCount = -1;
         private ThingDef ammoDef;
         private int burstTicksLeft;
+        private bool autoTargetHeld;
         private int lastPowerMessageTick = -99999; // powerComp is inherited
         private static readonly Color MagazineLinkColor = new Color(0.85f, 0.6f, 1f);
 
@@ -105,6 +106,18 @@ namespace BatshitTechnology
 
         /// <summary>Volleys held for lack of power this session (smoke test).</summary>
         internal static int VolleysHeldForPower;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the Ballista picks no
+        /// target of its own (the showcase tour): it fires only when
+        /// ordered. Its least range alone does not hold it, because the
+        /// verb still reaches hostiles from 5.9 tiles out.
+        /// </summary>
+        internal bool AutoTargetHeld
+        {
+            get => autoTargetHeld;
+            set => autoTargetHeld = value;
+        }
 
         /// <summary>Creates the Ballista with an empty internal magazine.</summary>
         public Building_BatshittiumBallista()
@@ -228,7 +241,16 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref selectedCount, "selectedCount", -1);
             Scribe_Defs.Look(ref ammoDef, "ammoDef");
             Scribe_Values.Look(ref burstTicksLeft, "burstTicksLeft", 0);
+            Scribe_Values.Look(ref autoTargetHeld, "autoTargetHeld", false);
         }
+
+        /// <summary>
+        /// Finds no target while <see cref="AutoTargetHeld"/> is set; an
+        /// ordered target never comes here, so orders still fire.
+        /// </summary>
+        /// <returns>Invalid while held, else vanilla's choice.</returns>
+        public override LocalTargetInfo TryFindNewTarget() =>
+            autoTargetHeld ? LocalTargetInfo.Invalid : base.TryFindNewTarget();
 
         /// <summary>Counts down the burst and keeps the power draw current.</summary>
         protected override void Tick()
