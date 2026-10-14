@@ -118,10 +118,12 @@ All open questions were answered on 2026-10-13 (details in
 In recommended order, each on its own branch:
 
 0. **Showcase API** (`feature/showcase-api`, `docs/SHOWCASE-API.md`): a
-   game API for showcases and a **Showcases** button on the main menu
-   (mods, then their showcases, then Start). Proposed to be built after
-   the Tractor Bomb's mechanics, so that its showcase step (the directed
-   tour) is built on it.
+   game API for showcases, so players can use them normally, and a
+   **Showcases** button on the main menu (mods, then their showcases,
+   then Start). Built after the Tractor Bomb's mechanics, so that its
+   showcase step (the directed tour) is built on it. Inside Batshit
+   Technology for now, to be split into a framework mod later; the menu
+   button is the mod's first, approved Harmony patch.
 1. **Sound pipeline** (`feature/audio`): `Tools/make_sounds.py`,
    SoundDefs, and an audio section in the motif. Needed by the Colony
    Bomb and Mirror Mirror.

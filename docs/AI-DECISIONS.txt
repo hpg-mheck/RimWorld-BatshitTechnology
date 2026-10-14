@@ -257,3 +257,11 @@ painful (bullet-class) bolts among animals; the check failed on the old
 code with the same exception, and passes now. (A first draft of the fix
 called base.TickRare(), which Entity implements as throw
 NotImplementedException; the runner caught that too.)
+2026-10-13 Matt "Breakpoint" Heck: showcases become a player feature, not
+a dev tool: a Showcase API (docs/SHOWCASE-API.md) and a main-menu
+Showcases button. Harmony is approved for that button, the mod's first
+patch, since vanilla's main menu has no extension point; nothing else in
+the API may need patches. The API lives inside Batshit Technology under
+its own namespace for now and will be split into a framework mod later.
+Showcases declare their known issues with other mods; only those raise
+warnings, and a fatal one refuses to launch unless forced.

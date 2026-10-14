@@ -1,10 +1,14 @@
 # The Showcase API
 
-Status: proposed, not yet built. Requested by Matt "Breakpoint" Heck on
+Status: specified, not yet built; it follows the Tractor Bomb's
+mechanics (see "Order of Work"). Requested by Matt "Breakpoint" Heck on
 2026-10-13: a game API for showcases, and a **Showcases** button on the
 main menu that lists the mods offering showcases and each mod's
-showcases, as multi-stage menus or selection screens. Points marked
-*(proposal)* are open; see "Open Questions".
+showcases, as multi-stage menus or selection screens. "Because these are
+amazing, and I think it would be a hell of a lot of fun to let players
+use them normally." His answers to the open questions are under
+"Decisions"; smaller details still marked *(proposal)* stand unless he
+says otherwise.
 
 ## What It Is
 
@@ -48,6 +52,8 @@ windows use vanilla's dialog style, so they look like part of the game.
   - `label`, `description`;
   - `previewTexPath` and `estimatedMinutes`;
   - `requiredMods` (package ids, such as DLCs);
+  - `compatibility`: known issues with other mods, by package id, each
+    with a severity (see "Other Mods") and a short note;
   - `mapSize` (default 250) and an optional biome preference;
   - `workerClass`, a subclass of `ShowcaseWorker`;
   - for director-driven showcases, a list of scenes.
@@ -79,6 +85,21 @@ windows use vanilla's dialog style, so they look like part of the game.
 - **The command line still works.** `-showcase=<defName>` starts a
   showcase directly, so `Tools/smoke-test.ps1 -Showcase` and the
   capture tooling keep working.
+
+## Other Mods
+
+A showcase game runs with the player's current mod list. The showcase
+itself declares what it knows about other mods, and the menu acts on it
+(specified 2026-10-13):
+
+- **No warning by default.** The details page warns only when a loaded
+  mod matches an entry in the showcase's `compatibility` list.
+- **Concern, warning, or known incompatibility:** the details page shows
+  each matching mod, its severity and the showcase's note, and Start
+  still works.
+- **Fatal incompatibility:** Start is refused, with the reason. A
+  separate **Force start** button (behind a confirmation) launches it
+  anyway, for testing and for reproducing the crash.
 
 ## The Main Menu Button Needs Harmony
 
@@ -128,13 +149,19 @@ step 12.
   - `-showcase=<defName>` starts a game that runs the tour to its end,
     with no logged errors.
 
-## Open Questions
+## Decisions
 
-1. Is Harmony acceptable for the main menu button (proposed), or should
-   the menus live on the mod's settings page instead?
-2. Inside Batshit Technology for now (proposed), or a separate framework
-   mod from the start?
-3. Should a showcase game use the player's current mod list (proposed;
-   it is what is loaded), or warn when other mods might interfere?
-4. When does it get built: after the Tractor Bomb's mechanics and before
-   its showcase step (proposed), or right away?
+Answered by Matt "Breakpoint" Heck on 2026-10-13:
+
+1. **Harmony** is approved for the main-menu button, the mod's first
+   patch. Everything else stays patch-free.
+2. **Packaging:** inside Batshit Technology for now, under its own
+   namespace and free of Batshit-specific code. It will "absolutely" be
+   split out into a framework mod later.
+3. **Other mods:** warn only about mods the showcase itself flags (a
+   concern, a warning, or a known incompatibility). A fatal
+   incompatibility refuses to launch unless forced, for testing and
+   reproducing the crash.
+4. **Timing:** after the Tractor Bomb's mechanics (roadmap steps 2 to
+   11), on `feature/showcase-api`, with the directed tour then built on
+   it as the Tractor Bomb's step 12.
