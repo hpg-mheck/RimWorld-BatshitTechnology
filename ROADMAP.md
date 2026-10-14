@@ -33,7 +33,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 |---|---|---|---|
 | 1000 | Foundations (v0.8) | `trunk` | Done |
 | 2000 | AnyRim | `trunk` | Done |
-| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (12000, review) |
+| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 13000) |
 | 4000 | Showcase API | `trunk` | Done |
 | 5000 | Sound pipeline | `feature/audio` | Next |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
@@ -89,7 +89,12 @@ sense runs.
 | 9000 | Deaths | Done |
 | 10000 | Art | Done |
 | 11000 | Tests and multi-bomb physics | Done |
-| 12000 | Directed tour, docs, merge into `trunk` | Built; awaiting review |
+| 12000 | Directed tour, docs | Done |
+| 13000 | Narration overlay | Now |
+| 14000 | Boomalope stampede | Planned |
+| 15000 | Raccoon Incident | Planned |
+| 16000 | Named yield settings | Planned |
+| 17000 | Review, merge into `trunk` | Planned |
 
 Slice 11000 delivered the twin-bomb junkyard test and the multi-bomb
 physics: superposed pulls with random bias jitter, absolute durations (the
@@ -114,6 +119,22 @@ tour verification 11/11. Open before the merge: the operator watches the
 tour (`Tools/smoke-test.ps1 -Showcase`), answers requests 17 and 18 in
 `docs/AI-requests-for-humans.txt`, and reviews the narration's wording;
 two tour faults (colonist deaths) are in `docs/AI-TODO.txt`.
+
+The operator watched it on 2026-10-14 and asked for slices 13000 to
+16000; the plan is in `.local/scratch/tour2/plan.md` until it is built
+and recorded in the specifications:
+
+- **13000, narration overlay:** one oversized line with a drop shadow,
+  fading in and out, silent, in place of vanilla's message stack.
+- **14000, boomalope stampede:** a new scene after Home Defence, in which
+  one 256-bolt volley meets hundreds of boomalopes from the east.
+- **15000, the Raccoon Incident:** built as its own scene after the
+  junk-pile grenade, which stays ("test both").
+- **16000, named yield settings:** Proximity (Timid, Prudent, Nosy), Pull
+  (Intimate, Neighborly, Popular) and Blast (Birthday Cake, Firework,
+  Block Party), set per robot, for every robot at once, and as the
+  barn's production defaults. The tour's tractors go up a setting.
+- **17000:** the operator watches again; then the merge into `trunk`.
 
 ### Decisions
 

@@ -88,15 +88,7 @@ Matt "Breakpoint" Heck:
     opt-in switch such as -Showcase -UntilFinished), or with the directed
     tour (Tractor Bomb slice 12000)?
 
-17. The Story reordered (docs/SHOWCASE.md, "The Directed Tour" and "The
-    Story"), for Matt "Breakpoint" Heck: as built in slice 12000, AnyRim
-    and the grenade come before the Tractor Bomb, and two Tractor Bombs
-    in a junkyard close the film on the byline, so it ends on its
-    biggest bang. Reels 1 to 4 share one scene and Reel 6 has two. Keep
-    this order, or restore the drafted one (Tractor Bomb as Reel 7)?
-18. Reel 9, the Raccoon Incident, deferred (docs/SHOWCASE.md): the
-    grenade scene keeps the junk pile west of the base as its target,
-    with a colonist volunteer, rather than Ned "Overkill" Lessly and the
-    rabid raccoon on Main Street. Build the Raccoon Incident next (a
-    ninth AnyRim resident, a manhunting raccoon, the census revised), or
-    keep the junk pile?
+17. (Resolved 2026-10-14: keep the reordered story as built.)
+18. (Resolved 2026-10-14: "test both". The junk-pile grenade scene stays,
+    and the Raccoon Incident is built as its own scene; ROADMAP.md,
+    phase 3000, slice 15000.)
