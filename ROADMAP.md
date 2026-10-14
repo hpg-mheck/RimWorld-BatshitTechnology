@@ -91,24 +91,24 @@ repairs bombs on its own. Everyone with sense runs.
 All of the steps above are complete, every test passes, the showcase
 demo runs clean, and `feature/tractor-bomb` is merged into `trunk`.
 
-### Open Questions
+### Decisions
 
-Each has a proposed answer in `docs/TRACTOR-BOMB.md`:
+All open questions were answered on 2026-10-13 (details in
+`docs/TRACTOR-BOMB.md`, "Decisions"):
 
-1. Which research does Tractor Bomb follow? Proposed: the Ergonomic
-   Singularity Grenade.
-2. Should a bomb refuse to emplace while a colonist is inside its pull
-   radius? Should that be switchable, or is friendly fire the point?
-3. Dial-A-Yield ranges: proposed 3 to 20 tiles for the pull and 1.9 to
-   9.9 for the blast.
-4. The barn: bills worked autonomously, with "Build one now" adding a
-   bill (proposed), or something else?
-5. Ingredients and costs for a Tractor Bomb and the barn.
-6. Do patrols stay inside the home area or roam the whole map?
-7. "Already too close": inside the blast radius (proposed) or the pull
-   radius?
-8. What does it look like? The name invites a small farm tractor with a
-   tractor-beam emitter on top.
+- **Research:** after the Ergonomic Singularity Grenade.
+- **Colonists in the radius:** the tractor beeps and flashes in protest
+  for three extra seconds, then emplaces anyway.
+- **Dial-A-Yield:** pull 3 to 20 tiles, blast 2 to 10.
+- **The barn:** autonomous bills, with "Build one now" adding one.
+- **Costs:** 60 steel, 3 components and 5 batshittium a bomb; 250 steel,
+  8 components and 20 batshittium for the barn.
+- **Patrol:** an allowed area per bomb, defaulting to the whole map.
+- **Too close:** pawns inside the blast radius freeze, with one of twenty
+  "making peace with their impending doom" status lines; anyone who can
+  run, does.
+- **Looks:** a little farm tractor with a magenta tractor-beam emitter;
+  its tires flip out flat when it emplaces.
 
 ## Next
 
