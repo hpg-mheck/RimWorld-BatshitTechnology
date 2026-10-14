@@ -255,9 +255,10 @@ public sealed class ShowcaseXmlTests
     public void ClassDeclared_should_match_the_namespace_exactly()
     {
         Assert.True(ClassDeclared("BatshitTechnology.Showcases.ShowcaseDirector"));
-        Assert.True(ClassDeclared("BatshitTechnology.BatshitShowcaseWorker"));
+        Assert.True(ClassDeclared("BatshitTechnology.BatshitTourDirector"));
         Assert.False(ClassDeclared("BatshitTechnology.ShowcaseDirector"));
-        Assert.False(ClassDeclared("BatshitTechnology.Showcases.BatshitShowcaseWorker"));
+        Assert.False(ClassDeclared("BatshitTechnology.Showcases.BatshitTourDirector"));
+        Assert.False(ClassDeclared("BatshitTechnology.BatshitShowcaseWorker"));
         Assert.False(ClassDeclared("BatshitTechnology.NoSuchWorker"));
     }
 
@@ -276,23 +277,24 @@ public sealed class ShowcaseXmlTests
     };
 
     /// <summary>
-    /// Batshit Technology's first showcase runs today's demo base through
-    /// the API, with the agreed preview, size and running time.
+    /// Batshit Technology's first showcase is the directed tour, with the
+    /// agreed preview, size and running time; its scenes and narration
+    /// are checked by <see cref="TourXmlTests"/>.
     /// </summary>
-    [Fact(DisplayName = "BT_Showcase runs the demo base through the API")]
-    public void BT_Showcase_should_wrap_the_demo_base()
+    [Fact(DisplayName = "BT_Showcase is the directed tour")]
+    public void BT_Showcase_should_be_the_directed_tour()
     {
         XElement def = Assert.Single(
             ShowcaseDefs(), d => d.Element("defName")?.Value == "BT_Showcase");
 
-        Assert.Equal("demo base", def.Element("label")?.Value);
+        Assert.Equal("living better with batshittium", def.Element("label")?.Value);
         Assert.Equal(
-            "BatshitTechnology.BatshitShowcaseWorker",
+            "BatshitTechnology.BatshitTourDirector",
             def.Element("workerClass")?.Value);
         Assert.Equal("UI/Showcases/BT_Showcase", def.Element("previewTexPath")?.Value);
         Assert.Equal("250", def.Element("mapSize")?.Value);
-        Assert.Equal("3", def.Element("estimatedMinutes")?.Value);
-        Assert.Null(def.Element("scenes"));
+        Assert.Equal("5", def.Element("estimatedMinutes")?.Value);
+        Assert.NotNull(def.Element("scenes"));
         Assert.Null(def.Element("requiredMods"));
     }
 
@@ -402,7 +404,7 @@ public sealed class ShowcaseXmlTests
 
     /// <summary>Every ShowcaseDef in the mod's Defs.</summary>
     /// <returns>The def elements.</returns>
-    private static IEnumerable<XElement> ShowcaseDefs() =>
+    internal static IEnumerable<XElement> ShowcaseDefs() =>
         Directory.EnumerateFiles(
                 Path.Combine(FixturesDirectory, "Defs"), "*.xml",
                 SearchOption.AllDirectories)
@@ -418,7 +420,7 @@ public sealed class ShowcaseXmlTests
     /// </summary>
     /// <param name="fullName">The namespace-qualified class name.</param>
     /// <returns>True if it is declared.</returns>
-    private static bool ClassDeclared(string fullName)
+    internal static bool ClassDeclared(string fullName)
     {
         int dot = fullName.LastIndexOf('.');
         string ns = fullName.Substring(0, dot);

@@ -65,7 +65,6 @@
     <Compile Include="AnyRimResidents.cs" />
     <Compile Include="Artificer.cs" />
     <Compile Include="Ballista.cs" />
-    <Compile Include="BatshitShowcaseWorker.cs" />
     <Compile Include="BatshittiumReactor.cs" />
     <Compile Include="BoltStorage.cs" />
     <Compile Include="BrainSqueezer.cs" />
@@ -86,6 +85,10 @@
     <Compile Include="SmokeTest.TractorBombHostiles.cs" />
     <Compile Include="SmokeTest.TractorBombTwins.cs" />
     <Compile Include="SmokeTestShowcases.cs" />
+    <Compile Include="Tour\BatshitTourDirector.cs" />
+    <Compile Include="Tour\TourScenes.cs" />
+    <Compile Include="Tour\TourStage.cs" />
+    <Compile Include="Tour\TractorScenes.cs" />
     <Compile Include="TractorBarn.cs" />
     <Compile Include="TractorBomb.cs" />
     <Compile Include="TractorBombAI.cs" />

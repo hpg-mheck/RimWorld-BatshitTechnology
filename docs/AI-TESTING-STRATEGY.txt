@@ -14,6 +14,14 @@ run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
   planner and tractor layouts (TourScriptTests, TourStagePlannerTests,
   TractorLayoutTests: the yard and pads keep their distances, the twin
   pulls overlap, the barn stands beyond pull plus blast).
+- XML tests for the directed tour (TourXmlTests): BT_Showcase runs on
+  BatshitTourDirector; its scene keys are Core's TourScript, in order,
+  each with a class declared in Source/, a short title, sane timing and
+  zooms; every script moment and outcome has a line, no line names an
+  unknown one, and every line keeps The Story's voice (one line, at most
+  96 characters, no "!", no player, mod, game, showcase or click); the
+  film ends on the twins' line and the byline; and Core's robot sight
+  matches the robot's def.
 - XML regression tests over Defs/, About and Textures/: the corrected v0.2
   values (so those bugs cannot return), research, recipes, the reactor,
   every BT_ cross-reference, every mod texture path, and two RimWorld

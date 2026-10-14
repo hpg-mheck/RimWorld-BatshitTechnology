@@ -1121,3 +1121,55 @@ the plan said "+6 z" without naming the origin. The first smoke run
 after the extraction planted the twins at (118,125) and (132,125), 14.0
 apart, the cells TractorPlanting predicts (7 tiles either side of the
 army's centre).
+
+2026-10-14 Claude: Tractor Bomb slice 12000, step 4: the directed tour.
+BT_Showcase is now "living better with batshittium", a ShowcaseDirector
+tour of eight scenes run by BatshitTourDirector, whose Setup builds the
+stage (Showcase.Build now returns a TourStage record and runs nothing on
+a timer) before the API's director attaches the scenes. The old timeline
+(pending demos, the THROW and TOUR cues, the opening message) and
+BatshitShowcaseWorker are gone; the ANYRIM cue stays. The scenes live in
+Source/Tour/: TourScene (the stage, the start tick, beats played at most
+once, colonists moved clear) and DeviceParadeScene, BallistaVolleyScene,
+SelfDestructScene (by pad), AnyRimWalkScene, GrenadeScene, and, sharing
+TractorYardScene, TractorBombScene and TwinTractorsScene. Every wait is a
+world-state condition (a burst over and no bolt in flight; a pad device
+destroyed and its aftermath idle; Tractor Bomb explosions counted and no
+implosion running) with the def's timeout behind it. A scene's first
+beat plays at tick 150 or later, so its start line (delayed 90 ticks)
+lands first and the narration log reads in cue order. The Ballista now
+holds its fire between scenes by keeping its least range, 10, since a
+turret with no forced target fires at hostiles and the tractor yard's
+raiders are within 75 tiles of it. The twins scene implodes both bombs
+150 ticks after both count down, without the smoke runner's countdown
+hold; the def's 3 to 5 seconds leaves room, and if one bomb went off
+early it still counts toward the two explosions. The plan's cut line
+was not reached, so the colonist protest is in (a drafted colonist at
+the layout's stray cell, walked 30 tiles north when the robot protests);
+the barn's real build was cut instead, as the plan allows: the barn
+stands finished and the robot appears at its door, "made earlier"
+(docs/AI-TODO.txt). The narration lines the plan did not give (each
+scene's start and completed, and the beats artificer, homes, barn,
+spotted, emplaced, pull and blast) were written in the same deadpan
+voice. TourXmlTests hold the def to Core's TourScript and the voice
+rules, and check TractorPlanting.RobotSight against the robot's def;
+each of the plan's eight XML sabotages failed at least one of them.
+The first showcase run found two faults, both fixed before the commit.
+MapComponent_Implosions.Active is pruned only when an implosion pulls,
+so once the last implosion ends it still names it; a scene waiting for
+an empty list timed out (the tractor scene), and a stale entry made the
+grenade look thrown. Tour scenes now count an implosion as running only
+if it is open and ticked this tick or the last. And the grenadier chosen
+at build time could no longer throw half the tour later, so the grenade
+scene casts its grenadier and volunteer when the throw is due, from the
+colonists able to stand, hands the grenadier a grenade if needed, logs
+why a throw could not be ordered, and treats the throw as seen only for
+the grenade's own projectile or an implosion at the pile.
+The second run lost the tractor scene's robot after its protest: no
+bomb was ever emplaced. The likeliest cause is the stray: the first free
+colonist, who was also the grenadier, stood drafted near the raiders
+with the grenade in hand, and a drafted colonist attacks hostiles in
+range by itself. The stray now holds its fire (FireAtWill off while the
+scene runs) and is never the grenadier, the grenade scene takes the
+grenade back when it ends, and a tractor scene that times out logs what
+the yard held (robot, bombs, raiders, implosions) as a message.

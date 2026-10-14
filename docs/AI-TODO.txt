@@ -228,6 +228,18 @@
   Battery), delivered by a janky quadrotor that blows up impressively if
   destroyed and is replaced the next day.
 
+- [ ] Tour scene 7, "The Tractor of Tomorrow" (Source/Tour/
+  TractorScenes.cs): the Tractor Barn should build the robot on screen.
+  Cut for time in slice 12000, step 4, by the plan's cut line: the barn
+  stands finished and the robot appears at its door ("This one was made
+  earlier"), which the narration already covers. A real build needs the
+  barn's bill, its work time shortened for the scene, and a wait on the
+  robot leaving the barn.
+- [ ] Tour: watch the colonist protest in scene 7 (the drafted stray is
+  walked 30 tiles north when the robot protests) across several maps;
+  the step 5 verifier's "no colonist dies" check should catch a stray
+  that is still caught by the pull.
+
 ## Test justifications
 
 The Tractor Bomb follows the same split. Its pure logic is in Core with

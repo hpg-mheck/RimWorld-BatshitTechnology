@@ -147,7 +147,7 @@ namespace BatshitTechnology
 
     /// <summary>
     /// A smoke-test worker that asks for its devices' DEV buttons, as
-    /// BatshitShowcaseWorker does, and never finishes on its own.
+    /// BatshitTourDirector does, and never finishes on its own.
     /// </summary>
     internal class SmokeDevButtonsWorker : ShowcaseWorker
     {

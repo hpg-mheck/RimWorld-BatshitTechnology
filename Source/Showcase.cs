@@ -1,23 +1,20 @@
-// Batshit Technology - in-game showcase.
-// The demo base behind BT_Showcase, run through the Showcase API by
-// BatshitShowcaseWorker: from the main menu's Showcases button, or with
-// -showcase=BT_Showcase (Tools/smoke-test.ps1 -Showcase). On the fresh
-// 250-cell map the API generates, it finishes the mod's research and builds
-// a working demo base: a fuelled reactor powering a stocked replicator, the
+// Batshit Technology - in-game showcase: the tour's stage.
+// The demo base behind BT_Showcase, built for the directed tour
+// (BatshitTourDirector and its scenes in Source/Tour/): from the main
+// menu's Showcases button, or with -showcase=BT_Showcase
+// (Tools/smoke-test.ps1 -Showcase). On the fresh 250-cell map the API
+// generates, it finishes the mod's research and builds a working demo
+// base: a fuelled reactor powering a stocked replicator, the
 // Transmogrifier with a bill and rock chunks, a colonist in the Brain
 // Squeezer, the Artificer making bolts, and a Ballista with chained,
-// loaded magazines firing explosive volleys at open ground. It builds
-// AnyRim, the test town, on the best site in the north-west (or logs that
-// it skipped it). Then two lone devices in the most open far corners that
-// are out of reach of AnyRim self-destruct, well clear of the base, with
-// the camera on each as it arms: a Random Replicator five seconds in
-// (blast, fires, secondaries), then a Batshittium Reactor twenty seconds
-// later (core blast and a barrage of bolts). Next, a colonist throws an
-// Ergonomic Singularity Grenade at a junk pile (and a volunteer) west of
-// the base, and ten seconds after the throw the camera tours AnyRim from
-// its welcome sign. Then it leaves the game running. Log cues for capture
-// tooling: [BT-SHOWCASE] ANYRIM (or AnyRim skipped), THROW, TOUR; the API
-// logs READY once the base is built.
+// loaded magazines that holds its fire until its scene. It builds AnyRim,
+// the test town, on the best site in the north-west (or logs that it
+// skipped it), then plans the tractor yard and the two self-destruct
+// pads together (Core's TourStagePlanner), puts a lone Random Replicator
+// and a lone Batshittium Reactor on the pads, and stages the grenade's
+// junk pile and cast. Nothing here runs on a timer: the scenes arm,
+// throw and tour. Log cue for capture tooling: [BT-SHOWCASE] ANYRIM (or
+// AnyRim skipped); the API logs READY once the stage is built.
 
 using System;
 using System.Collections.Generic;
@@ -33,24 +30,17 @@ namespace BatshitTechnology
     internal static class Showcase
     {
         /// <summary>
-        /// Game ticks the timeline holds after its last step before it
-        /// counts as finished, so the last scene stays on screen before the
-        /// API's closing message.
+        /// Builds the tour's stage around the map's centre: the demo base,
+        /// AnyRim, the self-destruct pads and the grenade's junk pile. The
+        /// Ballista is loaded but holds its fire, and nothing is armed or
+        /// thrown; the scenes do that.
         /// </summary>
-        internal const int FinishHoldTicks = 600;
-
-        /// <summary>
-        /// The tick the timeline was first seen idle, or -1 while it still
-        /// has steps to run.
-        /// </summary>
-        private static int idleSinceTick = -1;
-
-        /// <summary>Builds the demo base around the map's center.</summary>
         /// <param name="map">The showcase's fresh map.</param>
-        internal static void Build(Map map)
+        /// <returns>What the tour's scenes have to work with.</returns>
+        internal static TourStage Build(Map map)
         {
             // God mode, for the devices' DEV buttons, is lent by the
-            // Showcase API in BatshitShowcaseWorker.Setup, in dev mode only,
+            // Showcase API in BatshitTourDirector.Setup, in dev mode only,
             // and given back when the showcase ends: it is a static flag
             // that would otherwise follow the player into their own games.
             FinishResearch();
@@ -86,7 +76,8 @@ namespace BatshitTechnology
             Thing artificer = Spawn(map, "BT_BatshittiumArtificer", center + new IntVec3(3, 0, 3));
             artificer.TryGetComp<CompRefuelable>().Refuel(10f);
 
-            BuildBallista(map, center);
+            Building_BatshittiumBallista ballista = BuildBallista(
+                map, center, out IntVec3 volleyTarget);
 
             // Stock for haulers: batshittium to refuel the reactor and
             // Artificer, and a stockpile for replicated food.
@@ -105,62 +96,40 @@ namespace BatshitTechnology
             map.powerNetManager.UpdatePowerNetsAndConnections_First();
             SendColonistToSqueezer(map, squeezer);
 
-            // AnyRim goes up before the self-destruct demo, which clears
-            // the fog and must pick corners out of the town's reach.
-            bool town = BuildAnyRim(map, center);
-            Thing doomed = BuildSelfDestructDemo(map, center, out int demos);
-            Find.CameraDriver.JumpToCurrentMapLoc(doomed?.Position ?? center);
-            Find.CameraDriver.SetRootSize(MaxCameraSize);
+            // AnyRim goes up before the pads, which clear the fog and
+            // must stay out of the town's reach.
+            BuildAnyRim(map, center);
+            List<Thing> pads = BuildSelfDestructDemo(map, center);
+            (Pawn grenadier, Pawn volunteer, IntVec3 grenadeTarget) =
+                BuildGrenadeDemo(map, center);
+            Find.CameraDriver.JumpToCurrentMapLoc(center);
             Find.TickManager.CurTimeSpeed = TimeSpeed.Normal;
-            Messages.Message(
-                OpeningMessage(demos, throwAtTick >= 0, town),
-                MessageTypeDefOf.PositiveEvent, false);
-            idleSinceTick = -1;
-            // The Showcase API logs "[BT-SHOWCASE] READY" when this returns;
-            // Tools/smoke-test.ps1 waits for it before maximizing.
-        }
 
-        /// <summary>
-        /// Whether the timeline has played out: nothing left to arm, throw
-        /// or tour, no demo device still counting down under the camera,
-        /// and <see cref="FinishHoldTicks"/> since that was first true.
-        /// </summary>
-        /// <param name="now">The current game tick.</param>
-        /// <returns>True once the showcase is over.</returns>
-        internal static bool TimelineFinished(int now)
-        {
-            bool countingDown = watching != null && !watching.Destroyed
-                && watching.TryGetComp<CompSelfDestruct>()?.IsCountingDown == true;
-            bool idle = pendingDemos.Count == 0 && throwAtTick < 0
-                && tourAtTick < 0 && !countingDown;
-            if (!idle)
+            // The Showcase API logs "[BT-SHOWCASE] READY" once the
+            // director's Setup returns; Tools/smoke-test.ps1 waits for it.
+            Box? yard = StagePlan?.Yard;
+            return new TourStage
             {
-                idleSinceTick = -1;
-                return false;
-            }
-
-            if (idleSinceTick < 0)
-            {
-                idleSinceTick = now;
-            }
-
-            return now - idleSinceTick >= FinishHoldTicks;
-        }
-
-        /// <summary>
-        /// Stops the timeline: nothing more is armed, thrown or toured, and
-        /// the camera is left alone. Devices already counting down still go
-        /// off.
-        /// </summary>
-        internal static void StopTimeline()
-        {
-            pendingDemos.Clear();
-            throwAtTick = -1;
-            tourAtTick = -1;
-            watching = null;
-            grenadier = null;
-            volunteer = null;
-            idleSinceTick = -1;
+                BaseCentre = center,
+                Reactor = reactor,
+                Replicator = replicator,
+                Transmogrifier = bench,
+                Squeezer = squeezer,
+                Artificer = artificer,
+                Ballista = ballista,
+                BallistaTarget = volleyTarget,
+                Pads = pads,
+                Grenadier = grenadier,
+                Volunteer = volunteer,
+                GrenadeTarget = grenadeTarget,
+                AnyRimPlan = anyRimPlan,
+                AnyRimAnchor = anyRimAnchor,
+                Yard = yard is Box y
+                    ? CellRect.FromLimits(y.MinX, y.MinZ, y.MaxX, y.MaxZ)
+                        .ClipInsideMap(map)
+                    : (CellRect?)null,
+                PlanNote = StagePlan?.Note,
+            };
         }
 
         /// <summary>
@@ -183,29 +152,57 @@ namespace BatshitTechnology
         /// <summary>The quick-test map's size, which the doc's numbers assume.</summary>
         private const float DocMapSize = 250f;
 
-        /// <summary>Game ticks from the grenade throw to the AnyRim tour.</summary>
-        private const int TourDelayTicks = 600;
-
         /// <summary>
-        /// The camera's zoom on the tour: Middle (under 42), where the
-        /// signs show, and wide enough to take in the town's south half.
-        /// </summary>
-        private const float TourCameraSize = 30f;
-
-        /// <summary>
-        /// How far north of the welcome sign the tour's camera looks, so the
+        /// How far north of the welcome sign the AnyRim scene looks, so the
         /// sign sits low in the frame with the town above it.
         /// </summary>
-        private const int TourLookNorth = 20;
+        internal const int TourLookNorth = 20;
+
+        /// <summary>
+        /// The Ballista's range during its volley: far enough to reach the
+        /// open ground 60 tiles east.
+        /// </summary>
+        internal const int VolleyRange = 75;
+
+        /// <summary>
+        /// A Ballista with three chained magazines of explosive bolts, set
+        /// for 16-bolt volleys, holding its fire: its range is the least
+        /// it allows, so it never reaches the tractor yard's raiders, and
+        /// it has no target until the defence scene orders one.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The base's center.</param>
+        /// <param name="target">The open ground 60 tiles east to fire at.</param>
+        /// <returns>The Ballista.</returns>
+        private static Building_BatshittiumBallista BuildBallista(
+            Map map, IntVec3 center, out IntVec3 target)
+        {
+            var ballista = (Building_BatshittiumBallista)Spawn(
+                map, "BT_BatshittiumBallista", center + new IntVec3(4, 0, -5));
+            ThingDef explosive = BT_BallistaDefOf.BT_BoltReallyPainful;
+            Fill(ballista.InternalMagazine, explosive, 16);
+            foreach (IntVec3 offset in new[] { new IntVec3(6, 0, -5), new IntVec3(7, 0, -5),
+                new IntVec3(7, 0, -6) })
+            {
+                var magazine = (Building_BallistaMagazine)Spawn(
+                    map, "BT_BallistaMagazine", center + offset);
+                Fill(magazine.Storage, explosive, 400);
+                Fill(magazine.Storage, BT_BallistaDefOf.BT_BoltPainful, 200);
+            }
+
+            ballista.SetAmmo(explosive);
+            ballista.SetCount(16);
+            ballista.SetRange(BallistaPower.MinRange);
+            target = center + new IntVec3(60, 0, 0);
+            target.x = System.Math.Min(target.x, map.Size.x - 10);
+            return ballista;
+        }
 
         /// <summary>The plan AnyRim was built from, or null if it was skipped.</summary>
         private static TownPlan anyRimPlan;
 
         /// <summary>AnyRim's crossroads, or Invalid if it was skipped.</summary>
         private static IntVec3 anyRimAnchor = IntVec3.Invalid;
-
-        /// <summary>The tick to tour AnyRim at, or -1.</summary>
-        private static int tourAtTick = -1;
 
         /// <summary>
         /// AnyRim's preferred crossroads, (55,163) on the 250-tile
@@ -272,7 +269,6 @@ namespace BatshitTechnology
         {
             anyRimPlan = null;
             anyRimAnchor = IntVec3.Invalid;
-            tourAtTick = -1;
             try
             {
                 AnyRimBuildReport report = new AnyRimBuildReport();
@@ -306,39 +302,6 @@ namespace BatshitTechnology
             return false;
         }
 
-        /// <summary>
-        /// Points the camera at AnyRim's welcome sign with the town in
-        /// view, at a zoom where the signs show, and says what the town is
-        /// for.
-        /// </summary>
-        private static void TourAnyRim()
-        {
-            Map map = Find.CurrentMap;
-            MapComponent_AnyRim record = map?.GetComponent<MapComponent_AnyRim>();
-            if (record == null || !record.Built)
-            {
-                return;
-            }
-
-            IntVec3 sign = record.WelcomeSign.IsValid ? record.WelcomeSign : record.Anchor;
-            var look = new IntVec3(
-                record.Anchor.x, 0, Math.Min(sign.z + TourLookNorth, map.Size.z - 1));
-            Find.CameraDriver.JumpToCurrentMapLoc(look);
-            Find.CameraDriver.SetRootSize(TourCameraSize);
-            try
-            {
-                Messages.Message(
-                    AnyRimText.OpeningMessage, new LookTargets(sign, map),
-                    MessageTypeDefOf.PositiveEvent, false);
-            }
-            catch (Exception e)
-            {
-                Log.Error($"[BT] Showcase could not word AnyRim's opening message: {e}");
-            }
-
-            Log.Message("[BT-SHOWCASE] TOUR"); // a cue for screen-capture tooling
-        }
-
         /// <summary>Scales an x from the 250-tile quick-test map to this map.</summary>
         /// <param name="map">The map.</param>
         /// <param name="x">The x on a 250-tile map.</param>
@@ -352,197 +315,47 @@ namespace BatshitTechnology
         private static int ScaleZ(Map map, int z) => (int)Math.Round(z * map.Size.z / DocMapSize);
 
         /// <summary>
-        /// A Ballista with three chained magazines of explosive bolts, firing
-        /// 16-bolt volleys at open ground 60 tiles east.
-        /// </summary>
-        /// <param name="map">The map.</param>
-        /// <param name="center">The base's center.</param>
-        private static void BuildBallista(Map map, IntVec3 center)
-        {
-            var ballista = (Building_BatshittiumBallista)Spawn(
-                map, "BT_BatshittiumBallista", center + new IntVec3(4, 0, -5));
-            ThingDef explosive = BT_BallistaDefOf.BT_BoltReallyPainful;
-            Fill(ballista.InternalMagazine, explosive, 16);
-            foreach (IntVec3 offset in new[] { new IntVec3(6, 0, -5), new IntVec3(7, 0, -5),
-                new IntVec3(7, 0, -6) })
-            {
-                var magazine = (Building_BallistaMagazine)Spawn(
-                    map, "BT_BallistaMagazine", center + offset);
-                Fill(magazine.Storage, explosive, 400);
-                Fill(magazine.Storage, BT_BallistaDefOf.BT_BoltPainful, 200);
-            }
-
-            ballista.SetAmmo(explosive);
-            ballista.SetCount(16);
-            ballista.SetRange(75);
-            IntVec3 target = center + new IntVec3(60, 0, 0);
-            target.x = System.Math.Min(target.x, map.Size.x - 10);
-            ballista.OrderAttack(new LocalTargetInfo(target));
-        }
-
-        /// <summary>
         /// Distance from the base to the self-destruct demo, along both axes:
         /// about 106 tiles, clear of the 75-tile blast and the base's own
         /// half-width.
         /// </summary>
         private const int DemoOffset = 75;
 
-        /// <summary>The camera's widest zoom (CameraMapConfig.sizeRange.max).</summary>
-        private const float MaxCameraSize = 60f;
-
-        /// <summary>
-        /// The camera's zoom during a countdown: close enough to see the
-        /// warning band around the device.
-        /// </summary>
-        private const float CountdownCameraSize = 22f;
-
-        /// <summary>The demo device counting down under the camera, if any.</summary>
-        private static Thing watching;
-
-        /// <summary>
-        /// Game ticks between the base being ready and the first demo arming:
-        /// time for the window to maximize and the viewer to find the rings.
-        /// </summary>
-        private const int ArmDelayTicks = 300;
-
-        /// <summary>
-        /// Game ticks between the replicator demo arming and the reactor demo
-        /// arming: its 10 s countdown, the ~6 s aftermath, and a breath.
-        /// </summary>
-        private const int SecondDemoDelayTicks = 1200;
-
-        private static readonly List<(Thing Device, int ArmAt)> pendingDemos =
-            new List<(Thing Device, int ArmAt)>();
-
-        /// <summary>
-        /// Game ticks from the reactor demo arming to the grenade throw: its
-        /// countdown and barrage, and a breath.
-        /// </summary>
-        private const int GrenadeDemoDelayTicks = 1200;
-
-        /// <summary>
-        /// The colonist who throws the grenade, until the throw. Statics
-        /// outlive the game (vanilla empties only the map and world when a
-        /// game ends), and a pawn reaches much of its game's object graph,
-        /// so this is cleared as soon as it is no longer needed: at the
-        /// throw, on Stop, and before each new demo.
-        /// </summary>
-        private static Pawn grenadier;
-
-        /// <summary>
-        /// The colonist volunteering inside the junk pile, until the throw;
-        /// cleared as <see cref="grenadier"/> is.
-        /// </summary>
-        private static Pawn volunteer;
-
-        /// <summary>The junk pile's centre, where the grenade is thrown.</summary>
-        private static IntVec3 grenadeTarget;
-        private static int throwAtTick = -1;
-
-        /// <summary>
-        /// Called every game tick by BatshitShowcaseWorker; arms each
-        /// self-destruct demo when its moment comes, with the camera on it.
-        /// </summary>
-        internal static void Tick()
-        {
-            if (throwAtTick >= 0 && Find.TickManager.TicksGame >= throwAtTick)
-            {
-                throwAtTick = -1;
-                ThrowGrenade();
-            }
-
-            if (tourAtTick >= 0 && Find.TickManager.TicksGame >= tourAtTick)
-            {
-                tourAtTick = -1;
-                TourAnyRim();
-            }
-
-            // Pull back to take in the whole blast when it goes off.
-            if (watching != null && watching.Destroyed)
-            {
-                watching = null;
-                Find.CameraDriver.SetRootSize(MaxCameraSize);
-            }
-
-            for (int i = pendingDemos.Count - 1; i >= 0; i--)
-            {
-                (Thing device, int armAt) = pendingDemos[i];
-                if (Find.TickManager.TicksGame < armAt)
-                {
-                    continue;
-                }
-
-                pendingDemos.RemoveAt(i);
-                if (!device.Spawned)
-                {
-                    continue;
-                }
-
-                CompSelfDestruct comp = device.TryGetComp<CompSelfDestruct>();
-                MoveColonistsClear(device, comp.Props.blastRadius + 8f);
-                Find.CameraDriver.JumpToCurrentMapLoc(device.Position);
-                Find.CameraDriver.SetRootSize(CountdownCameraSize);
-                Find.Selector.ClearSelection();
-                Find.Selector.Select(device, playSound: false);
-                watching = device;
-                comp.Arm();
-            }
-        }
-
         /// <summary>
         /// Two lone devices on small pads in the far corners with the most
         /// open ground, among the corners that every part of AnyRim (as
         /// built) and the tractor yard clear by
         /// <see cref="DemoCornerReach"/> tiles; Core's planner chooses the
-        /// pads and the yard together (<see cref="StagePlan"/>): a
-        /// Random Replicator, armed after <see cref="ArmDelayTicks"/>, then
-        /// a Batshittium Reactor, armed after the replicator's blast has
-        /// played out. The replicator is selected first so its blast rings
-        /// show. Fog is cleared so every blast can be watched. The grenade
-        /// demo and the AnyRim tour are scheduled after them.
+        /// pads and the yard together (<see cref="StagePlan"/>): a Random
+        /// Replicator, then a Batshittium Reactor. Neither is armed here;
+        /// the retirement scenes arm them. Fog is cleared so every blast
+        /// can be watched.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="baseCenter">The demo base's centre.</param>
-        /// <param name="demos">How many self-destruct demos were set up: 0, 1 or 2.</param>
         /// <returns>
-        /// The replicator, which the camera starts on, or null if no corner
-        /// was safe to use.
+        /// The pad devices, replicator first: none, one or two.
         /// </returns>
-        private static Thing BuildSelfDestructDemo(Map map, IntVec3 baseCenter, out int demos)
+        private static List<Thing> BuildSelfDestructDemo(Map map, IntVec3 baseCenter)
         {
             StagePlan = PlanStage(map, baseCenter);
             List<IntVec3> corners = StagePlan.Pads
                 .Select(c => new IntVec3(c.X, 0, c.Z))
                 .ToList();
-            demos = Math.Min(corners.Count, 2);
             map.fogGrid.ClearAllFog();
-            int now = Find.TickManager.TicksGame;
-            pendingDemos.Clear();
-            watching = null;
-
-            Thing replicator = null;
-            if (corners.Count > 0)
+            var pads = new List<Thing>();
+            string[] devices = { "BT_RandomReplicator", "BT_BatshittiumReactor" };
+            for (int i = 0; i < Math.Min(corners.Count, devices.Length); i++)
             {
                 TractorStaging.LevelGround(
-                    map, CellRect.CenteredOn(corners[0], 2));
-                replicator = Spawn(map, "BT_RandomReplicator", corners[0]);
-                pendingDemos.Add((replicator, now + ArmDelayTicks));
-                Find.Selector.ClearSelection();
-                Find.Selector.Select(replicator, playSound: false);
-            }
-            else
-            {
-                Log.Warning("[BT] Showcase: no demo corner is clear of "
-                    + $"AnyRim and the yard; no self-destructs "
-                    + $"({StagePlan.Note}).");
+                    map, CellRect.CenteredOn(corners[i], 2));
+                pads.Add(Spawn(map, devices[i], corners[i]));
             }
 
-            if (corners.Count > 1)
+            if (corners.Count == 0)
             {
-                TractorStaging.LevelGround(
-                    map, CellRect.CenteredOn(corners[1], 2));
-                Thing reactor = Spawn(map, "BT_BatshittiumReactor", corners[1]);
-                pendingDemos.Add((reactor, now + ArmDelayTicks + SecondDemoDelayTicks));
+                Log.Message("[BT-SHOWCASE] no demo corner is clear of "
+                    + $"AnyRim and the yard ({StagePlan.Note})");
             }
             else if (corners.Count == 1)
             {
@@ -550,10 +363,7 @@ namespace BatshitTechnology
                     + "AnyRim and the yard; reactor demo skipped");
             }
 
-            int throwAt = now + ArmDelayTicks + SecondDemoDelayTicks + GrenadeDemoDelayTicks;
-            BuildGrenadeDemo(map, baseCenter, throwAt);
-            tourAtTick = anyRimPlan != null ? throwAt + TourDelayTicks : -1;
-            return replicator;
+            return pads;
         }
 
         /// <summary>
@@ -592,60 +402,21 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// The showcase's opening message, saying only what will run: the
-        /// replicator and reactor demos that found a corner, the grenade if
-        /// a colonist holds one, and the AnyRim tour if the town stands.
-        /// </summary>
-        /// <param name="demos">Self-destruct demos set up: 0, 1 or 2.</param>
-        /// <param name="grenade">Whether the grenade throw is scheduled.</param>
-        /// <param name="town">Whether AnyRim was built.</param>
-        /// <returns>The message.</returns>
-        private static string OpeningMessage(int demos, bool grenade, bool town)
-        {
-            var steps = new List<string>();
-            if (demos >= 1)
-            {
-                steps.Add("this lone replicator arms its self-destruct in five seconds");
-            }
-
-            if (demos >= 2)
-            {
-                steps.Add(grenade ? "a lone reactor follows it" : "and a lone reactor follows it");
-            }
-
-            if (grenade)
-            {
-                steps.Add(steps.Count > 0
-                    ? "then a colonist throws an Ergonomic Singularity Grenade"
-                    : "a colonist throws an Ergonomic Singularity Grenade shortly");
-            }
-
-            string intro = steps.Count > 0
-                ? string.Join(", ", steps) + ". The demo base"
-                : "the demo base";
-            return "Batshit Technology showcase: " + intro + " is at the map's centre; "
-                + "select things there to see their buttons and status."
-                + (town
-                    ? " AnyRim, a small test town, stands to the north-west; the camera visits it "
-                        + (grenade ? "after the grenade." : "in about a minute.")
-                    : string.Empty);
-        }
-
-        /// <summary>
         /// A junk pile 25 tiles west of the base (stools, a wooden wall and
         /// stacks of steel and wood), and a colonist armed with an Ergonomic
-        /// Singularity Grenade, due to throw it at the pile with another
-        /// colonist volunteering inside it.
+        /// Singularity Grenade, ready to throw it at the pile with another
+        /// colonist volunteering inside it. The grenade scene throws it.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="baseCenter">The demo base's centre.</param>
-        /// <param name="throwAt">The tick to throw at.</param>
-        private static void BuildGrenadeDemo(Map map, IntVec3 baseCenter, int throwAt)
+        /// <returns>
+        /// The grenadier and the volunteer (either may be null when the
+        /// colony is short of colonists) and the pile's centre.
+        /// </returns>
+        private static (Pawn Grenadier, Pawn Volunteer, IntVec3 Target)
+            BuildGrenadeDemo(Map map, IntVec3 baseCenter)
         {
-            throwAtTick = -1; // set below once a grenadier is ready
-            grenadier = null; // never an earlier game's pawns
-            volunteer = null;
-            grenadeTarget = baseCenter + new IntVec3(
+            IntVec3 grenadeTarget = baseCenter + new IntVec3(
                 TourStagePlanner.GrenadeOffset.X, 0,
                 TourStagePlanner.GrenadeOffset.Z);
             TractorStaging.LevelGround(map, CellRect.CenteredOn(
@@ -684,44 +455,79 @@ namespace BatshitTechnology
                 .Where(p => !p.Dead && !p.Downed).ToList();
             if (colonists.Count == 0)
             {
-                return;
+                return (null, null, grenadeTarget);
             }
 
-            grenadier = colonists[0];
-            Thing grenade = ThingMaker.MakeThing(
-                DefDatabase<ThingDef>.GetNamed("BT_ErgonomicSingularityGrenade"));
-            grenadier.equipment.DestroyAllEquipment();
-            grenadier.equipment.AddEquipment((ThingWithComps)grenade);
-            volunteer = colonists.Count > 1 ? colonists[colonists.Count - 1] : null;
-            throwAtTick = throwAt;
+            Pawn grenadier = ArmGrenadier(colonists[0]);
+            Pawn volunteer = colonists.Count > 1 ? colonists[colonists.Count - 1] : null;
+            return (grenadier, volunteer, grenadeTarget);
+        }
+
+        /// <summary>The Ergonomic Singularity Grenade's def name.</summary>
+        internal const string GrenadeDef = "BT_ErgonomicSingularityGrenade";
+
+        /// <summary>The grenade's projectile's def name.</summary>
+        internal const string GrenadeProjectileDef = "BT_Projectile_SingularityGrenade";
+
+        /// <summary>
+        /// Puts an Ergonomic Singularity Grenade in a colonist's hands, in
+        /// place of whatever it held, unless it holds one already.
+        /// </summary>
+        /// <param name="pawn">The colonist.</param>
+        /// <returns>The colonist, or null if it has no equipment.</returns>
+        internal static Pawn ArmGrenadier(Pawn pawn)
+        {
+            if (pawn?.equipment == null)
+            {
+                return null;
+            }
+
+            if (pawn.equipment.Primary?.def.defName != GrenadeDef)
+            {
+                Thing grenade = ThingMaker.MakeThing(
+                    DefDatabase<ThingDef>.GetNamed(GrenadeDef));
+                pawn.equipment.DestroyAllEquipment();
+                pawn.equipment.AddEquipment((ThingWithComps)grenade);
+            }
+
+            return pawn;
         }
 
         /// <summary>
-        /// Brings the grenadier into range, points the camera at the pile,
-        /// and orders the throw.
+        /// Brings the grenadier into range of the pile and the volunteer
+        /// into it, and orders the throw.
         /// </summary>
-        private static void ThrowGrenade()
+        /// <param name="grenadier">The colonist holding the grenade.</param>
+        /// <param name="volunteer">The volunteer, or null.</param>
+        /// <param name="target">The pile's centre.</param>
+        /// <returns>Why the throw could not be ordered, or null if it was.</returns>
+        internal static string ThrowGrenade(Pawn grenadier, Pawn volunteer, IntVec3 target)
         {
-            if (grenadier == null || grenadier.Dead || !grenadier.Spawned)
+            if (grenadier == null || grenadier.Dead || !grenadier.Spawned
+                || grenadier.Downed)
             {
-                return;
+                return $"the grenadier {grenadier?.LabelShort ?? "(none)"} "
+                    + $"is not standing on the map (dead {grenadier?.Dead}, "
+                    + $"spawned {grenadier?.Spawned}, downed {grenadier?.Downed})";
             }
 
-            Teleport(grenadier, grenadeTarget + new IntVec3(12, 0, 0));
+            if (!target.IsValid)
+            {
+                return "the junk pile has no cell";
+            }
+
+            Teleport(grenadier, target + new IntVec3(12, 0, 0));
             if (volunteer != null && !volunteer.Dead && volunteer.Spawned)
             {
-                Teleport(volunteer, grenadeTarget + new IntVec3(-7, 0, -3));
+                Teleport(volunteer, target + new IntVec3(-7, 0, -3));
             }
 
-            Find.CameraDriver.JumpToCurrentMapLoc(grenadeTarget);
-            Find.CameraDriver.SetRootSize(CountdownCameraSize);
             grenadier.drafter.Drafted = true;
-            Job job = JobMaker.MakeJob(JobDefOf.AttackStatic, grenadeTarget);
+            Job job = JobMaker.MakeJob(JobDefOf.AttackStatic, target);
             job.maxNumStaticAttacks = 1;
-            grenadier.jobs.TryTakeOrderedJob(job, JobTag.Misc);
-            grenadier = null; // nothing reads them after the throw
-            volunteer = null;
-            Log.Message("[BT-SHOWCASE] THROW"); // a cue for screen-capture tooling
+            return grenadier.jobs.TryTakeOrderedJob(job, JobTag.Misc)
+                ? null
+                : "the grenadier would not take the order";
         }
 
         /// <summary>Moves a pawn, interrupting whatever it was doing.</summary>
@@ -735,17 +541,42 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Showcase only: colonists who wandered into a demo's blast radius
-        /// are moved back to the base, so the demo kills no one.
+        /// Showcase only: colonists within a radius of a danger are moved
+        /// back to the base, so the scene kills no one.
         /// </summary>
-        /// <param name="device">The demo device about to arm.</param>
+        /// <param name="map">The map.</param>
+        /// <param name="danger">Where the danger is.</param>
         /// <param name="radius">How far out counts as in danger.</param>
-        private static void MoveColonistsClear(Thing device, float radius)
+        /// <param name="spare">A colonist to leave where it is, or null.</param>
+        internal static void MoveColonistsClear(
+            Map map, IntVec3 danger, float radius, Pawn spare = null)
         {
-            Map map = device.Map;
+            if (danger.IsValid)
+            {
+                MoveColonistsOut(
+                    map, c => c.InHorDistOf(danger, radius), spare);
+            }
+        }
+
+        /// <summary>
+        /// Showcase only: colonists standing where a test says is in
+        /// danger are moved back to the base, near the map's centre.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="inDanger">Whether a cell is in danger.</param>
+        /// <param name="spare">A colonist to leave where it is, or null.</param>
+        internal static void MoveColonistsOut(
+            Map map, Func<IntVec3, bool> inDanger, Pawn spare = null)
+        {
+            if (map == null || inDanger == null)
+            {
+                return;
+            }
+
             foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned.ToList())
             {
-                if (!pawn.Position.InHorDistOf(device.Position, radius)
+                if (pawn == spare
+                    || !inDanger(pawn.Position)
                     || !CellFinder.TryFindRandomCellNear(
                         map.Center, map, 8, c => c.Standable(map), out IntVec3 cell))
                 {
@@ -772,7 +603,7 @@ namespace BatshitTechnology
         /// <summary>Starts a free colonist on a session in the squeezer.</summary>
         /// <param name="map">The map.</param>
         /// <param name="squeezer">The Brain Squeezer.</param>
-        private static void SendColonistToSqueezer(Map map, Thing squeezer)
+        internal static void SendColonistToSqueezer(Map map, Thing squeezer)
         {
             Pawn pawn = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(
                 p => !p.Downed && !p.InMentalState && p.needs?.joy != null);
