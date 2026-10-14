@@ -10,6 +10,11 @@
         <li Class="ThinkNode_Subtree">
           <treeDef>Despawned</treeDef>
         </li>
+        <!-- Its pawn kind wrecks it when it cannot move, but should it ever
+             be left downed, it idles instead of trying to drive -->
+        <li Class="ThinkNode_Subtree">
+          <treeDef>Downed</treeDef>
+        </li>
         <!-- A hostile it can see: emplace if in range, else close in -->
         <li Class="BatshitTechnology.JobGiver_TractorBombHunt" />
         <!-- Nobody about: patrol -->

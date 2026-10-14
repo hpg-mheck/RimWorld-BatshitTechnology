@@ -92,7 +92,7 @@ namespace BatshitTechnology
         protected override Job TryGiveJob(Pawn pawn)
         {
             CompTractorBomb comp = pawn?.TryGetComp<CompTractorBomb>();
-            if (comp == null || !pawn.Spawned)
+            if (comp == null || !pawn.Spawned || pawn.Downed)
             {
                 return null;
             }
