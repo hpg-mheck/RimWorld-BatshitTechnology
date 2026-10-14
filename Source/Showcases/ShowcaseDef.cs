@@ -257,8 +257,9 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Scene and narration checks: scenes need unique keys, a def with
-        /// scenes needs a director, and narration must name real scenes
-        /// when the def has any.
+        /// scenes needs a director, narration must name real scenes when
+        /// the def has any, and a "stopped" line must not wait (Stop ends
+        /// narration, so a delayed one would never be said).
         /// </summary>
         /// <returns>Each problem found.</returns>
         private IEnumerable<string> SceneErrors()
@@ -300,6 +301,13 @@ namespace BatshitTechnology.Showcases
                         + "which it does not have";
                 }
             }
+
+            foreach (NarrationCue cue in NarrationScript.DroppedAtStop(NarrationCues()))
+            {
+                yield return $"narration line for scene '{cue.Scene}' at "
+                    + $"'stopped' has delayTicks {cue.DelayTicks}, but Stop "
+                    + "ends narration, so it would never be said";
+            }
         }
     }
 
@@ -337,12 +345,17 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// The moment: "start" (the default), an outcome ("completed",
-        /// "timedOut", "skipped", "stopped"), or a worker's own name.
+        /// "timedOut", "skipped", "stopped", "failed"), or a worker's own
+        /// name.
         /// </summary>
         [NoTranslate]
         public string when = NarrationScript.Start;
 
-        /// <summary>Ticks after the moment before it is said.</summary>
+        /// <summary>
+        /// Ticks after the moment before it is said. A "stopped" line is
+        /// said only when its delay is 0: Stop ends all narration, so a
+        /// delayed one is dropped (the def's configuration check says so).
+        /// </summary>
         public int delayTicks;
 
         /// <summary>The words.</summary>

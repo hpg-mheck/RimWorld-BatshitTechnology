@@ -202,7 +202,7 @@ namespace BatshitTechnology
                 yield return command;
             }
 
-            if (DebugSettings.godMode)
+            if (DebugSettings.ShowDevGizmos)
             {
                 yield return new Command_Action
                 {

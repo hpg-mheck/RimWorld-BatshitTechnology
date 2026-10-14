@@ -28,10 +28,15 @@ namespace BatshitTechnology
         public override bool Finished =>
             Showcase.TimelineFinished(Find.TickManager.TicksGame);
 
-        /// <summary>Builds the demo base, AnyRim and the demos.</summary>
+        /// <summary>
+        /// Builds the demo base, AnyRim and the demos. In dev mode the
+        /// devices' DEV buttons show too (god mode, lent by the API and
+        /// given back when the showcase ends or the viewer leaves it).
+        /// </summary>
         /// <param name="map">The showcase's map.</param>
         public override void Setup(Map map)
         {
+            EnableDevButtons();
             Showcase.Build(map);
         }
 

@@ -22,6 +22,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
@@ -174,11 +175,14 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Describes every patch Harmony holds under this mod's id, one
-        /// line each ("Verse.OptionListingUtility.DrawOptionListing:
-        /// postfix BatshitTechnology.Showcases.ShowcaseMenuButton.Postfix"),
-        /// so the smoke runner can check that the menu button is the mod's
-        /// only patch. Empty if Harmony is missing.
+        /// Describes every Harmony patch that belongs to this mod, one line
+        /// each ("Verse.OptionListingUtility.DrawOptionListing: postfix
+        /// BatshitTechnology.Showcases.ShowcaseMenuButton.Postfix"), so the
+        /// smoke runner can check that the menu button is the mod's only
+        /// patch. A patch is the mod's if its owner id starts with the
+        /// mod's package id, whatever the rest of the id, or if its patch
+        /// method is in one of the mod's assemblies, whatever the owner.
+        /// Empty if Harmony is missing.
         /// </summary>
         /// <returns>The lines, sorted.</returns>
         public static List<string> OwnPatches()
@@ -210,6 +214,17 @@ namespace BatshitTechnology.Showcases
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static List<string> DescribeOwnPatches()
         {
+            Assembly own = typeof(ShowcaseMenuButton).Assembly;
+            ModContentPack pack = LoadedModManager.RunningModsListForReading
+                .FirstOrDefault(m => m?.assemblies?.loadedAssemblies?.Contains(own) == true);
+            var assemblies = new HashSet<Assembly>(
+                pack?.assemblies?.loadedAssemblies ?? new List<Assembly>()) { own };
+            string idPrefix = pack?.PackageId;
+            if (idPrefix.NullOrEmpty())
+            {
+                idPrefix = HarmonyId;
+            }
+
             var lines = new List<string>();
             foreach (MethodBase method in Harmony.GetAllPatchedMethods())
             {
@@ -231,12 +246,17 @@ namespace BatshitTechnology.Showcases
                 {
                     foreach (Patch patch in list ?? Array.Empty<Patch>())
                     {
-                        if (patch?.owner != HarmonyId)
+                        MethodInfo m = patch?.PatchMethod;
+                        bool ours = patch != null
+                            && ((patch.owner?.StartsWith(
+                                    idPrefix, StringComparison.OrdinalIgnoreCase) ?? false)
+                                || (m?.DeclaringType != null
+                                    && assemblies.Contains(m.DeclaringType.Assembly)));
+                        if (!ours)
                         {
                             continue;
                         }
 
-                        MethodInfo m = patch.PatchMethod;
                         lines.Add($"{target}: {kind} "
                             + $"{m?.DeclaringType?.FullName}.{m?.Name}");
                     }

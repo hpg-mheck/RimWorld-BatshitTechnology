@@ -90,6 +90,7 @@
     <Compile Include="Showcases\GameComponent_ShowcaseSession.cs" />
     <Compile Include="Showcases\ShowcaseDef.cs" />
     <Compile Include="Showcases\ShowcaseDirector.cs" />
+    <Compile Include="Showcases\ShowcaseGodMode.cs" />
     <Compile Include="Showcases\ShowcaseLauncher.cs" />
     <Compile Include="Showcases\ShowcaseLibrary.cs" />
     <Compile Include="Showcases\ShowcaseMenuButton.cs" />

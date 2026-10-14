@@ -86,7 +86,35 @@ public sealed class ShowcaseTextTests
             .Select(NarrationScript.OutcomeKey)
             .ToList();
 
-        Assert.Equal(new[] { "completed", "timedOut", "skipped", "stopped" }, keys);
+        Assert.Equal(
+            new[] { "completed", "timedOut", "skipped", "stopped", "failed" }, keys);
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => NarrationScript.OutcomeKey((SceneEnd)99));
+    }
+
+    /// <summary>
+    /// A "stopped" line with a delay would never be said, because Stop
+    /// ends all narration; the configuration check reports exactly
+    /// those, whatever their case, and nothing else.
+    /// </summary>
+    [Fact(DisplayName = "Delayed 'stopped' narration is reported as never said")]
+    public void DroppedAtStop_should_report_delayed_stopped_lines()
+    {
+        var lines = new[]
+        {
+            new NarrationCue("reactor", "stopped", 0, "said at once"),
+            new NarrationCue("reactor", "stopped", 60, "dropped"),
+            new NarrationCue("grenade", " STOPPED ", 1, "dropped too"),
+            new NarrationCue("reactor", "completed", 60, "another moment"),
+            new NarrationCue("reactor", "start", 60, "the start"),
+            null,
+        };
+
+        Assert.Equal(
+            new[] { "dropped", "dropped too" },
+            NarrationScript.DroppedAtStop(lines).Select(l => l.Text));
+        Assert.Empty(NarrationScript.DroppedAtStop(null));
+        Assert.Equal("stopped", NarrationScript.Stopped);
     }
 
     /// <summary>The caption reads "2 of 8: Title".</summary>

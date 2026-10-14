@@ -49,37 +49,44 @@ public static class ShowcaseStartRules
     public const string ShowcaseArg = "showcase";
 
     /// <summary>
-    /// The command-line flag that offers Force start outside dev mode, and
-    /// lets <c>-showcase=</c> start a showcase flagged fatal.
+    /// The command-line flag that lets <c>-showcase=</c> start a showcase
+    /// flagged fatal, as the details page's Force start does. It affects
+    /// only the command line; the menu offers Force start whenever a
+    /// fatal flag is all that stands in the way.
     /// </summary>
     public const string ForceArg = "showcaseforce";
 
     /// <summary>
-    /// Whether the details page may offer Force start at all. It is a
-    /// testing tool (docs/SHOWCASE-API.md, "Other Mods"), so it appears
-    /// only in dev mode or when the game was started with
-    /// <see cref="ForceArg"/>.
+    /// Vanilla's quick-test flag, which skips the main menu and generates
+    /// a game at once.
     /// </summary>
-    /// <param name="devMode">Whether dev mode is on.</param>
-    /// <param name="forceFlag">Whether <see cref="ForceArg"/> was passed.</param>
-    /// <returns>True if Force start may be offered.</returns>
-    public static bool MayOfferForce(bool devMode, bool forceFlag) =>
-        devMode || forceFlag;
+    public const string QuickTestArg = "quicktest";
 
     /// <summary>
     /// Whether the details page shows a Force start button for a
-    /// showcase: only a fatal flag stands in its way, and forcing may be
-    /// offered.
+    /// showcase: only a fatal flag stands in its way (docs/SHOWCASE-API.md,
+    /// "Other Mods", and Decision 3). It is offered to every player, dev
+    /// mode or not, behind a confirmation; a missing requirement can never
+    /// be forced.
     /// </summary>
     /// <param name="decision">The showcase's unforced decision.</param>
-    /// <param name="devMode">Whether dev mode is on.</param>
-    /// <param name="forceFlag">Whether <see cref="ForceArg"/> was passed.</param>
     /// <returns>True if the button should be shown.</returns>
-    public static bool ShowForceButton(
-        LaunchDecision? decision, bool devMode, bool forceFlag) =>
-        decision != null
-        && decision.CanForce
-        && MayOfferForce(devMode, forceFlag);
+    public static bool ShowForceButton(LaunchDecision? decision) =>
+        decision != null && decision.CanForce;
+
+    /// <summary>
+    /// Whether the main menu acts on <c>-showcase=</c> itself. Not when
+    /// <see cref="QuickTestArg"/> was passed: vanilla then draws the main
+    /// menu for a single frame while its own quick-test game is about to
+    /// generate, and a second generation started there would collide
+    /// with it. The quick-test game adopts the showcase instead.
+    /// </summary>
+    /// <param name="quickTestPassed">
+    /// Whether <see cref="QuickTestArg"/> was passed.
+    /// </param>
+    /// <returns>True if the main menu should start the showcase.</returns>
+    public static bool MenuActsOnCommandLine(bool quickTestPassed) =>
+        !quickTestPassed;
 
     /// <summary>
     /// Decides what a <c>-showcase=</c> command line does.

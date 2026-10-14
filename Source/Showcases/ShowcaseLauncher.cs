@@ -173,19 +173,48 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Acts on <c>-showcase=&lt;defName&gt;</c> the first time the main
-        /// menu is shown: starts the showcase, or logs why not. Called by
-        /// the main-menu button's patch, which runs exactly when the menu
-        /// is ready for input (no long event, no dialog open).
+        /// Gets how many times the main menu has reported itself shown, for
+        /// the smoke runner.
         /// </summary>
+        internal static int MainMenuShownCount { get; private set; }
+
+        /// <summary>
+        /// Gets a value indicating whether the main menu acted on the
+        /// command line (rather than leaving it to a quick-test game), for
+        /// the smoke runner.
+        /// </summary>
+        internal static bool MenuActedOnCommandLine { get; private set; }
+
+        /// <summary>
+        /// Called whenever the main menu is shown, by the main-menu
+        /// button's patch, which runs when the menu is drawn in the Entry
+        /// scene. Gives back any god mode a showcase still held (the
+        /// viewer quit the showcase game to the menu), then, the first
+        /// time, acts on <c>-showcase=&lt;defName&gt;</c>: starts the
+        /// showcase, or logs why not.
+        /// </summary>
+        /// <remarks>
+        /// Under <c>-quicktest</c> the menu leaves the command line alone.
+        /// Vanilla then draws the main menu for one frame (QuickStarter
+        /// loads the Play scene directly from UIRoot_Entry.Init, outside a
+        /// long event, RimWorld 1.6.4871) while its own quick-test game is
+        /// about to generate; launching a second generation there would
+        /// collide with it. The session adopts the showcase on the
+        /// quick-test map instead (<see cref="TakeQuickTestRequest"/>).
+        /// </remarks>
         public static void OnMainMenuShown()
         {
-            if (commandLineHandled)
+            MainMenuShownCount++;
+            ShowcaseGodMode.Restore();
+            if (commandLineHandled
+                || !ShowcaseStartRules.MenuActsOnCommandLine(
+                    GenCommandLine.CommandLineArgPassed(ShowcaseStartRules.QuickTestArg)))
             {
                 return;
             }
 
             commandLineHandled = true;
+            MenuActedOnCommandLine = true;
             string name = CommandLineDefName;
             if (name.NullOrEmpty())
             {
@@ -198,14 +227,17 @@ namespace BatshitTechnology.Showcases
         /// <summary>
         /// For a game started with both <c>-quicktest</c> and
         /// <c>-showcase=</c>: the quick test skips the main menu, so the
-        /// session adopts the command line's showcase on the quick-test map
-        /// (250 cells, any biome) instead. Returns it once, or null.
+        /// session adopts the command line's showcase on the quick-test
+        /// map, as vanilla generated it (250 cells, a random tile). The
+        /// def's <c>mapSize</c> and <c>biome</c> are not applied (that
+        /// would take a second Harmony patch); a MAPSIZE or BIOME cue says
+        /// so. Returns the request once, or null.
         /// </summary>
         /// <returns>The showcase and whether it is forced, or null.</returns>
         public static LaunchRequest TakeQuickTestRequest()
         {
             if (commandLineHandled
-                || !GenCommandLine.CommandLineArgPassed("quicktest"))
+                || !GenCommandLine.CommandLineArgPassed(ShowcaseStartRules.QuickTestArg))
             {
                 return null;
             }
@@ -225,9 +257,50 @@ namespace BatshitTechnology.Showcases
                 return null;
             }
 
+            int mapSize = Find.GameInitData?.mapSize ?? Find.CurrentMap?.Size.x ?? 0;
+            if (def.MapSizeClamped != mapSize)
+            {
+                ShowcaseLog.Cue(
+                    "MAPSIZE", $"{def.MapSizeClamped} ignored; quicktest map is {mapSize}");
+            }
+
+            if (def.biome != null)
+            {
+                ShowcaseLog.Cue("BIOME", $"{def.biome.defName} ignored; quicktest map");
+            }
+
             ShowcaseLog.Cue("LAUNCH", $"{def.defName} quicktest");
             return new LaunchRequest(
                 def, Current.Game, verdict == CommandLineVerdict.LaunchForced);
+        }
+
+        /// <summary>
+        /// Smoke-test seam: plants a launch request, as a generation would,
+        /// so the runner can check that it is handed only to its own game.
+        /// Players never reach this.
+        /// </summary>
+        /// <param name="request">The request, or null to clear it.</param>
+        internal static void PlantForTest(LaunchRequest request)
+        {
+            lock (Gate)
+            {
+                pending = request;
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether a launch request is waiting for
+        /// its game, for the smoke runner.
+        /// </summary>
+        internal static bool HasPendingForTest
+        {
+            get
+            {
+                lock (Gate)
+                {
+                    return pending != null;
+                }
+            }
         }
 
         /// <summary>

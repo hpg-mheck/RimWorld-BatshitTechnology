@@ -171,31 +171,94 @@ public sealed class ShowcaseXmlTests
     }
 
     /// <summary>
-    /// The Showcases button is the mod's one Harmony patch: one class
-    /// creates a Harmony instance, with an id under the mod's package id,
-    /// and nothing else patches.
+    /// The Showcases button is the mod's one Harmony patch. Any C# use of
+    /// Harmony needs the HarmonyLib namespace (a using, an alias, a fully
+    /// qualified name) or a Harmony attribute, so no other file may
+    /// mention either; and the button's own file makes one Harmony
+    /// instance, under the mod's package id, and one Patch call, with no
+    /// bulk or reverse patching.
     /// </summary>
     [Fact(DisplayName = "The Showcases button is the mod's only Harmony patch")]
     public void Harmony_should_patch_only_the_menu_button()
     {
         string source = Path.Combine(FixturesDirectory, "Source");
-        List<string> patching = Directory
+        string buttonFile = Path.Combine(source, "Showcases", "ShowcaseMenuButton.cs");
+        List<string> others = Directory
             .EnumerateFiles(source, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !string.Equals(
+                Path.GetFullPath(f), Path.GetFullPath(buttonFile),
+                StringComparison.OrdinalIgnoreCase))
             .Where(f => Regex.IsMatch(
-                File.ReadAllText(f),
-                @"new\s+Harmony\s*\(|\[HarmonyPatch|\.PatchAll\s*\("))
+                WithoutComments(File.ReadAllText(f)), @"\bHarmonyLib\b|\[\s*Harmony"))
             .Select(Path.GetFileName)
             .Select(n => n!)
             .ToList();
-        string button = File.ReadAllText(
-            Path.Combine(source, "Showcases", "ShowcaseMenuButton.cs"));
+        string button = WithoutComments(File.ReadAllText(buttonFile));
 
-        Assert.Equal(new[] { "ShowcaseMenuButton.cs" }, patching);
+        Assert.Empty(others);
         Assert.Contains(
             "HarmonyId = \"breakpoint8088.BatshitTechnology.",
             button,
             StringComparison.Ordinal);
         Assert.Single(Regex.Matches(button, @"\.Patch\s*\("));
+        Assert.Single(Regex.Matches(
+            button, @"new\s*(Harmony(Lib\.Harmony)?)?\s*\(\s*HarmonyId\s*\)"));
+        Assert.DoesNotMatch(
+            @"PatchAll|PatchCategory|CreateClassProcessor|CreateProcessor|ReversePatch"
+                + @"|\[\s*Harmony",
+            button);
+    }
+
+    /// <summary>
+    /// God mode is a static flag that outlives a showcase game, so only the
+    /// Showcase API's loan sets it (Source/Showcases/ShowcaseGodMode.cs),
+    /// besides the smoke runner, which sets up and restores its own cases;
+    /// and every DEV button the mod draws needs dev mode as well, through
+    /// DebugSettings.ShowDevGizmos, never god mode alone.
+    /// </summary>
+    [Fact(DisplayName = "Only the showcase's loan sets god mode; DEV buttons need dev mode")]
+    public void God_mode_should_be_set_only_by_the_loan()
+    {
+        string source = Path.Combine(FixturesDirectory, "Source");
+        var files = Directory
+            .EnumerateFiles(source, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar))
+            .Select(f => (Name: Path.GetFileName(f), Code: WithoutComments(File.ReadAllText(f))))
+            .ToList();
+
+        List<string> setters = files
+            .Where(f => Regex.IsMatch(f.Code, @"DebugSettings\.godMode\s*=(?!=)"))
+            .Select(f => f.Name)
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .ToList();
+        List<string> devButtons = files
+            .Where(f => f.Code.Contains("\"DEV:", StringComparison.Ordinal))
+            .Select(f => f.Name)
+            .ToList();
+
+        Assert.Equal(new[] { "ShowcaseGodMode.cs", "SmokeTestShowcases.cs" }, setters);
+        Assert.NotEmpty(devButtons);
+        Assert.All(files.Where(f => devButtons.Contains(f.Name)), f =>
+        {
+            Assert.Contains("DebugSettings.ShowDevGizmos", f.Code, StringComparison.Ordinal);
+            Assert.DoesNotMatch(@"if\s*\(\s*DebugSettings\.godMode\b", f.Code);
+        });
+    }
+
+    /// <summary>
+    /// The worker-class check matches a namespace exactly, and ignores
+    /// comments: a class in BatshitTechnology.Showcases is not a class in
+    /// BatshitTechnology, so a def naming the wrong namespace fails here
+    /// rather than in game.
+    /// </summary>
+    [Fact(DisplayName = "The worker-class check matches the namespace exactly")]
+    public void ClassDeclared_should_match_the_namespace_exactly()
+    {
+        Assert.True(ClassDeclared("BatshitTechnology.Showcases.ShowcaseDirector"));
+        Assert.True(ClassDeclared("BatshitTechnology.BatshitShowcaseWorker"));
+        Assert.False(ClassDeclared("BatshitTechnology.ShowcaseDirector"));
+        Assert.False(ClassDeclared("BatshitTechnology.Showcases.BatshitShowcaseWorker"));
+        Assert.False(ClassDeclared("BatshitTechnology.NoSuchWorker"));
     }
 
     /// <summary>The XML element naming a ShowcaseDef.</summary>
@@ -348,8 +411,10 @@ public sealed class ShowcaseXmlTests
                 ?? Enumerable.Empty<XElement>());
 
     /// <summary>
-    /// Whether the game code declares a class by its full name: a file in
-    /// the class's namespace declares a class of that short name.
+    /// Whether the game code declares a class by its full name: a file
+    /// whose namespace is exactly the class's (block or file-scoped, so
+    /// "BatshitTechnology" never matches "BatshitTechnology.Showcases")
+    /// declares a class of that short name. Comments are ignored.
     /// </summary>
     /// <param name="fullName">The namespace-qualified class name.</param>
     /// <returns>True if it is declared.</returns>
@@ -362,9 +427,23 @@ public sealed class ShowcaseXmlTests
             .EnumerateFiles(Path.Combine(FixturesDirectory, "Source"), "*.cs",
                 SearchOption.AllDirectories)
             .Select(File.ReadAllText)
-            .Any(text => Regex.IsMatch(text, @"namespace\s+" + Regex.Escape(ns) + @"\b")
-                && Regex.IsMatch(text, @"\bclass\s+" + Regex.Escape(shortName) + @"\b"));
+            .Select(WithoutComments)
+            .Any(code => Regex.IsMatch(
+                    code, @"\bnamespace\s+" + Regex.Escape(ns) + @"\s*[;{]")
+                && Regex.IsMatch(
+                    code, @"\bclass\s+" + Regex.Escape(shortName) + @"\b"));
     }
+
+    /// <summary>
+    /// C# source without its comments (line, block and XML documentation
+    /// comments), so a name mentioned only in prose never counts as code.
+    /// String literals are left alone; a comment marker inside one is
+    /// rare enough in this code base not to matter.
+    /// </summary>
+    /// <param name="code">The source text.</param>
+    /// <returns>The text with comments removed.</returns>
+    private static string WithoutComments(string code) =>
+        Regex.Replace(code, @"//[^\r\n]*|/\*.*?\*/", string.Empty, RegexOptions.Singleline);
 
     /// <summary>A PNG's width and height, from its IHDR chunk.</summary>
     /// <param name="file">The PNG.</param>

@@ -186,14 +186,31 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Stops the showcase: no more camera moves or narration. The game
-        /// keeps running; the colony is the viewer's. Subclasses that
-        /// override this must call the base.
+        /// Stops the showcase. Any narration lines still queued are
+        /// dropped, and there are no more camera moves or narration
+        /// afterwards. The game keeps running; the colony is the viewer's.
+        /// Subclasses that override this must call the base.
+        /// (<see cref="ShowcaseDirector"/> first ends its running scene as
+        /// stopped, which says that scene's "stopped" lines whose delay is
+        /// 0; a delayed one is dropped here with the rest.)
         /// </summary>
         public virtual void Stop()
         {
             Stopped = true;
             queued.Clear();
+        }
+
+        /// <summary>
+        /// Turns on the developer buttons of the devices a showcase stages,
+        /// by lending it god mode, but only in dev mode, where those
+        /// buttons show at all (<c>DebugSettings.ShowDevGizmos</c>). The
+        /// API gives god mode back when the showcase stops or finishes and
+        /// on every way out of the showcase game, so it never reaches the
+        /// player's own colonies. Call it from <see cref="Setup"/>.
+        /// </summary>
+        protected void EnableDevButtons()
+        {
+            ShowcaseGodMode.Lend();
         }
 
         /// <summary>

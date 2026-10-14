@@ -11,10 +11,9 @@ namespace BatshitTechnology.Showcases
     /// <summary>
     /// One showcase: its preview, description, running time and
     /// requirements, any loaded mod it flags, and Start and Back. A fatal
-    /// flag refuses Start with the reason; Force start (behind a
-    /// confirmation) is offered only in dev mode or when the game was
-    /// started with <c>-showcaseforce</c>, since it exists for testing and
-    /// for reproducing the crash.
+    /// flag refuses Start with the reason, and Force start (behind a
+    /// confirmation) launches it anyway, for testing and for reproducing
+    /// the crash (docs/SHOWCASE-API.md, "Other Mods").
     /// </summary>
     public class Dialog_ShowcaseDetails : ShowcaseWindow
     {
@@ -53,11 +52,9 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Gets a value indicating whether Force start is offered: only a
-        /// fatal flag stands in the way, and dev mode is on or the game was
-        /// started with <c>-showcaseforce</c>.
+        /// fatal flag stands in the way. Dev mode does not matter.
         /// </summary>
-        public bool ForceOffered => ShowcaseStartRules.ShowForceButton(
-            decision, Prefs.DevMode, ShowcaseLauncher.ForceFlagPassed);
+        public bool ForceOffered => ShowcaseStartRules.ShowForceButton(decision);
 
         /// <summary>
         /// Gets the lines under the preview: running time, requirements,

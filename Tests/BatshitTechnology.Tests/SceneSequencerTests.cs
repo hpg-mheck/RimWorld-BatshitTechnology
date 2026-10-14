@@ -175,6 +175,32 @@ public sealed class SceneSequencerTests
     }
 
     /// <summary>
+    /// Fail ends the running scene as Failed on the same tick, before its
+    /// minimum and whatever its settle time, and starts the next; it does
+    /// nothing when no scene runs.
+    /// </summary>
+    [Fact(DisplayName = "Fail ends a scene at once and starts the next")]
+    public void Fail_should_end_scene_at_once_and_start_next()
+    {
+        var sequencer = new SceneSequencer(new[]
+        {
+            new SceneTiming(500, 1000, 200), new SceneTiming(0, 1000),
+        });
+        Assert.False(sequencer.Fail(0).Any);
+        sequencer.Advance(0, false);
+
+        SequencerStep step = sequencer.Fail(3);
+
+        Assert.Equal(0, step.EndedScene);
+        Assert.Equal(SceneEnd.Failed, step.Ending);
+        Assert.Equal(1, step.StartedScene);
+        Assert.Equal(3, sequencer.SceneStartTick);
+        Assert.True(sequencer.Fail(4).Finished);
+        Assert.Equal(new[] { SceneEnd.Failed, SceneEnd.Failed }, sequencer.Endings);
+        Assert.False(sequencer.Fail(5).Any);
+    }
+
+    /// <summary>
     /// Stop ends the running scene as Stopped, and no later scene runs.
     /// </summary>
     [Fact(DisplayName = "Stop ends the showcase; later scenes never run")]

@@ -5,7 +5,8 @@
 // condition holds or it times out. The Core SceneSequencer decides when
 // scenes end; a Core BeatSchedule hands out each scene's camera shots.
 // The director only executes those decisions, so its rules are unit
-// tested without RimWorld.
+// tested without RimWorld. A scene whose own code throws is logged once
+// and ends Failed on that tick (SceneSequencer.Fail); the tour moves on.
 
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,14 @@ namespace BatshitTechnology.Showcases
         /// <summary>The zoom of a scene's implicit opening shot.</summary>
         private const float DefaultZoom = 24f;
 
+        /// <summary>
+        /// The length of the placeholder pan a cut starts, in real seconds,
+        /// only to replace any glide still running (see
+        /// <see cref="Frame"/>). Positive, so the pan never divides zero
+        /// by zero.
+        /// </summary>
+        private const float CutPanSeconds = 0.01f;
+
         /// <summary>This run's copies of the def's scenes, in order.</summary>
         private readonly List<ShowcaseScene> scenes = new List<ShowcaseScene>();
 
@@ -35,6 +44,12 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>Scenes whose Tick or IsDone threw, by index.</summary>
         private readonly HashSet<int> faulted = new HashSet<int>();
+
+        /// <summary>
+        /// Scenes whose set-up threw, by index: they never began, so they
+        /// are neither ended nor narrated.
+        /// </summary>
+        private readonly HashSet<int> neverBegan = new HashSet<int>();
 
         /// <summary>Decides when scenes begin and end.</summary>
         private SceneSequencer sequencer;
@@ -114,6 +129,7 @@ namespace BatshitTechnology.Showcases
             scenes.Clear();
             shots.Clear();
             faulted.Clear();
+            neverBegan.Clear();
             foreach (ShowcaseScene template in
                 def?.scenes ?? new List<ShowcaseScene>())
             {
@@ -141,7 +157,9 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Runs the current scene for one tick, frames any shot that has
-        /// come due, and lets the sequencer decide whether it ends.
+        /// come due, and lets the sequencer decide whether it ends. A scene
+        /// whose Tick or IsDone throws ends Failed on this tick, and the
+        /// next scene begins.
         /// </summary>
         public override void Tick()
         {
@@ -156,8 +174,17 @@ namespace BatshitTechnology.Showcases
             {
                 int index = sequencer.Current;
                 RunSceneTick(index);
-                FrameDueShots(index, now);
-                conditionMet = SceneIsDone(index);
+                if (!faulted.Contains(index))
+                {
+                    FrameDueShots(index, now);
+                    conditionMet = SceneIsDone(index);
+                }
+
+                if (faulted.Contains(index))
+                {
+                    Apply(sequencer.Fail(now), now);
+                    return;
+                }
             }
 
             Apply(sequencer.Advance(now, conditionMet), now);
@@ -179,7 +206,10 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Stops the tour: the running scene ends as stopped, and no later
-        /// scene runs. The camera and the colony are the viewer's.
+        /// scene runs. The camera and the colony are the viewer's. The
+        /// scene's "stopped" lines whose delay is 0 are said as it ends;
+        /// a delayed one is dropped, since Stop ends all narration (the
+        /// def's configuration check warns about those).
         /// </summary>
         public override void Stop()
         {
@@ -219,7 +249,9 @@ namespace BatshitTechnology.Showcases
         /// <summary>
         /// Begins a scene: sets it up, logs its cue, selects its subject,
         /// frames its opening shots and says its opening lines. A scene
-        /// whose set-up throws is skipped, with the reason logged.
+        /// whose set-up throws never begins: the error is logged once, a
+        /// SKIPPED cue gives the reason, and it ends Failed with no SCENE
+        /// or END cue and no narration, so END always follows a SCENE.
         /// </summary>
         /// <param name="index">The scene's index.</param>
         /// <param name="now">The current tick.</param>
@@ -236,7 +268,8 @@ namespace BatshitTechnology.Showcases
                 Log.Error($"{ShowcaseLog.Prefix} scene '{scene.key}' of "
                     + $"{def?.defName} could not set up: {e}");
                 ShowcaseLog.Cue("SKIPPED", $"{scene.key}: set-up failed");
-                Apply(sequencer.Skip(now), now);
+                neverBegan.Add(index);
+                Apply(sequencer.Fail(now), now);
                 return;
             }
 
@@ -248,12 +281,19 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Ends a scene: tells it how it ended, logs the cue and says its
-        /// outcome lines.
+        /// outcome lines. A scene that never began (its set-up threw) is
+        /// not ended at all.
         /// </summary>
         /// <param name="index">The scene's index.</param>
         /// <param name="ending">How it ended.</param>
         private void EndScene(int index, SceneEnd ending)
         {
+            beats = null;
+            if (neverBegan.Contains(index))
+            {
+                return;
+            }
+
             ShowcaseScene scene = scenes[index];
             string outcome = NarrationScript.OutcomeKey(ending);
             try
@@ -269,12 +309,12 @@ namespace BatshitTechnology.Showcases
 
             ShowcaseLog.Cue("END", $"{scene.key} {outcome}");
             Narrate(scene.key, outcome, SafeLookTargets(scene));
-            beats = null;
         }
 
         /// <summary>
         /// Runs a scene's own tick. A scene that throws is logged once and
-        /// treated as finished, so one bad scene cannot stall the tour.
+        /// marked faulted; <see cref="Tick"/> then ends it Failed, so one
+        /// bad scene cannot stall the tour.
         /// </summary>
         /// <param name="index">The scene's index.</param>
         private void RunSceneTick(int index)
@@ -295,8 +335,9 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Asks a scene whether its action has played out; a faulted scene
-        /// always has.
+        /// Asks a scene whether its action has played out. A scene whose
+        /// check throws is logged once and marked faulted (and reported as
+        /// not done; <see cref="Tick"/> ends it Failed).
         /// </summary>
         /// <param name="index">The scene's index.</param>
         /// <returns>True when the scene may end.</returns>
@@ -304,7 +345,7 @@ namespace BatshitTechnology.Showcases
         {
             if (faulted.Contains(index))
             {
-                return true;
+                return false;
             }
 
             try
@@ -314,7 +355,7 @@ namespace BatshitTechnology.Showcases
             catch (Exception e)
             {
                 Fault(index, "IsDone", e);
-                return true;
+                return false;
             }
         }
 
@@ -352,13 +393,24 @@ namespace BatshitTechnology.Showcases
         /// showcase's map: a glide or a cut, to the scene's focus (or the
         /// map's centre) plus the shot's offset, at the shot's zoom.
         /// </summary>
+        /// <remarks>
+        /// A cut must also cancel any glide still running. CameraDriver
+        /// keeps a glide in a private panner that re-applies its position
+        /// and zoom every frame until it ends, and JumpToCurrentMapLoc and
+        /// SetRootSize do not touch it (RimWorld 1.6.4871), so a cut made
+        /// within a glide's time (a Skip, or a glide then a cut) was undone
+        /// on the next frame. The cut therefore jumps, then starts a pan
+        /// from that framing to itself: it replaces the old glide, holds
+        /// still, and since the zoom already matches, RootSize's
+        /// zoom-to-mouse nudge never runs.
+        /// </remarks>
         /// <param name="scene">The scene.</param>
         /// <param name="shot">The shot.</param>
         private void Frame(ShowcaseScene scene, ShowcaseShot shot)
         {
             Map map = Map;
             if (map == null || Find.CurrentMap != map
-                || WorldRendererUtility.WorldRendered)
+                || WorldRendererUtility.WorldSelected)
             {
                 return;
             }
@@ -383,8 +435,10 @@ namespace BatshitTechnology.Showcases
                 }
                 else
                 {
-                    camera.JumpToCurrentMapLoc(cell);
+                    Vector3 loc = cell.ToVector3Shifted();
+                    camera.JumpToCurrentMapLoc(loc);
                     camera.SetRootSize(zoom);
+                    camera.PanToMapLocAndSize(loc, zoom, CutPanSeconds);
                 }
             }
             catch (Exception e)

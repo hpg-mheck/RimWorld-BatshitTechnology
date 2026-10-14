@@ -45,24 +45,32 @@ public sealed class ShowcaseStartRulesTests
     private static LaunchDecision Decide(ShowcaseEntry entry, bool force) =>
         LaunchDecision.Evaluate(entry, Loaded, force);
 
-    /// <summary>Force start is a testing tool, hidden from players.</summary>
-    /// <param name="devMode">Whether dev mode is on.</param>
-    /// <param name="flag">Whether -showcaseforce was passed.</param>
-    /// <param name="expected">Whether Force may be offered.</param>
-    [Theory(DisplayName = "Force start is offered only in dev mode or with -showcaseforce")]
-    [InlineData(false, false, false)]
-    [InlineData(true, false, true)]
-    [InlineData(false, true, true)]
-    [InlineData(true, true, true)]
-    public void MayOfferForce_should_need_dev_mode_or_flag(
-        bool devMode, bool flag, bool expected)
+    /// <summary>
+    /// Force start is offered for a fatal flag to every player, dev mode
+    /// or not, as the specification's Decision 3 settles: the rule takes
+    /// no dev-mode or command-line input at all.
+    /// </summary>
+    [Fact(DisplayName = "Force start is offered for a fatal flag, whatever the dev mode")]
+    public void ShowForceButton_should_not_depend_on_dev_mode()
     {
-        Assert.Equal(expected, ShowcaseStartRules.MayOfferForce(devMode, flag));
+        LaunchDecision fatal = Decide(
+            Entry(flagged: "some.author.crashmod",
+                severity: ShowcaseSeverity.Fatal),
+            force: false);
+
+        Assert.True(ShowcaseStartRules.ShowForceButton(fatal));
+        Assert.Single(
+            typeof(ShowcaseStartRules).GetMethods(),
+            m => m.Name == nameof(ShowcaseStartRules.ShowForceButton)
+                && m.GetParameters().Length == 1);
+        Assert.DoesNotContain(
+            typeof(ShowcaseStartRules).GetMethods(),
+            m => m.Name == "MayOfferForce");
     }
 
     /// <summary>
-    /// The Force button appears only for a fatal flag, and only where
-    /// forcing may be offered.
+    /// The Force button appears only for a fatal flag: never for a
+    /// warning, a missing requirement, or no decision.
     /// </summary>
     [Fact(DisplayName = "Force button appears only for a refused showcase")]
     public void ShowForceButton_should_need_a_refusal()
@@ -76,12 +84,25 @@ public sealed class ShowcaseStartRulesTests
         LaunchDecision missing = Decide(
             Entry(required: "ludeon.rimworld.odyssey"), force: false);
 
-        Assert.True(ShowcaseStartRules.ShowForceButton(fatal, true, false));
-        Assert.True(ShowcaseStartRules.ShowForceButton(fatal, false, true));
-        Assert.False(ShowcaseStartRules.ShowForceButton(fatal, false, false));
-        Assert.False(ShowcaseStartRules.ShowForceButton(warned, true, true));
-        Assert.False(ShowcaseStartRules.ShowForceButton(missing, true, true));
-        Assert.False(ShowcaseStartRules.ShowForceButton(null, true, true));
+        Assert.True(ShowcaseStartRules.ShowForceButton(fatal));
+        Assert.False(ShowcaseStartRules.ShowForceButton(warned));
+        Assert.False(ShowcaseStartRules.ShowForceButton(missing));
+        Assert.False(ShowcaseStartRules.ShowForceButton(null));
+    }
+
+    /// <summary>
+    /// The main menu starts a <c>-showcase=</c> showcase itself, except
+    /// under <c>-quicktest</c>, whose own game adopts it instead.
+    /// </summary>
+    /// <param name="quickTest">Whether -quicktest was passed.</param>
+    /// <param name="expected">Whether the menu acts.</param>
+    [Theory(DisplayName = "The main menu leaves -showcase= to a quick-test game")]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public void MenuActsOnCommandLine_should_yield_to_quicktest(
+        bool quickTest, bool expected)
+    {
+        Assert.Equal(expected, ShowcaseStartRules.MenuActsOnCommandLine(quickTest));
     }
 
     /// <summary>A blank request means no command-line showcase.</summary>
@@ -153,10 +174,11 @@ public sealed class ShowcaseStartRulesTests
     }
 
     /// <summary>The command-line keys are the documented ones.</summary>
-    [Fact(DisplayName = "Command-line keys are showcase and showcaseforce")]
+    [Fact(DisplayName = "Command-line keys are showcase, showcaseforce and quicktest")]
     public void Keys_should_match_the_documentation()
     {
         Assert.Equal("showcase", ShowcaseStartRules.ShowcaseArg);
         Assert.Equal("showcaseforce", ShowcaseStartRules.ForceArg);
+        Assert.Equal("quicktest", ShowcaseStartRules.QuickTestArg);
     }
 }

@@ -7,8 +7,11 @@
 // waits on, and keeps the game from autosaving, so a showcase never
 // overwrites the player's autosave slots. Nothing about the session is
 // saved: a showcase game the player chooses to save loads as an ordinary
-// game. Two internal seams, AdoptForTest and ReleaseForTest, let the smoke
-// runner (Source/SmokeTestShowcases.cs) run test showcases in its own game.
+// game. God mode a showcase borrowed for its developer buttons
+// (ShowcaseGodMode) is given back when the showcase stops or finishes,
+// and again whenever a game that is not a showcase starts or loads. Two
+// internal seams, AdoptForTest and ReleaseForTest, let the smoke runner
+// (Source/SmokeTestShowcases.cs) run test showcases in its own game.
 
 using System;
 using System.Linq;
@@ -132,12 +135,14 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Gets the tick the closing message was shown on, or -1 if it has
-        /// not been shown.
+        /// not been shown (or showing it failed).
         /// </summary>
         public int FarewellTick => farewellTick;
 
         /// <summary>
-        /// Takes the launcher's request for this game, if there is one.
+        /// Takes the launcher's request for this game, if there is one. A
+        /// game that is not a showcase gives back any god mode an earlier
+        /// showcase still held.
         /// </summary>
         public override void StartedNewGame()
         {
@@ -145,12 +150,27 @@ namespace BatshitTechnology.Showcases
                 ?? ShowcaseLauncher.TakeQuickTestRequest();
             if (request == null)
             {
+                ShowcaseGodMode.Restore();
                 return;
             }
 
             def = request.Def;
             forced = request.Forced;
             ShowcaseLog.Cue("GAME", def.defName);
+        }
+
+        /// <summary>
+        /// A loaded game is never a showcase game (nothing about a session
+        /// is saved), so it gives back any god mode an earlier showcase
+        /// still held: loading from a showcase game's own menu skips the
+        /// main menu. A launch request left behind is dropped too; it can
+        /// only be stale, since a showcase launches only from the main
+        /// menu and loading a save is itself a long event.
+        /// </summary>
+        public override void LoadedGame()
+        {
+            ShowcaseLauncher.TakeRequestFor(game);
+            ShowcaseGodMode.Restore();
         }
 
         /// <summary>
@@ -226,6 +246,7 @@ namespace BatshitTechnology.Showcases
             {
                 ended = true;
                 farewellPending = true;
+                ShowcaseGodMode.Restore();
                 ShowcaseLog.Cue("FINISHED", def.defName);
                 SayFarewellWhenQuiet();
             }
@@ -238,12 +259,17 @@ namespace BatshitTechnology.Showcases
         /// take part in every event, as vanilla's do, so their control ids
         /// stay in step, while the background is painted on repaint only.
         /// Everything is guarded; one failure is logged and the bar is
-        /// hidden, and the text and colour state is always restored.
+        /// hidden, and the text and colour state is always restored. The
+        /// bar hides while the world map is open, tested as vanilla's map
+        /// interface does (WorldRendererUtility.DrawingMap, RimWorld
+        /// 1.6.4871): WorldRendered is also true on a map drawn over the
+        /// world (Odyssey's space maps), where the bar must stay. Screenshot
+        /// mode, which the gravship cutscene turns on, hides it as well.
         /// </summary>
         public override void GameComponentOnGUI()
         {
             if (guiFailed || !Running || Event.current == null
-                || Find.CurrentMap == null || WorldRendererUtility.WorldRendered
+                || Find.CurrentMap == null || !WorldRendererUtility.DrawingMap
                 || Find.UIRoot?.screenshotMode?.FiltersCurrentEvent == true)
             {
                 return;
@@ -295,7 +321,8 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Stops the showcase for good. The game keeps running; the camera
-        /// and the colony are the viewer's.
+        /// and the colony are the viewer's, and any god mode the showcase
+        /// borrowed is given back.
         /// </summary>
         /// <param name="byViewer">Whether the viewer asked for it.</param>
         public void StopShowcase(bool byViewer)
@@ -317,6 +344,7 @@ namespace BatshitTechnology.Showcases
                     + $"stopping: {e}");
             }
 
+            ShowcaseGodMode.Restore();
             ShowcaseLog.Cue("STOPPED", def.defName);
             if (byViewer)
             {
@@ -366,9 +394,13 @@ namespace BatshitTechnology.Showcases
             ResetRun();
         }
 
-        /// <summary>Forgets the showcase and everything about its run.</summary>
+        /// <summary>
+        /// Forgets the showcase and everything about its run, giving back
+        /// any god mode it borrowed.
+        /// </summary>
         private void ResetRun()
         {
+            ShowcaseGodMode.Restore();
             def = null;
             forced = false;
             worker = null;
@@ -400,6 +432,7 @@ namespace BatshitTechnology.Showcases
             catch (Exception e)
             {
                 ended = true;
+                ShowcaseGodMode.Restore();
                 ShowcaseLog.Cue("FAILED", def.defName);
                 Log.Error($"{ShowcaseLog.Prefix} {def.defName} could not set "
                     + $"up: {e}");
@@ -430,8 +463,10 @@ namespace BatshitTechnology.Showcases
             }
 
             farewellPending = false;
-            farewellTick = Find.TickManager.TicksGame;
-            Message("BT_Showcases_Finished".Translate());
+            if (Message("BT_Showcases_Finished".Translate()))
+            {
+                farewellTick = Find.TickManager.TicksGame;
+            }
         }
 
         /// <summary>
@@ -547,16 +582,22 @@ namespace BatshitTechnology.Showcases
         /// Shows a session message, never throwing.
         /// </summary>
         /// <param name="text">The text.</param>
-        private static void Message(string text)
+        /// <returns>
+        /// True if the message was shown; false if showing it threw (the
+        /// failure is logged as a warning).
+        /// </returns>
+        private static bool Message(string text)
         {
             try
             {
                 Messages.Message(text, MessageTypeDefOf.NeutralEvent, false);
+                return true;
             }
             catch (Exception e)
             {
                 Log.Warning($"{ShowcaseLog.Prefix} could not show a message: "
                     + e.Message);
+                return false;
             }
         }
     }

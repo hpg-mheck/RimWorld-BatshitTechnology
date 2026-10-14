@@ -49,8 +49,11 @@ namespace BatshitTechnology
         /// <param name="map">The showcase's fresh map.</param>
         internal static void Build(Map map)
         {
+            // God mode, for the devices' DEV buttons, is lent by the
+            // Showcase API in BatshitShowcaseWorker.Setup, in dev mode only,
+            // and given back when the showcase ends: it is a static flag
+            // that would otherwise follow the player into their own games.
             FinishResearch();
-            DebugSettings.godMode = true; // show the DEV buttons
             IntVec3 center = map.Center;
             Clear(map, CellRect.CenteredOn(center, 16));
 
@@ -154,6 +157,8 @@ namespace BatshitTechnology
             throwAtTick = -1;
             tourAtTick = -1;
             watching = null;
+            grenadier = null;
+            volunteer = null;
             idleSinceTick = -1;
         }
 
@@ -405,8 +410,22 @@ namespace BatshitTechnology
         /// </summary>
         private const int GrenadeDemoDelayTicks = 1200;
 
+        /// <summary>
+        /// The colonist who throws the grenade, until the throw. Statics
+        /// outlive the game (vanilla empties only the map and world when a
+        /// game ends), and a pawn reaches much of its game's object graph,
+        /// so this is cleared as soon as it is no longer needed: at the
+        /// throw, on Stop, and before each new demo.
+        /// </summary>
         private static Pawn grenadier;
+
+        /// <summary>
+        /// The colonist volunteering inside the junk pile, until the throw;
+        /// cleared as <see cref="grenadier"/> is.
+        /// </summary>
         private static Pawn volunteer;
+
+        /// <summary>The junk pile's centre, where the grenade is thrown.</summary>
         private static IntVec3 grenadeTarget;
         private static int throwAtTick = -1;
 
@@ -583,6 +602,8 @@ namespace BatshitTechnology
         private static void BuildGrenadeDemo(Map map, IntVec3 baseCenter, int throwAt)
         {
             throwAtTick = -1; // set below once a grenadier is ready
+            grenadier = null; // never an earlier game's pawns
+            volunteer = null;
             grenadeTarget = baseCenter + new IntVec3(-25, 0, 0);
             Clear(map, CellRect.CenteredOn(grenadeTarget, 13));
             ThingDef stool = DefDatabase<ThingDef>.GetNamedSilentFail("Stool");
@@ -654,6 +675,8 @@ namespace BatshitTechnology
             Job job = JobMaker.MakeJob(JobDefOf.AttackStatic, grenadeTarget);
             job.maxNumStaticAttacks = 1;
             grenadier.jobs.TryTakeOrderedJob(job, JobTag.Misc);
+            grenadier = null; // nothing reads them after the throw
+            volunteer = null;
             Log.Message("[BT-SHOWCASE] THROW"); // a cue for screen-capture tooling
         }
 

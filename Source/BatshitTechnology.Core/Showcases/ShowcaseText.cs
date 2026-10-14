@@ -55,6 +55,9 @@ public static class NarrationScript
     /// <summary>The moment a scene begins.</summary>
     public const string Start = "start";
 
+    /// <summary>The moment the viewer stops the showcase during a scene.</summary>
+    public const string Stopped = "stopped";
+
     /// <summary>
     /// The lines for one scene and moment (keys compare without regard to
     /// case), by delay, ties in declared order. Blank lines are dropped.
@@ -103,6 +106,22 @@ public static class NarrationScript
             .ToList();
     }
 
+    /// <summary>
+    /// The "stopped" lines that would never be said, for a def's
+    /// configuration check. Stop ends all narration at once: a scene's
+    /// "stopped" lines with no delay are said as it ends, and any with a
+    /// delay are dropped with the rest of the queue. Moments compare
+    /// without regard to case.
+    /// </summary>
+    /// <param name="lines">Every line the def declares; may be null.</param>
+    /// <returns>The "stopped" lines with a delay, in declared order.</returns>
+    public static IReadOnlyList<NarrationCue> DroppedAtStop(
+        IEnumerable<NarrationCue?>? lines) =>
+        (lines ?? Enumerable.Empty<NarrationCue?>())
+            .Where(l => l != null && Same(l.When, Stopped) && l.DelayTicks > 0)
+            .Select(l => l!)
+            .ToList();
+
     /// <summary>Whether two keys match, ignoring case.</summary>
     /// <param name="a">One key.</param>
     /// <param name="b">The other.</param>
@@ -112,13 +131,21 @@ public static class NarrationScript
 
     /// <summary>The moment key for an ending, for outcome lines.</summary>
     /// <param name="ending">How the scene ended.</param>
-    /// <returns>"completed", "timedOut", "skipped" or "stopped".</returns>
+    /// <returns>
+    /// "completed", "timedOut", "skipped", "stopped" or "failed".
+    /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown for a value that is not a <see cref="SceneEnd"/>.
+    /// </exception>
     public static string OutcomeKey(SceneEnd ending) => ending switch
     {
         SceneEnd.Completed => "completed",
         SceneEnd.TimedOut => "timedOut",
         SceneEnd.Skipped => "skipped",
-        _ => "stopped",
+        SceneEnd.Stopped => Stopped,
+        SceneEnd.Failed => "failed",
+        _ => throw new ArgumentOutOfRangeException(
+            nameof(ending), ending, "Unknown scene ending."),
     };
 }
 

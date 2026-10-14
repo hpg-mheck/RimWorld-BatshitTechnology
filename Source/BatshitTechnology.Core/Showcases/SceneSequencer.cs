@@ -59,6 +59,12 @@ public enum SceneEnd
 
     /// <summary>The viewer stopped the whole showcase during it.</summary>
     Stopped,
+
+    /// <summary>
+    /// It failed: its set-up, its tick or its wait-until check threw, so
+    /// the director moved on to the next scene at once.
+    /// </summary>
+    Failed,
 }
 
 /// <summary>Where a sequencer is in its scenes.</summary>
@@ -257,6 +263,19 @@ public sealed class SceneSequencer
     public SequencerStep Skip(int now) =>
         State == SequencerState.Running
             ? EndCurrent(SceneEnd.Skipped, now)
+            : SequencerStep.None;
+
+    /// <summary>
+    /// Fails the running scene, because its own code threw: it ends
+    /// <see cref="SceneEnd.Failed"/> and the next begins at once, whatever
+    /// its minimum or settle time, so one bad scene cannot stall the
+    /// tour. Does nothing unless a scene is running.
+    /// </summary>
+    /// <param name="now">The current game tick.</param>
+    /// <returns>What happened.</returns>
+    public SequencerStep Fail(int now) =>
+        State == SequencerState.Running
+            ? EndCurrent(SceneEnd.Failed, now)
             : SequencerStep.None;
 
     /// <summary>

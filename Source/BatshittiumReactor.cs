@@ -126,7 +126,7 @@ namespace BatshitTechnology
                 yield return g;
             }
 
-            if (DebugSettings.godMode && burnTicksLeft > 0)
+            if (DebugSettings.ShowDevGizmos && burnTicksLeft > 0)
             {
                 yield return new Command_Action
                 {
