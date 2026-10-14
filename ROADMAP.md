@@ -223,9 +223,8 @@ Between phases, or alongside them (not phases themselves):
   stay on 1.6 until 1.7 is released.
 - **Art:** hand-drawn replacements for the procedural sprites, if wanted.
 - **Def validation in the build:** done 2026-10-14 (the ValidateDefs
-  target; `docs/AI-DECISIONS.txt`). Still to do: document the pattern in the
-  RimWorld pack's Def-validation knack and, with an ECR, in FieldManual's
-  `dotnet/framework-builds` knack.
+  target; `docs/AI-DECISIONS.txt`), documented in the RimWorld pack and
+  offered to FieldManual as #3 (BT-ECR-2026-012).
 - **Records migration:** proposal BT-PROP-2026-001 (moving these records
   into FieldManual's layout) awaits a decision; proposed for right after
   a phase merges.
