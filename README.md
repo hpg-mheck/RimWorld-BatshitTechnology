@@ -84,7 +84,8 @@ for one patch only: the main menu's **Showcases** button.
 ## Showcases
 
 To see everything at once, choose **Showcases** at the bottom of the main
-menu, then **Batshit Technology**, then **Demo base**, then **Start**. The
+menu, then **Batshit Technology**, then **Living better with
+batshittium**, then **Start**. The
 showcase runs in a fresh, throwaway colony that never autosaves, so your
 saves are untouched unless you save it yourself. A bar at the top of the
 screen offers **Stop**, which ends the showcase and leaves the colony,
@@ -96,26 +97,40 @@ list: it starts RimWorld with an isolated data folder and
 `-showcase=BT_Showcase`, which the main menu acts on as if Start had been
 pressed, generating a quick-test-style map (it needs Harmony too). It
 exits with an error if the showcase is refused or fails, or if the mod
-logs an error before the demo is ready. The showcase builds a
-working demo base: reactor, stocked replicator, Transmogrifier with a bill,
-a colonist in the Brain Squeezer, the Artificer, and a Ballista firing
-explosive volleys from chained magazines. The camera starts on a lone
-replicator in the most open far corner, which arms its self-destruct five
-seconds in, well clear of the base; a lone reactor in the next corner
-follows twenty seconds later, and then a colonist throws an Ergonomic
-Singularity Grenade at a junk pile west of the base. Last, the camera
-visits **AnyRim**, a small test town in the north-west built from Nevada
-Test Site history: one Main Street, three model homes in wood, brick and
-steel, a five-and-dime selling singularity grenades, a funeral home with
-a reserved plot for everyone, a bank vault, a town hall, Public Works
-with the Batshit equipment, and eight residents whose names suggest they
-are not long for this world. Blow it up as you please; its residents
-belong to no one who will mind. The script's window opens maximized at
-2x UI scale. In dev mode the devices' DEV buttons show during the
-showcase, and only then. In your own dev-mode games, the Actions menu's
-"Mods" section can build AnyRim at a click, at the best site, or remove
-it again. See docs/SHOWCASE.md, and docs/SHOWCASE-API.md for how other
-mods can offer showcases of their own.
+logs an error before the demo is ready. The showcase is a directed
+tour, a 1950s public information film in eight scenes, each captioned
+("3 of 8: When Devices Retire") and narrated in the mod's deadpan voice,
+with the camera moving for every beat:
+
+1. **The Home of Tomorrow:** the reactor, the stocked Random Replicator,
+   the Transmogrifier and the Brain Squeezer, one at a time.
+2. **Home Defence:** the Artificer, and the Batshittium Ballista firing a
+   16-bolt explosive volley from chained magazines.
+3. **When Devices Retire:** a lone replicator's self-destruct, in a far
+   corner well clear of the base.
+4. **When Reactors Retire:** a lone reactor's, in another corner.
+5. **A Typical Rim Community:** a walk through AnyRim.
+6. **Comfort Is a Weapon:** a colonist throws an Ergonomic Singularity
+   Grenade at a junk pile, with a volunteer inside it.
+7. **The Tractor of Tomorrow:** a Tractor Bomb robot finds a party of
+   raiders, protests at a colonist too close, emplaces, and implodes.
+8. **Two Tractors:** two robots in a junkyard, their pulls overlapping,
+   and the byline.
+
+A scene this map cannot stage (no clear corner, no room for the tractor yard)
+is skipped, and the captions count only the scenes that run. The bar's
+**Skip** ends the current scene. **AnyRim** is a small test town in the
+north-west built from Nevada Test Site history: one Main Street, three model
+homes in wood, brick and steel, a five-and-dime selling singularity grenades,
+a funeral home with a reserved plot for everyone, a bank vault, a town hall,
+Public Works with the Batshit equipment, and eight residents whose names
+suggest they are not long for this world. Blow it up as you please; its
+residents belong to no one who will mind. The script's window opens maximized
+at 2x UI scale. In dev mode the devices' DEV buttons show during the showcase,
+and only then. In your own dev-mode games, the Actions menu's "Mods" section
+can build AnyRim at a click, at the best site, or remove it again. See
+docs/SHOWCASE.md, and docs/SHOWCASE-API.md for how other mods can offer
+showcases of their own.
 
 ## Research
 

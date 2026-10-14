@@ -1222,3 +1222,86 @@ to the cause, so it is logged in docs/AI-TODO.txt and
 docs/AI-KNOWN-ISSUES.txt for a fix that starts with a failing check;
 the verifier did what it is for. One rerun on the same build, on a new
 map, passed: 9 passed, 0 failed, exit 0.
+
+2026-10-14 Claude: Tractor Bomb slice 12000, final step: the review's
+findings and the docs. Fixed in severity order:
+- The Ballista (high). Range 10 never held it: its verb's least range is
+  5.9, so a hostile 6 to 10 tiles off drew a 16-bolt explosive volley
+  into the base, where every colonist moved "clear" stands. It now has
+  a saved AutoTargetHeld flag; while set, TryFindNewTarget (a vanilla
+  public virtual) finds nothing, and an ordered target, which never asks
+  it, still fires. Showcase.BuildBallista sets it and the volley scene's
+  HoldFire keeps it, setting the least range before clearing the order
+  so the turret's immediate search on clearing finds nothing. A vanilla
+  holdFire flag exists, but it is private and toggled by a gizmo; an
+  override needs no reflection. The verifier gained a world fact for
+  every scene but the volley: "the Ballista held its fire" (no bolt
+  fired). This is the likeliest cause of tour fault 2 (all colonists
+  dead in scene 1).
+- Beats (high). The verifier now fails a completed scene that skipped a
+  beat: "every completed scene played its beats". The device parade's
+  required beats are the devices that stood at its setup
+  (DeviceParadeScene.PlannedMoments), so a device lost before its beat
+  fails, as it should have in step 5's pass2; every other scene's are
+  Core's TourScript.RequiredMoments, which leaves out only the
+  tractor's "doom" (it needs a raider to freeze in place). The grenade's
+  "thrownAlone" stands for "thrown" (TourScript.StandsFor).
+- Captions (medium). Check 3 no longer asks the director: N and the
+  titles come from TourScript, the forced and declined keys, and the
+  def, and the scenes that ran must match that list.
+- Unforced declines (medium). A new check, "every unforced decline is
+  justified by the stage", judges each SKIPPED key that was not forced
+  from the stage and the planner's plan (Showcase.StagePlan, so a yard
+  lost between the plan and the stage fails), never from the scene's
+  own reason, which is what is under test.
+- ClearYard (medium) never removes the player's own pawns (faction or
+  host faction is the player's), even when HostileTo is true for them:
+  a berserk colonist, a manhunting tame animal, a prisoner breaking out.
+  A smoke check covers it: "clearing a yard spares a berserk colonist".
+- The volunteer (medium, two findings). The director asks OutcomeKey
+  after End, so GrenadeScene.End fixes the fate first: dead, destroyed
+  or downed is "volunteerLost" ("comforted. Completely."), because the
+  survivor's line ("feeling very supported") suits only one standing.
+  Then End heals a volunteer who lived, so a later death is the tour's
+  fault, not the grenade's. The two findings disagreed on the verifier:
+  one would excuse the volunteer's death in any scene, the other only
+  during the grenade. I kept it excused only during the grenade and
+  labelled a later death "the volunteer", because after the heal a
+  later death is a real fault and should fail. Each death now also
+  records whether the pawn died or vanished and its bad hediffs.
+- Low: TourVerifying and the smoke runner's flag are read once
+  (static readonly), not every tick and frame in every game; a
+  "thrownAlone" beat and line for a throw with no volunteer; a second
+  home start line (delay 120, before the first beat at 150) giving the
+  byline's first three promises, so the film's arc opens as The Story
+  says; TourStagePlannerTests' AnyRim test now has a control plan and
+  asserts the pads kept. Deferred for time, in docs/AI-TODO.txt: a
+  negative case for RunBeat's guards, and a smoke check that a held
+  Ballista ignores a nearby hostile.
+Docs: README and docs/SHOWCASE.md describe the tour as built (the
+menu's "Living better with batshittium", the eight scenes, the cues);
+SHOWCASE-API.md says BT_Showcase is director-driven and lists its cues;
+ARTISTIC-MOTIF.md has a Narration subsection; AI-requests-for-humans.txt
+items 17 (The Story reordered) and 18 (Reel 9 deferred).
+Runs (each build confirmed by the DLL's timestamp): the Release build
+with ValidateDefs, 0 warnings, 0 errors, 0 Def problems; 638 unit and
+XML tests; 18 Python tests. Full smoke on DLL 05:13:14: 190 passed, 0
+failed (the new ClearYard check included). Verify run 1 on the same
+DLL: 10 passed, 1 failed, a real fault the new labelling explained at
+once: the grenade's volunteer, healed after "volunteerSurvived", died
+during the tractor scene while hauling beside the junk pile
+(docs/AI-TODO.txt). One sabotage run (.local/scratch/tour-step6/
+sabotage.py, restored byte for byte) applied three at once: the G1
+filter ignoring the forced skip, the parade showing devices without
+their beats, and the tractor scenes always declining "no tractor yard"
+(DLL 05:18:16). Each new or changed check failed on its own sabotage:
+"every forced skip declined", "every unforced decline is justified by
+the stage" (tractor and twins: a yard and a hostile faction), "every
+completed scene played its beats" (home: all four missing) and
+"captions read 'i of N: title'" (saw "1 of 6", wanted "1 of 5"), 7
+passed and 4 failed; checks 2 and 4 passed under the beat sabotage, as
+the review predicted. Verify run 2 on the restored build (DLL 05:21:39):
+11 passed, 0 failed, exit 0, no mod log error.
+Full smoke again on the final DLL (05:21:39): 190 passed, 0 failed,
+exit 0, no mod log error. Not merged into trunk: the operator will
+watch the tour first.

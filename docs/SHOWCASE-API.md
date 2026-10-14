@@ -28,8 +28,10 @@ player can start from the main menu, and any mod can contribute to.
   it at a worker class, and optionally build it from the API's director:
   scenes, camera moves, captions and narration lines, all data-driven.
   Batshit Technology's own tour (`docs/SHOWCASE.md`, "The Directed Tour"
-  and "The Story") becomes the first director-driven showcase built on
-  it; `BT_Showcase` runs today's demo base through it meanwhile.
+  and "The Story") is the first director-driven showcase built on it:
+  `BT_Showcase`'s worker is `BatshitTourDirector`, whose eight scenes
+  use the two hooks the tour added, a scene declining a map (G1) and a
+  scene playing beats (G2).
 
 ## The Menus
 
@@ -335,7 +337,8 @@ API's errors and warnings carry the same prefix, but are not cues.
 
 Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
 `Tools/smoke-test.ps1 -Showcase` does. `BT_Showcase` adds its own cues
-(`ANYRIM` or "AnyRim skipped", `THROW`, `TOUR`).
+(`ANYRIM` or "AnyRim skipped"); its scenes log the director's
+`SCENE`, `BEAT`, `END` and `SKIPPED` cues above.
 
 ## Tests
 

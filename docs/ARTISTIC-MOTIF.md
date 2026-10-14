@@ -246,6 +246,31 @@ notice: earnest, reassuring, and quietly aware of what the town is for.
   grey background. Magenta stays reserved for batshittium, and town
   furnishings avoid magenta and purple paint and carpet.
 
+### Narration
+
+The showcase tour's narrator (`Defs/Misc/BT_Showcases.xml`, docs/
+SHOWCASE.md "The Story") is the motif's deadpan, spoken aloud: a 1950s
+public information film's cheerful voice, warm, confident and on message.
+
+- **One line each,** at most 96 characters, with no exclamation mark;
+  the narrator is never excited. He never breaks the fourth wall (no
+  "mod", "game", "player", "RimWorld" or "showcase") and never admits
+  anything is wrong; his reassurances shrink to remaining calm.
+- **The arc.** The film opens on the byline's first three promises
+  (sooner, cheaper, funnier) and closes, in the twins' scene, on the
+  whole byline: "The Future: Sooner. Cheaper. Funnier. And ludicrously
+  dangerous."
+- **The cast** is "our volunteer family"; the grenade's volunteer is "a
+  valued member of the family"; AnyRim's residents are "our neighbours".
+  Outcomes speak to what happened on screen: a volunteer knocked flat is
+  "comforted. Completely.", and an empty pile gets its own line.
+- **Timing.** A scene's start lines wait 90 ticks or more, and its first
+  beat plays at tick 150, so lines read in cue order: start, beats,
+  outcome.
+- **Review.** `TourXmlTests` check the length, the punctuation, the
+  forbidden words, the byline and that every beat has a line. Anything
+  beyond that, the wording itself, needs a human's review.
+
 ## Showcase Previews
 
 Each showcase (`docs/SHOWCASE-API.md`) has a preview picture for the

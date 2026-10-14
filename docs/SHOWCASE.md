@@ -15,18 +15,26 @@ wrong in the same change.
 The showcase is `BT_Showcase`, the first client of the Showcase API
 (`docs/SHOWCASE-API.md`). Players start it from the main menu: Showcases
 (at the bottom of the menu, below Quit to OS; the Harmony mod must be
-active), then Batshit Technology, then "Demo base", then Start. The
-script builds nothing itself: it starts RimWorld with
-`-showcase=BT_Showcase`, the main menu acts on that by generating a fresh
-game for the showcase, and `Source/Showcase.cs` (through
-`BatshitShowcaseWorker`) does the rest and leaves the game running. The
+active), then Batshit Technology, then "Living better with
+batshittium", then Start. The script builds nothing itself: it starts
+RimWorld with `-showcase=BT_Showcase`, the main menu acts on that by
+generating a fresh game for the showcase, and the def's worker,
+`BatshitTourDirector` (`Source/Tour/`), builds the stage through
+`Source/Showcase.cs` and directs the tour, leaving the game running. The
 script exits at once with an error if the showcase is refused or fails
 to set up, or if the mod logs an error before `READY`. Windows shown to
 the operator open maximized at 2x UI scale. The game log carries cues
-for screen-capture tooling, so it never has to guess at timings:
-`[BT-SHOWCASE] READY` (from the API, once the base is built), `ANYRIM`,
-`THROW` and `TOUR`, then `FINISHED BT_Showcase` ten seconds after the
-last of them (the API's full cue list is in its specification).
+for screen-capture tooling, so it never has to guess at timings, all
+prefixed `[BT-SHOWCASE]`: `READY` (once the stage is built), `ANYRIM` or
+"AnyRim skipped", then for each scene `SCENE <key>`, `BEAT <key>
+<moment>` for each beat and `END <key> <outcome>`, or `SKIPPED <key>:
+<reason>` for a scene this map cannot stage, and last `FINISHED
+BT_Showcase` (the API's full cue list is in its specification).
+
+`.\Tools\smoke-test.ps1 -Showcase -Verify` runs the whole tour as a test
+(`docs/AI-TESTING-STRATEGY.txt`, section 4): small, muted, at Superfast,
+with AnyRim forced to decline so that declining is exercised on every
+map (`-TourSkip ''` runs all eight).
 
 A showcase game never autosaves, so the player's autosave slots are
 safe. The devices' DEV buttons show only in dev mode: the showcase
@@ -50,29 +58,42 @@ north.
 | Self-destruct pads | Two corners at centre ±75 | A replicator, a reactor |
 | AnyRim | North-west, about (55,163) | The test town |
 
-## Timeline
+## The Scenes
 
-Ticks run at 60 a second at normal speed; the reactor's barrage slows the
-game below real time, which is why capture tools wait for log cues.
+Built in slice 12000 (2026-10-14). There is no timer: each scene waits on
+the world (a burst ending, an aftermath going idle, an implosion closing)
+with its def's `timeoutTicks` behind it, and every scene declines, with a
+stated reason, a map that lacks what it needs. Ticks run at 60 a second
+at normal speed; the reactor's barrage slows the game below real time,
+which is why capture tools wait for log cues.
 
-| Tick | Event |
-|------|-------|
-| 0 | Base and AnyRim built; fog cleared; `READY` and `ANYRIM` logged |
-| +300 | The replicator demo arms, camera on it (10 s countdown) |
-| +1500 | The reactor demo arms, camera on it |
-| +2700 | A colonist throws a singularity grenade; `THROW` logged |
-| +3300 | Camera tours AnyRim's welcome sign; `TOUR` logged |
+| # | Key | Title | Beats | Declines when |
+|---|-----|-------|-------|---------------|
+| 1 | `home` | The Home of Tomorrow | each device | no device stands |
+| 2 | `defence` | Home Defence | artificer, volley | no Ballista |
+| 3 | `retire-replicator` | When Devices Retire | blast | no pad 0 |
+| 4 | `retire-reactor` | When Reactors Retire | blast | no pad 1 |
+| 5 | `anyrim` | A Typical Rim Community | sign, street, homes | no AnyRim |
+| 6 | `grenade` | Comfort Is a Weapon | thrown* | no able colonist |
+| 7 | `tractor` | The Tractor of Tomorrow | barn to blast | no yard or foe |
+| 8 | `twins` | Two Tractors | planted, pull, blast | no yard or foe |
 
-Before each self-destruct arms, colonists within its blast radius plus 8
-are moved back to the base, so no demo kills a colonist.
+\* Or `thrownAlone` when no colonist is left to volunteer.
 
-## The Directed Tour (planned)
+`TourScript` (Core) holds the order and the beats; the def's XML, the
+scene classes and the tests all read it. Before a self-destruct arms,
+and before the grenade and the tractors, colonists in reach are moved
+clear. The Ballista picks no target of its own during the tour
+(`AutoTargetHeld`): it fires only the volley it is ordered to.
 
-Requested by Matt "Breakpoint" Heck on 2026-10-13, to be built with the
-Tractor Bomb's showcase work (`ROADMAP.md`). Today's showcase runs its
-demos on a timer and moves the camera now and then. The tour takes
-ownership of the camera, directs the action, and shows one major feature
-at a time, explaining as it goes.
+## The Directed Tour
+
+Requested by Matt "Breakpoint" Heck on 2026-10-13 and built with the
+Tractor Bomb's showcase work in slice 12000 (`ROADMAP.md`), on the
+Showcase API's director. The tour takes ownership of the camera, directs
+the action, and shows one major feature at a time, explaining as it
+goes. The bullets below were the plan; the notes in brackets say how it
+was built.
 
 - **A director.** A small state machine runs scenes in order. Each scene
   sets up, frames the camera, says what is happening, runs, and waits for
@@ -91,23 +112,19 @@ at a time, explaining as it goes.
   2026-10-14).
 - **The camera.** The tour moves and zooms it for every beat, framing the
   subject, and pulls back for anything with a big radius.
-- **Scenes** *(proposal, in order)*:
-  1. The demo base, one device at a time: reactor, Random Replicator,
-     Transmogrifier, Brain Squeezer, Artificer, each selected, so its
-     buttons and inspect text show.
-  2. The Batshit Ballista and its magazines, firing a volley.
-  3. The Random Replicator's self-destruct.
-  4. The Batshittium Reactor's self-destruct.
-  5. The Tractor Bomb: the barn builds one, it patrols, finds a staged
-     enemy party, protests if a colonist strays too close, emplaces with
-     its tires flipping flat, counts down, pulls, and blows. Those too
-     close to run make peace with their impending doom.
-  6. AnyRim, street by street, and then the Ergonomic Singularity
-     Grenade, in the town's own pest-control incident (below). This
-     replaces the junk-pile grenade demo west of the base.
-  7. "The showcase is yours": the director lets go of the camera.
-- **Log cues.** Each scene logs `[BT-SHOWCASE] SCENE <name>` for capture
-  tooling, replacing the ad hoc cues above (which stay until then).
+- **Scenes** (as built; see "The Scenes" above): the demo base's
+  devices; the Ballista's volley (the Artificer appears there); the two
+  self-destructs; AnyRim; the grenade at the junk pile west of the base;
+  the Tractor Bomb against a staged raider party, with a colonist's
+  protest; and two Tractor Bombs in a junkyard as the finale. Changes
+  from the plan: AnyRim and the grenade come before the Tractor Bomb, so
+  the film ends on its biggest bang; the grenade stays at the junk pile,
+  and the Raccoon Incident (Reel 9) is deferred; the barn does not build
+  the robot on screen ("This one was made earlier"; `docs/AI-TODO.txt`).
+  Both proposals are in `docs/AI-requests-for-humans.txt`, items 17 and
+  18.
+- **Log cues.** Each scene logs `SCENE`, `BEAT` and `END` cues (or
+  `SKIPPED`), replacing the old `THROW` and `TOUR` cues, which are gone.
 - **Letting go.** The caption bar's buttons, provided by the API: Skip
   ends the current scene, and the next begins at once; Stop ends the
   tour, after which the director stops moving the camera and narrating,
@@ -171,7 +188,15 @@ Reels and sample narration (final lines are written with the scenes):
     The colony is yours. Please remain calm." The director lets go of
     the camera.
 
-### Reel 9: The Raccoon Incident *(draft)*
+As built, the reels run in the scenes' order: Reels 1 to 4 are the
+first scene, Reel 5 the second, Reel 6 the third and fourth, then AnyRim
+(Reel 8) and the grenade at the junk pile (Reel 9's title, without the
+raccoon), then the Tractor of Tomorrow (Reel 7) and the twins, which
+close on the byline. The film now opens on the first three promises
+("The future, delivered sooner, cheaper and funnier."). The narration's
+rules are in `docs/ARTISTIC-MOTIF.md`, "Narration".
+
+### Reel 9: The Raccoon Incident *(draft; deferred)*
 
 AnyRim's ninth resident is the security guard of AnyRim Savings & Loan,
 which until now had nobody in it: **Ned "Overkill" Lessly** (read it
@@ -217,8 +242,9 @@ right?".
   part of AnyRim, tapering roads included. The site search keeps the
   north-east and south-east corners clear by the same rule, measured the
   same way, so both demos run; the most open of the two gets the
-  replicator. If ever only one corner qualifies, the showcase logs it and
-  skips the reactor demo, and its opening message says so.
+  replicator. If ever only one corner qualifies, the showcase logs it,
+  the reactor's scene declines (`SKIPPED retire-reactor`), and the
+  captions' "i of N" count only the scenes that run.
 - **AnyRim keeps away from the base and the grenade range:** at least 10
   tiles from the base's cleared square and 15 from the grenade clearing.
 - **The tractor yard and the pads are planned together** (Core's
@@ -711,7 +737,8 @@ RimWorld:
   - the census drops by one when a resident dies;
   - demolition leaves nothing behind;
   - nothing logs an error.
-- **Showcase:** a screen capture at the `TOUR` cue.
+- **Showcase:** a screen capture at each `SCENE` cue, or at the `END`
+  cue of a named scene; `-Showcase -Verify` checks the whole tour.
 
 ## Known Limits
 

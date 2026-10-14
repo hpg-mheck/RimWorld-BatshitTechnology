@@ -137,4 +137,8 @@
   2026-10-14: one colonist died during the tractor scene on one map,
   and all three died during the first scene on another, after which
   "Home Defence" timed out. Two other verify runs lost nobody. Causes
-  not yet known; see docs/AI-TODO.txt. A viewer may see the same.
+  not yet proved; see docs/AI-TODO.txt. The likeliest cause of the
+  second, the Ballista firing at a hostile inside its least range, is
+  fixed (it now picks no target of its own during the tour), and a
+  surviving volunteer is healed so the grenade cannot kill off camera.
+  A viewer may still see a death until verify runs show it is gone.

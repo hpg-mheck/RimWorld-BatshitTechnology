@@ -269,13 +269,20 @@ begins, the world facts as each ends, and colonists' deaths. After
 FINISHED and the farewell it checks that:
 
 1. FINISHED was reached, with SCENE and END cues in TourScript order,
-   less any SKIPPED, and every forced skip declined;
-2. every scene ended Completed, with its world facts: the pad device
-   destroyed and the aftermath idle; at least 16 bolts spent; one more
-   implosion; tractor explosions up by 1, then by 2; superposed pulls up
-   for the twins;
-3. the captions read "i of N: title", N counting only the scenes that
-   run (7 with AnyRim skipped);
+   less any SKIPPED, and every forced skip declined; and every unforced
+   decline is justified by the stage itself (no yard in the planner's
+   plan, no pad device, no AnyRim, no able colonist), judged without
+   asking the scene;
+2. every scene ended Completed, with its world facts: the Ballista fired
+   no bolt outside the volley; the pad device destroyed and the
+   aftermath idle; at least 16 bolts spent; one more implosion; tractor
+   explosions up by 1, then by 2; superposed pulls up for the twins; and
+   every completed scene played its beats (the parade's planned devices,
+   else TourScript.RequiredMoments, which leaves out only the tractor's
+   "doom" and lets "thrownAlone" stand for "thrown");
+3. the captions read "i of N: title", worked out without the director:
+   the script's order less the forced and the declined, with the def's
+   titles (7 with AnyRim skipped);
 4. the narration log holds every line the def gives for each SCENE,
    BEAT and END cue, in cue order, under its scene, with a target;
 5. no colonist died but the grenade's volunteer;
@@ -287,11 +294,14 @@ smoke run does. A tour that never finishes fails at a deadline: the sum
 of the scenes' timeouts plus 3,000 ticks.
 
 Sabotage runs in slice 12000, step 5 proved checks 1, 2 and 6, and
-check 5 caught a real death on one map (see docs/AI-DECISIONS.txt);
-checks 3 and 4 are not yet proved by sabotage. The captions check
-compares each caption with the scenes that actually ran, so a G1 filter
-that ignores the forced skip is caught by check 1's "every forced skip
-declined", not by the captions.
+check 5 caught a real death on one map (see docs/AI-DECISIONS.txt). The
+review that followed found that check 3 compared the director with
+itself, that a scene with no beats passed, and that an unforced decline
+passed silently; the final step fixed all three (above). Their sabotage
+results, and the checks still unproved, are in docs/AI-DECISIONS.txt
+(slice 12000, final step) and docs/AI-TODO.txt. The smoke suite gained
+"clearing a yard spares a berserk colonist" (TractorStaging.ClearYard
+never removes the player's own pawns).
 
 ## Manual checks still worth doing
 

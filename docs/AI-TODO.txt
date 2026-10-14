@@ -248,7 +248,22 @@
   and cell, so the next death says. Likely fixes: send the stray away
   as soon as the protest starts and wait for it to leave the pull
   before the robot may emplace, or let the stray be immune to the
-  freeze while its order stands.
+  freeze while its order stands. A second suspect, found in review:
+  Gransier may have been the grenade's volunteer, downed by the
+  implosion and bleeding out a scene later. Since the final step of
+  slice 12000, GrenadeScene.End heals a volunteer who lived, a downed
+  volunteer reads as "volunteerLost", and the verifier labels a later
+  death of the volunteer "the volunteer", so the next run says which.
+  It said so at once: in the final step's first verify run (.local/
+  scratch/tour-step6/verify1-player.log, AnyRim skipped), the grenade
+  ended "volunteerSurvived", the volunteer was healed, and then died
+  during the tractor scene while hauling at (101,124), beside the junk
+  pile, far from the yard. So the volunteer, not the stray, is the one
+  to watch: something at the pile kills a healthy colonist a scene
+  later (an item the implosion left, a fire, the comfort hediff). The
+  verifier now records whether a lost colonist died or vanished and its
+  bad hediffs; read those in the next failing run, then fix it (likely
+  by keeping colonists off the pile after the grenade, or clearing it).
 - [ ] Tour: find why every colonist died in scene 1 on one map. The
   step 5 verify run "pass2" (.local/scratch/tour-step5/pass2-player.log,
   AnyRim skipped) lost all three colonists during "The Home of
@@ -259,9 +274,18 @@
   order: the Ballista firing at a hostile animal or pawn within its
   least range (10) between scenes, its bolts setting off the base's
   armed devices (damage triggers, the reactor's barrage); a device's
-  own self-destruct or heat; something native to the map. Add a check
-  that fails first (the verifier's death record and a per-scene device
-  census would show it), then fix it.
+  own self-destruct or heat; something native to the map. Review
+  confirmed the first suspect was possible: the verb's least range is
+  5.9, so range 10 never held the turret, and the colonists moved
+  "clear" stand within 8 tiles of the map's centre, inside that ring.
+  The final step of slice 12000 added Building_BatshittiumBallista.
+  AutoTargetHeld (TryFindNewTarget finds nothing; ordered volleys still
+  fire), set from the build and after the volley, and two verifier
+  checks that would have failed pass2: "the Ballista held its fire" (a
+  world fact for every scene but the volley) and "every completed scene
+  played its beats" (home's planned devices). Close this item once a
+  few verify runs pass without a death in scene 1; reopen it with the
+  new checks' output if one recurs.
 
 ## Test justifications
 
@@ -392,3 +416,29 @@ Three review fixes have no automated check, for these reasons:
   ("EXPECTED <first line>") so the harness scan leaves exactly those out.
   Revise the showcases fileset's "planned API" status now that the API
   exists.
+
+- [ ] Tour verifier review items not done in slice 12000 (low severity,
+  deferred for time on 2026-10-14):
+  - A negative case for RunBeat's guards in the API smoke: a scene that
+    calls Beat from End() (when it is no longer current) and from the
+    scene that ends Stopped, expecting no BEAT cue, no narration and a
+    false return. Sabotage: delete the ReferenceEquals(scene,
+    CurrentScene) term; the check, the exact cue list and the exact
+    narration list should all fail. The Stopped term alone cannot be
+    caught once the sequencer has stopped; say so in the check's
+    comment. Check first whether ShowcaseDirector.EndScene runs while
+    CurrentScene still names the ending scene (it reads
+    sequencer.Current): if it does, a Beat from End() plays, and the
+    guard needs fixing before the test can pass.
+  - A smoke check that a held Ballista ignores a hostile 8 tiles off
+    for 120 ticks (BoltsFired unchanged), with the sabotage of removing
+    the TryFindNewTarget override. The verifier's "the Ballista held its
+    fire" fact guards the tour meanwhile, but only on a map where
+    something hostile comes near.
+  - The sabotage runs that the final step could not fit (see docs/
+    AI-DECISIONS.txt, slice 12000 final step, for those that ran).
+- [ ] Tidy-ups carried through slice 12000: validate-defs.ps1 still
+  prints the "PatchOperationAdd: N match(es)" lines under -MSBuild;
+  docs/AI-KNOWN-ISSUES.txt has two smoke-flake sections to merge; and
+  AnyRimText.OpeningMessage is no longer used by the showcase (the
+  AnyRim scene narrates instead).
