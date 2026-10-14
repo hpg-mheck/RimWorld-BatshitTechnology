@@ -462,3 +462,37 @@ Three review fixes have no automated check, for these reasons:
     sabotaged sources with shutil.copy2 keeps their old modification
     times, so an incremental MSBuild skips the rebuild; always confirm
     the DLL timestamp changed.
+- [ ] Stampede follow-ups (slice 14000, 2026-10-14):
+  - Watch it by eye in the operator's viewing (slice 17000): the opening
+    shot of the band, the herd's 13 s walk, the volley framed with the
+    Ballista (zoom 56), the rain, and the 120 ms hitch as it lands.
+  - If the volley should come sooner, the grid needs more than one
+    reactor's 76-tile reach for 256 bolts: a second reactor, or
+    batteries under a roof (a battery in the open can short-circuit in
+    the scene's rain). Not done; the plan asked for the herd to be met
+    well before the base, which 76 tiles does.
+  - The cleanup volleys, the "stragglers" beat and line, and sending
+    survivors home have run in one clean run and the sabotage runs. A
+    smoke check that stages a few stragglers and expects one cleanup
+    volley at them would cover them on every run.
+  - One stampede-only verify run fired no volley (docs/AI-KNOWN-ISSUES
+    .txt). If it recurs, read the scene's "still waiting for the volley"
+    notes in that run's log; if the herd is slow rather than stuck,
+    lengthen giveUpTicks (1,800) and the scene's timeout (3,600).
+  - Measure how often the stampede declines for a closed east edge over
+    more maps (once in the slice's first runs, before the northward
+    slides). If it is often, consider the other edges, keeping the
+    volley's impact clear of the tractor yard and the pads.
+  - Sabotage the 4K narration check (slice 14000): a line too long for
+    two lines at the Medium size, and a character the font lacks, should
+    each fail "every narration line fits the overlay in two lines at
+    3840x2160 and 2x UI scale". Not run yet.
+  - Look at the operator's 115-character volley line by eye at 2x on 4K
+    in slice 17000: its two lines, its em dashes, and whether 8.25 s of
+    reading time feels right at the money shot.
+  - The tour's self-destruct scenes clear colonists only at set-up and
+    arming; a hauler walked back into the reactor's barrage in one verify
+    run (docs/AI-KNOWN-ISSUES.txt). Keep colonists out of the blast's
+    reach plus margin every tick until the aftermath is idle (for
+    example, forbid the area or draft them in the base, as the stampede
+    does), then sabotage it.

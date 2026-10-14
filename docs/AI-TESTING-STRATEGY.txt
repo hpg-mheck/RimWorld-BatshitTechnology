@@ -238,7 +238,13 @@ what only drawing and input show: the caption bar paints; the
 narration overlay, given a long line and then a short one, shows the
 short one, the last said, within 7 seconds (each replaces the line
 before after its 2.5-second base time, not its full reading time) and
-paints it, logging a NOTE with the font size and the wait; a cut right
+paints it, logging a NOTE with the font size and the wait; every
+narration line of every showcase, measured inside a repaint as the
+overlay draws it on a 3840 by 2160 screen at 2x UI scale (1,920 UI units
+wide, so 1,100 to wrap in), wraps to two lines or fewer at the Medium
+size or larger, with a glyph in the font for each character (slice
+14000, for the operator's 115-character volley line and its em dashes;
+a NOTE gives that line's size); a cut right
 after a glide still holds after half a second of frames; vanilla's main
 menu, drawn off screen with the program state set to Entry for that one
 call, gets exactly one Showcases button with its keyed text loaded, and
@@ -254,7 +260,8 @@ a queued autosave would have been written, the save folder has gained
 and changed no files. DONE waits for these frame steps, for 120 seconds
 at most. Every one of these checks was seen to fail against a sabotaged
 build (docs/AI-DECISIONS.txt, 2026-10-14, slices 6000 and 8000; the
-overlay's three, Tractor Bomb slice 13000).
+overlay's three, Tractor Bomb slice 13000), except the 4K narration
+check, which was not sabotaged.
 
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
@@ -270,7 +277,7 @@ belongs on input events only, never on a repaint or layout event.
 
 starts BT_Showcase through the Showcase API, as -Showcase does, and adds
 -bttourverify and -bttourskip=anyrim (-TourSkip changes the list; pass
--TourSkip '' to run all eight scenes). The verifier
+-TourSkip '' to run all nine scenes). The verifier
 (Source/SmokeTestTour.cs, part of the smoke runner) forces the listed
 scenes to decline, waits for READY, switches to Superfast and watches
 every tick: the scene running and its caption, the counters as each scene
@@ -283,26 +290,43 @@ FINISHED and the farewell it checks that:
    plan, no pad device, no AnyRim, no able colonist), judged without
    asking the scene;
 2. every scene ended Completed, with its world facts: the Ballista fired
-   no bolt outside the volley; the pad device destroyed and the
-   aftermath idle; at least 16 bolts spent; one more implosion; tractor
-   explosions up by 1, then by 2; superposed pulls up for the twins; and
-   every completed scene played its beats (the parade's planned devices,
-   else TourScript.RequiredMoments, which leaves out only the tractor's
-   "doom" and lets "thrownAlone" stand for "thrown");
+   no bolt outside the volley and the stampede; the pad device destroyed
+   and the aftermath idle; at least 16 bolts spent; the stampede's facts
+   (below); one more implosion; tractor explosions up by 1, then by 2;
+   superposed pulls up for the twins; and every completed scene played
+   its beats (the parade's planned devices, else
+   TourScript.RequiredMoments, which leaves out only the tractor's
+   "doom" and the stampede's "stragglers", and lets "thrownAlone" stand
+   for "thrown");
 3. the captions read "i of N: title", worked out without the director:
    the script's order less the forced and the declined, with the def's
-   titles (7 with AnyRim skipped);
+   titles (8 with AnyRim skipped);
 4. the narration log holds every line the def gives for each SCENE,
    BEAT and END cue, in cue order, under its scene, with a target;
 5. no colonist died but the grenade's volunteer;
 6. nothing logged an error or a mod warning (the smoke runner's own
    final check).
 
-It also logs a NOTE on how the narration would pace on the overlay if
-watched at normal speed: the lines said, at their ticks, replayed
-through Core's rules (the verifier itself runs at Superfast, where the
-overlay's real-time rules do not show), with the longest wait and how
-many lines would be replaced before their full reading time.
+The stampede's facts (Source/SmokeTestTour.Stampede.cs) use Core's
+Stampede rules but measure the world each tick rather than asking the
+scene: a herd of at least 150; a 256-bolt volley (the Ballista's bolt
+counter, which a volley moves in one tick); at most three volleys; 90
+per cent of the herd dead when the first live boomalope comes within 25
+tiles of the base's square (and by the scene's end if none does); no
+colonist downed, dead or with an injury it lacked when the scene began;
+everything of the stage that stood at the start (the base's devices, the
+Ballista, the pads' devices) still standing; and no fire left burning.
+Two sabotage runs in slice 14000 failed the 256-bolt, 90 per cent,
+harm, stage and fire facts in turn (docs/AI-DECISIONS.txt); the
+herd-size and three-volley facts were not sabotaged.
+
+It also logs a NOTE for each scene's clock (game ticks against real time
+and frames, and the longest real gap between two ticks, with the scene
+tick it ended on), and a NOTE on how the narration would pace on the
+overlay if watched at normal speed: the lines said, at their ticks,
+replayed through Core's rules (the verifier itself runs at Superfast,
+where the overlay's real-time rules do not show), with the longest wait
+and how many lines would be replaced before their full reading time.
 
 It then logs "[BT-SMOKE] DONE" and quits, and the script reports as a
 smoke run does. A tour that never finishes fails at a deadline: the sum

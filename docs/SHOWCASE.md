@@ -34,7 +34,7 @@ BT_Showcase` (the API's full cue list is in its specification).
 `.\Tools\smoke-test.ps1 -Showcase -Verify` runs the whole tour as a test
 (`docs/AI-TESTING-STRATEGY.txt`, section 4): small, muted, at Superfast,
 with AnyRim forced to decline so that declining is exercised on every
-map (`-TourSkip ''` runs all eight).
+map (`-TourSkip ''` runs all nine).
 
 A showcase game never autosaves, so the player's autosave slots are
 safe. The devices' DEV buttons show only in dev mode: the showcase
@@ -54,6 +54,7 @@ north.
 |------|-------|----------|
 | Demo base | Centre, within 16 tiles | Every device, working |
 | Ballista range | East of the base | Volleys at (185,125) |
+| Stampede | East edge, level with the base | 200 boomalopes enter |
 | Grenade range | Clearing at (100,125) | Junk pile, two colonists |
 | Self-destruct pads | Two corners at centre ±75 | A replicator, a reactor |
 | AnyRim | North-west, about (55,163) | The test town |
@@ -71,20 +72,93 @@ which is why capture tools wait for log cues.
 |---|-----|-------|-------|---------------|
 | 1 | `home` | The Home of Tomorrow | each device | no device stands |
 | 2 | `defence` | Home Defence | artificer, volley | no Ballista |
-| 3 | `retire-replicator` | When Devices Retire | blast | no pad 0 |
-| 4 | `retire-reactor` | When Reactors Retire | blast | no pad 1 |
-| 5 | `anyrim` | A Typical Rim Community | sign, street, homes | no AnyRim |
-| 6 | `grenade` | Comfort Is a Weapon | thrown* | no able colonist |
-| 7 | `tractor` | The Tractor of Tomorrow | barn to blast | no yard or foe |
-| 8 | `twins` | Two Tractors | planted, pull, blast | no yard or foe |
+| 3 | `stampede` | Uninvited Guests | herd, volley, aftermath† | see below |
+| 4 | `retire-replicator` | When Devices Retire | blast | no pad 0 |
+| 5 | `retire-reactor` | When Reactors Retire | blast | no pad 1 |
+| 6 | `anyrim` | A Typical Rim Community | sign, street, homes | no AnyRim |
+| 7 | `grenade` | Comfort Is a Weapon | thrown* | no able colonist |
+| 8 | `tractor` | The Tractor of Tomorrow | barn to blast | no yard or foe |
+| 9 | `twins` | Two Tractors | planted, pull, blast | no yard or foe |
 
 \* Or `thrownAlone` when no colonist is left to volunteer.
+
+† And `stragglers` before the aftermath when a cleanup volley fires. The
+stampede declines without a Ballista, with fewer than 256 explosive bolts
+in its chain, without the boomalope in the game, or when no open ground on
+the east edge reaches the base.
 
 `TourScript` (Core) holds the order and the beats; the def's XML, the
 scene classes and the tests all read it. Before a self-destruct arms,
 and before the grenade and the tractors, colonists in reach are moved
 clear. The Ballista picks no target of its own during the tour
-(`AutoTargetHeld`): it fires only the volley it is ordered to.
+(`AutoTargetHeld`): it fires only the volleys it is ordered to.
+
+### Scene 3: Uninvited Guests (the Stampede)
+
+Requested by Matt "Breakpoint" Heck on 2026-10-14 ("a 256 bolt volley
+taking out hundreds of incoming boomalopes from the east") and built in
+slice 14000. Core's `Stampede` holds the rules; the scene is
+`Source/Tour/StampedeScene.cs`.
+
+- **The herd.** 200 manhunting boomalopes (adults, so each bursts at 4.9
+  tiles) enter on the east edge, 25 a tick, in a dense front 8 tiles deep and
+  41 tall, level with the base and 2 tiles in from the edge: about 0.6 a cell.
+  Only standable cells that reach the base count; with too few, the band
+  widens twice (12 by 61, then 16 by 91), then each size is tried again 35 and
+  70 tiles further north along the edge (never south, where the tractor yard's
+  candidates lie), before the scene declines, naming the best band's counts.
+  They go manhunting silently, so no letter or message interrupts, and make
+  for the colonists. Measured in the verify runs: 2.8 tiles a second in the
+  rain, and 220 game ticks a second at Superfast against about 288 in the
+  other scenes (4.5 ms a tick against 3.5), so the herd stays at 200.
+- **The volley.** The Ballista loads explosive (Really Painful) bolts: each
+  lands as a 3.9-tile bomb, and every boomalope it kills bursts in turn. Its
+  first volley is 256 bolts, led to where the herd's centre will be when they
+  land (the herd's own drift over the last second, and the bolt's 0.45 tiles a
+  tick). The grid sets the range: the demo base has one 250 kW reactor and no
+  batteries, so the Ballista fires when the lead point is within the longest
+  range whose firing draw the reactor covers with the magazines' 1.5 kW
+  feeding and a 10 kW margin spare (`BallistaPower.LongestRangeWithin`): 76
+  tiles, about 60 tiles out from the base's edge. The three magazines hold
+  1,200 explosive bolts. In the verify runs the volley left between scene
+  ticks 761 and 1,040 (13 to 17 s in at normal speed; usually about 800), with
+  the herd's centre about 84 tiles off, and killed all 200 in all but one run,
+  where one 128-bolt cleanup volley finished 51 stragglers. At most two such
+  volleys may follow, at the thickest group of stragglers
+  (`Stampede.BestCover`), each after the Ballista's 5-second cooldown and once
+  the last bolt has landed. While the first volley waits, the scene logs where
+  the herd is every 600 ticks; it gives up 1,800 ticks after tick 360 and
+  sends the herd home.
+- **Fire.** It rains for the scene: the rain starts at full strength as the
+  scene opens, so the boomalopes' fires cannot take the grassland, and the
+  bolts' bomb waves put out any fire they touch. During the aftermath's hold
+  the scene puts out a share of whatever still burns each tick, so the last is
+  out as it ends; at the end it puts out the rest and gives back the weather
+  from before, at once. In the verify runs 0 to 13 fires were burning at the
+  aftermath, all out by the end. No batteries were added: a vanilla battery
+  under open sky can short-circuit in rain.
+- **Safety.** The colonists are moved inside the base's square and drafted, so
+  none wanders east; they are undrafted at the end. A boomalope counts as
+  having reached the base inside 25 tiles of its square, five times its own
+  blast. Any boomalope still on its feet at the aftermath stops manhunting and
+  walks off the east edge (a downed one stays down); any still alive at the
+  end is removed, however the scene ended (Skip and Stop included), so no herd
+  outlives the scene. The Ballista holds its fire again, at its old count of
+  16.
+- **Camera and beats.** The opening shot looks at the band (zoom 40). `herd`
+  at tick 150 frames the herd, a little west of its centre; `volley` frames
+  the Ballista and the impact together (zoom 56) and selects the Ballista,
+  whose inspect pane reads "Volley: 256 x really painful bolt"; `stragglers`
+  plays with a cleanup volley; `aftermath` frames the impact (zoom 36) and
+  holds 420 ticks. The aftermath beat waits at least 510 ticks after the last
+  volley, so the volley's line gets its full reading time on the overlay.
+- **Narration.** The volley line is the operator's own (2026-10-14), word for
+  word, with his spelling and em dashes: "Two hundred fifty-six largely
+  inaccurate—but highly explosive—Ballista bolts make for a firm, but
+  neighborly, "No."" At 115 characters it raised the narration limit from 96
+  to 120 (`docs/ARTISTIC-MOTIF.md`, "Narration"). The smoke runner checks that
+  every line fits the overlay in two lines on a 3840 by 2160 screen at 2x UI
+  scale, with a glyph for each character.
 
 ## The Directed Tour
 
@@ -113,9 +187,10 @@ was built.
 - **The camera.** The tour moves and zooms it for every beat, framing the
   subject, and pulls back for anything with a big radius.
 - **Scenes** (as built; see "The Scenes" above): the demo base's
-  devices; the Ballista's volley (the Artificer appears there); the two
-  self-destructs; AnyRim; the grenade at the junk pile west of the base;
-  the Tractor Bomb against a staged raider party, with a colonist's
+  devices; the Ballista's volley (the Artificer appears there); the
+  boomalope stampede (added in slice 14000); the two self-destructs;
+  AnyRim; the grenade at the junk pile west of the base; the Tractor
+  Bomb against a staged raider party, with a colonist's
   protest; and two Tractor Bombs in a junkyard as the finale. Changes
   from the plan: AnyRim and the grenade come before the Tractor Bomb, so
   the film ends on its biggest bang; the grenade stays at the junk pile,
@@ -189,7 +264,8 @@ Reels and sample narration (final lines are written with the scenes):
     the camera.
 
 As built, the reels run in the scenes' order: Reels 1 to 4 are the
-first scene, Reel 5 the second, Reel 6 the third and fourth, then AnyRim
+first scene, Reel 5 the second and third (the volley, then the
+stampede), Reel 6 the fourth and fifth, then AnyRim
 (Reel 8) and the grenade at the junk pile (Reel 9's title, without the
 raccoon), then the Tractor of Tomorrow (Reel 7) and the twins, which
 close on the byline. The film now opens on the first three promises
@@ -247,6 +323,11 @@ right?".
   captions' "i of N" count only the scenes that run.
 - **AnyRim keeps away from the base and the grenade range:** at least 10
   tiles from the base's cleared square and 15 from the grenade clearing.
+- **The stampede stays east of the base.** The herd must be 90 per cent
+  dead before any boomalope comes within 25 tiles of the base's square,
+  the colonists wait drafted inside it, rain keeps the fires from
+  spreading, and no live boomalope outlasts the scene (see "Scene 3"
+  above).
 - **The tractor yard and the pads are planned together** (Core's
   `TourStagePlanner`, slice 12000). The yard, 65 by 29 tiles, keeps 18
   tiles (a robot's default pull plus 8) from the base square, the grenade

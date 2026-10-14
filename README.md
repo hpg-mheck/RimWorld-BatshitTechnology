@@ -98,23 +98,26 @@ list: it starts RimWorld with an isolated data folder and
 pressed, generating a quick-test-style map (it needs Harmony too). It
 exits with an error if the showcase is refused or fails, or if the mod
 logs an error before the demo is ready. The showcase is a directed
-tour, a 1950s public information film in eight scenes, each captioned
-("3 of 8: When Devices Retire") and narrated in the mod's deadpan voice,
+tour, a 1950s public information film in nine scenes, each captioned
+("4 of 9: When Devices Retire") and narrated in the mod's deadpan voice,
 with the camera moving for every beat:
 
 1. **The Home of Tomorrow:** the reactor, the stocked Random Replicator,
    the Transmogrifier and the Brain Squeezer, one at a time.
 2. **Home Defence:** the Artificer, and the Batshittium Ballista firing a
    16-bolt explosive volley from chained magazines.
-3. **When Devices Retire:** a lone replicator's self-destruct, in a far
+3. **Uninvited Guests:** two hundred manhunting boomalopes stampede in
+   from the east, in the rain, and the Ballista meets them with one
+   256-bolt volley.
+4. **When Devices Retire:** a lone replicator's self-destruct, in a far
    corner well clear of the base.
-4. **When Reactors Retire:** a lone reactor's, in another corner.
-5. **A Typical Rim Community:** a walk through AnyRim.
-6. **Comfort Is a Weapon:** a colonist throws an Ergonomic Singularity
+5. **When Reactors Retire:** a lone reactor's, in another corner.
+6. **A Typical Rim Community:** a walk through AnyRim.
+7. **Comfort Is a Weapon:** a colonist throws an Ergonomic Singularity
    Grenade at a junk pile, with a volunteer inside it.
-7. **The Tractor of Tomorrow:** a Tractor Bomb robot finds a party of
+8. **The Tractor of Tomorrow:** a Tractor Bomb robot finds a party of
    raiders, protests at a colonist too close, emplaces, and implodes.
-8. **Two Tractors:** two robots in a junkyard, their pulls overlapping,
+9. **Two Tractors:** two robots in a junkyard, their pulls overlapping,
    and the byline.
 
 A scene this map cannot stage (no clear corner, no room for the tractor yard)

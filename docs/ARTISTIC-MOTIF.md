@@ -252,10 +252,22 @@ The showcase tour's narrator (`Defs/Misc/BT_Showcases.xml`, docs/
 SHOWCASE.md "The Story") is the motif's deadpan, spoken aloud: a 1950s
 public information film's cheerful voice, warm, confident and on message.
 
-- **One line each,** at most 96 characters, with no exclamation mark;
-  the narrator is never excited. He never breaks the fourth wall (no
-  "mod", "game", "player", "RimWorld" or "showcase") and never admits
-  anything is wrong; his reassurances shrink to remaining calm.
+- **One line each,** at most 120 characters, with no exclamation mark;
+  the narrator is never excited. The limit was 96 until Matt
+  "Breakpoint" Heck wrote the stampede's volley line on 2026-10-14
+  ("Two hundred fifty-six largely inaccurate—but highly
+  explosive—Ballista bolts make for a firm, but neighborly, "No."",
+  115 characters); keep most lines well under it, since a long line
+  needs its full reading time (2.5 s plus 50 ms a character) on screen.
+  He never breaks the fourth wall (no "mod", "game", "player",
+  "RimWorld" or "showcase") and never admits anything is wrong; his
+  reassurances shrink to remaining calm.
+- **Punctuation.** Em dashes are the real character (—), closed up
+  with no spaces, as the operator writes them; the overlay's font draws
+  it (the smoke runner checks every line's glyphs). Quotation marks are
+  straight. The operator's own lines keep his spelling ("neighborly"),
+  though the narrator otherwise writes British English
+  ("neighbourhood", "defence").
 - **The arc.** The film opens on the byline's first three promises
   (sooner, cheaper, funnier) and closes, in the twins' scene, on the
   whole byline: "The Future: Sooner. Cheaper. Funnier. And ludicrously

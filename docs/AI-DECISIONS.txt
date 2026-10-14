@@ -1389,3 +1389,151 @@ Restored, DLL 10:27:00: full smoke 193 passed, 0 failed; verify run
 with -TourSkip '' (every scene), 11 passed, 0 failed, exit 0. After a
 comment-only rewrap, DLL 10:31:03: full smoke 192 passed, 1 failed (the
 known AnyRim lamps flake), then on the rerun 193 passed, 0 failed.
+2026-10-14 Claude: Tractor Bomb slice 14000: the boomalope stampede, a new
+tour scene after the defence. Asked for by Matt "Breakpoint" Heck after
+watching the tour: "let's add an example of a 256 bolt volley taking out
+hundreds of incoming boomalopes from the east." Plan:
+.local/scratch/tour2/plan.md, "Slice 14000". As built: docs/SHOWCASE.md,
+"Scene 3: Uninvited Guests (the Stampede)".
+- Key "stampede", title "Uninvited Guests"; beats herd, volley, stragglers
+  (optional: only with a cleanup volley) and aftermath. The tour now runs nine
+  scenes; estimatedMinutes went from 5 to 6 (the nine scenes measured 11,628
+  ticks, 3.2 minutes at 60 ticks a second, before the slow-downs of the
+  reactor's barrage and the raids).
+- The herd: 200 adult boomalopes (the operator's "about 200"), spawned 25 a
+  tick on the east edge in a band 8 by 41, level with the base, about 0.6 a
+  cell, then put silently into ManhunterPermanent (no letter, no message, no
+  forced slowdown). They walk 2.8 tiles a second in the rain. The frame rate
+  did not collapse (see the runs below), so the herd stays at 200.
+- Entry: only standable cells that reach the base count. With too few, the
+  band widens twice, then each size is tried 35 and 70 tiles north along the
+  edge; never south, where the tractor yard's candidates lie and a herd from
+  the south-east would bring the volley down on it. With none, the scene
+  declines and names the best band's counts. One sabotage run (DLL 11:10:58)
+  declined for this, on a map with AnyRim at (45,166); the northward slides
+  came after it.
+- The volley: Really Painful (explosive) bolts, whose 3.9-tile bombs set off
+  the boomalopes' own 4.9-tile bursts. The first volley is the Ballista's
+  largest, 256; up to two 128-bolt cleanup volleys may follow, at the thickest
+  group of stragglers. Each is led to where its target will be when the bolts
+  land (the herd's drift over the last second; a straggler's pace toward the
+  base). The first volley killed all 200 in every clean run but one, where one
+  128-bolt cleanup volley finished 51 stragglers (199 dead, one downed).
+- Power: the demo grid is one 250 kW reactor with no batteries, so the range
+  is what the reactor covers alone: Core's BallistaPower.LongestRangeWithin
+  inverts the firing draw, less the magazines' 1.5 kW feeding and a 10 kW
+  margin, without which a brownout would switch a magazine or the Ballista off
+  mid-burst. That is 76 tiles for 256 bolts, so the volley waits for the herd
+  to come that close: it left between scene ticks 761 and 1,040 (13 to 17 s in
+  at normal speed; usually about 800), with the herd's centre about 84 tiles
+  off and the lead point about 60 tiles out from the base's edge ("well before
+  it reaches the base"). Batteries would have let it fire as the herd arrived,
+  but a vanilla battery under open sky can short-circuit in rain
+  (SteadyEnvironmentEffects.RollForRainFire), and the scene needs rain. No
+  bolts were added: the three magazines hold 1,200 explosive bolts. The
+  availability check counts the magazines' bolts whether or not they are
+  powered yet, since a fresh grid switches its consumers on one at a time
+  (PowerNet.PowerNetTick); the volley waits for powered ones. (The first
+  verify run, with the stampede alone, declined for this before the fix.)
+- Fire: rain for the scene, at full strength from its first tick, which wears
+  fires down and stops them spreading; the bolts' bomb waves also put out
+  every fire they touch. The aftermath's hold puts out a share of what still
+  burns each tick, so the last is out as it ends, and the end puts out the
+  rest and gives back the weather from before, at once (the next scene opens
+  on a cut). The scene restarts the rain if the weather decider changes it (a
+  fire on the map shortens its turn). In the clean runs 0 to 13 fires were
+  burning at the aftermath, all out by the end; with no rain and no putting
+  out (sabotage S4) 12 and 263 were, and 8 and 98 were left at the end.
+- Safety: colonists are moved inside the base's square and drafted, then
+  undrafted at the end. The base's keep-away is 25 tiles from its square. A
+  boomalope on its feet at the aftermath stops manhunting (silently) and walks
+  off the east edge; any still alive and on the map at the end is removed,
+  whatever the ending (Skip and Stop too), so no herd outlives the scene. The
+  Ballista holds its fire at its old count (16).
+- A bug the first sabotage run found: a downed straggler was given the walk
+  home ("Boomalope tried to path while downed. This should never happen.").
+  The scene now aims at, counts and sends home only boomalopes on their feet;
+  a downed one stays down and the end removes it.
+- A second bug, found by a rerun of sabotage run A: a cleanup volley 86 tiles
+  out set the Ballista's range to 88, and the selected Ballista then logged
+  "Cannot draw radius ring of radius 88: not enough squares in the
+  precalculated list." Vanilla's turret rings its range below 90 tiles, but
+  GenRadial's pattern ends at 79.8. Stampede.RangeFor now turns 80 to 89 into
+  90 (tested). The Ballista's own range presets (75, then 100) never land
+  there, so players cannot meet it; the Ballista itself is unchanged. A
+  cleanup volley the grid never powers now gives up after giveUpTicks, as the
+  first does, rather than waiting for the scene's timeout.
+- Verifier facts (Source/SmokeTestTour.Stampede.cs), measured from the world
+  each tick with Core's rules: a herd of at least 150; a 256-bolt volley (the
+  Ballista's bolt counter, which a volley moves in one tick); at most three
+  volleys; 90 per cent of the herd dead when the first live boomalope comes
+  inside the keep-away, and by the end if none does; no colonist downed, dead
+  or with an injury it lacked at the start; the stage (the base's devices, the
+  Ballista, the pads' devices) still standing; no fire left. The verifier also
+  logs a clock NOTE for every scene.
+- Sabotage (.local/scratch/stampede14000/sabotage.py, two verify runs of the
+  stampede alone, restored byte for byte and rebuilt). Run A: S1, a 255-bolt
+  first volley; S3, a colonist put 20 tiles west of the herd's entry; S4, no
+  rain and no fire put out. It failed "a 256-bolt volley (largest 255; volleys
+  [255, 128, 128])", "no colonist harmed (Quinny downed, dead, 10 new
+  injuries)" and "no fire left burning (8)", and, as expected, "no colonist
+  dies"; the 90 per cent fact held (199 of 200 dead). Run B: S2, every volley
+  aimed 50 degrees north of the herd round the Ballista; S5, the first pad's
+  device removed at the aftermath. It failed "90 per cent of the herd dead
+  before any reached the base (0 dead when one reached (163, 152); 0 of 200 at
+  the end)" and "the stage still stands (lost [random replicator])", and
+  nothing else; the herd was sent home before it reached a colonist. Both runs
+  again after the two fixes above: run A on a map where the herd blew itself
+  up on the planted colonist before any volley ("a 256-bolt volley (largest
+  0)", the colonist harmed, 98 fires left, and the volley beat missing), with
+  no error logged; run B as before (0 of 200 dead, the replicator lost),
+  nothing else.
+- Frame rate (verify runs at Superfast): the stampede ran at 220 ticks a
+  second (4.5 ms a tick, 21 frames a second) against about 288 (3.5 ms) in the
+  base's other scenes. Its longest gap between two ticks was 124 ms, on the
+  tick the volley landed: one visible hitch at normal speed. With the herd
+  packed round a colonist (sabotage run A) one chain of bursts cost 785 ms.
+  The herd's entry, 25 a tick, never set the longest gap. In the final runs
+  (DLL 11:32:04) the stampede took 1,850 to 2,020 ticks and its longest gap
+  was 130 to 313 ms, on the landing.
+- The operator's lines (relayed by the main session, 2026-10-14). The
+  stampede's volley line is now his, word for word, with his typed "--" set as
+  closed-up em dashes: "Two hundred fifty-six largely inaccurate—but highly
+  explosive—Ballista bolts make for a firm, but neighborly, "No."" It keeps
+  his American spelling, commas and straight quotes. It is 115 characters, so
+  the narration limit went from 96 to 120: TourXmlTests.MaxLineLength, the
+  def's header comment, and the motif's Narration subsection, which now cites
+  this line and adds a Punctuation rule (closed-up em dashes, straight
+  quotes). Neither ShowcaseXmlTests nor the Showcase API had a length rule to
+  change. The defence scene's completed line is also his: "Note that the area
+  now meets local lawn care standards." (it replaces "That patch of ground
+  will not be troubling anyone again."; nothing else quoted the old line).
+- Checking the long line on the operator's screen: a new in-repaint smoke
+  check measures every narration line of every showcase as the overlay draws
+  it on a 3840 by 2160 screen at 2x UI scale (1,920 UI units wide, so it wraps
+  in 1,100): two lines or fewer at the Medium size or more, and a glyph in the
+  font for every character, the em dash included
+  (NarrationOverlayDrawer.Probe). Layout is in UI units, so the smoke runner's
+  small 1x window measures the same wrap as 4K at 2x; the UI scale changes
+  sharpness, not wrapping. The fallback to "--" was to be used only if the em
+  dash had no glyph.
+- Pacing for the long line: it reads for 8.25 s on the overlay, and the
+  aftermath's beat came about 5.5 s after the volley, which would have cut it
+  short. The aftermath now waits at least 510 ticks (8.5 s at normal speed)
+  after the last volley (StampedeScene.lineHoldTicks).
+Runs (each build confirmed by the DLL's timestamp): Release builds with
+ValidateDefs, 0 warnings, 0 errors, 0 Def problems, the last at DLL 11:32:04;
+674 unit and XML tests; 18 Python tests. On DLL 11:32:04: verify with the
+default skip 11 passed, 0 failed (eight scenes, AnyRim declined); verify with
+-TourSkip '' 10 passed, 1 failed (the colonist lost in retire-reactor,
+docs/AI-KNOWN-ISSUES.txt), then on the rerun 11 passed, 0 failed, all nine
+scenes Completed, the overlay pacing NOTE 47 of 47 lines shown, the longest
+wait 5.7 s, 30 replaced before their full reading time; two stampede-only
+verify runs 11 passed, 0 failed each (one with a cleanup volley at the last
+straggler); full smoke 193 passed, 1 failed (the AnyRim lamps flake), a second
+run cut off when its game was closed from outside the session, then 192
+passed, 2 failed (the implosion pair, silver at (0, 2)), then 194 passed, 0
+failed. Before it: ten stampede-only verify runs on DLLs 11:19:46 and
+11:23:24, all 11 passed, 0 failed; and on DLL 11:16:17 one stampede-only run
+(g3-only3) that fired no volley (docs/AI-KNOWN-ISSUES.txt). No RimWorld of
+this session is left running, and the operator's data folder was never used.

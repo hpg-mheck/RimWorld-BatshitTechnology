@@ -133,6 +133,29 @@
   action by up to 2.5 s a line (the tour verifier's pacing NOTE gives
   the longest wait at normal speed). The overlay has been checked by the
   smoke runner in a small window, not yet by eye at 2x UI scale on 4K.
+- Tour, the stampede (2026-10-14, slice 14000): the scene declines on a
+  map whose east edge has too little open ground that reaches the base,
+  even after widening the band and sliding it north (it never slides
+  south, toward the tractor yard); one sabotage run declined so, before
+  the slides were added. The Ballista fires
+  only once the herd is within 76 tiles, the most the demo base's one
+  reactor powers for 256 bolts, so the herd walks about 13 s at normal
+  speed first. The tick the volley lands costs 120 to 310 ms (one
+  visible hitch); a herd packed tight round a target cost 785 ms in one
+  sabotage run. The cleanup volleys and the "stragglers" line have
+  played in one clean run (a 128-bolt volley at 51 stragglers) and in
+  the sabotage runs; elsewhere the first volley killed all 200. One of
+  fourteen verify runs of the stampede alone (g3-only3, map with AnyRim
+  at (59,170)) fired nothing: the herd never came within reach in
+  2,160 ticks and never reached the keep-away, so the scene gave up and
+  sent it home, and the verifier failed the 256-bolt and 90 per cent
+  facts. Not reproduced in the twelve stampede-only runs and three
+  tour runs since; the cause (slow ground, a herd that did not advance, a
+  grid that did not power the Ballista, or another session using the
+  same data folder at the time) is not known. Its log shows one game,
+  without errors. The scene now logs, every 600 ticks while the
+  volley waits, the herd's centre, distance, pace, mental states and
+  jobs, and the grid's numbers, so the next one will say which.
 - Smoke flake (2026-10-14, slice 13000): "an implosion drags everything
   within 10 tiles to within 1.5" and its companion "reports everything
   gathered early, then settles" failed together in two of four full
@@ -158,3 +181,12 @@
   fixed (it now picks no target of its own during the tour), and a
   surviving volunteer is healed so the grenade cannot kill off camera.
   A viewer may still see a death until verify runs show it is gone.
+  It happened again on 2026-10-14 (slice 14000, verify run of all nine
+  scenes, DLL 11:32:04): a colonist died during retire-reactor,
+  "HaulToCell, at (143, 58)", shredded, with a missing part and blood
+  loss. The reactor's scene moves colonists clear to 78 tiles (its
+  70-tile blast plus 8) when it sets up and arms, but not again during
+  the countdown and barrage, so a hauler can walk back in; that spot is
+  about 58 tiles from the south-east corner pad. The rerun on the same
+  DLL lost nobody. Whether the stampede's undrafted colonists made it
+  likelier is not known.
