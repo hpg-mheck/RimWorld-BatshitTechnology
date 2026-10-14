@@ -24,8 +24,10 @@ physics. Text follows the motif's rule: funny, never cruel.
   adjacent **Shitty Folding Chairs** (a minimum, specified 2026-10-13).
   The two-thirds threshold counts the chairs actually there.
   - The chairs cost 5 steel each and are very uncomfortable.
-  - *(Proposal:)* they must face the stage, as vanilla seats face a
-    table or television.
+  - They should face the stage, but it is not enforced (decided
+    2026-10-13): most players will place them that way anyway. A chair
+    facing elsewhere still counts toward the two-thirds threshold, and
+    the House Seats marker's inspect pane notes how many face away.
 - **House Seats:** a ritual marker placed on the seating area.
 - **An emcee:** a male colonist wearing a **Prom Dress**, or a female
   colonist wearing a **Luchador Onesie**. Both are new apparel.
@@ -123,10 +125,9 @@ physics. Text follows the motif's rule: funny, never cruel.
 
 ## Open Questions
 
-1. Must the chairs face the stage? (Sizes are minimums: answered.)
-2. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
+1. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
    damage right, with a recreation boost and a short good-mood memory?
-3. Research and costs: which project unlocks it, and what do the stage
+2. Research and costs: which project unlocks it, and what do the stage
    tiles, markers and the two outfits cost? The chairs are 5 steel.
-4. Disco music before the sound pipeline exists: silence, a vanilla
+3. Disco music before the sound pipeline exists: silence, a vanilla
    stand-in, or wait for the pipeline?
