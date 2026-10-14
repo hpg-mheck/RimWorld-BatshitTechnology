@@ -100,6 +100,15 @@ Colour rules:
   pulverization, not a generic explosion.
 - **Steel stays neutral grey.** Do not tint housings; the glow does the
   talking.
+- **Rare mundane exceptions.** Once a motif is established, a few
+  deliberately ordinary objects are funny in themselves (Matt
+  "Breakpoint" Heck, 2026-10-13). The Junk Drawer is a scuffed wooden
+  cabinet that does not quite close, and Gaffer Tape is a plain black
+  roll. Neither has steel, batshittium or glow.
+  - Keep them rare, so that each one lands.
+  - Make each one plainly useful.
+  - Draw them in vanilla's own style, so they read as ordinary on
+    purpose and not as unfinished.
 
 ## Shape Vocabulary
 
