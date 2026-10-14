@@ -33,7 +33,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 |---|---|---|---|
 | 1000 | Foundations (v0.8) | `trunk` | Done |
 | 2000 | AnyRim | `trunk` | Done |
-| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 12000) |
+| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (12000, review) |
 | 4000 | Showcase API | `trunk` | Done |
 | 5000 | Sound pipeline | `feature/audio` | Next |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
@@ -89,7 +89,7 @@ sense runs.
 | 9000 | Deaths | Done |
 | 10000 | Art | Done |
 | 11000 | Tests and multi-bomb physics | Done |
-| 12000 | Directed tour, docs, merge into `trunk` | Now |
+| 12000 | Directed tour, docs, merge into `trunk` | Built; awaiting review |
 
 Slice 11000 delivered the twin-bomb junkyard test and the multi-bomb
 physics: superposed pulls with random bias jitter, absolute durations (the
@@ -104,6 +104,16 @@ one major feature at a time with on-screen commentary, and the Tractor
 Bomb gets its own scene, ending on the twin bombs in a junkyard ("Two
 tractors are better than one."). Then the README, the decisions log, and
 the merge into `trunk`.
+
+Built on 2026-10-14 (overnight, by a workflow): the Showcase API gained
+scenes that decline a map (G1) and beats (G2); `BatshitTourDirector` plays
+eight scenes with narration, the Tractor Bomb and the junkyard twins last;
+`Tools/smoke-test.ps1 -Showcase -Verify` checks a tour run end to end.
+Adversarially reviewed and fixed. 638 unit and XML tests, smoke 190/190,
+tour verification 11/11. Open before the merge: the operator watches the
+tour (`Tools/smoke-test.ps1 -Showcase`), answers requests 17 and 18 in
+`docs/AI-requests-for-humans.txt`, and reviews the narration's wording;
+two tour faults (colonist deaths) are in `docs/AI-TODO.txt`.
 
 ### Decisions
 
