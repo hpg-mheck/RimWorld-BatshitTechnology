@@ -198,15 +198,16 @@ namespace BatshitTechnology
                     && robotsAfter + plantedAfter == target
                     && counter.CountProducts(bill) == target
                     && !bill.ShouldDoNow()
-                    && second.All(t => t.Spawned && !t.Destroyed),
+                    && barn.innerContainer.Count == 0,
                 $"robots {robots} + planted {plantedCount} -> X {target}; "
                     + $"barn counted {counted} (can count {canCount}); built "
                     + $"+{Building_TractorBarn.Built - built}, started again "
                     + $"{again}; now robots {robotsAfter} + planted "
                     + $"{plantedAfter}, barn counts "
-                    + $"{counter.CountProducts(bill)}; second set untouched "
-                    + $"{second.All(t => t.Spawned)}; first set used "
-                    + $"{first.All(t => t.Destroyed)}");
+                    + $"{counter.CountProducts(bill)}; loaded since "
+                    + $"{barn.innerContainer.Count}; first set used "
+                    + $"{first.All(t => t.Destroyed)}, second set lying "
+                    + $"about {second.Count(t => t.Spawned)}/{second.Count}");
             planted.Destroy(DestroyMode.Vanish);
             RemoveTestPawns(hauler, patrol);
         }

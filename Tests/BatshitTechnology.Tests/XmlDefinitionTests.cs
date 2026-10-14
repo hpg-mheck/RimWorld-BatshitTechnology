@@ -502,8 +502,9 @@ public sealed partial class XmlDefinitionTests
 
     /// <summary>
     /// The Tractor Bomb's textures that code loads by path, not a Def: the
-    /// flip frames, the parts its death vortex sucks in, and the protest
-    /// lamp (Source/TractorBomb.cs, BT_TractorBombAssets).
+    /// flip frames, the parts its death vortex sucks in, the protest lamp
+    /// and the Disposition button's icons (Source/TractorBomb.cs,
+    /// BT_TractorBombAssets).
     /// </summary>
     /// <param name="path">The texture path.</param>
     [Theory(DisplayName = "Tractor Bomb textures loaded by code exist")]
@@ -514,6 +515,9 @@ public sealed partial class XmlDefinitionTests
     [InlineData("Things/Mote/BT_TractorBombPart_Hood")]
     [InlineData("Things/Mote/BT_TractorBombPart_Emitter")]
     [InlineData("Things/Mote/BT_TractorBombLamp")]
+    [InlineData("UI/Commands/BT_DispositionCautious")]
+    [InlineData("UI/Commands/BT_DispositionModerate")]
+    [InlineData("UI/Commands/BT_DispositionNosy")]
     public void TractorBombCodeTextures_should_exist(string path)
     {
         Assert.True(File.Exists(Path.Combine(

@@ -11,7 +11,7 @@
   <ThingDef ParentName="BasePawn">
     <defName>BT_TractorBomb</defName>
     <label>tractor bomb</label>
-    <description>A little steel farm tractor with a batshittium tractor-beam emitter where the exhaust stack should be. It patrols its allowed area, drives to within 15 tiles of the nearest hostile it can see, and plants itself: its tyres flip out flat, it counts down three to five seconds, drags everything within 10 tiles into a heap at its feet, and explodes over 5 tiles.\n\nIf a colonist is inside its tractor beam when it is ready, it protests for three seconds, beeping and flashing, and then plants itself anyway. It does not refuel, rest or complain. Badly damaged, it drives home to its Tractor Barn for repairs; otherwise, it is not coming back.</description>
+    <description>A little steel farm tractor with a batshittium tractor-beam emitter where the exhaust stack should be. It patrols its allowed area, drives at the nearest hostile it can see, and plants itself: its tyres flip out flat, it counts down three to five seconds, drags everything within 10 tiles into a heap at its feet, and explodes over 5 tiles. Its disposition decides how close it drives: Cautious stops 15 tiles out, Moderate one tile inside its tractor beam, and Nosy right up close.\n\nIf a colonist is inside its tractor beam when it is ready, it protests for three seconds, beeping and flashing, and then plants itself anyway. It does not refuel, rest or complain. Badly damaged, it drives home to its Tractor Barn for repairs; otherwise, it is not coming back.</description>
     <soundImpactDefault>BulletImpact_Metal</soundImpactDefault>
     <statBases>
       <MoveSpeed>3.6</MoveSpeed>

@@ -143,6 +143,35 @@ namespace BatshitTechnology
         /// <summary>The DEV commands' icon.</summary>
         public static readonly Texture2D DevIcon =
             ContentFinder<Texture2D>.Get("UI/Commands/Detonate");
+
+        /// <summary>
+        /// The Disposition button's icons, in
+        /// <see cref="TractorBombDisposition"/> order.
+        /// </summary>
+        public static readonly string[] DispositionIconPaths =
+        {
+            "UI/Commands/BT_DispositionCautious",
+            "UI/Commands/BT_DispositionModerate",
+            "UI/Commands/BT_DispositionNosy",
+        };
+
+        /// <summary>The Disposition icons, loaded.</summary>
+        private static readonly Texture2D[] DispositionIcons =
+            DispositionIconPaths
+                .Select(p => ContentFinder<Texture2D>.Get(p))
+                .ToArray();
+
+        /// <summary>The Disposition button's icon for a setting.</summary>
+        /// <param name="disposition">The setting.</param>
+        /// <returns>The icon.</returns>
+        public static Texture2D DispositionIcon(
+            TractorBombDisposition disposition)
+        {
+            int i = (int)TractorBombApproach.Sanitize(disposition);
+            return i < DispositionIcons.Length
+                ? DispositionIcons[i]
+                : BaseContent.BadTex;
+        }
     }
 
     /// <summary>
@@ -172,7 +201,9 @@ namespace BatshitTechnology
         public float sightRadius = 45f;
 
         /// <summary>
-        /// How close it gets to a hostile before it emplaces, in tiles.
+        /// How close a cautious robot gets to a hostile before it emplaces,
+        /// in tiles; its disposition may take it closer
+        /// (<see cref="TractorBombApproach.StopDistance"/>).
         /// </summary>
         public float emplaceRange = 15f;
 
@@ -264,6 +295,8 @@ namespace BatshitTechnology
         private int readyTick = -1;
         private int protestTicksLeft;
         private int protestTicksRun;
+        private TractorBombDisposition disposition =
+            TractorBombApproach.Default;
 
         /// <summary>Typed access to this comp's XML properties.</summary>
         public CompProperties_TractorBomb Props =>
@@ -322,6 +355,31 @@ namespace BatshitTechnology
         public bool YieldAdjustable =>
             DialAYieldResearched && parent.Faction == Faction.OfPlayer
             && readyTick < 0;
+
+        /// <summary>
+        /// How close it drives to its quarry: Cautious, Moderate (the
+        /// default) or Nosy. Saved with the robot.
+        /// </summary>
+        public TractorBombDisposition Disposition
+        {
+            get => TractorBombApproach.Sanitize(disposition);
+            set => disposition = TractorBombApproach.Sanitize(value);
+        }
+
+        /// <summary>
+        /// How far from its quarry it stops to plant itself, in tiles: its
+        /// disposition's stop, with the tractor beam in effect.
+        /// </summary>
+        public float StopDistance => (float)TractorBombApproach.StopDistance(
+            Disposition, Props.emplaceRange, PullRadius);
+
+        /// <summary>
+        /// Whether the player may change its disposition: a player robot
+        /// that is not yet emplacing. (Once planted it no longer matters,
+        /// so a planted bomb has no such setting.)
+        /// </summary>
+        public bool DispositionAdjustable =>
+            parent.Faction == Faction.OfPlayer && readyTick < 0;
 
         /// <summary>
         /// Whether a colonist stands inside its pull radius: what it
@@ -479,12 +537,17 @@ namespace BatshitTechnology
             }
         }
 
-        /// <summary>Its yield, its allowed area and any protest.</summary>
+        /// <summary>
+        /// Its yield, its disposition, its allowed area and any protest.
+        /// </summary>
         /// <returns>The inspect pane lines.</returns>
         public override string CompInspectStringExtra()
         {
             string text = $"Tractor beam {PullRadius:0} tiles, "
-                + $"blast {BlastRadius:0} tiles";
+                + $"blast {BlastRadius:0} tiles"
+                + "\nDisposition: "
+                + TractorBombDispositionText.Label(Disposition)
+                + $" (stops {StopDistance:0} tiles out)";
             if (Robot?.playerSettings != null)
             {
                 text += "\nPatrols: " + AreaUtility.AreaAllowedLabel(Robot);
@@ -500,8 +563,8 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Its controls: the allowed area, the yield sliders once
-        /// Dial-A-Yield is researched, and DEV commands.
+        /// Its controls: the allowed area, its disposition, the yield
+        /// sliders once Dial-A-Yield is researched, and DEV commands.
         /// </summary>
         /// <returns>The gizmos.</returns>
         public override IEnumerable<Gizmo> CompGetGizmosExtra()
@@ -520,6 +583,11 @@ namespace BatshitTechnology
             if (robot.playerSettings != null && robot.Spawned)
             {
                 yield return new Command_TractorBombArea(robot);
+            }
+
+            if (DispositionAdjustable)
+            {
+                yield return new Command_TractorBombDisposition(this);
             }
 
             if (YieldAdjustable)
@@ -544,7 +612,9 @@ namespace BatshitTechnology
             }
         }
 
-        /// <summary>Saves and loads the yield and any emplacing.</summary>
+        /// <summary>
+        /// Saves and loads the yield, the disposition and any emplacing.
+        /// </summary>
         public override void PostExposeData()
         {
             base.PostExposeData();
@@ -556,8 +626,11 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref readyTick, "readyTick", -1);
             Scribe_Values.Look(ref protestTicksLeft, "protestTicksLeft");
             Scribe_Values.Look(ref protestTicksRun, "protestTicksRun");
+            Scribe_Values.Look(
+                ref disposition, "disposition", TractorBombApproach.Default);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
+                disposition = TractorBombApproach.Sanitize(disposition);
                 dialledPull = TractorBombYield.ClampPull(dialledPull);
                 dialledBlast = TractorBombYield.ClampBlast(dialledBlast);
                 protestTicksLeft = Mathf.Clamp(
@@ -702,22 +775,24 @@ namespace BatshitTechnology
         /// <summary>
         /// The robot's quarry: the nearest hostile pawn it can see, within
         /// its sight, that is no threat-in-name-only (downed, dormant,
-        /// invisible), with a cell within emplacing range that it can reach
-        /// without leaving its allowed area.
+        /// invisible), with a cell within its stopping distance (its
+        /// disposition's) that it can reach without leaving its allowed
+        /// area.
         /// </summary>
         /// <param name="robot">The robot.</param>
-        /// <param name="props">Its settings.</param>
+        /// <param name="comp">Its brain: settings and disposition.</param>
         /// <param name="target">The hostile.</param>
         /// <param name="cell">
         /// Where to go: its own cell when already in range.
         /// </param>
         /// <returns>False if there is none.</returns>
         public static bool TryFindQuarry(
-            Pawn robot, CompProperties_TractorBomb props, out Pawn target,
+            Pawn robot, CompTractorBomb comp, out Pawn target,
             out IntVec3 cell)
         {
             target = null;
             cell = IntVec3.Invalid;
+            CompProperties_TractorBomb props = comp?.Props;
             if (robot == null || !robot.Spawned || props == null
                 || robot.Faction == null)
             {
@@ -726,6 +801,7 @@ namespace BatshitTechnology
 
             Map map = robot.Map;
             float sight = props.sightRadius;
+            float stop = Mathf.Min(comp.StopDistance, sight);
             var seen = new List<Pawn>();
             foreach (IAttackTarget t in map.attackTargetsCache
                 .TargetsHostileToFaction(robot.Faction))
@@ -739,8 +815,7 @@ namespace BatshitTechnology
             foreach (Pawn p in seen.OrderBy(
                 p => (p.Position - robot.Position).LengthHorizontalSquared))
             {
-                if (TryFindApproachCell(
-                    robot, p, props.emplaceRange, out cell))
+                if (TryFindApproachCell(robot, p, stop, out cell))
                 {
                     target = p;
                     return true;
@@ -772,7 +847,7 @@ namespace BatshitTechnology
         /// </summary>
         /// <param name="robot">The robot.</param>
         /// <param name="target">The hostile.</param>
-        /// <param name="range">The emplacing range, in tiles.</param>
+        /// <param name="range">The stopping distance, in tiles.</param>
         /// <param name="cell">The cell; the robot's own if in range.</param>
         /// <returns>False if there is none.</returns>
         public static bool TryFindApproachCell(

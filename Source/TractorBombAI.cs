@@ -1,7 +1,8 @@
 // Batshit Technology - the Tractor Bomb's mind.
 // Its think tree (Defs/ThinkTreeDefs/BT_TractorBomb_ThinkTrees.xml) runs:
-// hunt (JobGiver_TractorBombHunt: emplace if a hostile it can see is in
-// range, else approach it), otherwise patrol its allowed area
+// hunt (JobGiver_TractorBombHunt: emplace if a hostile it can see is
+// within its disposition's stopping distance, else approach it), otherwise
+// patrol its allowed area
 // (JobGiver_TractorBombPatrol). The constant tree runs the hunt every
 // half second, so a patrolling robot breaks off the moment it spots one.
 // JobDriver_TractorBombApproach closes in and retargets as hostiles move;
@@ -17,8 +18,10 @@ using Verse.AI;
 namespace BatshitTechnology
 {
     /// <summary>
-    /// The hunt: emplace if a hostile the robot can see is within range,
-    /// otherwise close in on the nearest one it can reach.
+    /// The hunt: emplace if a hostile the robot can see is within its
+    /// stopping distance (Cautious 15 tiles, Moderate one inside its
+    /// tractor beam, Nosy 3), otherwise close in on the nearest one it can
+    /// reach.
     /// </summary>
     public class JobGiver_TractorBombHunt : ThinkNode_JobGiver
     {
@@ -59,7 +62,7 @@ namespace BatshitTechnology
             }
 
             if (!TractorBombUtility.TryFindQuarry(
-                pawn, comp.Props, out Pawn target, out IntVec3 cell))
+                pawn, comp, out Pawn target, out IntVec3 cell))
             {
                 return null;
             }
@@ -159,7 +162,7 @@ namespace BatshitTechnology
             }
 
             if (!TractorBombUtility.TryFindQuarry(
-                pawn, comp.Props, out Pawn target, out IntVec3 cell))
+                pawn, comp, out Pawn target, out IntVec3 cell))
             {
                 EndJobWith(JobCondition.Incompletable);
                 return;

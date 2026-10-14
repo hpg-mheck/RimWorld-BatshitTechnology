@@ -184,6 +184,11 @@ helper in the generator.
   (`_north`, `_east`, `_south`; RimWorld mirrors east for west) while the
   light stays at the top left. Robots live in `Things/Pawn/Robot`, which
   vanilla does not have; mechanoids keep `Things/Pawn/Mechanoid`.
+- **Buttons.** A setting with a few values gets one 128 px icon per
+  value in `UI/Commands`, named `BT_<Setting><Value>`, drawn on
+  transparent, with the thing it sets as the subject. The Disposition
+  icons show the tractor bomb from above, nose up a dashed track toward
+  a danger-red target reticle, stopping far, near or touching it.
 - **Overlays and pieces.** Glows drawn in game (a lamp) are soft white
   discs tinted by their material; pieces a death flings about are 64 px
   sprites in `Things/Mote`, drawn at about half a tile.

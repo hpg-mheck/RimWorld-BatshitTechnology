@@ -5,6 +5,8 @@
 // sets them all. Command_TractorBombArea: picks a robot's allowed area,
 // the vanilla per-pawn area that bounds its patrol, from vanilla's own
 // area menu, since only colonists, animals and mechs get vanilla's area UI.
+// Command_TractorBombDisposition: steps a robot's disposition (how close it
+// drives before planting) through Cautious, Moderate and Nosy.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -222,6 +224,91 @@ namespace BatshitTechnology
                 {
                     robot.playerSettings.AreaRestrictionInPawnCurrentMap =
                         area;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The player-facing words for a Tractor Bomb's dispositions.
+    /// </summary>
+    public static class TractorBombDispositionText
+    {
+        /// <summary>A disposition's name, capitalised.</summary>
+        /// <param name="disposition">The disposition.</param>
+        /// <returns>Its name.</returns>
+        public static string Label(TractorBombDisposition disposition) =>
+            TractorBombApproach.Sanitize(disposition) switch
+            {
+                TractorBombDisposition.Cautious => "Cautious",
+                TractorBombDisposition.Nosy => "Nosy",
+                _ => "Moderate",
+            };
+    }
+
+    /// <summary>
+    /// Steps the disposition of every selected robot to the one after this
+    /// robot's: Cautious, Moderate, Nosy, and round again. One click for
+    /// the whole selection.
+    /// </summary>
+    public class Command_TractorBombDisposition : Command_Action
+    {
+        /// <summary>Makes the command for one robot.</summary>
+        /// <param name="comp">The robot's brain.</param>
+        public Command_TractorBombDisposition(CompTractorBomb comp)
+        {
+            TractorBombDisposition current =
+                comp?.Disposition ?? TractorBombApproach.Default;
+            TractorBombDisposition next = TractorBombApproach.Next(current);
+            Current = current;
+            Next = next;
+            defaultLabel = "Disposition: "
+                + TractorBombDispositionText.Label(current);
+            defaultDesc = "How close this tractor bomb drives to its "
+                + "quarry before it plants itself. Click for "
+                + TractorBombDispositionText.Label(next) + ".\n\n"
+                + "Cautious: stops 15 tiles out.\n"
+                + "Moderate: stops one tile inside its tractor beam, or 15 "
+                + "tiles out if that is nearer, so a target standing still "
+                + "is caught.\n"
+                + "Nosy: drives right up, to 3 tiles.";
+            if (comp != null)
+            {
+                defaultDesc += $"\n\nNow it stops {comp.StopDistance:0} "
+                    + "tiles out.";
+            }
+
+            icon = BT_TractorBombAssets.DispositionIcon(current);
+            action = () => SetAll(next);
+        }
+
+        /// <summary>The disposition it shows.</summary>
+        public TractorBombDisposition Current { get; }
+
+        /// <summary>The disposition a click sets.</summary>
+        public TractorBombDisposition Next { get; }
+
+        /// <summary>
+        /// One click, not one per selected robot: the choice applies to all
+        /// of them.
+        /// </summary>
+        /// <param name="other">Another command in the group.</param>
+        /// <returns>False: the others do nothing.</returns>
+        public override bool InheritInteractionsFrom(Gizmo other) => false;
+
+        /// <summary>
+        /// Gives every selected player robot that may still change it the
+        /// disposition.
+        /// </summary>
+        /// <param name="disposition">The disposition.</param>
+        public static void SetAll(TractorBombDisposition disposition)
+        {
+            foreach (Pawn robot in Find.Selector.SelectedPawns.ToList())
+            {
+                CompTractorBomb comp = robot.TryGetComp<CompTractorBomb>();
+                if (comp != null && comp.DispositionAdjustable)
+                {
+                    comp.Disposition = disposition;
                 }
             }
         }

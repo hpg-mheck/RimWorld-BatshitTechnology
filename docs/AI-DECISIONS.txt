@@ -548,3 +548,30 @@ TRACTOR-BOMB.md, "As Built"). Decisions:
   StepsToMend per injury. Sabotage runs (a "Build one now" bill of 2,
   no healing, no tyres, planted bombs uncounted; then no robot built)
   failed every new check.
+2026-10-13 Claude: Tractor Bomb Disposition (decided after the core
+build; docs/TRACTOR-BOMB.md, "As Built"). Decisions:
+- Stops, from Core's TractorBombApproach: Cautious is the robot's XML
+  emplaceRange (15); Moderate the nearer of that and the dialled pull
+  less one (9 by default, 2 to 15 across Dial-A-Yield); Nosy the nearer
+  of 3 and Moderate's stop, so it is never farther than Moderate (2 with
+  a 3-tile pull). Moderate is the default, as proposed.
+- Saved per robot as its number (Cautious 0, Moderate 1, Nosy 2); a
+  number none has becomes Moderate.
+- A button on the robot steps Cautious, Moderate, Nosy; one click sets
+  every selected robot, as the patrol-area button does. It goes once
+  the robot starts to emplace. A planted bomb has no Disposition: once
+  planted it no longer matters ("where it still matters").
+- The robot's inspect pane says its disposition and its stop in tiles.
+- The earlier hunt, protest and Dial-A-Yield smoke scenarios now set
+  their robots to Cautious, which keeps their geometry (each stops 15
+  tiles out or plants where it stands). Moderate would have stopped the
+  hunt's robot at 9 tiles and pulled in the raider the scenario expects
+  to stay put.
+- Flake fixed while proving this: the flee check's fresh colonist and
+  muffalo are now made healthy (any ailment generated with them is
+  removed) and the muffalo adult, and the note logs their Moving. A
+  clean run had failed with the muffalo 17.3 tiles out against 18; it
+  usually ends just past 19, where it stops. The AnyRim power check
+  failed on two random maps in nineteen runs (a few lamps on a net with
+  nothing generating; it runs before any Tractor Bomb code); its
+  failure detail now names the nets and the town reactor's state.

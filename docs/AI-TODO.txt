@@ -151,6 +151,9 @@
     "Build one now", repair docking and the barn's death, each proved to
     fail by a sabotage run; Core tests for the repair arithmetic; XML
     tests for the barn's defs and the stopgap's removal.
+  - [x] Disposition (decided after the core build): Cautious, Moderate
+    (default) and Nosy, per robot, with Core's TractorBombApproach, unit
+    tests and a smoke check proved by sabotage.
   - [ ] Step 12: showcase scene and docs.
   - [ ] Replace the protest's TrapArm click with a beep from the sound
     pipeline (feature/audio).

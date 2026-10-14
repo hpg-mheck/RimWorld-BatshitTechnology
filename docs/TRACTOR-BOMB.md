@@ -21,9 +21,10 @@ bomb when it finds them.
 - **Patrol:** it wanders the map looking for hostile forces, within a
   vanilla allowed area set per bomb, which defaults to the whole map. Draw
   an area to fence it in.
-- **Approach:** when it finds any, it moves to within 15 tiles of them.
-  "Hostile forces" means pawns hostile to the player that it can see; it
-  retargets if they move before it has emplaced (built).
+- **Approach:** when it finds any, it moves to within 15 tiles of them,
+  or closer, as its Disposition says (built; see "As Built"). "Hostile
+  forces" means pawns hostile to the player that it can see; it retargets
+  if they move before it has emplaced (built).
 - **Emplacement:** it permanently emplaces itself, becoming a fixed bomb
   that cannot move again. The tires flip out flat over about half a second
   (built).
@@ -160,9 +161,19 @@ build settled a detail, it is recorded here; the decisions log
   - **Hunt:** it sees a hostile pawn within 45 tiles in line of sight,
     in explored ground, standing and a real threat (not downed, dormant
     or invisible). It drives to the reachable cell nearest itself that
-    is within 15 tiles of the nearest one, inside its area; it never
-    leaves its area to chase. It looks again every half second,
+    is within its stopping distance of the nearest one, inside its area;
+    it never leaves its area to chase. It looks again every half second,
     following or switching targets.
+  - **Disposition** (decided after the core build): how close it drives
+    before it plants itself, set per robot with a button that steps
+    through the three (one click sets the whole selection) and saved
+    with it. **Cautious** stops 15 tiles out. **Moderate**, the default,
+    stops one tile inside its tractor beam or 15 tiles out, whichever is
+    nearer: 9 tiles at the default yield, following Dial-A-Yield (2 to
+    15). **Nosy** drives right up, to 3 tiles (2 with a 3-tile beam).
+    The arithmetic is Core's `TractorBombApproach`. Once planted the
+    setting no longer matters, so a planted bomb has none; the robot's
+    inspect pane says how far it stops.
   - **Protest:** decided once, when it is ready: a colonist (free or
     enslaved) inside its pull radius. Three seconds of a beep every half
     second (vanilla's `TrapArm` click, for now) and a lamp on its control

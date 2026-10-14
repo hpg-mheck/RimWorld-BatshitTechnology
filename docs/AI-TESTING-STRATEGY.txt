@@ -91,7 +91,10 @@ twenty "making peace" lines, unchanged, until the pull seizes it and
 its freeze ends; a berserk colonist and a manhunting muffalo in plain
 sight neither run nor freeze; a muffalo seized mid-run by a pull started
 early (ImplodeNow) is released from its flee and given nothing while
-the pull runs; and none of it logs an error. The Tractor Barn
+the pull runs; and none of it logs an error. Each disposition stops at
+its own distance from a raider standing still 37 tiles off (Cautious 15,
+Moderate 9, Nosy 3), and a new robot is Moderate with a working button.
+The Tractor Barn
 (SmokeTest.TractorBarn.cs): "Build one now" adds a "Do 1 times" bill; a
 colonist who may only haul loads that bill's parts into the barn and is
 then removed, and the barn builds the robot alone in about an hour,
@@ -104,8 +107,8 @@ and refitted for exactly the steel and time Core's TractorBarnRepair
 predicts, then drives off on patrol. A destroyed barn flings its spare
 tyres (TestDeathBlasts). Unit tests cover its pure logic
 (TractorBombYield, TractorBombTiming, DeathVortexMath, TractorBombFlee,
-TractorBarnRepair). Each new check was proved by a run that broke its
-behaviour first.
+TractorBarnRepair, TractorBombApproach). Each new check was proved by a
+run that broke its behaviour first.
 
 The runner silences the storyteller at the start, so no raid lands in
 the middle of a check (one raid sent pirates round a long-range Ballista

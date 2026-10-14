@@ -909,9 +909,19 @@ namespace BatshitTechnology
             }
 
             var unpowered = consumers.Where(t => !t.TryGetComp<CompPowerTrader>().PowerOn).ToList();
+            // Which nets the consumers are on, and the reactor's state: a
+            // run on 2026-10-13 found a few lamps on a net with nothing
+            // generating, on two random maps out of nineteen.
+            int nets = consumers.Select(t => t.TryGetComp<CompPowerTrader>().PowerNet)
+                .Where(n => n != null).Distinct().Count();
+            string reactorState = reactor == null ? "no reactor"
+                : $"reactor output {reactor.TryGetComp<CompPowerPlant>()?.PowerOutput ?? -1f:F0} W, "
+                    + $"burn {reactor.TryGetComp<CompBatshittiumReactor>()?.BurnTicksLeft ?? -1}, "
+                    + $"fuel {fuel?.Fuel ?? -1f:F1}, on {FlickUtility.WantsToBeOn(reactor)}";
             Check("AnyRim's devices and lamps are powered", consumers.Length > 0 && unpowered.Count == 0,
-                $"{unpowered.Count} of {consumers.Length} unpowered, e.g. "
-                    + string.Join(", ", unpowered.Take(3).Select(t => $"{t.def.defName} ({PowerDetail(t)})")));
+                $"{unpowered.Count} of {consumers.Length} unpowered on {nets} nets ({reactorState}), e.g. "
+                    + string.Join(", ", unpowered.Take(3).Select(t =>
+                        $"{t.def.defName} at {t.Position} ({PowerDetail(t)})")));
 
             if (reactor != null)
             {
@@ -1663,6 +1673,7 @@ namespace BatshitTechnology
             TestTractorBombPatrol(map, center);
             TestTractorBarn(map, center);
             TestTractorBombHunt(map, center);
+            TestTractorBombDispositions(map, center);
             TestTractorBombProtest(map, center);
             TestTractorBombFlee(map, center);
             TestTractorBombDialAYield(map, center);
@@ -1939,7 +1950,9 @@ namespace BatshitTechnology
         /// everything within 10 tiles to within 1.5 (eleven stacks that
         /// cannot merge, so two must wait just outside the pile) and
         /// explodes over 5 tiles, catching what is left outside the pile.
-        /// The raider at 15 tiles is out of reach and stays put.
+        /// The raider at 15 tiles is out of reach and stays put: the robot
+        /// is Cautious, so it stops 15 tiles out (Moderate, the default,
+        /// would stop at 9 and pull the raider in).
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -1947,6 +1960,8 @@ namespace BatshitTechnology
         {
             ClearTractorStage(map, center);
             Pawn robot = SpawnTestRobot(map, center + new IntVec3(-25, 0, 0));
+            robot.TryGetComp<CompTractorBomb>().Disposition =
+                TractorBombDisposition.Cautious;
             Pawn quarry = SpawnStunnedHostile(map, center + new IntVec3(12, 0, 0));
             float startDistance = robot.Position.DistanceTo(quarry.Position);
             Building_TractorBomb bomb = WaitForEmplacement(
@@ -2069,8 +2084,79 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// Each disposition stops at its own distance from a raider
+        /// standing still 37 tiles off, at the default yield: Cautious at
+        /// 15 tiles, Moderate at 9 (one inside its 10-tile tractor beam),
+        /// Nosy at 3. A robot plants on the reachable cell nearest itself
+        /// within its stop, so each lands within a tile and a half inside
+        /// it. A new robot is Moderate, its button steps to the next, and
+        /// it says how far it stops on its inspect pane. Each bomb is
+        /// removed before it goes off.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombDispositions(Map map, IntVec3 center)
+        {
+            var expected = new Dictionary<TractorBombDisposition, float>
+            {
+                [TractorBombDisposition.Cautious] = 15f,
+                [TractorBombDisposition.Moderate] = 9f,
+                [TractorBombDisposition.Nosy] = 3f,
+            };
+            var results = new List<string>();
+            bool ok = true;
+            bool newIsModerate = false;
+            bool button = false;
+            foreach (KeyValuePair<TractorBombDisposition, float> want in expected)
+            {
+                ClearTractorStage(map, center);
+                Pawn robot = SpawnTestRobot(map, center + new IntVec3(-25, 0, 0));
+                var comp = robot.TryGetComp<CompTractorBomb>();
+                if (want.Key == TractorBombDisposition.Moderate)
+                {
+                    newIsModerate = comp.Disposition == want.Key;
+                    var command = comp.CompGetGizmosExtra()
+                        .OfType<Command_TractorBombDisposition>()
+                        .FirstOrDefault();
+                    button = command != null && command.Current == want.Key
+                        && command.Next == TractorBombDisposition.Nosy
+                        && robot.GetInspectString().Contains(
+                            "Disposition: Moderate (stops 9 tiles out)");
+                }
+
+                comp.Disposition = want.Key;
+                Pawn quarry = SpawnStunnedHostile(
+                    map, center + new IntVec3(12, 0, 0));
+                Building_TractorBomb bomb = WaitForEmplacement(
+                    robot, 1500, out bool approached);
+                float distance = bomb == null ? -1f
+                    : bomb.Position.DistanceTo(quarry.Position);
+                bool fits = bomb != null && approached
+                    && distance <= want.Value + 0.01f
+                    && distance > want.Value - 1.5f;
+                ok &= fits;
+                results.Add($"{want.Key}: wanted {want.Value:0}, planted "
+                    + $"{distance:F1} tiles out (approached {approached})");
+                if (bomb != null && bomb.Spawned)
+                {
+                    bomb.Destroy(DestroyMode.Vanish);
+                }
+
+                RemoveTestPawns(quarry);
+            }
+
+            Check("each disposition stops at its distance from a stationary "
+                    + "target",
+                ok && newIsModerate && button,
+                $"new robot Moderate {newIsModerate}, button and pane "
+                    + $"{button}; " + string.Join("; ", results));
+        }
+
+        /// <summary>
         /// A colonist inside the pull radius when the robot is ready: it
-        /// protests for about three seconds, then emplaces anyway.
+        /// protests for about three seconds, then emplaces anyway. The
+        /// robot is Cautious, so it is ready where it stands, 12 tiles from
+        /// its quarry and 4 from the colonist.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -2078,6 +2164,8 @@ namespace BatshitTechnology
         {
             ClearTractorStage(map, center);
             Pawn robot = SpawnTestRobot(map, center + new IntVec3(-6, 0, 0));
+            robot.TryGetComp<CompTractorBomb>().Disposition =
+                TractorBombDisposition.Cautious;
             Pawn colonist = TestColonist(
                 map, robot.Position + new IntVec3(0, 0, 4));
 
@@ -2164,6 +2252,8 @@ namespace BatshitTechnology
             var reports = new HashSet<string>();
             bool runnerRan = false;
             bool critterRan = false;
+            int runnerAt = -1;
+            int critterAt = -1;
             bool stayedPut = true;
             bomb.StartCountdown();
             for (int i = 0; i < 600 && bomb.Spawned
@@ -2175,6 +2265,8 @@ namespace BatshitTechnology
                     == BT_TractorBombDefOf.BT_TractorBombFlee;
                 critterRan |= critter.CurJobDef
                     == BT_TractorBombDefOf.BT_TractorBombFlee;
+                runnerAt = runnerAt < 0 && runnerRan ? i : runnerAt;
+                critterAt = critterAt < 0 && critterRan ? i : critterAt;
                 if (frozen.CurJobDef
                     == BT_TractorBombDefOf.BT_TractorBombFreeze)
                 {
@@ -2194,8 +2286,10 @@ namespace BatshitTechnology
                 ? critter.Position.DistanceTo(bomb.Position) : -1f;
             int armed = bomb.ImplosionStartedTick - bomb.CountdownStartedTick;
             Log.Message($"[BT-SMOKE] NOTE flee distance {flee}: colonist "
-                + $"{runnerOut:F1} and muffalo {critterOut:F1} tiles out when "
-                + $"the pull started, {armed} ticks after arming");
+                + $"{runnerOut:F1} ({Legs(runner)}, ran at {runnerAt}) and "
+                + $"muffalo {critterOut:F1} ({Legs(critter)}, ran at "
+                + $"{critterAt}) tiles out when the pull started, {armed} "
+                + "ticks after arming");
             Check("a colonist and an animal in reach run past pull + 8 "
                     + "before the pull",
                 pulling && runnerRan && critterRan && runnerOut > flee
@@ -2409,9 +2503,9 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// A brand-new colonist, undrafted, rested and fed, exactly on a
-        /// spot: one free to react, unlike the colony's own, which the
-        /// stage holds drafted.
+        /// A brand-new colonist, undrafted, rested, fed and healthy,
+        /// exactly on a spot: one free to react, unlike the colony's own,
+        /// which the stage holds drafted.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="spot">Where to put it.</param>
@@ -2423,12 +2517,13 @@ namespace BatshitTechnology
                 forceGenerateNewPawn: true, dontGiveWeapon: true));
             GenSpawn.Spawn(p, spot, map);
             Refresh(p);
+            Heal(p);
             return p;
         }
 
         /// <summary>
-        /// A brand-new wild muffalo (or any animal, if muffalo are
-        /// missing), rested and fed, exactly on a spot.
+        /// A brand-new wild adult muffalo (or any animal, if muffalo are
+        /// missing), rested, fed and healthy, exactly on a spot.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="spot">Where to put it.</param>
@@ -2439,12 +2534,42 @@ namespace BatshitTechnology
                 DefDatabase<PawnKindDef>.GetNamedSilentFail("Muffalo")
                 ?? DefDatabase<PawnKindDef>.AllDefs.First(
                     k => k.RaceProps.Animal);
+            float adult = kind.RaceProps.lifeStageAges.LastOrDefault()
+                ?.minAge ?? 1f;
             Pawn p = PawnGenerator.GeneratePawn(new PawnGenerationRequest(
-                kind, null, forceGenerateNewPawn: true));
+                kind, null, forceGenerateNewPawn: true,
+                fixedBiologicalAge: adult + 1f,
+                fixedChronologicalAge: adult + 1f));
             GenSpawn.Spawn(p, spot, map);
             Refresh(p);
+            Heal(p);
             return p;
         }
+
+        /// <summary>
+        /// Rids a fresh pawn of whatever ailments it was generated with (a
+        /// bad back, a missing toe, frailty), so how far it runs in a
+        /// countdown depends on its legs, not on luck. A sabotage-free
+        /// run once failed the flee check by 0.7 tiles on a muffalo.
+        /// </summary>
+        /// <param name="p">The pawn.</param>
+        private static void Heal(Pawn p)
+        {
+            foreach (Hediff h in p.health.hediffSet.hediffs
+                .Where(h => h.def.isBad).ToList())
+            {
+                p.health.RemoveHediff(h);
+            }
+        }
+
+        /// <summary>
+        /// A pawn's legs, for a note: its Moving capacity and life stage.
+        /// </summary>
+        /// <param name="p">The pawn.</param>
+        /// <returns>The text.</returns>
+        private static string Legs(Pawn p) =>
+            $"moving {p.health.capacities.GetLevel(PawnCapacityDefOf.Moving):P0}"
+            + $", {p.ageTracker.CurLifeStage.defName}";
 
         /// <summary>
         /// Tops up a pawn's rest, food and joy, so it neither lies down to
@@ -2516,7 +2641,8 @@ namespace BatshitTechnology
         /// bomb, set its implosion's reach and its blast, and the bomb's
         /// sliders go once it starts to pull. Here the tractor beam is
         /// dialled down to 4 tiles and the blast to 3: an item 3 tiles out
-        /// is pulled in, one 6 tiles out is left alone.
+        /// is pulled in, one 6 tiles out is left alone. The robot is
+        /// Cautious, so it emplaces where it stands, among those items.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -2528,6 +2654,7 @@ namespace BatshitTechnology
                 doCompletionDialog: false, doCompletionLetter: false);
             Pawn robot = SpawnTestRobot(map, center + new IntVec3(-6, 0, 0));
             var comp = robot.TryGetComp<CompTractorBomb>();
+            comp.Disposition = TractorBombDisposition.Cautious;
             var sliders = comp.CompGetGizmosExtra()
                 .OfType<Gizmo_TractorBombYield>().ToList();
             comp.PullRadius = 25f;
