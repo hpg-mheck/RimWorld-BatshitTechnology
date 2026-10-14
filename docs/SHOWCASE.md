@@ -88,6 +88,66 @@ at a time, explaining as it goes.
   "Skip tour" button on the caption bar)*; the director then stops
   moving the camera and leaves everything running.
 
+### The Story *(draft)*
+
+Requested by Matt "Breakpoint" Heck on 2026-10-13: a narrative to tie the
+showcase together. The tour is a 1950s industrial film, the kind that
+gave the world "Duck and Cover" and "The House in the Middle", in which a
+cheerful narrator presents the future, in reels.
+
+**Living Better with Batshittium.** *A Batshit Technology Public
+Information Film.* The caption bar reads like a title card throughout.
+
+- **The narrator** is warm, confident and on message. He is the motif's
+  deadpan, spoken aloud. As the reels go by his reassurances grow
+  shorter, and in the final reels they are mostly about remaining calm.
+  He never breaks the fourth wall, and he never admits anything is wrong.
+- **The cast** is the colony, introduced as "our volunteer family". The
+  grenade's volunteer is "a valued member of the family". AnyRim's
+  residents are "our neighbours". Captions name colonists by their real
+  names.
+- **The premise** is the arc. The film opens on the byline's first three
+  promises (sooner, cheaper, funnier) and closes, once the evidence is in,
+  on the fourth (and ludicrously dangerous).
+
+Reels and sample narration (final lines are written with the scenes):
+
+1. **Reel 1: Power for the Modern Colony.** The reactor. "Two hundred and
+   fifty thousand watts from a single unit of batshittium. Clean,
+   abundant, and only occasionally hot enough to cook the kitchen."
+2. **Reel 2: The Kitchen of Tomorrow.** The Random Replicator. "A
+   different dinner every time. Your family will never know what's for
+   supper, and neither will you."
+3. **Reel 3: Rocks Into Riches.** The Transmogrifier. "Every rock on
+   your land is a fortune waiting to be transmogrified."
+4. **Reel 4: Leisure, Scientifically Applied.** The Brain Squeezer. "A
+   firm, reassuring squeeze for the overworked mind."
+5. **Reel 5: Home Defence.** The Artificer and the Batshit Ballista.
+   "Sixteen bolts, one volley, and a neighbourhood with very few
+   complaints."
+6. **Reel 6: When Devices Retire.** The replicator's and the reactor's
+   self-destructs. "Every Batshit device knows when to step aside.
+   Please step aside also."
+7. **Reel 7: Comfort Is a Weapon.** The singularity grenade. "Ergonomic,
+   gravitational, and rated for comfort under pressure."
+8. **Reel 8: The Tractor of Tomorrow.** The Tractor Bomb. "The Tractor
+   Barn builds it. The tractor finds the problem. The problem is
+   resolved." Those too close are "making peace with their impending
+   doom", and the narrator explains that this is normal.
+9. **Reel 9: A Typical Rim Community.** AnyRim, street by street, and the
+   Survival Town history it comes from. "Every home in AnyRim is a
+   proving ground. So is every neighbour."
+10. **The End.** The sign-off card: "The Future: Sooner. Cheaper. Funnier.
+    And ludicrously dangerous." Then: "This concludes our presentation.
+    The colony is yours. Please remain calm." The director lets go of
+    the camera.
+
+*(Proposals:)* the reels map onto the scenes above (Reel 1 to 5 are the
+demo base and the Ballista); the narrator's lines live in XML so they
+can be translated and tested, as the Brain Squeezer's monologues do; and
+a future Colony Bomb reel ends the film with "Holy shit!" and "I know,
+right?".
+
 ## Safety Rules
 
 - **Demo corners keep away from AnyRim.** The replicator's reach,
