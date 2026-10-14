@@ -82,6 +82,17 @@
     <ProjectReference
         Include="BatshitTechnology.Core\BatshitTechnology.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Harmony, for the Showcases main-menu button only (the mod's one
+         patch; docs/SHOWCASE-API.md). Compile-time only: runtime assets
+         are excluded, so 0Harmony.dll is never copied to Assemblies/. The
+         Harmony mod (brrainz.harmony, a declared dependency) supplies it
+         at run time. 2.4.3 matches that mod's 1.6 build. -->
+    <PackageReference Include="Lib.Harmony" Version="2.4.3">
+      <ExcludeAssets>runtime</ExcludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
   <!-- Mod assets linked in so Visual Studio shows the whole mod tree. -->
   <ItemGroup>
     <None Include="..\About\**\*.*">
