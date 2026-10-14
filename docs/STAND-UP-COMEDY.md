@@ -39,6 +39,8 @@ The specification names the requirements; the running order is proposed.
   memory ("Sat through amateur comedy"); each comic gets a good memory
   for having done it. The worse the comics' Social skill, the funnier
   the player should find it and the more mixed the audience memory.
+- **Research:** Batshit Entertainment, the same project as the Drag
+  Show.
 
 ## Quality, and the Mob
 
@@ -70,9 +72,6 @@ Specified by Matt "Breakpoint" Heck on 2026-10-13:
   everyone ("Watched a comedy show turn into a riot"), and one last
   line of narration in the house voice: "The management thanks you for
   your patience."
-
-- **Research:** Batshit Entertainment, the same project as the Drag
-  Show.
 
 ## Open Questions
 
