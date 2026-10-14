@@ -150,7 +150,8 @@ namespace BatshitTechnology
         /// <summary>
         /// The settings of the singularity's pull: this extension's radius
         /// and timings, gathering as close to the centre as it can, ripping
-        /// fixtures loose.
+        /// fixtures loose, and lasting exactly its ramp (its minimum and
+        /// maximum durations are both <see cref="pullTicks"/>).
         /// </summary>
         /// <returns>New settings for an <see cref="Implosion"/>.</returns>
         public ImplosionSettings MakeImplosionSettings() =>
@@ -163,6 +164,8 @@ namespace BatshitTechnology
                 pullRateEnd = pullRateEnd,
                 ripFixtures = true,
                 ripTicks = ripTicks,
+                minDurationTicks = pullTicks,
+                maxDurationTicks = pullTicks,
             };
 
         /// <summary>Reports mistakes in the settings.</summary>
@@ -301,8 +304,9 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// One tick: the implosion pulls until its time is up; then the
-        /// field explodes, and comforts the survivors a moment later.
+        /// One tick: the implosion pulls until it is over (exactly its
+        /// five seconds); then the field explodes, and comforts the
+        /// survivors a moment later.
         /// </summary>
         protected override void Tick()
         {
@@ -316,7 +320,7 @@ namespace BatshitTechnology
             if (!exploded)
             {
                 implosion.Tick(Map);
-                if (implosion.TimeUp)
+                if (implosion.Over)
                 {
                     Explode(s);
                 }

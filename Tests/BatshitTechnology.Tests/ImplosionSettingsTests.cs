@@ -38,6 +38,9 @@ public sealed class ImplosionSettingsTests
             ["rate beyond a cell a tick"] = s => s.pullRateEnd = 61,
             ["infinite rate"] = s => s.pullRateEnd = float.PositiveInfinity,
             ["end rate not a number"] = s => s.pullRateEnd = float.NaN,
+            ["no maximum duration"] = s => s.maxDurationTicks = 0,
+            ["negative minimum duration"] = s => s.minDurationTicks = -1,
+            ["minimum beyond the maximum"] = s => s.minDurationTicks = 301,
         };
 
     /// <summary>The names of <see cref="Mistakes"/>, for xUnit.</summary>
@@ -46,7 +49,7 @@ public sealed class ImplosionSettingsTests
 
     /// <summary>
     /// The defaults are the Ergonomic Singularity Grenade's settings, and
-    /// sound.
+    /// sound: exactly five seconds, its minimum and maximum equal.
     /// </summary>
     [Fact(DisplayName = "Implosion defaults are the grenade's, and sound")]
     public void Defaults_should_be_the_grenade()
@@ -59,20 +62,24 @@ public sealed class ImplosionSettingsTests
         Assert.Equal(12f, s.pullRateEnd);
         Assert.True(s.ripFixtures);
         Assert.Equal(120, s.ripTicks);
+        Assert.Equal(300, s.minDurationTicks);
+        Assert.Equal(300, s.maxDurationTicks);
         Assert.Empty(s.Problems(MaxRadius));
     }
 
     /// <summary>
-    /// The Tractor Bomb's settings (10 tiles in to 1.5, over its own
-    /// timing) are sound.
+    /// The Tractor Bomb's settings (10 tiles in to 1.5, for two to eight
+    /// seconds) are sound.
     /// </summary>
-    [Fact(DisplayName = "Tractor Bomb's gather radius is sound")]
+    [Fact(DisplayName = "Tractor Bomb's gather radius and durations are sound")]
     public void Tractor_bomb_settings_should_be_sound()
     {
         var s = new ImplosionSettings
         {
             gatherRadius = 1.5f,
             pullTicks = 600,
+            minDurationTicks = TractorBombTiming.MinImplosionTicks,
+            maxDurationTicks = TractorBombTiming.MaxImplosionTicks,
         };
         Assert.Empty(s.Problems(MaxRadius));
     }
@@ -125,6 +132,8 @@ public sealed class ImplosionSettingsTests
             pullRateEnd = 60,
             ripFixtures = false,
             ripTicks = 0,
+            minDurationTicks = 0,
+            maxDurationTicks = 1,
         };
         Assert.Equal(Describe(s), Describe(s.Normalized(MaxRadius)));
     }
@@ -144,6 +153,8 @@ public sealed class ImplosionSettingsTests
             pullRateStart = -1,
             pullRateEnd = 1e9f,
             ripTicks = -7,
+            minDurationTicks = -5,
+            maxDurationTicks = -9,
         }.Normalized(MaxRadius);
         Assert.Equal((float)MaxRadius, s.pullRadius);
         Assert.Equal(s.pullRadius, s.gatherRadius);
@@ -151,6 +162,16 @@ public sealed class ImplosionSettingsTests
         Assert.Equal(0f, s.pullRateStart);
         Assert.Equal((float)ImplosionSettings.MaxRate, s.pullRateEnd);
         Assert.Equal(0, s.ripTicks);
+        Assert.Equal(1, s.maxDurationTicks);
+        Assert.Equal(0, s.minDurationTicks);
+
+        var inverted = new ImplosionSettings
+        {
+            minDurationTicks = 900,
+            maxDurationTicks = 480,
+        }.Normalized(MaxRadius);
+        Assert.Equal(480, inverted.minDurationTicks);
+        Assert.Equal(480, inverted.maxDurationTicks);
 
         var nan = new ImplosionSettings
         {
@@ -205,5 +226,6 @@ public sealed class ImplosionSettingsTests
     /// <returns>A string naming every field's value.</returns>
     private static string Describe(ImplosionSettings s) =>
         $"{s.pullRadius} {s.gatherRadius} {s.pullTicks} {s.pullRateStart} "
-        + $"{s.pullRateEnd} {s.ripFixtures} {s.ripTicks}";
+        + $"{s.pullRateEnd} {s.ripFixtures} {s.ripTicks} "
+        + $"{s.minDurationTicks} {s.maxDurationTicks}";
 }

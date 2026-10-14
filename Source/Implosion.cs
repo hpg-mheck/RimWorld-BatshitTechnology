@@ -41,12 +41,14 @@ namespace BatshitTechnology
     /// <c>Scribe_Deep.Look(ref implosion, "implosion")</c>.
     /// </para>
     /// <para>
-    /// The implosion never ends by itself. The host decides: when
-    /// <see cref="TimeUp"/> (the grenade), early once
-    /// <see cref="AllGathered"/> or <see cref="Settled"/>, or at a cap of
-    /// its own. The drag keeps its end rate after <see cref="TimeUp"/>.
-    /// It draws nothing but the dust it sucks in: the vortex, the explosion
-    /// and any aftermath are the host's.
+    /// Its settings say how long it runs: never less than their minimum,
+    /// never more than their maximum, and in between until
+    /// <see cref="AllGathered"/> or <see cref="Settled"/>. It reports that
+    /// as <see cref="Over"/>, and the host ends it (the grenade's minimum
+    /// and maximum are both five seconds). The drag keeps its end rate
+    /// after its ramp (<see cref="PullTicks"/>). It draws nothing but the
+    /// dust it sucks in: the vortex, the explosion and any aftermath are
+    /// the host's.
     /// </para>
     /// </remarks>
     public sealed class Implosion : IExposable
@@ -178,10 +180,25 @@ namespace BatshitTechnology
         public int ElapsedTicks => elapsed;
 
         /// <summary>
-        /// Whether its intended length (<see cref="PullTicks"/>) has run
-        /// out. It goes on pulling if the host keeps ticking it.
+        /// The shortest it runs, in ticks, however soon everything is
+        /// gathered.
         /// </summary>
-        public bool TimeUp => elapsed >= settings.pullTicks;
+        public int MinDurationTicks => settings.minDurationTicks;
+
+        /// <summary>
+        /// The longest it runs, in ticks, however things stand.
+        /// </summary>
+        public int MaxDurationTicks => settings.maxDurationTicks;
+
+        /// <summary>
+        /// Whether it is over and its host should end it: its maximum has
+        /// passed, or its minimum has and everything is gathered or nothing
+        /// more can move (<see cref="ImplosionMath.IsOver"/>). It goes on
+        /// pulling if the host keeps ticking it.
+        /// </summary>
+        public bool Over => ImplosionMath.IsOver(
+            elapsed, settings.minDurationTicks, settings.maxDurationTicks,
+            AllGathered, Settled);
 
         /// <summary>
         /// Whether everything in reach was gathered at its last drag step:
@@ -283,6 +300,11 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref settings.pullRateEnd, "pullRateEnd");
             Scribe_Values.Look(ref settings.ripFixtures, "ripFixtures");
             Scribe_Values.Look(ref settings.ripTicks, "ripTicks");
+            // -1 marks a save from before the durations existed.
+            Scribe_Values.Look(
+                ref settings.minDurationTicks, "minDurationTicks", -1);
+            Scribe_Values.Look(
+                ref settings.maxDurationTicks, "maxDurationTicks", -1);
             Scribe_References.Look(ref host, "host");
             Scribe_References.Look(ref instigator, "instigator");
             Scribe_Values.Look(ref elapsed, "elapsed");
@@ -298,6 +320,15 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref lastOutstanding, "lastOutstanding");
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
+                // A save from before the durations existed: the released
+                // grenade ran exactly its ramp, so that is what it gets.
+                // (An unreleased Tractor Bomb's cap was half again more.)
+                if (settings.maxDurationTicks < 0)
+                {
+                    settings.maxDurationTicks = settings.pullTicks;
+                    settings.minDurationTicks = settings.pullTicks;
+                }
+
                 // A save edited by hand, or from a later version, must not
                 // stall or crash the pull.
                 settings =

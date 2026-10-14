@@ -52,6 +52,10 @@
           <pullRateEnd>12</pullRateEnd>
           <ripFixtures>true</ripFixtures>
           <ripTicks>120</ripTicks>
+          <!-- Never less than 2 s, never more than 8 s: in between, it
+               ends once everything is gathered or nothing can move -->
+          <minDurationTicks>120</minDurationTicks>
+          <maxDurationTicks>480</maxDurationTicks>
         </implosion>
         <countdownSeconds>3~5</countdownSeconds>
         <deployTicks>30</deployTicks> <!-- the tyres flip in half a second -->

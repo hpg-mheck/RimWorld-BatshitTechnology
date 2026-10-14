@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using BatshitTechnology.Core;
 using Xunit;
 
 namespace BatshitTechnology.Tests;
@@ -466,8 +467,9 @@ public sealed partial class XmlDefinitionTests
     }
 
     /// <summary>
-    /// The emplaced bomb hosts an implosion that gathers to 1.5 tiles,
-    /// counts down 3 to 5 seconds, flips its tyres in half a second, is
+    /// The emplaced bomb hosts an implosion that gathers to 1.5 tiles and
+    /// runs 2 to 8 seconds (120 to 480 ticks, as Core's TractorBombTiming
+    /// says), counts down 3 to 5 seconds, flips its tyres in half a second, is
     /// drawn every frame (the flip and the vortex), has no hit points (a
     /// hit only hurries it along; Source/TractorBombEmplaced.cs), and
     /// cannot be deconstructed or claimed. Its death vortex is a drawn
@@ -492,6 +494,14 @@ public sealed partial class XmlDefinitionTests
         Assert.Equal("1.5", settings.Element("implosion")
             ?.Element("gatherRadius")?.Value);
         Assert.Null(settings.Element("implosion")?.Element("pullRadius"));
+        Assert.Equal(
+            TractorBombTiming.MinImplosionTicks.ToString(
+                CultureInfo.InvariantCulture),
+            settings.Element("implosion")?.Element("minDurationTicks")?.Value);
+        Assert.Equal(
+            TractorBombTiming.MaxImplosionTicks.ToString(
+                CultureInfo.InvariantCulture),
+            settings.Element("implosion")?.Element("maxDurationTicks")?.Value);
         Assert.Equal("3~5", settings.Element("countdownSeconds")?.Value);
         Assert.Equal("30", settings.Element("deployTicks")?.Value);
 

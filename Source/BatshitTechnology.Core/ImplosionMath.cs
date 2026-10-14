@@ -48,6 +48,33 @@ public static class ImplosionMath
     }
 
     /// <summary>
+    /// Whether an implosion is over: at its maximum duration however things
+    /// stand, or, once its minimum has passed, as soon as everything in
+    /// reach is gathered or nothing more can move. Before the minimum it
+    /// keeps pulling whatever the state, so there is always a show.
+    /// </summary>
+    /// <param name="elapsedTicks">Ticks it has run.</param>
+    /// <param name="minDurationTicks">
+    /// Its minimum, in ticks; negative counts as 0, and more than the
+    /// maximum as the maximum.
+    /// </param>
+    /// <param name="maxDurationTicks">
+    /// Its maximum, in ticks; taken as 1 if smaller.
+    /// </param>
+    /// <param name="allGathered">Everything in reach is gathered.</param>
+    /// <param name="settled">Nothing more can move.</param>
+    /// <returns>True if it should end now.</returns>
+    public static bool IsOver(
+        int elapsedTicks, int minDurationTicks, int maxDurationTicks,
+        bool allGathered, bool settled)
+    {
+        int max = Math.Max(1, maxDurationTicks);
+        int min = Math.Min(max, Math.Max(0, minDurationTicks));
+        return elapsedTicks >= max
+            || (elapsedTicks >= min && (allGathered || settled));
+    }
+
+    /// <summary>
     /// How far from the centre the pull has reached to rip fixtures loose:
     /// it grows steadily from nothing to the full radius.
     /// </summary>

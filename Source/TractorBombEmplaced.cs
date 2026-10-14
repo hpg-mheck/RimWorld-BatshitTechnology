@@ -4,9 +4,10 @@
 // 3 to 5 seconds under the shared warning band (CountdownWarning.cs), then
 // hosts the shared implosion (Implosion.cs): everything within its pull
 // radius, 10 tiles unless dialled, is dragged to within 1.5 tiles. It
-// explodes over its blast radius, 5 tiles unless dialled, as soon as
-// everything is gathered or nothing more can move, or when half again its
-// drag time has passed.
+// explodes over its blast radius, 5 tiles unless dialled, when its pull is
+// over: never before two seconds, as soon as everything is gathered or
+// nothing more can move after that, and at eight seconds however things
+// stand (a tug-of-war with a neighbour's pull included).
 //
 // The pile holds one item stack per cell: nine cells lie within 1.5 tiles
 // (the bomb passes pawns and items over it, like sandbags). Stacks beyond
@@ -41,10 +42,7 @@ namespace BatshitTechnology
         /// The implosion it hosts. Its pull radius is replaced by the
         /// bomb's own (the default, or as dialled).
         /// </summary>
-        public ImplosionSettings implosion = new ImplosionSettings
-        {
-            gatherRadius = 1.5f,
-        };
+        public ImplosionSettings implosion = DefaultImplosion();
 
         /// <summary>
         /// The countdown's range, in seconds, rolled per bomb.
@@ -77,6 +75,19 @@ namespace BatshitTechnology
 
         /// <summary>The band's pulse period in the final seconds.</summary>
         public float finalPulsePeriodSeconds = 0.25f;
+
+        /// <summary>
+        /// The implosion a bomb hosts when its def gives none: gathering to
+        /// 1.5 tiles at the grenade's rates, for two to eight seconds.
+        /// </summary>
+        /// <returns>New settings.</returns>
+        public static ImplosionSettings DefaultImplosion() =>
+            new ImplosionSettings
+            {
+                gatherRadius = 1.5f,
+                minDurationTicks = TractorBombTiming.MinImplosionTicks,
+                maxDurationTicks = TractorBombTiming.MaxImplosionTicks,
+            };
 
         /// <summary>Reports mistakes in the settings.</summary>
         /// <returns>One message per problem.</returns>
@@ -523,11 +534,7 @@ namespace BatshitTechnology
                     }
 
                     implosion.Tick(Map);
-                    if (TractorBombTiming.ShouldExplode(
-                        implosion.AllGathered, implosion.Settled,
-                        implosion.ElapsedTicks,
-                        TractorBombTiming.ImplosionCapTicks(
-                            implosion.PullTicks)))
+                    if (implosion.Over)
                     {
                         Explode();
                     }
@@ -648,7 +655,7 @@ namespace BatshitTechnology
             StopAlarm();
             Overlay(Map)?.Deregister(this);
             ImplosionSettings pull = Settings.implosion?.Copy()
-                ?? new ImplosionSettings { gatherRadius = 1.5f };
+                ?? TractorBombExtension.DefaultImplosion();
             pull.pullRadius = PullRadius;
             implosion = new Implosion(Position, pull, this, this);
             stage = Stage.Imploding;

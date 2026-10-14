@@ -41,7 +41,8 @@ public sealed class ImplosionSettings
 
     /// <summary>
     /// Ticks the drag takes to accelerate from its start rate to its end
-    /// rate: the pull's intended length. The host decides when it ends.
+    /// rate. How long the implosion runs is
+    /// <see cref="minDurationTicks"/> and <see cref="maxDurationTicks"/>.
     /// </summary>
     public int pullTicks = 300;
 
@@ -65,6 +66,21 @@ public sealed class ImplosionSettings
     /// the full radius; 0 rips the whole radius at once.
     /// </summary>
     public int ripTicks = 120;
+
+    /// <summary>
+    /// The shortest it runs, in ticks: before this it keeps pulling even if
+    /// everything is already gathered or settled, so there is always a
+    /// show. The grenade's (the default) equals its maximum.
+    /// </summary>
+    public int minDurationTicks = 300;
+
+    /// <summary>
+    /// The longest it runs, in ticks: at this it ends however things
+    /// stand, so a balance point or a tug-of-war between two pulls can
+    /// never hold it open for ever. The default is the grenade's five
+    /// seconds.
+    /// </summary>
+    public int maxDurationTicks = 300;
 
     /// <summary>An independent copy, for a host to adjust.</summary>
     /// <returns>The copy.</returns>
@@ -96,8 +112,9 @@ public sealed class ImplosionSettings
     /// can stall or crash an implosion: the radii within the engine's
     /// limit (the gather radius within the pull radius), the timings not
     /// negative, the rates within [0, <see cref="MaxRate"/>] and never
-    /// slowing down. A value that is not a number falls back to the
-    /// smallest it may be (the end rate to the start rate).
+    /// slowing down, and the durations at least a tick with the minimum
+    /// no longer than the maximum. A value that is not a number falls back
+    /// to the smallest it may be (the end rate to the start rate).
     /// </summary>
     /// <param name="maxRadius">
     /// The engine's largest radius (RimWorld's
@@ -121,6 +138,9 @@ public sealed class ImplosionSettings
         n.pullRateEnd = (float)Clamp(
             double.IsNaN(pullRateEnd) ? n.pullRateStart : pullRateEnd,
             n.pullRateStart, MaxRate);
+        n.maxDurationTicks = Math.Max(1, maxDurationTicks);
+        n.minDurationTicks =
+            Math.Min(n.maxDurationTicks, Math.Max(0, minDurationTicks));
         return n;
     }
 
@@ -156,6 +176,13 @@ public sealed class ImplosionSettings
         {
             yield return "pull rate must not be negative, slow down or "
                 + "exceed a cell per tick";
+        }
+
+        if (maxDurationTicks < 1 || minDurationTicks < 0
+            || minDurationTicks > maxDurationTicks)
+        {
+            yield return "duration must last at least a tick, with its "
+                + "minimum between 0 and its maximum";
         }
     }
 

@@ -6,8 +6,8 @@ namespace BatshitTechnology.Tests;
 
 /// <summary>
 /// Verifies the Tractor Bomb's clock in <see cref="TractorBombTiming"/>:
-/// the protest, the tyre flip, the rolled countdown, the implosion cap,
-/// and the lamp and beeps of a protest.
+/// the protest, the tyre flip, the rolled countdown, the implosion's
+/// durations, and the lamp and beeps of a protest.
 /// </summary>
 public sealed class TractorBombTimingTests
 {
@@ -94,38 +94,14 @@ public sealed class TractorBombTimingTests
     }
 
     /// <summary>
-    /// The implosion may run half again its drag time, never less than a
-    /// tick, and a huge drag time does not overflow.
+    /// Its implosion runs at least two seconds and at most eight, as the
+    /// roadmap's multi-bomb physics asks (its build used a 7.5 s cap).
     /// </summary>
-    [Fact(DisplayName = "Implosion cap is half again the drag time")]
-    public void ImplosionCapTicks_should_be_half_again()
+    [Fact(DisplayName = "Tractor Bomb implosion runs 2 to 8 s")]
+    public void Implosion_durations_should_match_spec()
     {
-        Assert.Equal(450, TractorBombTiming.ImplosionCapTicks(300));
-        Assert.Equal(1, TractorBombTiming.ImplosionCapTicks(0));
-        Assert.Equal(1, TractorBombTiming.ImplosionCapTicks(-50));
-        Assert.Equal(int.MaxValue,
-            TractorBombTiming.ImplosionCapTicks(int.MaxValue));
-    }
-
-    /// <summary>
-    /// It goes off when everything is gathered, or settled, or the cap has
-    /// passed, and not before.
-    /// </summary>
-    /// <param name="gathered">AllGathered.</param>
-    /// <param name="settled">Settled.</param>
-    /// <param name="elapsed">Ticks run.</param>
-    /// <param name="explode">Whether it should go off.</param>
-    [Theory(DisplayName = "Goes off when gathered, settled or capped")]
-    [InlineData(false, false, 100, false)]
-    [InlineData(true, false, 100, true)]
-    [InlineData(false, true, 100, true)]
-    [InlineData(false, false, 449, false)]
-    [InlineData(false, false, 450, true)]
-    public void ShouldExplode_should_follow_the_spec(
-        bool gathered, bool settled, int elapsed, bool explode)
-    {
-        Assert.Equal(explode, TractorBombTiming.ShouldExplode(
-            gathered, settled, elapsed, 450));
+        Assert.Equal(120, TractorBombTiming.MinImplosionTicks);
+        Assert.Equal(480, TractorBombTiming.MaxImplosionTicks);
     }
 
     /// <summary>

@@ -5,10 +5,11 @@ namespace BatshitTechnology.Core;
 /// <summary>
 /// The Tractor Bomb's clock, from the moment it is ready to emplace to the
 /// moment it goes off (docs/TRACTOR-BOMB.md): an optional protest, the
-/// tyres flipping flat, a rolled countdown, then the implosion until
-/// everything is gathered or settled, or a cap passes. Kept free of
-/// RimWorld types so it can be unit tested. All times are game ticks, 60
-/// to the second.
+/// tyres flipping flat, a rolled countdown, then the implosion for at least
+/// two seconds and at most eight, ending early once everything is gathered
+/// or settled (<see cref="ImplosionMath.IsOver"/>). Kept free of RimWorld
+/// types so it can be unit tested. All times are game ticks, 60 to the
+/// second.
 /// </summary>
 public static class TractorBombTiming
 {
@@ -32,6 +33,18 @@ public static class TractorBombTiming
 
     /// <summary>The longest countdown, in seconds.</summary>
     public const double MaxCountdownSeconds = 5;
+
+    /// <summary>
+    /// The shortest its implosion runs, in ticks: two seconds, even if
+    /// everything is gathered sooner.
+    /// </summary>
+    public const int MinImplosionTicks = 2 * TicksPerSecond;
+
+    /// <summary>
+    /// The longest its implosion runs, in ticks: eight seconds, however
+    /// things stand (a tug-of-war with a neighbour's pull included).
+    /// </summary>
+    public const int MaxImplosionTicks = 8 * TicksPerSecond;
 
     /// <summary>
     /// How long it protests before emplacing.
@@ -74,33 +87,6 @@ public static class TractorBombTiming
         // Inclusive at both ends: max - min + 1 equally likely lengths.
         return min + (int)Math.Floor(u * (max - min + 1));
     }
-
-    /// <summary>
-    /// The longest the implosion may run before the bomb goes off anyway:
-    /// half again its drag time (docs/TRACTOR-BOMB.md).
-    /// </summary>
-    /// <param name="pullTicks">
-    /// The implosion's drag time, in ticks; taken as 1 if smaller.
-    /// </param>
-    /// <returns>The cap, in ticks.</returns>
-    public static int ImplosionCapTicks(int pullTicks)
-    {
-        long ticks = Math.Max(1, pullTicks);
-        return (int)Math.Min(int.MaxValue, ticks + (ticks / 2));
-    }
-
-    /// <summary>
-    /// Whether the bomb should go off now: everything in reach is gathered,
-    /// or nothing more can move, or the cap has passed.
-    /// </summary>
-    /// <param name="allGathered">The implosion's AllGathered.</param>
-    /// <param name="settled">The implosion's Settled.</param>
-    /// <param name="elapsedTicks">Ticks the implosion has run.</param>
-    /// <param name="capTicks">The cap, in ticks.</param>
-    /// <returns>True if it should explode.</returns>
-    public static bool ShouldExplode(
-        bool allGathered, bool settled, int elapsedTicks, int capTicks) =>
-        allGathered || settled || elapsedTicks >= capTicks;
 
     /// <summary>
     /// Which colour the protest lamp shows: it blinks red and yellow,
