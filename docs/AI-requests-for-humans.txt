@@ -43,11 +43,10 @@ Matt "Breakpoint" Heck:
    existing one); is the trait-inversion
    table right in spirit; Agonizer numbers; research and cost; and
    should the duplicate's name be marked?
-10. The Drag Show (docs/DRAG-SHOW.md, "Open Questions"): Core gatherings
-    whether chairs must face the stage (decided so far: base game plus
-    an Ideology layer, open to every pawn whatever their ideoligion;
-    sizes are minimums; injuries mild to moderate; Relax Historical
-    Accuracy is a checkbox on the Center Stage marker); where the "Relax Historical
-    Accuracy" checkbox lives; an outdoor stage's drag radius; how mild
-    "mild" is; research and costs; and disco music before the sound
-    pipeline exists.
+10. The Drag Show (docs/DRAG-SHOW.md, "Open Questions"). Decided so far:
+    base game plus an Ideology layer, open to every pawn whatever their
+    ideoligion; stage and seating sizes are minimums; injuries mild to
+    moderate; Relax Historical Accuracy is a checkbox on the Center Stage
+    marker. Still open: must chairs face the stage; an outdoor stage's
+    drag radius; the injury and buff numbers; research and costs; and
+    disco music before the sound pipeline exists.
