@@ -43,14 +43,6 @@ Matt "Breakpoint" Heck:
    existing one); is the trait-inversion
    table right in spirit; Agonizer numbers; research and cost; and
    should the duplicate's name be marked?
-10. The Drag Show (docs/DRAG-SHOW.md, "Open Questions"). Decided so far:
-    base game plus an Ideology layer, open to every pawn whatever their
-    ideoligion; stage and seating sizes are minimums; injuries mild to
-    moderate; Relax Historical Accuracy is a checkbox on the Center Stage
-    marker; outdoors the drag is capped at 15 tiles, and trees go
-    flying; chairs should face the stage but it is not enforced. Still
-    open: the injury and buff numbers; research and costs; Batshittium
-    Monofilament's exact stats (slightly better than hyperweave; about
-    10% proposed) and the show bonus. (Answered: party music now and
-    original disco with the sound pipeline; a 1:25 Extruder yield;
-    monofilament for all fabric items.)
+10. The Drag Show: all answered on 2026-10-13 (docs/DRAG-SHOW.md). The
+    remaining proposals (costs, the Brain Squeezer as the research
+    prerequisite, the show bonus) stand unless changed.

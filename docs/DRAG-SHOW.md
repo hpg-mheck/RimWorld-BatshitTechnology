@@ -50,9 +50,13 @@ Specified 2026-10-13:
 
 - **What "improves results" means.** As stuff, monofilament is slightly
   better than hyperweave (specified 2026-10-13).
-  - *(Proposal:)* about 10% better on each of hyperweave's stuff stats:
-    sharp armour 2.2, blunt 0.6, heat 3.15, insulation 29 and 29, beauty
-    factor 6.
+  - About 10% better on each of hyperweave's stuff stats, except that
+    its thermal insulation is degraded by 25% (approved 2026-10-13):
+    - sharp armour 2.2, blunt 0.6, heat 3.15, and beauty factor 6;
+    - cold and heat insulation 21.5 each, which is 25% below the 28.6
+      that "10% better" would give, and below hyperweave's 26.
+    
+    A fine fabric for a show, and a poor one for a winter.
   - Its market value is set to match.
   - Like any fabric, it works for every fabric item, not just these two
     (decided 2026-10-13).
@@ -69,6 +73,23 @@ Specified 2026-10-13:
 - **The look.** Things made from monofilament carry a faint magenta
   glint, since magenta means batshittium. One thin accent, never a full
   glow.
+
+## Research and Costs
+
+- **Research:** a new project, **Batshit Entertainment**, unlocks the
+  show: the stage, the markers, the chairs and the two outfits (decided
+  2026-10-13). *(Proposal:)* it follows the Brain Squeezer, the mod's
+  other entertainment.
+- **Costs** *(proposals; they stand unless changed)*:
+  - Event Stage: 4 wood per tile.
+  - Center Stage marker: 20 wood and 2 batshittium (it powers the
+    magenta stage lights).
+  - House Seats marker: 10 wood.
+  - Shitty Folding Chair: 5 steel (as specified).
+  - Prom Dress: 80 fabric.
+  - Luchador Onesie: 60 fabric.
+- **The Extruder** comes with Batshittium Lore, as specified, since
+  monofilament is useful well beyond the show.
 
 ## The Show
 
@@ -87,12 +108,13 @@ Specified 2026-10-13:
    stage, together with all the furniture and loose objects.
    - Building materials (walls, doors, columns, floors, the stage itself)
      are unaffected.
-   - Dragged pawns suffer mild to moderate injuries (specified
-     2026-10-13; *proposal:* blunt damage of roughly 3 to 12 points,
-     bruises and the odd cracked rib, never anything that downs a
-     healthy pawn on its own).
-   - They also gain a mild recreation buff *(proposal: a recreation boost
-     and a short good-mood memory with a line of its own)*.
+   - Dragged pawns suffer mild to moderate injuries: blunt damage of
+     roughly 3 to 12 points, bruises and the odd cracked rib, never
+     anything that downs a healthy pawn on its own (approved
+     2026-10-13).
+   - They also gain a mild recreation buff: a recreation boost and a
+     short good-mood memory with a line of its own (approved
+     2026-10-13).
    - **The kidney** (specified 2026-10-13): every participant, the emcee
      included, has a 1% chance of losing a kidney, unless they are
      already short one. The kidney just shows up on the floor.
@@ -177,10 +199,5 @@ Specified 2026-10-13:
 
 ## Open Questions
 
-1. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
-   damage right, with a recreation boost and a short good-mood memory?
-2. Research and costs: which project unlocks the show, and what do the
-   stage tiles, markers and the two outfits cost? The chairs are 5 steel.
-3. Batshittium Monofilament (slightly better than hyperweave, 1:25 from
-   batshittium, all fabric items: answered): about 10% better per stat,
-   plus a show bonus for the emcee's outfit?
+None. The proposals that remain (marked above) stand unless Matt
+"Breakpoint" Heck changes them.
