@@ -1,21 +1,26 @@
 // Batshit Technology - in-game smoke checks for the Showcase API
-// (docs/SHOWCASE-API.md; phase 4000, slice 6000). Part of the -btsmoketest
-// runner (Source/SmokeTest.cs); runs after the device tests, in two parts.
-// First, checks that tick the game inside one frame, as the device tests
-// do: the Harmony patch, launch verdicts against Core's, a directed test
-// showcase run through Skip, a timeout and its closing message, and the
-// autosave and save-file rules. Then a few real frames, for what only
-// drawing can show: the main menu's button, the three menu windows with
-// Back and Escape, the caption bar, Stop, and the save folder afterwards.
-// The test showcases are made here in code, never shipped in XML, and
-// removed again before the runner's final log check.
+// (docs/SHOWCASE-API.md; phase 4000, slices 6000 and 8000). Part of the
+// -btsmoketest runner (Source/SmokeTest.cs); runs after the device tests,
+// in two parts. First, checks that tick the game inside one frame, as the
+// device tests do: the Harmony patch and the menu column's gates, the
+// launcher's guards, launch verdicts against Core's, a directed test
+// showcase run through Skip, a timeout and its closing message, scenes
+// that throw, the god mode a showcase borrows, and the autosave and
+// save-file rules. Then a few real frames, for what only drawing can
+// show: the caption bar, a cut that follows a glide, the main menu's
+// button, the three menu windows with Back and Escape, Stop, and the save
+// folder afterwards. The test showcases are made here in code, never
+// shipped in XML, and removed again before the runner's final log check.
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
+using System.Xml;
 using BatshitTechnology.Showcases;
+using LudeonTK;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -24,22 +29,121 @@ namespace BatshitTechnology
 {
     /// <summary>
     /// A scene for the smoke runner's test showcases: it can wait for an
-    /// action that never ends, and it points at a given subject.
+    /// action that never ends, point at a given subject, and throw from
+    /// any of its hooks, to test how the director handles a broken scene.
     /// </summary>
     internal sealed class SmokeShowcaseScene : ShowcaseScene
     {
+        /// <summary>
+        /// The text every exception a test scene throws on purpose
+        /// carries, so the runner can tell its own faults from real ones.
+        /// </summary>
+        public const string FaultMarker = "smoke test fault";
+
         /// <summary>Whether the scene's action never ends.</summary>
         public bool neverDone;
 
         /// <summary>The thing the scene is about, or null.</summary>
         public Thing subject;
 
+        /// <summary>Whether <see cref="Setup"/> throws.</summary>
+        public bool throwInSetup;
+
+        /// <summary>Whether <see cref="Tick"/> throws.</summary>
+        public bool throwInTick;
+
+        /// <summary>Whether <see cref="IsDone"/> throws.</summary>
+        public bool throwInIsDone;
+
+        /// <summary>Whether <see cref="End"/> throws.</summary>
+        public bool throwInEnd;
+
         /// <summary>Gets the thing the scene is about, or null.</summary>
         public override Thing Subject => subject;
 
+        /// <summary>Sets the scene up, or throws if told to.</summary>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when <see cref="throwInSetup"/> is set.
+        /// </exception>
+        public override void Setup()
+        {
+            ThrowIf(throwInSetup, "Setup");
+        }
+
+        /// <summary>Runs a tick, or throws if told to.</summary>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when <see cref="throwInTick"/> is set.
+        /// </exception>
+        public override void Tick()
+        {
+            ThrowIf(throwInTick, "Tick");
+        }
+
         /// <summary>Whether the scene's action has played out.</summary>
         /// <returns>False while <see cref="neverDone"/> is set.</returns>
-        public override bool IsDone() => !neverDone;
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when <see cref="throwInIsDone"/> is set.
+        /// </exception>
+        public override bool IsDone()
+        {
+            ThrowIf(throwInIsDone, "IsDone");
+            return !neverDone;
+        }
+
+        /// <summary>Ends the scene, or throws if told to.</summary>
+        /// <param name="ending">How it ended.</param>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when <see cref="throwInEnd"/> is set.
+        /// </exception>
+        public override void End(SceneEnd ending)
+        {
+            ThrowIf(throwInEnd, "End");
+        }
+
+        /// <summary>Throws a marked fault when told to.</summary>
+        /// <param name="when">Whether to throw.</param>
+        /// <param name="where">The hook throwing, for the message.</param>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when <paramref name="when"/> is true.
+        /// </exception>
+        private void ThrowIf(bool when, string where)
+        {
+            if (when)
+            {
+                throw new InvalidOperationException(
+                    $"{FaultMarker} in {where} of scene '{key}'");
+            }
+        }
+    }
+
+    /// <summary>
+    /// A smoke-test worker that asks for its devices' DEV buttons, as
+    /// BatshitShowcaseWorker does, and never finishes on its own.
+    /// </summary>
+    internal class SmokeDevButtonsWorker : ShowcaseWorker
+    {
+        /// <summary>Gets a value indicating whether it is done: never.</summary>
+        public override bool Finished => false;
+
+        /// <summary>Asks for the DEV buttons (god mode, lent by the API).</summary>
+        /// <param name="map">The map.</param>
+        public override void Setup(Map map)
+        {
+            EnableDevButtons();
+        }
+    }
+
+    /// <summary>
+    /// A <see cref="SmokeDevButtonsWorker"/> that finishes two ticks after
+    /// it starts.
+    /// </summary>
+    internal sealed class SmokeDevButtonsFinishingWorker : SmokeDevButtonsWorker
+    {
+        /// <summary>
+        /// Gets a value indicating whether two ticks have passed since
+        /// set-up.
+        /// </summary>
+        public override bool Finished => Find.TickManager.TicksGame - StartTick >= 2;
     }
 
     /// <summary>The Showcase API's checks in the smoke runner.</summary>
@@ -56,6 +160,37 @@ namespace BatshitTechnology
 
         /// <summary>A test showcase that requires a mod nobody has.</summary>
         private const string MissingShowcase = "BT_SmokeShowcase_Missing";
+
+        /// <summary>
+        /// A directed test showcase whose scenes throw (made in code and run
+        /// directly, never listed in the menus).
+        /// </summary>
+        private const string FaultShowcase = "BT_SmokeShowcase_Faults";
+
+        /// <summary>
+        /// A test showcase that asks for DEV buttons (run directly, never
+        /// listed).
+        /// </summary>
+        private const string DevButtonsShowcase = "BT_SmokeShowcase_DevButtons";
+
+        /// <summary>
+        /// A test showcase with a glide and a cut on the same tick (run
+        /// directly, never listed).
+        /// </summary>
+        private const string CameraShowcase = "BT_SmokeShowcase_Camera";
+
+        /// <summary>The zoom of the camera test's glide.</summary>
+        private const float GlideZoom = 50f;
+
+        /// <summary>How long the camera test's glide would take, in seconds.</summary>
+        private const float GlideSeconds = 3f;
+
+        /// <summary>
+        /// How long the camera test lets real frames run before judging the
+        /// cut, in seconds: well inside the glide, which would otherwise
+        /// still be pulling the camera.
+        /// </summary>
+        private const float CutHoldSeconds = 0.5f;
 
         /// <summary>The shipped showcase, which must be listed too.</summary>
         private const string ShippedShowcase = "BT_Showcase";
@@ -110,6 +245,21 @@ namespace BatshitTechnology
         /// <summary>The newest error before the menu windows opened.</summary>
         private (LogMessage Last, int Repeats) windowsMark;
 
+        /// <summary>The camera test's director, while it runs.</summary>
+        private ShowcaseDirector cameraRun;
+
+        /// <summary>Where the camera test's cut points.</summary>
+        private IntVec3 cutCell;
+
+        /// <summary>The camera test's cut zoom, as the camera allows it.</summary>
+        private float cutZoom;
+
+        /// <summary>When the camera test framed its shots, in real seconds.</summary>
+        private float cutFramedAt;
+
+        /// <summary>Frames drawn since the camera test framed its shots.</summary>
+        private int cutFrames;
+
         /// <summary>The frame-driven steps, in order; null when none remain.</summary>
         private List<FrameStep> frameSteps;
 
@@ -144,7 +294,9 @@ namespace BatshitTechnology
 
             savesBefore = SnapshotSaves();
             autosaveDaysBefore = Prefs.AutosaveIntervalDays;
+            TestQuickTestMenuGuard();
             TestShowcasePatch();
+            TestMenuColumnGates();
             showcaseSubject = SpawnShowcaseSubject(map);
             if (!RegisterTestShowcases())
             {
@@ -152,9 +304,15 @@ namespace BatshitTechnology
                 return;
             }
 
+            TestLaunchGuards();
+            TestRequestBinding();
             TestShowcaseVerdicts();
+            TestStoppedLineConfigError();
+            TestForceOutsideDevMode();
             TestShowcaseGroups();
             TestDirectorRun(map);
+            TestFaultyScenes(map);
+            TestDevButtonLoan(map);
             BeginStopRun(map);
 
             Find.TickManager.CurTimeSpeed = TimeSpeed.Paused;
@@ -176,6 +334,265 @@ namespace BatshitTechnology
                     && patches.Count == 1 && patches[0] == ExpectedPatch,
                 $"installed {ShowcaseMenuButton.Installed}; patches: "
                     + (patches.Count == 0 ? "none" : string.Join("; ", patches)));
+        }
+
+        /// <summary>
+        /// Under -quicktest (which the smoke run uses), the main menu is
+        /// drawn for a frame while vanilla's quick-test game is about to
+        /// generate. It must leave -showcase= alone then, so the quick-test
+        /// game adopts the showcase instead of a second generation racing
+        /// it (ShowcaseStartRules.MenuActsOnCommandLine).
+        /// </summary>
+        private void TestQuickTestMenuGuard()
+        {
+            bool quickTest = GenCommandLine.CommandLineArgPassed(ShowcaseStartRules.QuickTestArg);
+            Log.Message("[BT-SMOKE] NOTE the main menu reported itself shown "
+                + $"{ShowcaseLauncher.MainMenuShownCount} times before this "
+                + $"quick-test game; -quicktest passed {quickTest}");
+            Check("under -quicktest the main menu leaves -showcase= to the "
+                    + "quick-test game",
+                quickTest && !ShowcaseLauncher.MenuActedOnCommandLine,
+                $"-quicktest {quickTest}; the menu acted on the command line "
+                    + $"{ShowcaseLauncher.MenuActedOnCommandLine} after being shown "
+                    + $"{ShowcaseLauncher.MainMenuShownCount} times");
+        }
+
+        /// <summary>
+        /// The patch's test for the main menu's own column, one gate at a
+        /// time, on lists made here: a positive control first (Entry, ending
+        /// in Quit to OS), then each gate alone must reject an otherwise
+        /// valid list: the in-game state, a web link, a null entry, a last
+        /// option that only calls Quit to OS from a closure, and an empty
+        /// or missing list. Vanilla's real menus cannot tell these gates
+        /// apart (its in-game Quit to OS is a closure already).
+        /// </summary>
+        private void TestMenuColumnGates()
+        {
+            Action quit = Root.Shutdown;
+            Action wrapped = () => Root.Shutdown(); // never invoked
+            var cases = new (string Name, ProgramState State, List<ListableOption> List,
+                bool Expected)[]
+            {
+                ("main menu column", ProgramState.Entry, new List<ListableOption>
+                {
+                    new ListableOption("a", null), new ListableOption("q", quit),
+                }, true),
+                ("in-game state", ProgramState.Playing, new List<ListableOption>
+                {
+                    new ListableOption("q", quit),
+                }, false),
+                ("web link", ProgramState.Entry, new List<ListableOption>
+                {
+                    new ListableOption_WebLink("w", "https://example.invalid", null),
+                    new ListableOption("q", quit),
+                }, false),
+                ("web link ending in Quit", ProgramState.Entry, new List<ListableOption>
+                {
+                    new ListableOption_WebLink("w", quit, null),
+                }, false),
+                ("null entry", ProgramState.Entry, new List<ListableOption>
+                {
+                    new ListableOption("a", null), null, new ListableOption("q", quit),
+                }, false),
+                ("Quit only through a closure", ProgramState.Entry, new List<ListableOption>
+                {
+                    new ListableOption("q", wrapped),
+                }, false),
+                ("empty list", ProgramState.Entry, new List<ListableOption>(), false),
+                ("no list", ProgramState.Entry, null, false),
+            };
+
+            var results = new List<string>();
+            bool ok = true;
+            ProgramState state = Current.ProgramState;
+            try
+            {
+                foreach (var c in cases)
+                {
+                    Current.ProgramState = c.State;
+                    bool got = ShowcaseMenuButton.IsMainMenuColumn(c.List);
+                    ok &= got == c.Expected;
+                    results.Add($"{c.Name} {got} (want {c.Expected})");
+                }
+            }
+            finally
+            {
+                Current.ProgramState = state;
+            }
+
+            Check("the main menu's column is told apart by each gate on its own",
+                ok, string.Join("; ", results));
+        }
+
+        /// <summary>
+        /// The launcher refuses what it must, saying why and queueing
+        /// nothing: a missing showcase, any showcase from inside a game,
+        /// and (from the main menu's state, for one call) a showcase flagged
+        /// fatal. A launch that could start is never tried here: it would
+        /// generate a real game.
+        /// </summary>
+        private void TestLaunchGuards()
+        {
+            LogMessage mark = Log.Messages.LastOrDefault();
+            bool missing = ShowcaseLauncher.Launch(null, false, out string missingWhy);
+            bool inGame = ShowcaseLauncher.Launch(
+                ShowcaseLibrary.Named(ShippedShowcase), false, out string inGameWhy);
+            bool queuedInGame = LongEventHandler.AnyEventNowOrWaiting;
+
+            ShowcaseDef fatal = ShowcaseLibrary.Named(FatalShowcase);
+            string expectedFatal = ShowcaseTexts.WhyNot(
+                ShowcaseLibrary.Evaluate(fatal, force: false));
+            bool fatalStarted;
+            string fatalWhy;
+            bool queuedFatal;
+            ProgramState state = Current.ProgramState;
+            try
+            {
+                Current.ProgramState = ProgramState.Entry;
+                fatalStarted = ShowcaseLauncher.Launch(fatal, false, out fatalWhy);
+                queuedFatal = LongEventHandler.AnyEventNowOrWaiting;
+            }
+            finally
+            {
+                Current.ProgramState = state;
+            }
+
+            List<string> cues = ShowcaseCuesSince(mark);
+            Check("the launcher refuses a missing showcase, and any showcase "
+                    + "from inside a game, saying why",
+                !missing && missingWhy == "BT_Showcases_RefusedMissing".Translate().Resolve()
+                    && !inGame && inGameWhy == "BT_Showcases_RefusedInGame".Translate().Resolve()
+                    && !queuedInGame,
+                $"missing: started {missing}, '{missingWhy}'; in game: started {inGame}, "
+                    + $"'{inGameWhy}'; long event queued {queuedInGame}");
+            Check("from the main menu, the launcher refuses a showcase flagged "
+                    + "fatal unless forced, queueing nothing",
+                !fatalStarted && fatalWhy == expectedFatal && !queuedFatal
+                    && !cues.Any(c => c.StartsWith("LAUNCH", StringComparison.Ordinal)),
+                $"started {fatalStarted}; reason '{fatalWhy}' (expected '{expectedFatal}'); "
+                    + $"long event queued {queuedFatal}; cues {string.Join(" | ", cues)}");
+        }
+
+        /// <summary>
+        /// A launch request reaches only the game generated for it: one
+        /// planted for another game is dropped, with a warning, and never
+        /// handed to this one, so a failed generation can never turn the
+        /// player's next real colony into a showcase; one planted for this
+        /// game is handed over exactly once.
+        /// </summary>
+        private void TestRequestBinding()
+        {
+            ShowcaseDef def = ShowcaseLibrary.Named(DirectorShowcase);
+            LogMessage mark = Log.Messages.LastOrDefault();
+            var other = (Game)FormatterServices.GetUninitializedObject(typeof(Game));
+            LaunchRequest stale = null, again = null, mine = null, twice = null;
+            bool pendingAfterStale = true;
+            try
+            {
+                ShowcaseLauncher.PlantForTest(new LaunchRequest(def, other, false));
+                stale = ShowcaseLauncher.TakeRequestFor(Current.Game);
+                pendingAfterStale = ShowcaseLauncher.HasPendingForTest;
+                again = ShowcaseLauncher.TakeRequestFor(Current.Game);
+
+                var planted = new LaunchRequest(def, Current.Game, false);
+                ShowcaseLauncher.PlantForTest(planted);
+                mine = ShowcaseLauncher.TakeRequestFor(Current.Game);
+                twice = ShowcaseLauncher.TakeRequestFor(Current.Game);
+                mine = ReferenceEquals(mine, planted) ? mine : null;
+            }
+            finally
+            {
+                ShowcaseLauncher.PlantForTest(null);
+            }
+
+            List<LogMessage> dropped = MessagesSince(mark)
+                .Where(m => m.type == LogMessageType.Warning
+                    && m.text.Contains("dropped a stale request"))
+                .ToList();
+            ExpectLogs(dropped);
+            Check("a launch request reaches only the game generated for it, "
+                    + "and only once",
+                stale == null && !pendingAfterStale && again == null && dropped.Count == 1
+                    && mine != null && twice == null,
+                $"stale handed over {stale != null}; still pending {pendingAfterStale}; "
+                    + $"warnings {dropped.Count}; own request handed over {mine != null}, "
+                    + $"again {twice != null}");
+        }
+
+        /// <summary>
+        /// A def's configuration check reports a "stopped" narration line
+        /// with a delay, which Stop would drop unsaid. The directed test
+        /// showcase declares one on purpose ("opening", 10 ticks); its
+        /// def is made in code, so the game's own start-up check never
+        /// sees it.
+        /// </summary>
+        private void TestStoppedLineConfigError()
+        {
+            List<string> errors = ShowcaseLibrary.Named(DirectorShowcase)?.ConfigErrors()
+                .ToList() ?? new List<string>();
+            List<string> stopped = errors
+                .Where(e => e.Contains("at 'stopped' has delayTicks"))
+                .ToList();
+            Check("a def's configuration check reports a delayed 'stopped' "
+                    + "narration line, which would never be said",
+                stopped.Count == 1 && stopped[0].Contains("'opening'")
+                    && stopped[0].Contains("delayTicks 10"),
+                $"{errors.Count} configuration errors: {string.Join(" | ", errors)}");
+        }
+
+        /// <summary>
+        /// Outside dev mode, as a player sees it, the details page of a
+        /// showcase flagged fatal still refuses Start and offers Force
+        /// start (docs/SHOWCASE-API.md, "Other Mods"). Dev mode is switched
+        /// off quietly, in Prefs' data, for the one check.
+        /// </summary>
+        private void TestForceOutsideDevMode()
+        {
+            const string Name = "outside dev mode, the details page refuses a "
+                + "fatal flag and still offers Force start";
+            bool wasDev = Prefs.DevMode;
+            try
+            {
+                if (!TrySetDevModeQuietly(false))
+                {
+                    Check(Name, false, "could not switch dev mode off (Prefs.data.devMode)");
+                    return;
+                }
+
+                var details = new Dialog_ShowcaseDetails(
+                    ShowcaseLibrary.Named(FatalShowcase), null);
+                Check(Name, !Prefs.DevMode && !details.StartEnabled && details.ForceOffered,
+                    $"dev mode {Prefs.DevMode}; start {details.StartEnabled}; force "
+                        + details.ForceOffered);
+            }
+            finally
+            {
+                TrySetDevModeQuietly(wasDev);
+            }
+        }
+
+        /// <summary>
+        /// Sets Prefs' dev-mode flag directly in its data, without the
+        /// setter's side effects: Prefs.Apply re-applies the resolution,
+        /// and switching dev mode off also clears god mode, which the god
+        /// mode checks must see the showcase leave alone.
+        /// </summary>
+        /// <param name="on">The dev mode wanted.</param>
+        /// <returns>True if dev mode is now as wanted.</returns>
+        private static bool TrySetDevModeQuietly(bool on)
+        {
+            FieldInfo dataField = typeof(Prefs).GetField(
+                "data", BindingFlags.Static | BindingFlags.NonPublic);
+            object data = dataField?.GetValue(null);
+            FieldInfo devMode = data?.GetType().GetField(
+                "devMode", BindingFlags.Instance | BindingFlags.Public);
+            if (devMode == null || devMode.FieldType != typeof(bool))
+            {
+                return false;
+            }
+
+            devMode.SetValue(data, on);
+            return Prefs.DevMode == on;
         }
 
         /// <summary>
@@ -584,7 +1001,228 @@ namespace BatshitTechnology
                     && showcaseSession.FarewellTick > lastLine,
                 $"said: {string.Join(" | ", said.Select(r => $"{r.Tick}: {r.Text}"))}; "
                     + $"closing message at {showcaseSession.FarewellTick}");
+
+            List<string> warnings = ShowcaseWarningsSince(mark);
+            Check("the directed run logs no Showcase API warning (camera moves, "
+                    + "selection, look targets and messages all worked)",
+                warnings.Count == 0, string.Join(" | ", warnings));
             showcaseSession.ReleaseForTest();
+        }
+
+        /// <summary>
+        /// A directed showcase whose scenes throw keeps going: a scene whose
+        /// set-up throws never begins (SKIPPED, no SCENE or END, no
+        /// narration); one whose Tick or IsDone throws ends Failed on that
+        /// tick, saying its "failed" lines and never its "completed" ones;
+        /// one whose End throws still ends as it ended; the scene after
+        /// them runs, and the tour reaches FINISHED. Each fault logs exactly
+        /// one error; those are expected, and left out of the final log
+        /// check.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        private void TestFaultyScenes(Map map)
+        {
+            ShowcaseDef def = MakeFaultShowcase(
+                ShowcaseLibrary.Named(ShippedShowcase)?.modContentPack);
+            LogMessage mark = Log.Messages.LastOrDefault();
+            showcaseSession.AdoptForTest(def, map);
+            var director = showcaseSession.Worker as ShowcaseDirector;
+            TickUntil(() => !showcaseSession.Running && showcaseSession.FarewellTick >= 0, 200);
+
+            List<string> cues = ShowcaseCuesSince(mark);
+            var expectedCues = new[]
+            {
+                "GAME " + FaultShowcase, "START " + FaultShowcase, "READY",
+                "SKIPPED setupFault: set-up failed",
+                "SCENE tickFault", "END tickFault failed",
+                "SCENE doneFault", "END doneFault failed",
+                "SCENE endFault", "END endFault completed",
+                "SCENE after", "END after completed",
+                "FINISHED " + FaultShowcase,
+            };
+            Check("a scene that throws is logged and the tour moves on: set-up "
+                    + "faults never begin, Tick and IsDone faults end failed",
+                director != null && cues.SequenceEqual(expectedCues)
+                    && director.Endings.SequenceEqual(new[]
+                    {
+                        SceneEnd.Failed, SceneEnd.Failed, SceneEnd.Failed,
+                        SceneEnd.Completed, SceneEnd.Completed,
+                    }),
+                $"cues {string.Join(" | ", cues)}; endings "
+                    + (director == null ? "no director" : Endings(director)));
+
+            List<string> said = director?.NarrationLog.Select(r => r.Text).ToList()
+                ?? new List<string>();
+            var expectedLines = new[]
+            {
+                "Smoke narration: tick fault begins.",
+                "Smoke narration: tick fault failed.",
+                "Smoke narration: done fault failed.",
+                "Smoke narration: end fault completed.",
+                "Smoke narration: after.",
+            };
+            Check("a failed scene says its failed lines, never its completed "
+                    + "ones, and a scene that never began says nothing",
+                said.SequenceEqual(expectedLines), string.Join(" | ", said));
+
+            List<LogMessage> errors = MessagesSince(mark)
+                .Where(m => m.type == LogMessageType.Error)
+                .ToList();
+            var faults = new[] { "setupFault", "tickFault", "doneFault", "endFault" };
+            bool oneEach = errors.Count == faults.Length
+                && errors.All(e => e.text.Contains(SmokeShowcaseScene.FaultMarker))
+                && faults.All(k => errors.Count(e => e.text.Contains($"'{k}'")) == 1);
+            Check("each scene fault logs exactly one error",
+                oneEach,
+                $"{errors.Count} errors: "
+                    + string.Join(" | ", errors.Select(e => e.text.Split('\n')[0])));
+            ExpectLogs(errors.Where(e => e.text.Contains(SmokeShowcaseScene.FaultMarker)));
+            showcaseSession.ReleaseForTest();
+        }
+
+        /// <summary>
+        /// Makes the fault test showcase: "setupFault" throws in Setup,
+        /// "tickFault" in Tick, "doneFault" in IsDone, "endFault" in End
+        /// (after completing), and "after" is a plain scene that must
+        /// still run. Its narration has lines that must never be said.
+        /// </summary>
+        /// <param name="pack">The mod it is listed under; may be null.</param>
+        /// <returns>The def, not registered.</returns>
+        private static ShowcaseDef MakeFaultShowcase(ModContentPack pack)
+        {
+            ShowcaseDef def = MakeTestShowcase(FaultShowcase, "smoke faults", pack, 910);
+            def.workerClass = typeof(ShowcaseDirector);
+            def.scenes.AddRange(new ShowcaseScene[]
+            {
+                new SmokeShowcaseScene
+                {
+                    key = "setupFault", minTicks = 0, timeoutTicks = 600,
+                    throwInSetup = true, selectSubject = false,
+                },
+                new SmokeShowcaseScene
+                {
+                    key = "tickFault", minTicks = 0, timeoutTicks = 600,
+                    neverDone = true, throwInTick = true, selectSubject = false,
+                },
+                new SmokeShowcaseScene
+                {
+                    key = "doneFault", minTicks = 0, timeoutTicks = 600,
+                    throwInIsDone = true, selectSubject = false,
+                },
+                new SmokeShowcaseScene
+                {
+                    key = "endFault", minTicks = 5, timeoutTicks = 600,
+                    throwInEnd = true, selectSubject = false,
+                },
+                new ShowcaseScene
+                {
+                    key = "after", minTicks = 5, timeoutTicks = 600, selectSubject = false,
+                },
+            });
+            def.narration.AddRange(new[]
+            {
+                Line("setupFault", "start", 0, "Smoke narration: never said (set-up start)."),
+                Line("setupFault", "failed", 0, "Smoke narration: never said (set-up failed)."),
+                Line("setupFault", "skipped", 0, "Smoke narration: never said (set-up skip)."),
+                Line("tickFault", "start", 0, "Smoke narration: tick fault begins."),
+                Line("tickFault", "failed", 0, "Smoke narration: tick fault failed."),
+                Line("tickFault", "completed", 0, "Smoke narration: never said (tick done)."),
+                Line("doneFault", "failed", 0, "Smoke narration: done fault failed."),
+                Line("doneFault", "completed", 0, "Smoke narration: never said (done)."),
+                Line("endFault", "completed", 0, "Smoke narration: end fault completed."),
+                Line("after", "start", 0, "Smoke narration: after."),
+            });
+            return def;
+        }
+
+        /// <summary>
+        /// God mode, which a showcase borrows for its DEV buttons, is lent
+        /// only in dev mode and given back on every way out: Stop, the
+        /// showcase finishing, the main menu, a loaded game and a new game.
+        /// A developer's own god mode stays on; a player outside dev mode
+        /// never gets it at all.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        private void TestDevButtonLoan(Map map)
+        {
+            bool godBefore = DebugSettings.godMode;
+            bool devBefore = Prefs.DevMode;
+            ShowcaseDef plain = MakeTestShowcase(DevButtonsShowcase, "smoke dev buttons", null, 920);
+            plain.workerClass = typeof(SmokeDevButtonsWorker);
+            ShowcaseDef finishing = MakeTestShowcase(
+                DevButtonsShowcase + "_Finishing", "smoke dev buttons finishing", null, 921);
+            finishing.workerClass = typeof(SmokeDevButtonsFinishingWorker);
+            try
+            {
+                DebugSettings.godMode = false;
+                showcaseSession.AdoptForTest(plain, map);
+                bool lent = DebugSettings.godMode && ShowcaseGodMode.Lent;
+                showcaseSession.StopShowcase(byViewer: false);
+                bool back = !DebugSettings.godMode && !ShowcaseGodMode.Lent;
+                showcaseSession.ReleaseForTest();
+                Check("in dev mode a showcase lends god mode for its DEV buttons, "
+                        + "and Stop gives it back",
+                    devBefore && lent && back,
+                    $"dev mode {devBefore}; lent {lent}; given back {back}");
+
+                DebugSettings.godMode = true;
+                showcaseSession.AdoptForTest(plain, map);
+                showcaseSession.StopShowcase(byViewer: false);
+                bool kept = DebugSettings.godMode;
+                showcaseSession.ReleaseForTest();
+                Check("a developer's own god mode is still on after a showcase",
+                    kept, $"god mode after Stop {kept}");
+
+                DebugSettings.godMode = false;
+                bool quiet = TrySetDevModeQuietly(false);
+                showcaseSession.AdoptForTest(plain, map);
+                bool raised = DebugSettings.godMode || ShowcaseGodMode.Lent;
+                showcaseSession.ReleaseForTest();
+                TrySetDevModeQuietly(devBefore);
+                Check("outside dev mode a showcase never turns god mode on",
+                    quiet && !raised,
+                    $"dev mode switched off {quiet}; god mode raised {raised}");
+
+                var exits = new (string Name, Action Leave)[]
+                {
+                    ("main menu", ShowcaseLauncher.OnMainMenuShown),
+                    ("loaded game", () => showcaseSession.LoadedGame()),
+                    ("new game", () => showcaseSession.StartedNewGame()),
+                };
+                var results = new List<string>();
+                bool allBack = true;
+                foreach ((string name, Action leave) in exits)
+                {
+                    DebugSettings.godMode = false;
+                    showcaseSession.AdoptForTest(plain, map);
+                    bool on = DebugSettings.godMode;
+                    leave();
+                    bool off = !DebugSettings.godMode && !ShowcaseGodMode.Lent;
+                    allBack &= on && off;
+                    results.Add($"{name}: lent {on}, given back {off}");
+                    showcaseSession.ReleaseForTest();
+                }
+
+                Check("leaving a showcase game (main menu, loaded game, new game) "
+                        + "gives god mode back",
+                    allBack, string.Join("; ", results));
+
+                DebugSettings.godMode = false;
+                showcaseSession.AdoptForTest(finishing, map);
+                bool onBefore = DebugSettings.godMode;
+                TickUntil(() => !showcaseSession.Running, 10);
+                bool offAfter = !DebugSettings.godMode && !ShowcaseGodMode.Lent;
+                showcaseSession.ReleaseForTest();
+                Check("a showcase that finishes gives god mode back",
+                    onBefore && offAfter,
+                    $"lent {onBefore}; given back at FINISHED {offAfter}");
+            }
+            finally
+            {
+                showcaseSession.ReleaseForTest();
+                TrySetDevModeQuietly(devBefore);
+                DebugSettings.godMode = godBefore;
+            }
         }
 
         /// <summary>
@@ -602,11 +1240,38 @@ namespace BatshitTechnology
             string saved = Scribe.saver.DebugOutputFor(showcaseSession);
             Check("a showcase game's session writes nothing into a save, so a "
                     + "saved showcase loads as an ordinary game",
-                !saved.NullOrEmpty() && saved.Contains("saveable")
-                    && !saved.Contains(DirectorShowcase),
+                ScribedNothing(saved) && !saved.Contains(DirectorShowcase),
                 $"wrote: {saved?.Replace('\n', ' ')}");
 
             CheckAutosaveSuppressed("a showcase game never reaches its autosave");
+        }
+
+        /// <summary>
+        /// Gets whether Scribe's debug output for an object is an empty
+        /// "saveable" element: attributes such as Class allowed, but no
+        /// child elements or text, so the object's ExposeData wrote
+        /// nothing.
+        /// </summary>
+        /// <param name="saved">The output of ScribeSaver.DebugOutputFor.</param>
+        /// <returns>True when nothing was written.</returns>
+        private static bool ScribedNothing(string saved)
+        {
+            if (saved.NullOrEmpty())
+            {
+                return false;
+            }
+
+            try
+            {
+                var doc = new XmlDocument();
+                doc.LoadXml(saved);
+                XmlElement root = doc.DocumentElement;
+                return root != null && root.Name == "saveable" && !root.HasChildNodes;
+            }
+            catch (XmlException)
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -673,6 +1338,8 @@ namespace BatshitTechnology
         {
             WaitFrames("caption bar paints", 5),
             new FrameStep("caption bar check", false, CheckCaptionBar),
+            new FrameStep("glide then cut", false, StartGlideThenCut),
+            new FrameStep("cut holds", false, CheckCutHolds),
             new FrameStep("main menu draw", true, CheckMenuButtonDraws),
             new FrameStep("open Showcases", false, OpenShowcasesMenu),
             WaitFrames("mods window paints", 3),
@@ -774,6 +1441,79 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// Starts the camera test: a director scene whose first two shots
+        /// fall on the same tick, a long glide to one place and then a cut
+        /// to another. The cut must win once real frames run, which needs
+        /// it to cancel the glide CameraDriver would otherwise keep
+        /// re-applying every frame.
+        /// </summary>
+        /// <returns>True: the step is complete.</returns>
+        private bool StartGlideThenCut()
+        {
+            Map map = Find.CurrentMap;
+            ShowcaseDef def = MakeTestShowcase(CameraShowcase, "smoke camera", null, 930);
+            def.workerClass = typeof(ShowcaseDirector);
+            var scene = new ShowcaseScene
+            {
+                key = "camera",
+                minTicks = 0,
+                timeoutTicks = 600,
+                selectSubject = false,
+            };
+            scene.shots.Add(new ShowcaseShot
+            {
+                atTick = 0, fromMapCenter = true, offset = new IntVec2(40, 40),
+                zoom = GlideZoom, pan = true, panSeconds = GlideSeconds,
+            });
+            scene.shots.Add(new ShowcaseShot
+            {
+                atTick = 0, fromMapCenter = true, offset = new IntVec2(-30, -30),
+                zoom = CutShotZoom, pan = false,
+            });
+            def.scenes.Add(scene);
+
+            CameraDriver camera = Find.CameraDriver;
+            camera.JumpToCurrentMapLoc(map.Center);
+            camera.SetRootSize(45f);
+            cutCell = (map.Center + new IntVec3(-30, 0, -30)).ClampInsideMap(map);
+            FloatRange range = camera.config.sizeRange;
+            cutZoom = Mathf.Clamp(CutShotZoom, range.min, range.max);
+            cameraRun = def.MakeWorker() as ShowcaseDirector;
+            cameraRun?.Begin(map);
+            cameraRun?.DoTick();
+            cutFramedAt = Time.realtimeSinceStartup;
+            cutFrames = 0;
+            return true;
+        }
+
+        /// <summary>
+        /// After a few real frames, the camera sits where the cut put it, at
+        /// the cut's zoom, not drifting toward the glide's target. Then the
+        /// camera test's director is stopped.
+        /// </summary>
+        /// <returns>True once judged.</returns>
+        private bool CheckCutHolds()
+        {
+            if (++cutFrames < 5 || Time.realtimeSinceStartup - cutFramedAt < CutHoldSeconds)
+            {
+                return false;
+            }
+
+            CameraDriver camera = Find.CameraDriver;
+            IntVec3 at = camera.MapPosition;
+            float size = camera.RootSize;
+            Check("a cut right after a glide holds once frames run: the glide "
+                    + "is cancelled",
+                cameraRun != null && Mathf.Abs(size - cutZoom) < 0.05f
+                    && at.InHorDistOf(cutCell, 2f),
+                $"camera at {at} size {size:F2} after {cutFrames} frames; cut to "
+                    + $"{cutCell} size {cutZoom:F2}; the glide went to size {GlideZoom}");
+            cameraRun?.Stop();
+            cameraRun = null;
+            return true;
+        }
+
+        /// <summary>
         /// Draws vanilla's menu options twice, off screen, through the
         /// patched method: once as the main menu (the Entry scene's state,
         /// set for this one call), where exactly one Showcases button must
@@ -800,11 +1540,13 @@ namespace BatshitTechnology
             int mainCalls = ShowcaseMenuButton.PostfixCalls - calls;
             int mainDrawn = ShowcaseMenuButton.ButtonsDrawn - drawn;
             string label = ShowcaseMenuButton.Button?.label;
-            Check("the main menu gets exactly one Showcases button",
-                mainCalls == 2 && mainDrawn == 1
+            bool keyed = "BT_Showcases_MenuButton".CanTranslate()
+                && "BT_Showcases_ModsTitle".CanTranslate();
+            Check("the main menu gets exactly one Showcases button, with its text",
+                mainCalls == 2 && mainDrawn == 1 && keyed
                     && label == "BT_Showcases_MenuButton".Translate().Resolve(),
                 $"postfix ran {mainCalls} times; buttons drawn {mainDrawn}; "
-                    + $"label '{label}'");
+                    + $"label '{label}'; keyed text loaded {keyed}");
 
             calls = ShowcaseMenuButton.PostfixCalls;
             drawn = ShowcaseMenuButton.ButtonsDrawn;
@@ -937,7 +1679,8 @@ namespace BatshitTechnology
 
         /// <summary>
         /// The fatal showcase's details refuse Start, say why, and offer
-        /// Force start (dev mode is on in smoke runs). Then goes Back.
+        /// Force start (TestForceOutsideDevMode checks the same outside dev
+        /// mode). Then goes Back.
         /// </summary>
         /// <returns>True: the step is complete.</returns>
         private bool CheckFatalDetails()
@@ -945,7 +1688,7 @@ namespace BatshitTechnology
             var details = Find.WindowStack.WindowOfType<Dialog_ShowcaseDetails>();
             List<string> facts = details?.FactLines.ToList() ?? new List<string>();
             Check("the details page refuses a fatal flag with the reason, and "
-                    + "offers Force start in dev mode",
+                    + "offers Force start",
                 details != null && details.Def?.defName == FatalShowcase
                     && details.FramesDrawn >= 2
                     && !details.StartEnabled && details.ForceOffered
@@ -1193,6 +1936,8 @@ namespace BatshitTechnology
             frameSteps = null;
             try
             {
+                cameraRun?.Stop();
+                cameraRun = null;
                 foreach (ShowcaseWindow window in Find.WindowStack.Windows
                     .OfType<ShowcaseWindow>().ToList())
                 {
@@ -1245,6 +1990,8 @@ namespace BatshitTechnology
 
         /// <summary>
         /// The Showcase API's log cues since a message, without the prefix.
+        /// Cues are plain messages; the API's errors and warnings share the
+        /// prefix but are not cues.
         /// </summary>
         /// <param name="mark">The last message before; null for all.</param>
         /// <returns>The cues, in order.</returns>
@@ -1255,9 +2002,53 @@ namespace BatshitTechnology
                 : Log.Messages.SkipWhile(m => m != mark).Skip(1);
             string prefix = ShowcaseLog.Prefix + " ";
             return since
-                .Where(m => m.text != null && m.text.StartsWith(prefix, StringComparison.Ordinal))
+                .Where(m => m.type == LogMessageType.Message && m.text != null
+                    && m.text.StartsWith(prefix, StringComparison.Ordinal))
                 .Select(m => m.text.Substring(prefix.Length))
                 .ToList();
+        }
+
+        /// <summary>The log messages since a message.</summary>
+        /// <param name="mark">The last message before; null for all.</param>
+        /// <returns>The messages, in order.</returns>
+        private static List<LogMessage> MessagesSince(LogMessage mark) =>
+            (mark == null
+                ? Log.Messages
+                : Log.Messages.SkipWhile(m => m != mark).Skip(1))
+            .ToList();
+
+        /// <summary>
+        /// The Showcase API's warnings since a message, first lines only.
+        /// </summary>
+        /// <param name="mark">The last message before; null for all.</param>
+        /// <returns>The warnings, in order.</returns>
+        private static List<string> ShowcaseWarningsSince(LogMessage mark) =>
+            MessagesSince(mark)
+                .Where(m => m.type == LogMessageType.Warning && m.text != null
+                    && m.text.StartsWith(ShowcaseLog.Prefix, StringComparison.Ordinal))
+                .Select(m => m.text.Split('\n')[0])
+                .ToList();
+
+        /// <summary>
+        /// Records messages a check provoked on purpose: the final log
+        /// check leaves them out, the launch script is told their first
+        /// lines (an EXPECTED line each) so it leaves them out of Player.log
+        /// too, and the debug log window that dev mode opens on an error is
+        /// kept shut, so it covers no later check.
+        /// </summary>
+        /// <param name="messages">The messages.</param>
+        private void ExpectLogs(IEnumerable<LogMessage> messages)
+        {
+            foreach (LogMessage m in messages)
+            {
+                if (expectedLogs.Add(m))
+                {
+                    Log.Message(
+                        $"[BT-SMOKE] EXPECTED {m.text.Split('\n')[0].TrimEnd('\r')}");
+                }
+            }
+
+            EditWindow_Log.wantsToOpen = false;
         }
 
         /// <summary>A director's endings, for failure details.</summary>

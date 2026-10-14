@@ -11,7 +11,9 @@
 #                                         # through the Showcase API (the
 #                                         # main menu acts on
 #                                         # -showcase=BT_Showcase), with
-#                                         # sound, and leave it running
+#                                         # sound, and leave it running;
+#                                         # exits 1 if it is refused, fails,
+#                                         # or logs a mod error before READY
 # Runs left open for a person to watch (-Showcase, -KeepOpen) get a
 # maximized window and 2x UI scale; plain test runs stay small and muted.
 # Defaults: the repository this script sits in, $env:RIMWORLD_DIR, and a
@@ -129,6 +131,52 @@ $exe = Join-Path $RimWorld 'RimWorldWin64.exe'
 $proc = Start-Process $exe -ArgumentList $gameArgs -WorkingDirectory $RimWorld -PassThru
 "Started RimWorld (pid $($proc.Id)); log: $log"
 
+# Errors: RimWorld logs errors and exceptions as plain lines; skip Unity's
+# stack-trace and file-location noise.
+# Also RimWorld's warning about statically held assets that are not loaded
+# at startup on the main thread: a texture held that way may never load.
+$errorPattern = 'Exception|\bError\b|XML error|Config error|Could not (resolve|find|load)|needs a StaticConstructorOnStartup'
+$tracePattern = '^\s*(at |\(Filename|UnityEngine\.|Verse\.Log:)'
+# RimWorld 1.6 writes a "[Ref 9E9A3C82]" line between an error and its
+# stack trace; it belongs to the trace.
+$refPattern = '^\[Ref [0-9A-F]+\]\s*$'
+# The mod's names, and the Showcase API's log prefix, which its own errors
+# carry.
+$modPattern = 'BT_|BatshitTechnology|RandomReplicator|Batshitt|\[BT-SHOWCASE\]'
+
+# Scans log lines for errors. An error is the mod's if its own line or its
+# stack trace (the "at ..." lines that follow) mentions the mod:
+# "Exception ticking MinifiedThing123" names no mod, but its trace runs
+# through BatshitTechnology code. Errors the runner provoked on purpose
+# (a test scene made to throw) are announced first in "[BT-SMOKE] EXPECTED
+# <first line>" lines, and exactly those lines are left out.
+function Find-LogErrors([string[]]$lines) {
+  $expected = @{}
+  foreach ($l in $lines) {
+    if ($l.StartsWith('[BT-SMOKE] EXPECTED ')) { $expected[$l.Substring(20)] = $true }
+  }
+  $all = @()
+  $mod = @()
+  for ($i = 0; $i -lt $lines.Count; $i++) {
+    $line = $lines[$i]
+    if ($line -notmatch $errorPattern -or $line -match $tracePattern -or
+        $line -match $refPattern -or $expected.ContainsKey($line) -or
+        $line.StartsWith("[BT-SMOKE]")) { continue }  # the runner's own lines
+    $trace = @()
+    for ($j = $i + 1; $j -lt $lines.Count -and
+         ($lines[$j] -match $tracePattern -or $lines[$j] -match $refPattern); $j++) {
+      $trace += $lines[$j]
+    }
+    $all += $line
+    if ($line -match $modPattern -or ($trace -match $modPattern)) { $mod += $line }
+  }
+  [pscustomobject]@{
+    All = @($all | Select-Object -Unique)
+    Mod = @($mod | Select-Object -Unique)
+    Expected = $expected.Count
+  }
+}
+
 # Maximizes the game window. Done once the game is ready, so its own
 # startup resolution change cannot undo it.
 function Maximize-Game {
@@ -145,16 +193,33 @@ public static extern bool ShowWindowAsync(System.IntPtr hWnd, int nCmdShow);
 }
 
 if ($Showcase) {
+  # Waits for READY, then leaves the game running for the viewer. A
+  # REFUSED or FAILED cue ends the wait at once (the showcase will never
+  # come), and the log up to READY must hold no mod error.
   'Showcase: waiting for the demo base to build...'
   $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
   while ((Get-Date) -lt $deadline -and -not $proc.HasExited) {
     Start-Sleep -Seconds 3
-    if ((Test-Path $log) -and
-        (Select-String -Path $log -SimpleMatch '[BT-SHOWCASE] READY' -Quiet)) {
-      Maximize-Game
-      'Showcase is running. Close the game when done.'
-      exit 0
+    if (-not (Test-Path $log)) { continue }
+    $sofar = @(Get-Content $log)
+    $end = $sofar | Select-String -Pattern '^\[BT-SHOWCASE\] (READY|REFUSED|FAILED)\b' |
+      Select-Object -First 1
+    if (-not $end) { continue }
+    $before = if ($end.LineNumber -gt 1) { $sofar[0..($end.LineNumber - 2)] } else { @() }
+    $scan = Find-LogErrors $before
+    "== Log errors before $($end.Matches[0].Groups[1].Value): $(@($scan.All).Count) total, " +
+      "$(@($scan.Mod).Count) mentioning this mod"
+    $scan.All | Select-Object -First 40 | % { "  $_" }
+    if ($end.Matches[0].Groups[1].Value -ne 'READY') {
+      throw "The showcase did not start: $($end.Line); see $log."
     }
+    Maximize-Game
+    if (@($scan.Mod).Count -gt 0) {
+      'Showcase is running, but the mod logged errors before READY (above).'
+      exit 1
+    }
+    'Showcase is running. Close the game when done.'
+    exit 0
   }
   throw "The showcase did not report READY within $TimeoutSeconds s; see $log."
 }
@@ -181,40 +246,12 @@ $lines = Get-Content $log
 $lines | Select-String -SimpleMatch '[BT-SMOKE]' | % { "  $($_.Line)" }
 if (-not $done) { "  (no DONE line: timed out after $TimeoutSeconds s, or the game exited)" }
 
-# Errors: RimWorld logs errors and exceptions as plain lines; skip Unity's
-# stack-trace and file-location noise.
-# Also RimWorld's warning about statically held assets that are not loaded
-# at startup on the main thread: a texture held that way may never load.
-$errorPattern = 'Exception|\bError\b|XML error|Config error|Could not (resolve|find|load)|needs a StaticConstructorOnStartup'
-$tracePattern = '^\s*(at |\(Filename|UnityEngine\.|Verse\.Log:)'
-# RimWorld 1.6 writes a "[Ref 9E9A3C82]" line between an error and its
-# stack trace; it belongs to the trace.
-$refPattern = '^\[Ref [0-9A-F]+\]\s*$'
-# The mod's names, and the Showcase API's log prefix, which its own errors
-# carry.
-$modPattern = 'BT_|BatshitTechnology|RandomReplicator|Batshitt|\[BT-SHOWCASE\]'
-# An error is the mod's if its own line or its stack trace (the "at ..."
-# lines that follow) mentions the mod: "Exception ticking MinifiedThing123"
-# names no mod, but its trace runs through BatshitTechnology code.
-$errors = @()
-$modErrors = @()
-for ($i = 0; $i -lt $lines.Count; $i++) {
-  $line = $lines[$i]
-  if ($line -notmatch $errorPattern -or $line -match $tracePattern -or
-      $line -match $refPattern -or
-      $line.StartsWith("[BT-SMOKE]")) { continue }  # the runner's own lines
-  $trace = @()
-  for ($j = $i + 1; $j -lt $lines.Count -and
-       ($lines[$j] -match $tracePattern -or $lines[$j] -match $refPattern); $j++) {
-    $trace += $lines[$j]
-  }
-  $errors += $line
-  if ($line -match $modPattern -or ($trace -match $modPattern)) { $modErrors += $line }
-}
-$errors = @($errors | Select-Object -Unique)
-$modErrors = @($modErrors | Select-Object -Unique)
+$scan = Find-LogErrors $lines
+$errors = $scan.All
+$modErrors = $scan.Mod
 ''
-"== Log errors: $(@($errors).Count) total, $($modErrors.Count) mentioning this mod"
+"== Log errors: $(@($errors).Count) total, $($modErrors.Count) mentioning this mod" +
+  $(if ($scan.Expected) { " ($($scan.Expected) provoked on purpose, left out)" } else { '' })
 $errors | Select-Object -First 40 | % { "  $_" }
 
 $failed = ($lines | Select-String -SimpleMatch '[BT-SMOKE] FAIL').Count

@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using BatshitTechnology.Core;
+using BatshitTechnology.Showcases;
 using Verse;
 using RimWorld;
 using Verse.AI;
@@ -47,6 +48,13 @@ namespace BatshitTechnology
         private int framesWithMap;
         private int passed;
         private int failed;
+
+        /// <summary>
+        /// Errors and warnings a check provoked on purpose (a scene made to
+        /// throw, a stale launch request), which the final log check
+        /// leaves out. Each check that adds one also asserts it appeared.
+        /// </summary>
+        private readonly HashSet<LogMessage> expectedLogs = new HashSet<LogMessage>();
 
         /// <summary>Created by RimWorld for every game.</summary>
         /// <param name="game">The game this component belongs to.</param>
@@ -194,16 +202,23 @@ namespace BatshitTechnology
         /// level and no stack trace (a "Tried to destroy non-destroyable
         /// thing" error from clearing ground went unnoticed that way). The
         /// runner's own FAIL warnings are already counted, so they are not
-        /// counted again here, even when they name a BT_ def.
+        /// counted again here, even when they name a BT_ def. The Showcase
+        /// API's own warnings count too: they carry its [BT-SHOWCASE]
+        /// prefix (which no "BT_" test catches) and report swallowed
+        /// failures, such as a camera move or a message that threw. Only
+        /// the messages a check provoked on purpose, and recorded as
+        /// expected, are left out.
         /// </summary>
         private void TestNoErrorsLogged()
         {
             var bad = Log.Messages
+                .Where(m => !expectedLogs.Contains(m))
                 .Where(m => m.type == LogMessageType.Error
                     || (m.type == LogMessageType.Warning
                         && !m.text.StartsWith("[BT-SMOKE] ", StringComparison.Ordinal)
                         && (m.text.Contains("StaticConstructorOnStartup")
-                            || m.text.Contains("BatshitTechnology") || m.text.Contains("BT_"))))
+                            || m.text.Contains("BatshitTechnology") || m.text.Contains("BT_")
+                            || m.text.StartsWith(ShowcaseLog.Prefix, StringComparison.Ordinal))))
                 .ToList();
             foreach (LogMessage m in bad)
             {
