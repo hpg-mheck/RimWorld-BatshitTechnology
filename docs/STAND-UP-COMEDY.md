@@ -79,8 +79,9 @@ Specified by Matt "Breakpoint" Heck on 2026-10-13:
 A riot has a 1% chance of being a true gunfight instead (specified
 2026-10-13).
 
-- *(Proposal:)* each rioter goes into vanilla's murderous rage against
-  the comic and uses whatever weapon they carry, guns included.
+- Each rioter goes into vanilla's murderous rage against the comic and
+  uses whatever weapon they carry, guns included (approved
+  2026-10-13).
 - It is lethal, unlike the social fight, and ends like any murderous
   rage, or when the Spritzers go off.
 
@@ -101,14 +102,17 @@ really anywhere.
 - **When it fires:** a Spritzer goes off about 3 seconds after any fight
   starts within its radius. That covers comedy riots and gunfights, and
   also ordinary social fights, berserk pawns and murderous rages.
-- **What it does:** a foam burst, about a 7-tile radius, the size of a
-  popper's.
+- **What it does:** a foam burst with a 5-tile radius (decided
+  2026-10-13; a popper's 7 was too large).
   - It ends every hostile and fighting mental state it touches.
   - It puts everyone it reaches to sleep for an hour or two, as
     anaesthetic does, guilty and innocent alike, the comic included.
   - It leaves a slick of pale foam on the floor.
-- **Single use,** like a popper: it is spent when it fires, and is
-  rebuilt to rearm.
+- **Single use until reset** (decided 2026-10-13). Once it has fired, a
+  pawn resets it with batshittium, a Water Bottle and an Incorrectly
+  Sized Battery. *(Proposal:)* 1 batshittium, a reset job like
+  refuelling, and a "Needs reset" overlay meanwhile. The battery finally
+  has a use, and still does not fit; that is part of the reset.
 - **Batshittium** makes the foam work, so it carries a faint magenta
   tint, the motif's one accent. Destroyed, a Spritzer spritzes
   everything near it, a death of its own as the motif requires.
@@ -118,10 +122,8 @@ really anywhere.
 
 1. Does it share the Drag Show's stage and seating (proposed), or run
    anywhere with a stool, a microphone stand and some seats?
-2. The twist (answered): about one set in ten riots, as a social fight,
-   with a 1% chance of a true gunfight. Is murderous rage against the
-   comic (proposed) the right shape for the gunfight?
-3. The Spritzers: firing on any fight in range (proposed) or only on
-   show riots; a 7-tile radius and an hour or two of sleep; single use?
-4. The audience's memory: mixed (proposed), good, or bad?
-5. Research: Batshit Entertainment (proposed)?
+2. The Spritzers (5-tile radius and single use until reset: answered):
+   firing on any fight in range (proposed) or only on show riots; and an
+   hour or two of sleep?
+3. The audience's memory: mixed (proposed), good, or bad?
+4. Research: Batshit Entertainment (proposed)?
