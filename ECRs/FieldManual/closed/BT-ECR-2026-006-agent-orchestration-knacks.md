@@ -1,12 +1,12 @@
-# Engineering Change Request: Add Claude Code on native Windows knacks
+# Engineering Change Request: Add agent-orchestration knacks from a multi-agent build
 
-- ECR ID: `BT-ECR-2026-004`
+- ECR ID: `BT-ECR-2026-006`
 - Request revision: 1
 - Source project or origin namespace: Batshit Technology (`BT`)
 - Target project: FieldManual
 - Target canonical locator:
   https://github.com/Hard-Problems-Group-LLC/FieldManual
-- Target component, version, or revision: `knacks/AI/Anthropic/` (new area),
+- Target component, version, or revision: `knacks/AI/agent-orchestration/`,
   drafted on `04bcec5`
 - Request owner: Matt "Breakpoint" Heck
 - Drafted: 2026-10-14
@@ -14,16 +14,16 @@
   Hard-Problems-Group-LLC/FieldManual#1
 - Submitted-content digest: branch `knacks/from-batshit-technology`
   at commit `d354450`
-- Source lifecycle: Open
-- Target handling status as reported: Open pull request, awaiting
-  review
+- Source lifecycle: Closed
+- Target handling status as reported: Accepted and merged,
+  2026-10-14
 - Target intake ID or authoritative reference:
   https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1
 - Sensitivity and reuse classification: Public; stock reusable guidance
   with no project-specific content
 - Related, duplicate, or superseded ECR IDs: siblings, one per knack area:
-  BT-ECR-2026-001, BT-ECR-2026-002, BT-ECR-2026-003, BT-ECR-2026-005,
-  BT-ECR-2026-006, BT-ECR-2026-007
+  BT-ECR-2026-001, BT-ECR-2026-002, BT-ECR-2026-003, BT-ECR-2026-004,
+  BT-ECR-2026-005, BT-ECR-2026-007
 - Origin and provenance: drafted by Claude Code agents for the
   operator from the source project's session transcripts, records and git
   history, then reviewed for consistency, links and neutrality.
@@ -35,22 +35,23 @@ material change must be resubmitted.
 
 ### Problem And Source Impact
 
-FieldManual covers OpenAI's Codex app server but not Claude Code, and nothing
-covers running a coding agent on native Windows, where there is no command
-sandbox, two shells with different rules, blocked sleep loops, a scratch
-folder that vanishes with the session, and long sessions that a forced restart
-can end. One purpose of the source project is learning to use Claude (and
-later Codex) effectively for advanced Windows development.
+`staged-verification` covers ordering checks, but not the failures seen when
+several agents build one product: commits that swept another agent's
+uncommitted edits, checks that passed vacuously, review findings that did not
+survive a skeptic, and work from an agent that could not build or run what it
+wrote (invented near-miss APIs, tests pinning invalid values, merges seconds
+after commit).
 
 ### Requested Outcome
 
-- Add `knacks/AI/Anthropic/` with a `claude-code/` subarea and
-  `claude-code/windows.knack/`: the harness's tools on Windows, subagents and
-  workflows, memory and durable state (6 files, about 5,900 words).
-- Index it in `knacks/AI/README.md`.
+- Add three hierarchies: `shared-checkout`, `adversarial-review` and
+  `unverified-work` (10 files, about 13,000 words), cross-linked with
+  `staged-verification`. The related `proving-checks` knack is filed under
+  testing (BT-ECR-2026-007).
+- Update the area README.
 
 The proposed files are on the branch `knacks/from-batshit-technology` of
-Hard-Problems-Group-LLC/FieldManual (added in `4f7936e`, renamed to their
+Hard-Problems-Group-LLC/FieldManual (added in `68c5d14`, renamed to their
 final paths in `d354450`), offered as a pull request against `main` at
 `04bcec5`.
 
@@ -85,11 +86,10 @@ final paths in `d354450`), offered as a pull request against `main` at
 
 ### Evidence At Submission
 
-- Drawn from about 30 hours of Claude Code sessions on native Windows,
-  including background subagents, multi-agent workflows, context compaction
-  and a forced restart mid-agent.
-- Version-sensitive behaviour is cited to the Claude Code documentation and
-  dated; behaviour seen only in transcripts is labelled as observed.
+- Git behaviours (commit by path, rebase refusals, autostash, worktree rules,
+  `index.lock` contention) were reproduced in a scratch repository.
+- An adversarial review workflow produced 21 findings, of which skeptic
+  verifiers confirmed 19 and refuted 2.
 
 ## Source Tracking
 
@@ -110,16 +110,27 @@ until the knacks are available from the FieldManual submodule.
   operator's review.
 - 2026-10-14 — Pull request history rebuilt so every commit adds files at
   their final paths; head `19fcd4f`. Content unchanged.
+- 2026-10-14 — Pull request FieldManual#1 merged into `main` as `b981327` by
+  the FieldManual owner; branch deleted.
 
 ### Discussion And Amendments
 
 - 2026-10-14 — The operator returned FieldManual#1 because file names repeated
   their path. Under BT-ECR-2026-009 revision 2 the files were renamed in
   `d5af082`: no `.knack` directory suffix, and no topic or `api.` prefix in
-  file names. The knacks are now at
-  `knacks/AI/Anthropic/claude-code/windows/`. Their content is unchanged; the
-  request stands as submitted.
+  file names. The knacks are now at `knacks/AI/agent-orchestration/` with
+  `shared-checkout/`, `adversarial-review/` and `unverified-work/`. Their
+  content is unchanged; the request stands as submitted.
 
 ### Target Disposition
 
+- Accepted and implemented, 2026-10-14. FieldManual merged pull request #1
+  (https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1) into `main`
+  as `b981327`, after review and two rounds of requested naming changes, which
+  are recorded above.
+
 ### Source Closure
+
+- 2026-10-14 — Closed on merge by Claude Code for Matt "Breakpoint" Heck,
+  who merged the pull request; disposition accepted and implemented. Batshit Technology picks the
+  change up by advancing its `FieldManual/` submodule.

@@ -1,12 +1,12 @@
-# Engineering Change Request: Add agent-orchestration knacks from a multi-agent build
+# Engineering Change Request: Add Windows knacks for AI agents and developers
 
-- ECR ID: `BT-ECR-2026-006`
+- ECR ID: `BT-ECR-2026-002`
 - Request revision: 1
 - Source project or origin namespace: Batshit Technology (`BT`)
 - Target project: FieldManual
 - Target canonical locator:
   https://github.com/Hard-Problems-Group-LLC/FieldManual
-- Target component, version, or revision: `knacks/AI/agent-orchestration/`,
+- Target component, version, or revision: `knacks/windows/` (new area),
   drafted on `04bcec5`
 - Request owner: Matt "Breakpoint" Heck
 - Drafted: 2026-10-14
@@ -14,16 +14,16 @@
   Hard-Problems-Group-LLC/FieldManual#1
 - Submitted-content digest: branch `knacks/from-batshit-technology`
   at commit `d354450`
-- Source lifecycle: Open
-- Target handling status as reported: Open pull request, awaiting
-  review
+- Source lifecycle: Closed
+- Target handling status as reported: Accepted and merged,
+  2026-10-14
 - Target intake ID or authoritative reference:
   https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1
 - Sensitivity and reuse classification: Public; stock reusable guidance
   with no project-specific content
 - Related, duplicate, or superseded ECR IDs: siblings, one per knack area:
-  BT-ECR-2026-001, BT-ECR-2026-002, BT-ECR-2026-003, BT-ECR-2026-004,
-  BT-ECR-2026-005, BT-ECR-2026-007
+  BT-ECR-2026-001, BT-ECR-2026-003, BT-ECR-2026-004, BT-ECR-2026-005,
+  BT-ECR-2026-006, BT-ECR-2026-007
 - Origin and provenance: drafted by Claude Code agents for the
   operator from the source project's session transcripts, records and git
   history, then reviewed for consistency, links and neutrality.
@@ -35,23 +35,24 @@ material change must be resubmitted.
 
 ### Problem And Source Impact
 
-`staged-verification` covers ordering checks, but not the failures seen when
-several agents build one product: commits that swept another agent's
-uncommitted edits, checks that passed vacuously, review findings that did not
-survive a skeptic, and work from an agent that could not build or run what it
-wrote (invented near-miss APIs, tests pinning invalid values, merges seconds
-after commit).
+FieldManual has no guidance for working on a Windows workstation as, or
+alongside, an AI coding agent. A long multi-agent session on native Windows
+hit quoting and encoding traps in Git Bash and both PowerShell editions, hung
+network Git commands, an unexplained forced restart, notification sounds from
+automated game launches, files locked by background processes, cropped screen
+captures on a high-DPI display, and child processes surviving their launcher.
+Each cost time to diagnose, and each applies to any Windows project.
 
 ### Requested Outcome
 
-- Add three hierarchies: `shared-checkout`, `adversarial-review` and
-  `unverified-work` (10 files, about 13,000 words), cross-linked with
-  `staged-verification`. The related `proving-checks` knack is filed under
-  testing (BT-ECR-2026-007).
-- Update the area README.
+- Add `knacks/windows/` with six hierarchies: `shells`, `git`, `event-logs`,
+  `processes-and-files`, `desktop` and `porting` (21 files, about 24,100
+  words).
+- Index the area in `knacks/README.md`; link the existing
+  `authentication/GitHub-SSH-multi-org-sanity` knack rather than repeating it.
 
 The proposed files are on the branch `knacks/from-batshit-technology` of
-Hard-Problems-Group-LLC/FieldManual (added in `68c5d14`, renamed to their
+Hard-Problems-Group-LLC/FieldManual (added in `2c18bfa`, renamed to their
 final paths in `d354450`), offered as a pull request against `main` at
 `04bcec5`.
 
@@ -86,10 +87,15 @@ final paths in `d354450`), offered as a pull request against `main` at
 
 ### Evidence At Submission
 
-- Git behaviours (commit by path, rebase refusals, autostash, worktree rules,
-  `index.lock` contention) were reproduced in a scratch repository.
-- An adversarial review workflow produced 21 findings, of which skeptic
-  verifiers confirmed 19 and refuted 2.
+- The PowerShell examples ran under Windows PowerShell 5.1 and PowerShell 7.6;
+  the Git Bash, Python and cmd behaviours described were reproduced, including
+  a batch-shim argument running a second command and a child surviving a
+  killed launcher until placed in a job object.
+- Reboot forensics come from a real Windows Update restart, read back from the
+  System log (events 1074, 6006, 109, 12 and 13).
+- Windows OpenSSH resolving its configuration from the registered profile
+  path, not `HOME` or `USERPROFILE`, was observed and matches the
+  Win32-OpenSSH source.
 
 ## Source Tracking
 
@@ -110,16 +116,28 @@ until the knacks are available from the FieldManual submodule.
   operator's review.
 - 2026-10-14 — Pull request history rebuilt so every commit adds files at
   their final paths; head `19fcd4f`. Content unchanged.
+- 2026-10-14 — Pull request FieldManual#1 merged into `main` as `b981327` by
+  the FieldManual owner; branch deleted.
 
 ### Discussion And Amendments
 
 - 2026-10-14 — The operator returned FieldManual#1 because file names repeated
   their path. Under BT-ECR-2026-009 revision 2 the files were renamed in
   `d5af082`: no `.knack` directory suffix, and no topic or `api.` prefix in
-  file names. The knacks are now at `knacks/AI/agent-orchestration/` with
-  `shared-checkout/`, `adversarial-review/` and `unverified-work/`. Their
-  content is unchanged; the request stands as submitted.
+  file names. The knacks are now at `knacks/windows/` with `shells/`, `git/`,
+  `event-logs/`, `processes-and-files/`, `desktop-automation/` and
+  `porting-cli-tools/`. Their content is unchanged; the request stands as
+  submitted.
 
 ### Target Disposition
 
+- Accepted and implemented, 2026-10-14. FieldManual merged pull request #1
+  (https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1) into `main`
+  as `b981327`, after review and two rounds of requested naming changes, which
+  are recorded above.
+
 ### Source Closure
+
+- 2026-10-14 — Closed on merge by Claude Code for Matt "Breakpoint" Heck,
+  who merged the pull request; disposition accepted and implemented. Batshit Technology picks the
+  change up by advancing its `FieldManual/` submodule.

@@ -15,9 +15,9 @@
   Hard-Problems-Group-LLC/FieldManual#1
 - Submitted-content digest: revision 1 at `d354450`; revision 2 at
   `d5af082`, both on branch `knacks/from-batshit-technology`
-- Source lifecycle: Open
-- Target handling status as reported: Open pull request, awaiting
-  review
+- Source lifecycle: Closed
+- Target handling status as reported: Accepted and merged,
+  2026-10-14
 - Target intake ID or authoritative reference:
   https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1
 - Sensitivity and reuse classification: Public; guidance only
@@ -113,6 +113,8 @@ None needed; the change travels with the knacks' pull request.
   `d5af082`.
 - 2026-10-14 — Pull request history rebuilt so every commit adds files at
   their final paths; head `19fcd4f`. Content unchanged.
+- 2026-10-14 — Pull request FieldManual#1 merged into `main` as `b981327` by
+  the FieldManual owner; branch deleted.
 
 ### Discussion And Amendments
 
@@ -133,4 +135,13 @@ None needed; the change travels with the knacks' pull request.
 
 ### Target Disposition
 
+- Accepted and implemented, 2026-10-14. FieldManual merged pull request #1
+  (https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1) into `main`
+  as `b981327`, after review and two rounds of requested naming changes, which
+  are recorded above.
+
 ### Source Closure
+
+- 2026-10-14 — Closed on merge by Claude Code for Matt "Breakpoint" Heck,
+  who merged the pull request; disposition accepted and implemented. Batshit Technology picks the
+  change up by advancing its `FieldManual/` submodule.
