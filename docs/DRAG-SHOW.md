@@ -14,13 +14,15 @@ physics. Text follows the motif's rule: funny, never cruel.
 
 ## What It Needs
 
-- **A stage:** a 2 by 5 area of **Event Stage** tiles, a new floor made of
-  tasteful wood, laid as one continuous rectangle. *(Proposal:)* either
-  orientation, and a larger rectangle also counts.
+- **A stage:** at least a 2 by 5 area of **Event Stage** tiles, a new
+  floor made of tasteful wood, laid as one continuous rectangle. A larger
+  rectangle counts (minimum sizes, specified 2026-10-13), in either
+  orientation *(proposal)*.
 - **Center Stage:** a ritual marker placed on the stage. It can be placed
   only on Event Stage tiles.
-- **Seating:** an Event Seating area, a 5 by 5 block of adjacent
-  **Shitty Folding Chairs**.
+- **Seating:** an Event Seating area, a block of at least 5 by 5
+  adjacent **Shitty Folding Chairs** (a minimum, specified 2026-10-13).
+  The two-thirds threshold counts the chairs actually there.
   - The chairs cost 5 steel each and are very uncomfortable.
   - *(Proposal:)* they must face the stage, as vanilla seats face a
     table or television.
@@ -39,7 +41,7 @@ physics. Text follows the motif's rule: funny, never cruel.
    for the seats to fill. The colony comes to watch and takes seats,
    using the vanilla gathering behaviour that parties use.
 3. **Showtime.** As soon as at least two thirds of the seats are full (17
-   of 25):
+   of 25 in the minimum block):
    - the stage lights up magenta;
    - exciting disco music plays;
    - the emcee begins to dance.
@@ -48,8 +50,10 @@ physics. Text follows the motif's rule: funny, never cruel.
    stage, together with all the furniture and loose objects.
    - Building materials (walls, doors, columns, floors, the stage itself)
      are unaffected.
-   - Dragged pawns suffer mild injuries *(proposal: a few points of blunt
-     damage, bruises at worst)*.
+   - Dragged pawns suffer mild to moderate injuries (specified
+     2026-10-13; *proposal:* blunt damage of roughly 3 to 12 points,
+     bruises and the odd cracked rib, never anything that downs a
+     healthy pawn on its own).
    - They also gain a mild recreation buff *(proposal: a recreation boost
      and a short good-mood memory with a line of its own)*.
 
@@ -99,13 +103,12 @@ physics. Text follows the motif's rule: funny, never cruel.
 
 1. Built on Core's gathering system (proposed, no DLC needed), or as an
    Ideology ritual?
-2. Stage and seating: exact sizes, or minimums? Must the chairs face the
-   stage?
+2. Must the chairs face the stage? (Sizes are minimums: answered.)
 3. Where does "Relax Historical Accuracy" live: on the Center Stage
    marker (proposed), or as a mod setting?
 4. An outdoor stage: limit the drag to a radius (15 tiles proposed)?
-5. How mild is "mild": a few points of blunt damage, and a recreation
-   boost plus a short good-mood memory?
+5. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
+   damage right, with a recreation boost and a short good-mood memory?
 6. Research and costs: which project unlocks it, and what do the stage
    tiles, markers and the two outfits cost? The chairs are 5 steel.
 7. Disco music before the sound pipeline exists: silence, a vanilla
