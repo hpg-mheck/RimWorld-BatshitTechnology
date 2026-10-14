@@ -33,7 +33,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 |---|---|---|---|
 | 1000 | Foundations (v0.8) | `trunk` | Done |
 | 2000 | AnyRim | `trunk` | Done |
-| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 13000) |
+| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 17000) |
 | 4000 | Showcase API | `trunk` | Done |
 | 5000 | Sound pipeline | `feature/audio` | Next |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
@@ -91,11 +91,13 @@ sense runs.
 | 10000 | Art | Done |
 | 11000 | Tests and multi-bomb physics | Done |
 | 12000 | Directed tour, docs | Done |
-| 13000 | Narration overlay | Now |
-| 14000 | Boomalope stampede | Planned |
-| 15000 | Raccoon Incident | Planned |
-| 16000 | Named yield settings | Planned |
-| 17000 | Review, merge into `trunk` | Planned |
+| 13000 | Narration overlay | Done |
+| 14000 | Boomalope stampede | Done |
+| 15000 | Raccoon Incident | Done |
+| 16000 | Named yield settings | Done |
+| 17000 | Operator's viewing | Now |
+| 18000 | Tourists, viewing feedback | Planned |
+| 19000 | Merge into `trunk` | Planned |
 
 Slice 11000 delivered the twin-bomb junkyard test and the multi-bomb
 physics: superposed pulls with random bias jitter, absolute durations (the
@@ -122,8 +124,8 @@ tour (`Tools/smoke-test.ps1 -Showcase`), answers requests 17 and 18 in
 two tour faults (colonist deaths) are in `docs/AI-TODO.txt`.
 
 The operator watched it on 2026-10-14 and asked for slices 13000 to
-16000; the plan is in `.local/scratch/tour2/plan.md` until it is built
-and recorded in the specifications:
+16000, built the same day and recorded in the specifications
+(`docs/SHOWCASE.md`, `docs/SHOWCASE-API.md`, `docs/TRACTOR-BOMB.md`):
 
 - **13000, narration overlay:** one oversized line with a drop shadow,
   fading in and out, silent, in place of vanilla's message stack.
@@ -135,7 +137,13 @@ and recorded in the specifications:
   (Intimate, Neighborly, Popular) and Blast (Birthday Cake, Firework,
   Block Party), set per robot, for every robot at once, and as the
   barn's production defaults. The tour's tractors go up a setting.
-- **17000:** the operator watches again; then the merge into `trunk`.
+- **17000:** the operator watches again.
+- **18000, tourists:** a small party of visitors as the tour's
+  unfortunates, in place of colonists (the colonists are already held
+  clear of every blast until it is over); deferred from the review step,
+  with its questions in `docs/AI-requests-for-humans.txt` item 21. The
+  operator's feedback from the viewing goes in with it.
+- **19000:** the merge into `trunk`.
 
 ### Decisions
 
