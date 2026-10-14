@@ -6,8 +6,8 @@
 - Target project: FieldManual
 - Target canonical locator:
   https://github.com/Hard-Problems-Group-LLC/FieldManual
-- Target component, version, or revision: `knacks/sandboxing/` (two new
-  hierarchies), drafted on `04bcec5`
+- Target component, version, or revision: `knacks/sandboxing/windows/` (new
+  subarea), drafted on `04bcec5`
 - Request owner: Matt "Breakpoint" Heck
 - Drafted: 2026-10-14
 - Submitted: Not yet submitted
@@ -41,15 +41,15 @@ root certificates that Python needs until Windows fetches them.
 
 ### Requested Outcome
 
-- Add `knacks/sandboxing/windows-agent-isolation.knack/` (3 files, about 4,200
-  words, agent-neutral) and `knacks/sandboxing/windows-sandbox.knack/` (4
-  files, about 6,800 words).
-- Index both in `knacks/sandboxing/README.md`.
+- Add `knacks/sandboxing/windows/` with `agent-isolation.knack/` (3 files,
+  about 4,200 words, agent-neutral) and `sandbox.knack/` (Windows Sandbox; 4
+  files, about 6,800 words), and an index.
+- Index the subarea in `knacks/sandboxing/README.md`.
 
-The proposed files are commit `9e6d5fa` on the local branch
-`knacks/from-batshit-technology` of a FieldManual checkout, based on
-`04bcec5`. The branch is not pushed; it will be offered as a pull request when
-the operator approves.
+The proposed files are on the branch `knacks/from-batshit-technology` of
+Hard-Problems-Group-LLC/FieldManual (added in `9e6d5fa`, renamed to their
+final paths in `65cd769`), offered as a pull request against `main` at
+`04bcec5`.
 
 ### Acceptance Criteria
 

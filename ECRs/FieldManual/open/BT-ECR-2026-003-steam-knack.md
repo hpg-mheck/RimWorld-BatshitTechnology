@@ -44,10 +44,10 @@ FieldManual has no games area.
   player, and local mods versus the Workshop (6 files, about 7,800 words).
 - Index the area in `knacks/README.md`.
 
-The proposed files are commit `dc664b8` on the local branch
-`knacks/from-batshit-technology` of a FieldManual checkout, based on
-`04bcec5`. The branch is not pushed; it will be offered as a pull request when
-the operator approves.
+The proposed files are on the branch `knacks/from-batshit-technology` of
+Hard-Problems-Group-LLC/FieldManual (added in `dc664b8`, renamed to their
+final paths in `65cd769`), offered as a pull request against `main` at
+`04bcec5`.
 
 ### Acceptance Criteria
 

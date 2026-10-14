@@ -39,17 +39,17 @@ or directed showcases.
 
 ### Requested Outcome
 
-- Add `testing/in-host-smoke-testing.knack/`,
-  `procedural-generation/data-first-generation.knack/`,
-  `procedural-generation/procedural-sprite-generation.knack/` and
-  `demonstrations/directed-showcases.knack/`, with area READMEs (18 files,
-  about 18,200 words).
+- Add `testing/in-host-smoke.knack/`, `testing/proving-checks.knack/`,
+  `procedural-generation/data-first.knack/`,
+  `procedural-generation/sprites.knack/` and
+  `demonstrations/showcases.knack/`, with area READMEs (21 files, about 22,900
+  words).
 - Update `knacks/software-engineering/README.md`.
 
-The proposed files are commit `0486ac3` on the local branch
-`knacks/from-batshit-technology` of a FieldManual checkout, based on
-`04bcec5`. The branch is not pushed; it will be offered as a pull request when
-the operator approves.
+The proposed files are on the branch `knacks/from-batshit-technology` of
+Hard-Problems-Group-LLC/FieldManual (added in `0486ac3`, renamed to their
+final paths in `65cd769`), offered as a pull request against `main` at
+`04bcec5`.
 
 ### Acceptance Criteria
 
@@ -82,6 +82,8 @@ the operator approves.
 
 ### Evidence At Submission
 
+- Sabotage runs in the source project exposed several vacuous checks; 8 of 9
+  behavioural sabotage runs logged no error, so a clean log is no test.
 - Derived from an in-host smoke runner that grew to 137 checks, a procedurally
   planned town with unit-tested invariants, and screen-captured showcases.
 - The sketch code ran: the summed-area table against brute force, the flood

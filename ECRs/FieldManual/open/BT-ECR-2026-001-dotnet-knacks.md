@@ -44,16 +44,15 @@ through failed builds.
 
 ### Requested Outcome
 
-- Add `knacks/dotnet/` with five hierarchies: `netstandard-shared-library`,
-  `net-framework-builds`, `closed-assembly-inspection`,
-  `culture-safe-formatting` and `visual-studio` (17 files, about 16,200
-  words).
+- Add `knacks/dotnet/` with five hierarchies: `shared-library`,
+  `framework-builds`, `assembly-inspection`, `culture-formatting` and
+  `visual-studio` (17 files, about 16,200 words).
 - Index the area in `knacks/README.md`.
 
-The proposed files are commit `c702563` on the local branch
-`knacks/from-batshit-technology` of a FieldManual checkout, based on
-`04bcec5`. The branch is not pushed; it will be offered as a pull request when
-the operator approves.
+The proposed files are on the branch `knacks/from-batshit-technology` of
+Hard-Problems-Group-LLC/FieldManual (added in `c702563`, renamed to their
+final paths in `65cd769`), offered as a pull request against `main` at
+`04bcec5`.
 
 ### Acceptance Criteria
 

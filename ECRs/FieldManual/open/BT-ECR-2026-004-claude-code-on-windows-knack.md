@@ -40,15 +40,15 @@ later Codex) effectively for advanced Windows development.
 
 ### Requested Outcome
 
-- Add `knacks/AI/Anthropic/README.md` and `claude-code-on-windows.knack/`: the
-  harness's tools on Windows, subagents and workflows, memory and durable
-  state (5 files, about 5,900 words).
+- Add `knacks/AI/Anthropic/` with a `claude-code/` subarea and
+  `claude-code/windows.knack/`: the harness's tools on Windows, subagents and
+  workflows, memory and durable state (6 files, about 5,900 words).
 - Index it in `knacks/AI/README.md`.
 
-The proposed files are commit `208e0b8` on the local branch
-`knacks/from-batshit-technology` of a FieldManual checkout, based on
-`04bcec5`. The branch is not pushed; it will be offered as a pull request when
-the operator approves.
+The proposed files are on the branch `knacks/from-batshit-technology` of
+Hard-Problems-Group-LLC/FieldManual (added in `208e0b8`, renamed to their
+final paths in `65cd769`), offered as a pull request against `main` at
+`04bcec5`.
 
 ### Acceptance Criteria
 

@@ -41,16 +41,16 @@ Each cost time to diagnose, and each applies to any Windows project.
 
 ### Requested Outcome
 
-- Add `knacks/windows/` with six hierarchies: `agent-shells`,
-  `git-for-agents`, `event-logs`, `processes-and-files`, `desktop-automation`
-  and `porting-cli-tools` (21 files, about 24,200 words).
+- Add `knacks/windows/` with six hierarchies: `shells`, `git`, `event-logs`,
+  `processes-and-files`, `desktop` and `porting` (21 files, about 24,100
+  words).
 - Index the area in `knacks/README.md`; link the existing
   `authentication/GitHub-SSH-multi-org-sanity` knack rather than repeating it.
 
-The proposed files are commit `7f8de0e` on the local branch
-`knacks/from-batshit-technology` of a FieldManual checkout, based on
-`04bcec5`. The branch is not pushed; it will be offered as a pull request when
-the operator approves.
+The proposed files are on the branch `knacks/from-batshit-technology` of
+Hard-Problems-Group-LLC/FieldManual (added in `7f8de0e`, renamed to their
+final paths in `65cd769`), offered as a pull request against `main` at
+`04bcec5`.
 
 ### Acceptance Criteria
 

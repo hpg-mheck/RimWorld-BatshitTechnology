@@ -40,16 +40,16 @@ after commit).
 
 ### Requested Outcome
 
-- Add four hierarchies: `shared-checkout-subagents`,
-  `proving-checks-can-fail`, `adversarial-review` and
-  `integrating-unverified-agent-work` (13 files, about 17,700 words),
-  cross-linked with `staged-verification`.
+- Add three hierarchies: `shared-checkout`, `adversarial-review` and
+  `unverified-work` (10 files, about 13,000 words), cross-linked with
+  `staged-verification`. The related `proving-checks` knack is filed under
+  testing (BT-ECR-2026-007).
 - Update the area README.
 
-The proposed files are commit `127d883` on the local branch
-`knacks/from-batshit-technology` of a FieldManual checkout, based on
-`04bcec5`. The branch is not pushed; it will be offered as a pull request when
-the operator approves.
+The proposed files are on the branch `knacks/from-batshit-technology` of
+Hard-Problems-Group-LLC/FieldManual (added in `127d883`, renamed to their
+final paths in `65cd769`), offered as a pull request against `main` at
+`04bcec5`.
 
 ### Acceptance Criteria
 
@@ -84,8 +84,6 @@ the operator approves.
 
 - Git behaviours (commit by path, rebase refusals, autostash, worktree rules,
   `index.lock` contention) were reproduced in a scratch repository.
-- Sabotage runs in the source project exposed several vacuous checks; 8 of 9
-  behavioural sabotage runs logged no error, so a clean log is no test.
 - An adversarial review workflow produced 21 findings, of which skeptic
   verifiers confirmed 19 and refuted 2.
 
