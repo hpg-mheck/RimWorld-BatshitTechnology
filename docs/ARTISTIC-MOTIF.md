@@ -264,9 +264,17 @@ public information film's cheerful voice, warm, confident and on message.
   valued member of the family"; AnyRim's residents are "our neighbours".
   Outcomes speak to what happened on screen: a volunteer knocked flat is
   "comforted. Completely.", and an empty pile gets its own line.
+- **On screen.** Lines show on the Showcase API's narration overlay
+  (`docs/SHOWCASE-API.md`, "The Narration Overlay"): one at a time,
+  centred in the lower third, in white at about twice the Medium font
+  over a soft dark drop shadow, fading in and out, without a sound. No
+  colour, icon or frame: the words carry it, as a film's subtitles do.
 - **Timing.** A scene's start lines wait 90 ticks or more, and its first
   beat plays at tick 150, so lines read in cue order: start, beats,
-  outcome.
+  outcome. On the overlay a line said while another shows waits until
+  that one has been up 2.5 s, so lines closer together than that queue
+  and show in turn; space a scene's lines by their reading time (2.5 s
+  plus 50 ms a character) where the action allows.
 - **Review.** `TourXmlTests` check the length, the punctuation, the
   forbidden words, the byline and that every beat has a line. Anything
   beyond that, the wording itself, needs a human's review.

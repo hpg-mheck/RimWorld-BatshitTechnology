@@ -223,15 +223,22 @@ that a four-scene director showcase, run through the game's own session,
 frames a cut shot, selects its subject, captions "2 of 4", obeys Skip,
 times out a scene that never ends, logs its cues in order to FINISHED,
 says each outcome's narration before the closing message, and logs no
-[BT-SHOWCASE] warning; that scenes throwing in Setup, Tick, IsDone and
-End log one error each while the tour goes on (a set-up fault never
-begins, Tick and IsDone faults end Failed, with the right cues, endings
-and narration); that god mode is lent only in dev mode, a developer's
+[BT-SHOWCASE] warning; that its narration and closing message go to the
+narration overlay and never to vanilla's messages (no live message
+added, none archived with a narration line's words, and the overlay
+handed every line and then the closing message); that scenes throwing
+in Setup, Tick, IsDone and End log one error each while the tour goes
+on (a set-up fault never begins, Tick and IsDone faults end Failed,
+with the right cues, endings and narration); that god mode is lent only in dev mode, a developer's
 own is kept, and it is given back by Stop, at FINISHED, at the main
 menu, and by a loaded or new game; that the session writes nothing into
 a save (its scribed output is an empty element); and that a showcase
 game never reaches its autosave. Then it runs a few real frames, for
-what only drawing and input show: the caption bar paints; a cut right
+what only drawing and input show: the caption bar paints; the
+narration overlay, given a long line and then a short one, shows the
+short one, the last said, within 7 seconds (each replaces the line
+before after its 2.5-second base time, not its full reading time) and
+paints it, logging a NOTE with the font size and the wait; a cut right
 after a glide still holds after half a second of frames; vanilla's main
 menu, drawn off screen with the program state set to Entry for that one
 call, gets exactly one Showcases button with its keyed text loaded, and
@@ -240,12 +247,14 @@ which list the mod and its showcases, grey out the missing-mod showcase
 with its reason, refuse the fatal one while offering Force start, and
 honour Back and Escape (a real key-down event is made current while the
 window stack handles the cancel key); Stop ends a run with no later
-scene; a stopped showcase game still never autosaves, an ordinary one
-does, and the autosave setting is unchanged; and, 30 frames later, when
+scene, and clears the overlay at once, leaving the stopped scene's own
+line alone on it; a stopped showcase game still never autosaves, an
+ordinary one does, and the autosave setting is unchanged; and, 30 frames later, when
 a queued autosave would have been written, the save folder has gained
 and changed no files. DONE waits for these frame steps, for 120 seconds
 at most. Every one of these checks was seen to fail against a sabotaged
-build (docs/AI-DECISIONS.txt, 2026-10-14, slices 6000 and 8000).
+build (docs/AI-DECISIONS.txt, 2026-10-14, slices 6000 and 8000; the
+overlay's three, Tractor Bomb slice 13000).
 
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
@@ -288,6 +297,12 @@ FINISHED and the farewell it checks that:
 5. no colonist died but the grenade's volunteer;
 6. nothing logged an error or a mod warning (the smoke runner's own
    final check).
+
+It also logs a NOTE on how the narration would pace on the overlay if
+watched at normal speed: the lines said, at their ticks, replayed
+through Core's rules (the verifier itself runs at Superfast, where the
+overlay's real-time rules do not show), with the longest wait and how
+many lines would be replaced before their full reading time.
 
 It then logs "[BT-SMOKE] DONE" and quits, and the script reports as a
 smoke run does. A tour that never finishes fails at a deadline: the sum

@@ -3,8 +3,10 @@
 Status: built on `feature/showcase-api` (phase 4000, slices 1000 to 7000,
 with the adversarial review's fixes), with `BT_Showcase` as its first
 client; awaiting the merge into `trunk` (slice 8000). "As Built" below is
-the contract as it stands. Requested by Matt "Breakpoint" Heck on
-2026-10-13: a game API for showcases, and a **Showcases** button on the
+the contract as it stands. The narration overlay ("The Narration
+Overlay") was added on `feature/tractor-bomb` (phase 3000, slice
+13000). Requested by Matt "Breakpoint" Heck on 2026-10-13: a game API
+for showcases, and a **Showcases** button on the
 main menu that lists the mods offering showcases and each mod's
 showcases, as multi-stage menus or selection screens. "Because these are
 amazing, and I think it would be a hell of a lot of fun to let players
@@ -78,7 +80,8 @@ replaces the one before, so only one window is open at a time.
   end.
 - **Narration** lives in the def's XML as lines keyed by scene and
   outcome, so it can be translated, and the motif's voice can be checked
-  by tests.
+  by tests. It is shown on the API's own narration overlay, one line at a
+  time, never as vanilla messages.
 - **Starting a showcase:**
   1. Generate a throwaway game the way vanilla's dev Quick Test does
      (`Root_Play.SetupForQuickTestPlay`, then `PageUtility.InitGameStart`),
@@ -237,8 +240,9 @@ Two hooks were added for the directed tour (phase 3000, slice 12000):
 - **A worker** overrides `Setup(Map)`, `Tick()` and `Finished`, and may
   offer `Skip()` (with `CanSkip`) and a `Caption`. `Narrate(scene, when,
   targets)` queues the def's lines; `Say(scene, text, targets)` says a
-  computed one. `EnableDevButtons()` turns on the developer buttons of
-  the devices it stages; see "God Mode" below.
+  computed one. Both show on the narration overlay (below) and are
+  recorded in `NarrationLog`. `EnableDevButtons()` turns on the
+  developer buttons of the devices it stages; see "God Mode" below.
 - **The director** runs the scenes one at a time with Core's
   `SceneSequencer`: a scene ends when its `IsDone()` has held, it has run
   `minTicks`, and it has settled; or at `timeoutTicks`. Its shots come
@@ -261,14 +265,71 @@ Two hooks were added for the directed tour (phase 3000, slice 12000):
   - **Skip** (when the worker offers it): the running scene ends as
     skipped, and the next begins at once;
   - **Stop**: the running scene ends as stopped, no later scene runs,
-    and narration ends. The game keeps running as a showcase game (it
+    and narration ends: the overlay is cleared at once, a scene's own
+    `stopped` line then shows on it, and a silent vanilla message
+    confirms the Stop. The game keeps running as a showcase game (it
     still never autosaves); the camera and the colony are the viewer's,
     and a device already counting down still goes off.
 - **The session** (`GameComponent_ShowcaseSession`) adopts the
   launcher's request for its own new game only, waits 120 frames for the
   map to settle, sets the worker up, ticks it, suppresses autosave,
-  draws the caption bar, and shows the closing message once any queued
-  narration has been said.
+  draws the caption bar and the narration overlay, and hands the overlay
+  the closing message once any queued narration has been said.
+
+### The Narration Overlay
+
+Requested by Matt "Breakpoint" Heck on 2026-10-14, after watching the
+tour: narration shown as vanilla messages, in the stack at the top left
+with a sound for each, was "kind of obnoxious"; he asked for "a single
+oversized overlay with a dropshadow that shows the current line, fading
+in at the start of a segment, out a few seconds before the next one
+starts, with no audio blat when it appears." Every showcase gets it;
+nothing a worker says goes to `Messages`.
+
+- **Where and how large.** One line at a time, centred in the lower
+  third: its bottom 230 UI units above the screen's bottom, clear of the
+  main buttons, the inspect pane and two rows of gizmos, and never above
+  the caption bar. White, about twice the Medium font (sized in UI
+  units, so it follows the UI scale), wrapping at 1,100 units to at most
+  two lines; a longer line steps the font down, never below Medium.
+- **Drop shadow.** Eleven light black passes around the text, heavier
+  below it, make a soft shadow that keeps white lettering legible over
+  snow, sand and explosions.
+- **Silent, and not clickable.** It plays no sound and takes no click;
+  the director already frames what a line is about.
+  `NarrationRecord.Targets` still records it, for tooling.
+- **Timing, in real seconds,** because people read in real time,
+  whatever the game's speed (Core's `NarrationTiming` and
+  `NarrationOverlay`, unit tested):
+  - a line fades in over 0.5 s;
+  - its reading time is 2.5 s plus 50 ms a character, at most 9 s;
+  - with nothing queued, it holds for its reading time and then fades
+    out over 1 s;
+  - with the next line already queued (a delayed cue), it holds until it
+    can be gone 2 s before that line is due, but never for less than its
+    reading time; ticks become real seconds at the game's nominal speed
+    (a slower game only makes the gap longer), and while the game is
+    paused the line holds;
+  - a line said while another shows waits until that one has been up
+    for 2.5 s, then replaces it with a 0.3 s cross-fade; lines said
+    together show in turn, each for at least 2.5 s.
+- **The closing message** ("This concludes the showcase. ...") speaks in
+  the narrator's voice, so it is narration and goes to the overlay too.
+  It is patient: it waits for the last line's full reading time, then
+  fades like any other line, leaving the overlay empty. The Stop
+  confirmation stays a vanilla message, now silent (`SilentInput`): it
+  answers the viewer's click, as the details page's refusals do.
+- **Clearing.** Stop clears the overlay at once, before the worker
+  stops, so a scene's own `stopped` line still shows; a smoke-test reset
+  clears it too. The overlay belongs to the game's session, so leaving
+  the game takes it along. After a showcase finishes it empties itself
+  once the closing message has faded.
+- **Failure.** Updating and drawing are guarded as the caption bar is:
+  one failure is logged as an error and hides the overlay for that game;
+  lines are still recorded.
+- **Unchanged for tooling:** `NarrationLog` and the `SCENE`, `BEAT` and
+  `END` cues. The session adds `NarrationFrames` (frames the overlay drew
+  text in) and `NarrationFailed`.
 
 ### God Mode
 
@@ -345,8 +406,8 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
 - **Core unit tests:** scene sequencing (including a failed scene),
   grouping showcases by mod, requirement and compatibility checks, the
   launch decision, the caption and its bar's layout, narration (including
-  delayed `stopped` lines), the god-mode loan, and the Force-start and
-  command-line rules.
+  delayed `stopped` lines), the narration overlay's timing and layout,
+  the god-mode loan, and the Force-start and command-line rules.
 - **XML tests:** every `ShowcaseDef`'s fields (worker classes matched by
   exact namespace), the keyed text and the keys the code uses, preview
   images, the Harmony dependency, that no file but the button's uses
@@ -372,6 +433,11 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
     scene plays a beat (`BEAT waiting poke`, with that moment's line);
     scenes that throw are logged once each and the tour goes on; a cut
     right after a glide holds;
+  - narration and the closing message go to the overlay, never to
+    vanilla's live messages or the archive; in real frames, the
+    overlay's current line is the last line said, replacing the line
+    before after its base time and painted; Stop clears it, leaving the
+    stopped scene's own line alone;
   - god mode is lent only in dev mode and given back on every way out;
   - a showcase game never autosaves, an ordinary one does, the session
     saves nothing, and the save folder gains no files.
@@ -406,3 +472,16 @@ Proposed while building and standing as settled (see "As Built"):
    never overwritten; nothing touches the player's saves unless they
    save.
 7. **`-btshowcase` is retired** in favour of `-showcase=BT_Showcase`.
+
+Asked for by Matt "Breakpoint" Heck on 2026-10-14, after watching the
+tour, with the details settled while building (see "The Narration
+Overlay"):
+
+8. **Narration on one overlay,** oversized, with a drop shadow, fading
+   in and out, silent, in place of vanilla's messages.
+9. **A line waits 2.5 s before it replaces another,** rather than
+   replacing it at once: the tour says each scene's start line 60 ticks
+   before its first beat (and its two opening lines 30 ticks apart), so
+   instant replacement would flash lines past unread.
+10. **The closing message is narration** and goes to the overlay; the
+    Stop confirmation stays a vanilla message, made silent.

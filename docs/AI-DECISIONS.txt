@@ -1305,3 +1305,87 @@ the review predicted. Verify run 2 on the restored build (DLL 05:21:39):
 Full smoke again on the final DLL (05:21:39): 190 passed, 0 failed,
 exit 0, no mod log error. Not merged into trunk: the operator will
 watch the tour first.
+2026-10-14 Claude: Tractor Bomb slice 13000: the narration overlay, in
+the Showcase API. Asked for by Matt "Breakpoint" Heck after watching the
+tour: narration as vanilla messages, the stack at the top left with a
+sound for each, was "kind of obnoxious"; he wanted "a single oversized
+overlay with a dropshadow that shows the current line, fading in at the
+start of a segment, out a few seconds before the next one starts, with
+no audio blat when it appears." Plan: .local/scratch/tour2/plan.md,
+"Slice 13000". Contract: docs/SHOWCASE-API.md, "The Narration Overlay".
+- Built in the API, so every showcase gets it. Core holds the rules:
+  NarrationTiming (reading time 2.5 s plus 50 ms a character, at most
+  9 s; ticks to real seconds at the nominal speed, infinity while
+  paused) and NarrationOverlay (one line; fade in 0.5 s, out 1 s; hold
+  for the reading time, or until it can be gone 2 s before the next
+  queued line, never less; cross-fade 0.3 s), with 20 unit tests. The
+  game draws it (NarrationOverlayDrawer) from the session's
+  GameComponentOnGUI and moves it on every frame from
+  GameComponentUpdate. ShowcaseWorker.Say no longer calls Messages.
+- One deviation from the plan: "a line said while another is showing
+  replaces it with a quick cross-fade" became "waits until that one has
+  been up 2.5 s, then replaces it with the cross-fade". The tour says
+  each scene's start line 60 ticks before its first beat, and the home
+  scene's opening lines 30 ticks apart, so replacing at once would flash
+  them past unread at normal speed. A queued line lags by at most 2.5 s
+  a line.
+- The session's Message() (about line 593 before this change) served
+  two messages. The closing message ("This concludes the showcase. The
+  colony is yours. Please remain calm.") is in the narrator's voice (the
+  motif says so), so it is narration: it goes to the overlay, patiently,
+  after the last line's full reading time, and the overlay empties
+  itself once it has faded. The Stop confirmation answers the viewer's
+  click, as the details page's refusals do, so it stays a vanilla
+  message, made silent (SilentInput). Dialog_ShowcaseDetails is
+  unchanged.
+- Stop clears the overlay before the worker stops, so a scene's own
+  "stopped" line (delay 0) still shows alone; the tour has none.
+- Size: a copy of vanilla's Medium label style with its font size
+  doubled (Arial_medium is a dynamic font: Medium 21, the overlay 42 in
+  the smoke runs), stepping down by 2 until a line wraps to two lines at
+  1,100 UI units, never below Medium. It is laid out in UI units under
+  RimWorld's UI-scale matrix, so it follows the scale. A font that could
+  not be resized would fall back to Medium with a warning (not seen).
+- Place: centred, its bottom 230 UI units above the screen's bottom
+  (the main buttons, the inspect pane or two gizmo rows, and a gap), so
+  in the lower third on screens 1,080 units tall and more, and never
+  above the caption bar. Shadow: eleven light black passes, heavier
+  below. Not clickable: the director frames the camera, and
+  NarrationRecord.Targets stays for the verifier.
+- Smoke: three new checks: "narration and the closing message go to the
+  overlay, never to vanilla's messages or the archive"; "the narration
+  overlay's current line is the last line said, replacing the one before
+  after its base time, painted in real frames" (a long line, then a
+  short one, in real frames; the short one must show within 7 s); and
+  "Stop clears the narration overlay at once: the stopped scene's own
+  line shows alone". One sabotage run (.local/scratch/overlay13000/
+  sabotage.py, restored byte for byte) applied three at once, each
+  aimed at one check: Say also sending the line to Messages; a waiting
+  line replacing the one showing only after its full reading time; and
+  Stop not clearing the overlay. Each new check failed (the second with
+  the long line still showing after 7.0 s; the third with the long line
+  showing and two waiting); no other check failed but the implosion
+  flake below. A sabotage of the third alone fails it too: the stopped
+  line would wait behind, or cross-fade from, the line showing.
+- The tour verifier logs a NOTE replaying the tour's narration through
+  Core's rules at normal speed (it runs at Superfast itself). All eight
+  scenes: 42 of 42 lines shown, the longest wait 5.7 s, 28 replaced
+  before their full reading time, each still shown 2.5 s or more. The
+  tour's lines are denser than one line at a time reads comfortably;
+  the timings are left as built for the operator's viewing (slice
+  17000), with a retiming proposal in docs/AI-TODO.txt.
+- Lesson: restoring the sabotaged files with Python's shutil.copy2 kept
+  their old modification times, so MSBuild's incremental build skipped
+  the rebuild and left the sabotaged DLL in place. The unchanged DLL
+  timestamp caught it; the files were touched and rebuilt, and the
+  script now uses copyfile.
+Runs (each build confirmed by the DLL's timestamp): Release builds with
+ValidateDefs, 0 warnings, 0 errors, 0 Def problems; 662 unit and XML
+tests; 18 Python tests. Full smoke on DLL 10:21:47: 191 passed, 2 failed
+(the implosion pair, a silver stack stuck at (0, 2)); the rerun on the
+same DLL, 193 passed, 0 failed. Sabotage run on DLL 10:25:12: 188
+passed, 5 failed (the three new checks and the implosion pair again).
+Restored, DLL 10:27:00: full smoke 193 passed, 0 failed; verify run
+with -TourSkip '' (every scene), 11 passed, 0 failed, exit 0. After a
+comment-only rewrap, DLL 10:31:03: full smoke 192 passed, 1 failed (the
+known AnyRim lamps flake), then on the rerun 193 passed, 0 failed.

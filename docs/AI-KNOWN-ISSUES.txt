@@ -126,6 +126,22 @@
 - Showcases: a showcase's DEV buttons disappear from the throwaway colony
   when it stops or finishes, because god mode is given back then; turn
   god mode on from the dev toolbar to keep using them.
+- Showcases (2026-10-14): the narration overlay is not clickable, so a
+  line no longer jumps the camera to what it is about, as a vanilla
+  message did; the director frames it already. Lines said less than
+  2.5 s apart queue and show in turn, so a burst of lines lags the
+  action by up to 2.5 s a line (the tour verifier's pacing NOTE gives
+  the longest wait at normal speed). The overlay has been checked by the
+  smoke runner in a small window, not yet by eye at 2x UI scale on 4K.
+- Smoke flake (2026-10-14, slice 13000): "an implosion drags everything
+  within 10 tiles to within 1.5" and its companion "reports everything
+  gathered early, then settles" failed together in two of four full
+  runs on the data folder %TEMP%\BT-smoke-tour2, each time with one
+  silver stack stuck at (0, 2) and nothing else moving; the other two
+  runs passed. The change being tested (the narration overlay) shares
+  no code with the implosion. It resembles the queue outside the
+  1.5-tile pile that the sideways slip fixed on 2026-10-13 (silver and a
+  component stuck at (0, 2) and (0, 3)); not yet explained.
 - Smoke-test flakes on some random maps, not yet explained: "AnyRim's
   devices and lamps are powered" fails when two or three of AnyRim's 23
   consumers sit on a power net with no generator ("connected; net

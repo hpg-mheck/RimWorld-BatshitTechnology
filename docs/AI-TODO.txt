@@ -442,3 +442,23 @@ Three review fixes have no automated check, for these reasons:
   docs/AI-KNOWN-ISSUES.txt has two smoke-flake sections to merge; and
   AnyRimText.OpeningMessage is no longer used by the showcase (the
   AnyRim scene narrates instead).
+- [ ] Narration overlay follow-ups (slice 13000, 2026-10-14):
+  - Look at the overlay by eye at 2x UI scale on 4K in the operator's
+    viewing (slice 17000): its size, its place above the gizmos and the
+    inspect pane, and the shadow over snow and explosions.
+  - Tour pacing on the overlay. Replayed at normal speed, 28 of the 42
+    lines are replaced before their full reading time (each still shows
+    2.5 s or more) and the longest wait is 5.7 s: lines bunch at scene
+    starts (the outcome line, the start line 90 ticks later, the first
+    beat at 150) and in the home scene (two start lines 30 ticks apart).
+    If the operator finds it rushed, space them by reading time: start
+    lines at about 300 ticks and TourScene.FirstBeatTick at about 600,
+    moving each scene's own beat ticks (Ballista orderTick, AnyRim
+    streetTick and homesTick, grenade throwTick, the barn's barnTick) to
+    keep their order, and checking each scene's timeoutTicks. Rerun the
+    verifier's pacing NOTE to measure it.
+  - The implosion smoke flake of 2026-10-14 (docs/AI-KNOWN-ISSUES.txt).
+  - Candidate knack for stock FieldManual (with an ECR): restoring
+    sabotaged sources with shutil.copy2 keeps their old modification
+    times, so an incremental MSBuild skips the rebuild; always confirm
+    the DLL timestamp changed.
