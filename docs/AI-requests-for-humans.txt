@@ -92,3 +92,12 @@ Matt "Breakpoint" Heck:
 18. (Resolved 2026-10-14: "test both". The junk-pile grenade scene stays,
     and the Raccoon Incident is built as its own scene; ROADMAP.md,
     phase 3000, slice 15000.)
+19. Showcase games run the quick test's storyteller, so raids and dark
+    entities can arrive mid-tour; in four of six verify runs in slice
+    15000 (2026-10-14) they did, killing colonists the tour did not and,
+    once, timing out the grenade scene under a raid. Should a showcase's
+    game have random incidents switched off while the showcase runs (a
+    Showcase API change, for every showcase), and should the tour's stage
+    builder clear the hostiles a map starts with (dark entities, a
+    mechhive), which killed colonists near the base in later runs?
+    Recommended: yes to both.

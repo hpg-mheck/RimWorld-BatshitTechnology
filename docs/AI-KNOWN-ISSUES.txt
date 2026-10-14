@@ -190,3 +190,26 @@
   about 58 tiles from the south-east corner pad. The rerun on the same
   DLL lost nobody. Whether the stampede's undrafted colonists made it
   likelier is not known.
+- Tour (BT_Showcase), slice 15000 (2026-10-14): the storyteller's own
+  incidents reach the tour. In four of six all-scene verify runs hostile
+  pawns were on the map during the tour (each scene's start now notes
+  them): "Dark entities" (Anomaly) from the first scene on two maps, and
+  raids during the grenade and raccoon scenes on two more. Colonists were
+  shredded near the base (FleeAndCower, bomb wounds) and one run's grenade
+  scene timed out under a raid. In one run AnyRim lost seven of its nine
+  residents before the raccoon scene, Ned among them, cause unseen (the
+  hostiles note came later); the raccoon scene then stood down. Showcase
+  games run the quick test's storyteller; a showcase with no random
+  incidents is proposed in docs/AI-TODO.txt and asked in
+  docs/AI-requests-for-humans.txt (item 19). The tour verifier now
+  silences the storyteller at READY, as the smoke run does, so verify
+  runs meet only the hostiles a map starts with (read the "begins:"
+  notes); a viewer's tour still gets the storyteller's incidents. Those
+  starting hostiles are the bigger part: of eleven later all-scene runs,
+  maps with "Dark entities" (two to five) or a mechhive (one to three)
+  lost colonists near the base in three, and on one mechhive map all
+  three colonists died during the stampede, so its volley never fired
+  and the grenade had no one to throw it. On two other dark-entity maps
+  the grenade scene timed out with no throw and no warning (the order
+  was taken; the grenadier never threw). One run missed the tractor's
+  "protest" beat. None of these involved AnyRim or the raccoon scene.

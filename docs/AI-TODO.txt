@@ -496,3 +496,38 @@ Three review fixes have no automated check, for these reasons:
     reach plus margin every tick until the aftermath is idle (for
     example, forbid the area or draft them in the base, as the stampede
     does), then sabotage it.
+- [ ] Raccoon Incident follow-ups (slice 15000, 2026-10-14):
+  - Showcase games keep the quick test's storyteller, so raids and dark
+    entities arrived in four of six verify runs and killed colonists the
+    tour did not (docs/AI-KNOWN-ISSUES.txt). Proposal: the Showcase API
+    switches off random incidents for a showcase's game (for example a
+    no-incident storyteller or difficulty while the showcase runs), which
+    would also keep the operator's viewing free of a raid. Asked in
+    docs/AI-requests-for-humans.txt; not done, as it changes every
+    showcase. The hostiles a map starts with (dark entities, mechhives)
+    did more harm than the storyteller in the later runs: the showcase's
+    stage builder could remove hostile pawns within reach of the base
+    and AnyRim when it builds, as the smoke run's QuietTheMap does
+    before its settling checks.
+  - Watch the scene by eye at 2x on 4K in slice 17000: Ned's sprint and
+    throw, Constance in her chair (she waits standing on it; vanilla has
+    no "sit" job outside meals and recreation), the street shot at zoom 30,
+    and the census on the welcome sign at zoom 16.
+  - Ned died in six of eleven throws, was downed in two and stood in
+    three: the raccoon closes on him during the throw's wind-up, so the
+    singularity opens within its 10-tile pull of him. If the operator
+    wants him to survive more often, move his post north or have him
+    throw from farther (both in Core's RaccoonIncident, with its tests).
+  - The scene's stand-down (Ned lost before it begins) ran once, as a
+    timeout before it existed; it and the "after anyone" path (Constance
+    gone) have not run on purpose since. A smoke check that kills Ned
+    before the scene, and one that removes Constance, would cover them.
+  - In one run Ned stood 8.1 tiles from the raccoon, in sight, on his
+    AttackStatic, and had not yet thrown 600 ticks after it came (he
+    threw later). Read the "still waiting" notes in future runs; if it
+    recurs, find out why TryStartAttack is refused (a busy stance, the
+    verb's own sight line to a raccoon at the gate).
+  - The census line is said through ShowcaseWorker.Say by the scene; if
+    another scene needs computed words, consider a Showcase API feature
+    (a line with a value the scene supplies) instead of more computed
+    beats.

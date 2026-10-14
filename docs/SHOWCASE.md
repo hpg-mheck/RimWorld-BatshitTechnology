@@ -34,7 +34,8 @@ BT_Showcase` (the API's full cue list is in its specification).
 `.\Tools\smoke-test.ps1 -Showcase -Verify` runs the whole tour as a test
 (`docs/AI-TESTING-STRATEGY.txt`, section 4): small, muted, at Superfast,
 with AnyRim forced to decline so that declining is exercised on every
-map (`-TourSkip ''` runs all nine).
+map; the Raccoon Incident needs the town shown first, so it declines
+with it (`-TourSkip ''` runs all ten).
 
 A showcase game never autosaves, so the player's autosave slots are
 safe. The devices' DEV buttons show only in dev mode: the showcase
@@ -77,10 +78,14 @@ which is why capture tools wait for log cues.
 | 5 | `retire-reactor` | When Reactors Retire | blast | no pad 1 |
 | 6 | `anyrim` | A Typical Rim Community | sign, street, homes | no AnyRim |
 | 7 | `grenade` | Comfort Is a Weapon | thrown* | no able colonist |
-| 8 | `tractor` | The Tractor of Tomorrow | barn to blast | no yard or foe |
-| 9 | `twins` | Two Tractors | planted, pull, blast | no yard or foe |
+| 8 | `raccoon` | The Raccoon Incident | guard, pest, thrown, census‡ | see Reel 9 |
+| 9 | `tractor` | The Tractor of Tomorrow | barn to blast | no yard or foe |
+| 10 | `twins` | Two Tractors | planted, pull, blast | no yard or foe |
 
 \* Or `thrownAlone` when no colonist is left to volunteer.
+
+‡ The census beat's words are computed: AnyRim's own census line, with
+the real count of surviving residents (`TourSceneScript.Computed`).
 
 † And `stragglers` before the aftermath when a cleanup volley fires. The
 stampede declines without a Ballista, with fewer than 256 explosive bolts
@@ -189,15 +194,16 @@ was built.
 - **Scenes** (as built; see "The Scenes" above): the demo base's
   devices; the Ballista's volley (the Artificer appears there); the
   boomalope stampede (added in slice 14000); the two self-destructs;
-  AnyRim; the grenade at the junk pile west of the base; the Tractor
-  Bomb against a staged raider party, with a colonist's
-  protest; and two Tractor Bombs in a junkyard as the finale. Changes
-  from the plan: AnyRim and the grenade come before the Tractor Bomb, so
-  the film ends on its biggest bang; the grenade stays at the junk pile,
-  and the Raccoon Incident (Reel 9) is deferred; the barn does not build
-  the robot on screen ("This one was made earlier"; `docs/AI-TODO.txt`).
-  Both proposals are in `docs/AI-requests-for-humans.txt`, items 17 and
-  18.
+  AnyRim; the grenade at the junk pile west of the base; the Raccoon
+  Incident in AnyRim (added in slice 15000); the Tractor Bomb against a
+  staged raider party, with a colonist's protest; and two Tractor Bombs
+  in a junkyard as the finale. Changes from the plan: AnyRim and the
+  grenade come before the Tractor Bomb, so the film ends on its biggest
+  bang; the grenade stays at the junk pile, and the Raccoon Incident
+  (Reel 9) follows it as its own scene (the operator's "test both",
+  2026-10-14); the barn does not build the robot on screen ("This one
+  was made earlier"; `docs/AI-TODO.txt`). Both proposals are in
+  `docs/AI-requests-for-humans.txt`, items 17 and 18.
 - **Log cues.** Each scene logs `SCENE`, `BEAT` and `END` cues (or
   `SKIPPED`), replacing the old `THROW` and `TOUR` cues, which are gone.
 - **Letting go.** The caption bar's buttons, provided by the API: Skip
@@ -266,18 +272,21 @@ Reels and sample narration (final lines are written with the scenes):
 As built, the reels run in the scenes' order: Reels 1 to 4 are the
 first scene, Reel 5 the second and third (the volley, then the
 stampede), Reel 6 the fourth and fifth, then AnyRim
-(Reel 8) and the grenade at the junk pile (Reel 9's title, without the
-raccoon), then the Tractor of Tomorrow (Reel 7) and the twins, which
+(Reel 8), the grenade at the junk pile (Reel 9's title) and the Raccoon
+Incident (Reel 9's story), then the Tractor of Tomorrow (Reel 7) and the
+twins, which
 close on the byline. The film now opens on the first three promises
 ("The future, delivered sooner, cheaper and funnier."). The narration's
 rules are in `docs/ARTISTIC-MOTIF.md`, "Narration".
 
-### Reel 9: The Raccoon Incident *(draft; deferred)*
+### Reel 9: The Raccoon Incident
 
-AnyRim's ninth resident is the security guard of AnyRim Savings & Loan,
-which until now had nobody in it: **Ned "Overkill" Lessly** (read it
-aloud) *(proposal)*. He carries an Ergonomic Singularity Grenade "for
-emergencies", stands at the bank door, and takes pests seriously.
+Specified by Matt "Breakpoint" Heck on 2026-10-13 and built in slice
+15000 (2026-10-14) as scene `raccoon`, after the grenade. AnyRim's ninth
+resident is the security guard of AnyRim Savings & Loan, which until
+then had nobody in it: **Ned "Overkill" Lessly** (read it aloud). He
+carries an Ergonomic Singularity Grenade "for emergencies", stands at
+the bank door, and takes pests seriously.
 
 1. **The setup.** The camera finds Ned at the bank. A raccoon wanders onto
    Main Street, foaming slightly: it is in vanilla's manhunter state,
@@ -297,11 +306,64 @@ emergencies", stands at the bank door, and takes pests seriously.
    - If it died: "The raccoon will not be troubling anyone."
    - Either way: "AnyRim thanks Ned for his service. Unfortunately."
 
-Implementation notes *(proposals)*: Ned is a regular AnyRim resident
-(the Ancients faction) with the grenade equipped; the director orders
-his throw directly, as the current demo orders the grenadier's. The
-raccoon is a vanilla Raccoon put into the manhunter mental state and
-spawned at the street's south end, so its target is predictable.
+As built (`Source/Tour/RaccoonScene.cs`; the places are Core's
+`RaccoonIncident`, in town-local cells):
+
+- **The cast.** Ned is a regular resident (the Ancients faction, his
+  household's own lord) generated capable of violence and holding the
+  grenade; his duty has no combat in it, so he never throws it on his
+  own (the smoke test watches him for 600 ticks). Before the camera
+  arrives the scene puts him on the bank's front walk, (+5,+39), and
+  Constance in her middle lawn chair, (+5,+28), facing the street, on a
+  wait the scene ends.
+- **Beats.** `guard` at tick 330 frames Ned close and selects him;
+  `pest` at tick 780 brings the raccoon in at Main Street's south end,
+  (0,−21), in the manhunter state (silently, so no message), sends it
+  running up the street to the sidewalk at the Damages' gate, (+3,+25),
+  and then sets it on Constance (left to path to her directly, it went
+  through the front yards chewing their fences), and frames the whole
+  street (zoom 30). Ned sprints to his
+  post in the west lane beside the car at the bank's kerb, (−1,+33), and
+  throws once, from there, as soon as the raccoon is in range: on the
+  centre line that is row +21, still on the road and 8.6 tiles from
+  Constance's chair, so the singularity's 10-tile pull reaches her.
+  During the throw's 1.5-second wind-up the raccoon keeps coming, so the
+  grenade usually lands within 10 tiles of Ned as well. If the raccoon
+  is not in his range and sight 900 ticks after it came, Ned goes after
+  it, the throw queued behind each sprint; while he waits, the scene logs
+  where both are every 600 ticks. `thrown` plays as
+  the grenade leaves his hand; `census` plays once the singularity is
+  over, on the welcome sign, with the census line said by the scene.
+  The scene is done 390 ticks later; Constance's and Ned's fates are the
+  world's.
+- **The verdict.** The outcome is `raccoonLost` if the raccoon is dead,
+  `raccoonSurvived` otherwise, and either way "AnyRim thanks Ned for his
+  service. Unfortunately." follows 60 ticks later, before the next
+  scene's start line. The census reads "AnyRim census revised to N..."
+  when the count fell, or "AnyRim census holds at 9. Please remain calm."
+  when no one was lost (`AnyRimText.CensusReport`). While a showcase
+  narrates on the map, AnyRim's own census message stays out of the
+  message stack, so the line is not said twice.
+- **Afterwards.** However the scene ends, a living raccoon is calmed,
+  Ned is stood down, a grenade he dropped is taken back, and Constance
+  leaves her chair.
+- **Declining.** It declines when AnyRim is not on the map, when the
+  AnyRim scene was skipped (the tour never shows the town's incident
+  without the town; the verifier's default `-TourSkip anyrim` therefore
+  skips it too), when Ned is not standing with his grenade, when the
+  game has no raccoons, or when Main Street's south end is blocked. The
+  tour asks only before it starts; if Ned has been lost by the time the
+  scene begins, no raccoon comes and the scene closes after its least
+  time on its "completed" line, which thanks him regardless (the
+  verifier then reports its missing beats and facts).
+- **Verifier facts.** Ned threw the grenade (the projectile's thrower,
+  seen in the air); one more implosion; the END cue's outcome matches the
+  raccoon's fate; the census line matches `AnyRimText.CensusReport` of
+  the counts before the scene and at the tick it was said; no census
+  message entered vanilla's stack; no colonist was hurt within the
+  incident's reach (Main Street from the entry to the bank, grown by the
+  throw and the pull, or within 5 tiles of the raccoon). A colonist hurt
+  elsewhere during the scene is logged as a note with where and how.
 
 *(Proposals:)* the reels map onto the scenes above (Reels 1 to 5 are the
 demo base and the Ballista); the narrator's lines live in XML so they
@@ -543,7 +605,8 @@ Each building, with its walls and floor:
   - a plasteel vault, with a plasteel door, holding 2,000 silver and 50
     gold;
   - an ATM on the front path;
-  - nobody lives here.
+  - Ned's cot behind the north counter, and a heater at the far end of
+    the south one (until slice 15000 nobody lived here).
 
 Around town:
 
@@ -554,12 +617,12 @@ Around town:
 - Hydrants on two corners of the crossroads.
 - Cars stand at measured distances from Ground Zero (about 12, 12, 21
   and 33 tiles), as Doorstep's cars did.
-- Ten graves in the cemetery: eight reserved, one for each resident, and
-  two unreserved; two oak trees.
+- Ten graves in the cemetery: nine reserved, one for each resident, and
+  one unreserved; two oak trees.
 
 ### Residents
 
-Eight residents, each with a home and a reserved plot. The nickname is
+Nine residents, each with a home and a reserved plot. The nickname is
 what shows above a pawn on the map.
 
 | Name | Age | Home |
@@ -572,6 +635,7 @@ what shows above a pawn on the map.
 | Barry "Six Feet" Graves | 58 | Funeral home |
 | Bea "Right Back" Shortly | 29 | Five-and-Dime |
 | Morty "Two Weeks" Tallis | 64 | Public Works |
+| Ned "Overkill" Lessly | 44 | Savings & Loan |
 
 - **Hugh** is mayor, fire chief and notary, in a bowler hat.
 - **Wendy** keeps dinner warm. **Ernest** is her lodger, reading by the
@@ -582,6 +646,8 @@ what shows above a pawn on the map.
   and bowler.
 - **Bea** runs the till beside the grenades.
 - **Morty** is two weeks from retirement, in a hard hat.
+- **Ned** guards the Savings & Loan in a flak vest, with an Ergonomic
+  Singularity Grenade "for emergencies" (Reel 9).
 
 How they behave:
 
@@ -604,11 +670,13 @@ How they behave:
   never panic and flee. They do still dodge a grenade they can see.
 - **Generation:** from a custom kind, `BT_AnyRimResident`:
   - adults with the fixed names, genders and ages above;
-  - industrial clothes plus the hats named, and no weapons;
+  - industrial clothes plus the hats named, and no weapons but Ned's
+    grenade (he is generated capable of violence, so he can use it);
   - no royal titles, and baseliners only.
 - **Census:** when a resident dies, a quiet message (not a letter) reads
-  "AnyRim census revised to 7. The sign has been updated. Please remain
-  calm."
+  "AnyRim census revised to 8. The sign has been updated. Please remain
+  calm." While a showcase narrates on the map the message is left out,
+  since the narrator reads the census (Reel 9).
 
 ### Signs and Labels
 
@@ -618,7 +686,7 @@ wall between two columns) with text drawn above it by
 colours, since magenta is reserved for batshittium.
 
 - **Welcome sign,** at the south entrance on the east verge, (+5,−24):
-  WELCOME TO ANYRIM / A Typical Rim Community / Pop. 8, subject to change
+  WELCOME TO ANYRIM / A Typical Rim Community / Pop. 9, subject to change
   / Est. this morning. Re-est. as needed. At zero the population line
   reads "Pop. 0. Thank you for your participation."
 - **Exit sign,** on the east arm, (+31,−4): NOW LEAVING ANYRIM / Come
@@ -800,7 +868,8 @@ RimWorld:
   - the tapers narrow and end; everything lies inside the bounds;
   - the heat and cook-off rules hold;
   - the same seed gives the same town;
-  - eight residents with nicknames of 16 characters or fewer;
+  - nine residents with nicknames of 16 characters or fewer, only Ned
+    armed;
   - the footprint rule; `Avoiding`; the site scorer; the texts.
 - **XML tests:** the new defs follow the house rules, and every def name
   the plan uses exists in RimWorld's Core data (when the game is
@@ -813,7 +882,9 @@ RimWorld:
   - no roof collapse pending before the first tick, and every roofed
     cell still roofed after it; the firebreak holds no plants;
   - the devices are powered; the reactor's heat ring holds no room;
-  - eight named, non-colonist residents, each in a lord;
+  - nine named, non-colonist residents, each in a lord; Ned holds his
+    grenade, nobody else is armed, and he has not thrown it 600 ticks
+    later;
   - after 600 ticks each is within 20 tiles of its own home;
   - the census drops by one when a resident dies;
   - demolition leaves nothing behind;

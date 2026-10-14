@@ -233,7 +233,7 @@ notice: earnest, reassuring, and quietly aware of what the town is for.
 
 - **Signs.** A capitalised heading, as real signage has, then plain
   sub-lines that undercut it: "WELCOME TO ANYRIM / A Typical Rim
-  Community / Pop. 8, subject to change". One undercut per sign.
+  Community / Pop. 9, subject to change". One undercut per sign.
 - **Names that read as fates.** A resident's full name says how this
   ends without anyone saying it: Wendy "Any Minute" Now, Morty "Two
   Weeks" Tallis. Surnames and nicknames carry the joke; first names stay
@@ -275,7 +275,12 @@ public information film's cheerful voice, warm, confident and on message.
 - **The cast** is "our volunteer family"; the grenade's volunteer is "a
   valued member of the family"; AnyRim's residents are "our neighbours".
   Outcomes speak to what happened on screen: a volunteer knocked flat is
-  "comforted. Completely.", and an empty pile gets its own line.
+  "comforted. Completely.", and an empty pile gets its own line. A line
+  that must state a number the world decides is computed, never
+  declared: the raccoon scene's census is AnyRim's own census line with
+  the real count of survivors ("AnyRim census revised to 6. The sign has
+  been updated. Please remain calm."), and when no one was lost, "AnyRim
+  census holds at 9. Please remain calm."
 - **On screen.** Lines show on the Showcase API's narration overlay
   (`docs/SHOWCASE-API.md`, "The Narration Overlay"): one at a time,
   centred in the lower third, in white at about twice the Medium font
@@ -283,7 +288,9 @@ public information film's cheerful voice, warm, confident and on message.
   colour, icon or frame: the words carry it, as a film's subtitles do.
 - **Timing.** A scene's start lines wait 90 ticks or more, and its first
   beat plays at tick 150, so lines read in cue order: start, beats,
-  outcome. On the overlay a line said while another shows waits until
+  outcome. An outcome's second line waits less than the next scene's
+  start line (the raccoon's thanks to Ned waits 60), or it would be said
+  after it. On the overlay a line said while another shows waits until
   that one has been up 2.5 s, so lines closer together than that queue
   and show in turn; space a scene's lines by their reading time (2.5 s
   plus 50 ms a character) where the action allows.

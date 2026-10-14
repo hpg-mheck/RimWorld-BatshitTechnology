@@ -1537,3 +1537,152 @@ failed. Before it: ten stampede-only verify runs on DLLs 11:19:46 and
 11:23:24, all 11 passed, 0 failed; and on DLL 11:16:17 one stampede-only run
 (g3-only3) that fired no volley (docs/AI-KNOWN-ISSUES.txt). No RimWorld of
 this session is left running, and the operator's data folder was never used.
+
+2026-10-14 Claude: Tractor Bomb slice 15000: the Raccoon Incident, a new
+tour scene after the grenade. The operator's request 18 was answered "test
+both": the junk-pile grenade stays and docs/SHOWCASE.md's Reel 9 is built
+as its own scene. Plan: .local/scratch/tour2/plan.md, "Slice 15000". As
+built: docs/SHOWCASE.md, "Reel 9: The Raccoon Incident".
+- Ned "Overkill" Lessly is AnyRim's ninth resident: 44, male, a flak vest
+  (the only apparel added to the catalogue), at E4, the Savings & Loan. He
+  sleeps on a cot behind the north counter; the heater went to the far end
+  of the south counter, because the north strip's only way in is past a
+  stool and a heater there would wall the cot off. He has the ninth grave
+  (nine reserved, one free). The council chamber keeps eight chairs (the
+  guard stands).
+- Arming: a new ResidentPlan.Weapon, so the plan, its tests and the smoke
+  check all say who is armed (only Ned). An armed resident is generated
+  with mustBeCapableOfViolence, since a backstory incapable of violence
+  could not throw. The residents' duty has no combat in it, so he never
+  throws on his own; the smoke test watches 600 ticks for it.
+- The raccoon: a vanilla Raccoon put silently into ManhunterPermanent at
+  Main Street's south end, (0,-21), and given a forced AttackMelee job on
+  Constance (it may bash doors and fences). A manhunter picks the nearest
+  target, and from the south end that is Bea or Morty, not Constance; the
+  forced job makes "most likely Constance" certain while she stands. If
+  she is gone, it chooses for itself. It first sprints up Main Street to
+  the sidewalk at the Damages' gate, (+3,+25), the bite queued behind:
+  sent straight at her, it pathed through the front yards bashing their
+  picket fences and stood chewing Town Hall's, 24 tiles from Ned, in three
+  of three runs, until he went after it.
+- The setting, before the camera arrives: Ned on the bank's front walk,
+  Constance in her middle lawn chair on a forced 6,000-tick wait, facing
+  the street (a forced job: her household's duty does not call her off,
+  and she does not react to the bite). Both are ended at the scene's end.
+- The throw: at the pest beat Ned sprints to his post, (-1,+33), in the
+  west lane beside the car parked at the bank's kerb ((+1,+33) is under the
+  car; a test found it), then holds a forced AttackStatic at the raccoon,
+  one throw. AttackStatic does not move him; it throws as soon as range and
+  sight allow, which on the centre line is row +21, still on the road and
+  8.6 tiles from Constance's chair. Ned's orders are recognised by what
+  they are (a forced AttackStatic at the raccoon, a forced Goto), never by
+  the Job object: RimWorld pools jobs, so a finished Goto comes back as
+  some other job, and a check by object can take a wander for his orders.
+  One verify run timed out with no throw in 3,600 ticks before that
+  change, cause not proved (the scene logged nothing then); the likeliest
+  is that check. After 900 ticks without a throw he now goes after the
+  raccoon (a sprint to where it is, the throw queued), and the scene logs
+  where both are every 600 ticks while it waits. The raccoon keeps coming
+  through the 1.5-second wind-up, so the singularity usually opens within
+  10 tiles of Ned too: he died in six of eleven throws, was downed in two
+  and stood in three. That is the joke ("Overkill"; "very possibly,
+  Ned"); moving his post would change it. If something takes him off his
+  orders before then, they are given again every 60 ticks.
+- The census is a computed beat: TourSceneScript gained Computed, a list of
+  beats whose words the scene says itself (ShowcaseWorker.Say), left out of
+  NarratedMoments and given no line in the def (TourXmlTests checks both).
+  The census beat frames the welcome sign, whose "Pop." line is live, and
+  the scene says AnyRimText.CensusReport: the census message when the count
+  fell, and "AnyRim census holds at 9. Please remain calm." when no one was
+  lost (a new line in the town's voice). Rejected: a placeholder in the
+  def's text (the API has none) and no beat (no camera on the sign).
+- AnyRim's own census message is left out while a showcase narrates on its
+  map (MapComponent_AnyRim.ShowcaseNarrating): it repeated the narrator's
+  line in the message stack the operator called obnoxious, with
+  NeutralEvent's sound. Outside a showcase nothing changes.
+- The verdict: dead or destroyed is raccoonLost; anything else, downed
+  included, is raccoonSurvived ("reassured"), in Core's
+  TourScript.RaccoonOutcome, which the verifier also reads. "AnyRim thanks
+  Ned for his service. Unfortunately." follows each fate 60 ticks later:
+  the next scene's start line comes at 90, and a later line would be said
+  after it, out of cue order (the narration check fails on that).
+- Timing by reading time at normal speed: guard at tick 330 (after the
+  start line's 4.05 s), pest at 780 (after the guard line's 7.3 s), the
+  census once the singularity is over plus 60 ticks, held 390. The scene
+  ran 2,356 to 2,868 ticks in the verify runs (39 to 48 s at normal speed);
+  estimatedMinutes went from 6 to 7.
+- Declining: no AnyRim, the AnyRim scene forced to decline (the tour never
+  shows the town's incident without the town; it also makes the verifier's
+  default -TourSkip anyrim skip the raccoon, as the slice's brief asked),
+  Ned not standing with his grenade, no raccoon def, or the entry blocked.
+  The API asks only before the tour; if Ned has been lost by the time the
+  scene begins (one run lost seven residents before it, cause unseen), the
+  scene stands down: no raccoon, closed after its least time on its
+  "completed" line. A timeout with a raccoon loose was the alternative.
+- Whatever the ending, a living raccoon is calmed (RecoverFromState) and
+  stopped, Ned's forced jobs are ended, a grenade he dropped is destroyed
+  (no colonist walks 100 tiles for it), and Constance leaves her chair.
+- Bug found by the new "no colonist harmed" fact, in the grenade scene:
+  its IsDone could hold on the tick the grenade landed, when the projectile
+  is gone and the field's implosion has not yet joined the map's field
+  (Implosion.Tick registers it), so the settle began early and the scene
+  ended before the explosion, which then shredded the volunteer, healed in
+  End, during the next scene (three of the first four runs: hurt twice,
+  killed once). Before this slice the tractor scene came next and nothing
+  checked harm there, so it went unnoticed. TourScene.SingularityOpen (a
+  field on the map) now keeps both the grenade and the raccoon scene
+  waiting; the grenade scene then ran 853 ticks instead of 600.
+- The verifier's harm fact counts only colonists hurt within the
+  incident's reach (Main Street from the entry to the bank grown by the
+  throw and the pull, 23 tiles, or within 5 tiles of the raccoon). In the
+  runs, colonists were hurt or killed near the base, about 100 tiles away,
+  by raids and dark entities the storyteller sent (each scene's start now
+  notes the map's hostiles); those are noted, with where and how, not
+  blamed on the incident. A first version counted AnyRim's whole bounds
+  plus 23 tiles, which reached the base.
+- The tour verifier silences the storyteller at READY, as the smoke run
+  already did: raids and dark entities killed colonists in four of the
+  first six all-scene runs, none of it the tour's doing. A viewer's tour
+  still has the storyteller (docs/AI-requests-for-humans.txt, item 19).
+- Sabotage (.local/scratch/raccoon15000/sabotage.py, DLL 12:49:49), one
+  build with six sabotages: S-A, Ned never ordered and the scene opening
+  the singularity at the raccoon itself; S-B, the fates swapped; S-C, one
+  more survivor read than there were; S-D, the census message posted
+  during showcases too; S-E, a colonist moved to Main Street's south end
+  and cut at the census; S-F, Constance armed as well. The all-scene
+  verify failed exactly the five raccoon facts aimed at: "Ned threw the
+  grenade (thrower none)", "the outcome matches the raccoon's fate (END
+  raccoonSurvived, raccoon dead)", "the census reads the real count (said
+  "AnyRim census holds at 9. Please remain calm."; population 9 -> 8)",
+  "no colonist harmed within the incident's reach ([Vol hurt at (59, 0,
+  155) ...])" and "the census left vanilla's message stack alone (stacked
+  [AnyRim census revised to 8. ...])"; its only other failure was the
+  grenade timing out on a mechhive map. The full smoke failed "AnyRim's
+  guard holds his grenade and no one else is armed" and "...keeps his
+  grenade to himself for 600 ticks" (Collateral and Overkill both
+  holding one), and, on that map, the squeezer, countdown and replicator
+  checks and a runner exception in WaitForPower that come before AnyRim
+  is built, so not from S-F (FleeAndCower near the base). Not sabotaged:
+  "one more implosion" for the raccoon, the decline justification, the
+  stand-down. The sources were restored byte for byte, touched, rebuilt
+  (git diff clean against the commit).
+Runs (each build confirmed by the DLL's timestamp; 0 warnings, 0 errors,
+0 Def problems): 686 unit and XML tests, 18 Python tests. Final DLL
+13:00:56 (the raccoon's run up Main Street): full smoke 196 passed, 0
+failed; default verify 11 passed, 0 failed, with "SKIPPED raccoon: AnyRim
+was not shown (its scene was skipped)" after "SKIPPED anyrim"; all-scene
+verify A 9 passed, 2 failed (the tractor's protest beat; a colonist
+killed near the base during the raccoon scene on a map with five dark
+entities), with FINISHED, raccoonLost and every raccoon fact held; B on a
+mechhive map 6 passed, 5 failed (all three colonists dead in the
+stampede, no volley, no grenadier); B's rerun 9 passed, 2 failed (the
+grenade never thrown and a colonist lost in the tractor scene, three dark
+entities), raccoon facts held. DLL 12:57:06 (one change back): all-scene
+11/0 twice and once 10/1 (grenade timed out, dark entities), default
+11/0, full smoke 196/0. DLL 12:52:38 (before the pursuit and the
+verifier's silencing): all-scene 11/0, default 11/0, full smoke 196/0.
+In every run that threw, the raccoon died; Ned died in six of eleven,
+was downed in two and stood in three; the census read 9 -> 6 to 9 -> 8.
+The raccoon scene ran 2,356 to 2,868 ticks; the overlay pacing NOTE
+showed 49 to 54 of 49 to 54 lines, the longest wait 5.7 s. No RimWorld of
+this session is left running; the operator's data folder was never used.

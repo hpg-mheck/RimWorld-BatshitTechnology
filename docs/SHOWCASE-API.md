@@ -31,7 +31,7 @@ player can start from the main menu, and any mod can contribute to.
   scenes, camera moves, captions and narration lines, all data-driven.
   Batshit Technology's own tour (`docs/SHOWCASE.md`, "The Directed Tour"
   and "The Story") is the first director-driven showcase built on it:
-  `BT_Showcase`'s worker is `BatshitTourDirector`, whose nine scenes
+  `BT_Showcase`'s worker is `BatshitTourDirector`, whose ten scenes
   use the two hooks the tour added, a scene declining a map (G1) and a
   scene playing beats (G2).
 

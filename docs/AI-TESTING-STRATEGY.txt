@@ -193,8 +193,10 @@ plain test runs stay small and muted.
 The runner also builds AnyRim, the showcase's test town, after the
 non-destructive tests: it checks the build report, every placement,
 enclosed and reachable rooms, roofs, the firebreak, power, the reactor's
-heat ring, the eight residents and their lords, the census, and a clean
-demolition, then takes the town down before the destructive tests, whose
+heat ring, the nine residents and their lords (Ned, the bank's guard,
+holding his grenade, nobody else armed, and the grenade still in his hand
+600 ticks later), the census, and a clean demolition, then takes the town
+down before the destructive tests, whose
 blasts would reach it. The town's geometry is unit tested in Core
 (TownPlanTests, TownSiteTests and others), including a catalogue check
 against RimWorld's own Defs where the game is installed.
@@ -275,9 +277,13 @@ belongs on input events only, never on a repaint or layout event.
 
     .\Tools\smoke-test.ps1 -Showcase -Verify
 
-starts BT_Showcase through the Showcase API, as -Showcase does, and adds
+starts BT_Showcase through the Showcase API, as -Showcase does (the
+verifier silences the storyteller at READY, as the smoke run does, so no
+raid lands mid-tour; hostiles the map starts with stay), and adds
 -bttourverify and -bttourskip=anyrim (-TourSkip changes the list; pass
--TourSkip '' to run all nine scenes). The verifier
+-TourSkip '' to run all ten scenes). The raccoon scene needs the town
+shown first, so it declines whenever the AnyRim scene is forced to, and
+the default run skips both. The verifier
 (Source/SmokeTestTour.cs, part of the smoke runner) forces the listed
 scenes to decline, waits for READY, switches to Superfast and watches
 every tick: the scene running and its caption, the counters as each scene
@@ -287,12 +293,13 @@ FINISHED and the farewell it checks that:
 1. FINISHED was reached, with SCENE and END cues in TourScript order,
    less any SKIPPED, and every forced skip declined; and every unforced
    decline is justified by the stage itself (no yard in the planner's
-   plan, no pad device, no AnyRim, no able colonist), judged without
-   asking the scene;
+   plan, no pad device, no AnyRim, no able colonist, no Ned on duty),
+   judged without asking the scene;
 2. every scene ended Completed, with its world facts: the Ballista fired
    no bolt outside the volley and the stampede; the pad device destroyed
    and the aftermath idle; at least 16 bolts spent; the stampede's facts
-   (below); one more implosion; tractor explosions up by 1, then by 2;
+   (below); one more implosion for the grenade and for the raccoon, and
+   the raccoon's facts (below); tractor explosions up by 1, then by 2;
    superposed pulls up for the twins; and every completed scene played
    its beats (the parade's planned devices, else
    TourScript.RequiredMoments, which leaves out only the tractor's
@@ -300,7 +307,7 @@ FINISHED and the farewell it checks that:
    for "thrown");
 3. the captions read "i of N: title", worked out without the director:
    the script's order less the forced and the declined, with the def's
-   titles (8 with AnyRim skipped);
+   titles (8 with AnyRim, and so the raccoon, skipped);
 4. the narration log holds every line the def gives for each SCENE,
    BEAT and END cue, in cue order, under its scene, with a target;
 5. no colonist died but the grenade's volunteer;
@@ -319,6 +326,23 @@ Ballista, the pads' devices) still standing; and no fire left burning.
 Two sabotage runs in slice 14000 failed the 256-bolt, 90 per cent,
 harm, stage and fire facts in turn (docs/AI-DECISIONS.txt); the
 herd-size and three-volley facts were not sabotaged.
+
+The raccoon's facts (Source/SmokeTestTour.Raccoon.cs) are measured
+from the world each tick: Ned threw the grenade (the projectile in the
+air, its thrower found by his planned name); the END cue's outcome
+matches the raccoon's fate (dead or destroyed is raccoonLost, as Core's
+TourScript.RaccoonOutcome says); the census line equals
+AnyRimText.CensusReport of AnyRim's population as the scene began and at
+the tick the line was said; no AnyRim census message entered vanilla's
+message stack (the narrator reads it); and no colonist was hurt, downed
+or killed within the incident's reach (Main Street from the raccoon's
+entry to the bank, grown by the throw and the pull, 23 tiles, or within
+5 tiles of the raccoon). A colonist hurt elsewhere during the scene is
+logged as a NOTE with where, doing what, and the injuries: the colony is
+about 100 tiles away, so the incident cannot have done it. As each scene
+begins, the verifier also notes AnyRim's population and the map's
+hostile pawns by faction, so deaths the tour did not cause (a raid, a
+map's own dark entities) can be told from its own.
 
 It also logs a NOTE for each scene's clock (game ticks against real time
 and frames, and the longest real gap between two ticks, with the scene

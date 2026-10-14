@@ -98,8 +98,8 @@ list: it starts RimWorld with an isolated data folder and
 pressed, generating a quick-test-style map (it needs Harmony too). It
 exits with an error if the showcase is refused or fails, or if the mod
 logs an error before the demo is ready. The showcase is a directed
-tour, a 1950s public information film in nine scenes, each captioned
-("4 of 9: When Devices Retire") and narrated in the mod's deadpan voice,
+tour, a 1950s public information film in ten scenes, each captioned
+("4 of 10: When Devices Retire") and narrated in the mod's deadpan voice,
 with the camera moving for every beat:
 
 1. **The Home of Tomorrow:** the reactor, the stocked Random Replicator,
@@ -115,10 +115,13 @@ with the camera moving for every beat:
 6. **A Typical Rim Community:** a walk through AnyRim.
 7. **Comfort Is a Weapon:** a colonist throws an Ergonomic Singularity
    Grenade at a junk pile, with a volunteer inside it.
-8. **The Tractor of Tomorrow:** a Tractor Bomb robot finds a party of
+8. **The Raccoon Incident:** AnyRim's bank guard, Ned "Overkill" Lessly,
+   deals with a rabid raccoon on Main Street, with the same grenade, and
+   the census is revised.
+9. **The Tractor of Tomorrow:** a Tractor Bomb robot finds a party of
    raiders, protests at a colonist too close, emplaces, and implodes.
-9. **Two Tractors:** two robots in a junkyard, their pulls overlapping,
-   and the byline.
+10. **Two Tractors:** two robots in a junkyard, their pulls overlapping,
+    and the byline.
 
 A scene this map cannot stage (no clear corner, no room for the tractor yard)
 is skipped, and the captions count only the scenes that run. The bar's
@@ -126,7 +129,7 @@ is skipped, and the captions count only the scenes that run. The bar's
 north-west built from Nevada Test Site history: one Main Street, three model
 homes in wood, brick and steel, a five-and-dime selling singularity grenades,
 a funeral home with a reserved plot for everyone, a bank vault, a town hall,
-Public Works with the Batshit equipment, and eight residents whose names
+Public Works with the Batshit equipment, and nine residents whose names
 suggest they are not long for this world. Blow it up as you please; its
 residents belong to no one who will mind. The script's window opens maximized
 at 2x UI scale. In dev mode the devices' DEV buttons show during the showcase,
