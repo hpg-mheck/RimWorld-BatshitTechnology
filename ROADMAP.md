@@ -44,6 +44,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 | 11000 | Antiparticle Board | `feature/antiparticle-board` | Planned |
 | 12000 | Firing positions | `feature/firing-positions` | Planned |
 | 13000 | Batshit Blimp | `feature/blimp` | Planned |
+| 14000 | All-Weather Battery | `feature/all-weather-battery` | Backlog |
 
 ## Done
 
@@ -206,6 +207,15 @@ In order, each on its own branch:
 - **Phase 13000, Batshit Blimp and Whoops Drive** (`feature/blimp`,
   `docs/BATSHIT-BLIMP.md`): the hardest engine work (flight, being shot at
   in the air, shooting from it), and the most open questions.
+- **Phase 14000, All-Weather Battery** (`feature/all-weather-battery`;
+  backlogged by Matt "Breakpoint" Heck on 2026-10-14): a battery that
+  can stand out in the rain. Vanilla's batteries short-circuit in rain
+  when unroofed and holding more than 100 Wd
+  (`ShortCircuitUtility.TryShortCircuitInRain`), draining the net and
+  exploding, which is why the tour's boomalope stampede (slice 14000)
+  runs the Ballista from the reactor alone, at 76 tiles. With it, the
+  stampede could store power for a longer reach. Design open: what it
+  costs, and what it does instead of shorting out.
 
 ## Tuning and Upkeep
 
