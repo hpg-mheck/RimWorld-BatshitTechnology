@@ -1713,8 +1713,9 @@ namespace BatshitTechnology
         /// explosion, each disposition's stop, a protest, everyone else
         /// running from an armed bomb, shooting planted bombs
         /// (SmokeTest.TractorBombHits.cs), hostiles' rolled reactions
-        /// (SmokeTest.TractorBombHostiles.cs), Dial-A-Yield and a robot's
-        /// death.
+        /// (SmokeTest.TractorBombHostiles.cs), Dial-A-Yield, a robot's
+        /// death, and twin bombs whose pulls overlap
+        /// (SmokeTest.TractorBombTwins.cs).
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -1739,6 +1740,7 @@ namespace BatshitTechnology
             TestTractorBombHostileReactions(map, center);
             TestTractorBombDialAYield(map, center);
             TestTractorBombDeath(map, center);
+            TestTractorBombTwins(map, center);
             Check("the Tractor Bomb scenarios logged no errors",
                 !NewErrorSince(mark), "an error was logged (see the log)");
         }

@@ -103,6 +103,7 @@ namespace BatshitTechnology
         private double pendingSteps;
         private int nextRipCell;
         private List<Pawn> caught = new List<Pawn>();
+        private List<Thing> waitingToRip = new List<Thing>();
         private int stepsTaken;
         private int uninstalled;
         private int tornDown;
@@ -376,6 +377,8 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref pendingSteps, "pendingSteps");
             Scribe_Values.Look(ref nextRipCell, "nextRipCell");
             Scribe_Collections.Look(ref caught, "caught", LookMode.Reference);
+            Scribe_Collections.Look(
+                ref waitingToRip, "waitingToRip", LookMode.Reference);
             Scribe_Values.Look(ref stepsTaken, "stepsTaken");
             Scribe_Values.Look(ref uninstalled, "uninstalled");
             Scribe_Values.Look(ref tornDown, "tornDown");
@@ -402,6 +405,8 @@ namespace BatshitTechnology
                     settings.Normalized(GenRadial.MaxRadialPatternRadius);
                 caught ??= new List<Pawn>();
                 caught.RemoveAll(p => p == null);
+                waitingToRip ??= new List<Thing>();
+                waitingToRip.RemoveAll(t => t == null);
                 lastTickedAt = -1;
             }
         }
@@ -453,11 +458,27 @@ namespace BatshitTechnology
         /// buildings are uninstalled, other buildings torn down to their
         /// materials, plants uprooted. Natural rock holds, and nothing that
         /// cannot be destroyed (a steam geyser) or is
-        /// <see cref="IImplosionProof"/> (an armed bomb) is touched.
+        /// <see cref="IImplosionProof"/> (an armed bomb) is touched. A
+        /// fixture holding more stacks than bare ground can (a shelf)
+        /// waits until the drag has taken its extra stacks off it.
         /// </summary>
         /// <param name="map">The map.</param>
         private void RipLoose(Map map)
         {
+            for (int i = waitingToRip.Count - 1; i >= 0; i--)
+            {
+                Thing t = waitingToRip[i];
+                if (t == null || t.Destroyed || !t.Spawned || t.Map != map)
+                {
+                    waitingToRip.RemoveAt(i);
+                }
+                else if (!Overfull(t, map))
+                {
+                    waitingToRip.RemoveAt(i);
+                    RipBuilding(t, map);
+                }
+            }
+
             float reach = (float)ImplosionMath.RipReach(
                 elapsed, settings.ripTicks, settings.pullRadius);
             int cellCount = GenRadial.NumCellsInRadius(settings.pullRadius);
@@ -485,10 +506,47 @@ namespace BatshitTechnology
                     else if (t.def.category == ThingCategory.Building
                         && t.def.building?.isNaturalRock != true)
                     {
-                        RipBuilding(t, map);
+                        if (Overfull(t, map))
+                        {
+                            if (!waitingToRip.Contains(t))
+                            {
+                                waitingToRip.Add(t);
+                            }
+                        }
+                        else
+                        {
+                            RipBuilding(t, map);
+                        }
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Whether a fixture holds more stacks on a cell than the bare
+        /// ground will once it goes. RimWorld would shove the extra stacks
+        /// aside as it leaves (<c>Building.DeSpawn</c>), away from the pull
+        /// as often as not, and drop any it found no room for.
+        /// </summary>
+        /// <param name="building">The fixture.</param>
+        /// <param name="map">The map.</param>
+        /// <returns>True if ripping it now would shove stacks.</returns>
+        private static bool Overfull(Thing building, Map map)
+        {
+            if (!(building is Building b) || b.MaxItemsInCell < 2)
+            {
+                return false;
+            }
+
+            foreach (IntVec3 c in b.OccupiedRect())
+            {
+                if (c.InBounds(map) && c.GetItemCount(map) > 1)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
