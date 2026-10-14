@@ -94,13 +94,37 @@ subdirectory.
   records stay authoritative: `ROADMAP.md`, `docs/AI-*.txt` and the
   feature specifications in `docs/`. Do not start using the new
   `project-management/` skeleton files for live records before then.
-- Publish status for Ubersight at meaningful transitions with
-  `python Tools/ubersight_status.py` (phases are roadmap features, slices are
-  the current feature's steps). It writes `.local/ubersight/status.json` in
-  Ubersight's `ubersight.status.v1` format, because Ubersight itself does
-  not yet run on Windows. Status text is a glance: no prompts, transcripts,
-  credentials, hostnames, or network or location details. See
-  `FieldManual/knacks/software-engineering/development-observability/`.
+- Publish status for Ubersight at meaningful transitions: work starts or
+  resumes, a slice changes, a long wait begins, something is blocked, and
+  closeout. The operator watches it in an ubersight-autosplit terminal.
+  Write it with `ubersight --write-status ...` from the repository root,
+  which writes `.local/ubersight/status.json`. The dependency-free
+  fallback, `python Tools/ubersight_status.py`, takes the same arguments.
+  See `FieldManual/knacks/software-engineering/development-observability/`.
+- **Numbering.** Phases are the roadmap's features, numbered in thousands
+  (1000, 2000, ...) so an unexpected phase can be wedged in afterwards
+  (2500) without renumbering. Slices are the current phase's steps, also
+  in thousands, starting again at 1000 in each phase. Row IDs are the bare
+  numbers, as in `--phase-row "4000:active:Showcase API"` and
+  `--slice "3000:active:Defs, worker, director"`; titles are short names,
+  without "Phase", "Slice", state words or sentences. `ROADMAP.md` carries
+  the same numbers and is the recovery anchor, in place of Ubersight's
+  `project-management/state/phase-slice-stack.md` under the transitional
+  exception above. Renumbering is a roadmap change: update both together.
+- **What to show.** Use the pane's space well:
+  - about seven phases, with the current one in the middle: the three
+    before it and the three after it, or more on one side near either end
+    of the roadmap;
+  - every slice of the current phase, as many as will realistically fit,
+    always including the active one (Ubersight windows a long slice list
+    around the active slice);
+  - titles that fit one row of a 40 to 60 column pane (about 28
+    characters for phases, 40 for slices), and notes of a line or two.
+- Status text is a glance: no prompts, transcripts, credentials,
+  hostnames, or network or location details.
+- Ubersight's documentation does not yet describe this numbering or
+  window, and its renderer shows two phases before the current one and
+  five after; BT-ECR-2026-008 (`ECRs/Ubersight/open/`) asks for both.
 
 Party on, but always double-check the references.
 

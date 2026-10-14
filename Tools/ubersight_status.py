@@ -3,22 +3,26 @@
 Ubersight (Hard-Problems-Group-LLC/Ubersight) is a terminal sidecar that
 shows what a long-running development session is doing. It reads
 ``.local/ubersight/status.json`` in its ``ubersight.status.v1`` format.
-Ubersight's own ``ubersight --write-status`` is the preferred writer, but it
-does not yet run on Windows, so this dependency-free script writes the same
-file with the same rules, mirroring Ubersight's ``write_status_file`` and
-its ``--write-status`` validation at the revision recorded below.
+Ubersight's own ``ubersight --write-status`` is the preferred writer. This
+dependency-free script is the fallback for machines without Ubersight: it
+writes the same file with the same rules, mirroring Ubersight's
+``write_status_file`` and its ``--write-status`` validation at the revision
+recorded below.
 
 Usage, from anywhere (the default path is this repository's
 ``.local/ubersight/status.json``)::
 
     python Tools/ubersight_status.py \\
-        --phase-row "tractor:active:Tractor Bomb" \\
-        --phase-row "showcase-api:pending:Showcase API" \\
-        --slice "barn:active:Build the Tractor Barn" \\
-        --slice "physics:pending:Multi-bomb physics" \\
-        --notes "Step 8 is running in the background."
+        --phase-row "3000:blocked:Tractor Bomb" \\
+        --phase-row "4000:active:Showcase API" \\
+        --phase-row "5000:pending:Sound pipeline" \\
+        --slice "2000:done:Core logic and unit tests" \\
+        --slice "3000:active:Defs, worker, director" \\
+        --notes "Building the director."
 
-Rows use ``ID:STATE:TITLE``; states are pending, active, done, failed,
+Phases and slices are numbered in thousands, slices starting again at 1000
+in each phase; AGENTS.md ("FieldManual and Ubersight") says which rows to
+show. Rows use ``ID:STATE:TITLE``; states are pending, active, done, failed,
 blocked and skipped. A write needs at least one phase row, exactly one
 active phase, at least one slice, at most one active slice, and one active
 slice unless ``--complete`` is given. Never put prompts, transcripts,
