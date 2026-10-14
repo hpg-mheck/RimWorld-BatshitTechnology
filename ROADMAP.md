@@ -169,7 +169,8 @@ Answered on 2026-10-13 (details in `docs/TRACTOR-BOMB.md`, "Decisions"):
 
 In order, each on its own branch:
 
-- **Phase 5000, Sound pipeline** (`feature/audio`):
+- **Phase 5000, Sound pipeline** (`feature/audio`, `docs/SOUND-PIPELINE.md`,
+  drafted 2026-10-14 with 13 open questions):
   `Tools/make_sounds.py`, SoundDefs, and an audio section in the motif.
   Needed by the Colony Bomb and Mirror Mirror. Once it works, it also
   makes the Drag Show's original disco track, which replaces the party
