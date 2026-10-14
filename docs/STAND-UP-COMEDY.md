@@ -39,6 +39,38 @@ The specification names the requirements; the running order is proposed.
   memory ("Sat through amateur comedy"); each comic gets a good memory
   for having done it. The worse the comics' Social skill, the funnier
   the player should find it and the more mixed the audience memory.
+
+## Quality, and the Mob
+
+Specified by Matt "Breakpoint" Heck on 2026-10-13:
+
+- **Show quality:** when each comic finishes, their performance quality
+  contributes to the quality of the whole show.
+- **The mob:** if any comic is bad enough, they are immediately treated
+  as hostile, and the entire audience attacks.
+
+*(Proposals:)*
+
+- **A comic's quality** is rolled when the set ends, from their Social
+  skill (necessarily below 5), their mood, and a large helping of luck.
+  The show's quality is the average of the sets, and it scales the
+  audience's recreation and memory. With Ideology active, it feeds the
+  ritual's quality.
+- **"Bad enough"** means a set in roughly the bottom tenth, rolled per
+  set. A full bill of eight comics should end in a riot now and then,
+  not every time.
+- **The attack:**
+  - Every member of the audience who can fight goes for the comic at
+    once, in vanilla's social-fight state: fists and whatever is in hand.
+  - It stops when the comic is down, or flees past the seating.
+  - The comic is "treated as hostile" for the length of the brawl, not
+    turned into an enemy of the colony, so nobody's faction changes and
+    the colony is not at war with itself afterwards.
+- **The show ends on a riot:** no further comics, a sour memory for
+  everyone ("Watched a comedy show turn into a riot"), and one last
+  line of narration in the house voice: "The management thanks you for
+  your patience."
+
 - **Research:** Batshit Entertainment, the same project as the Drag
   Show.
 
@@ -46,7 +78,9 @@ The specification names the requirements; the running order is proposed.
 
 1. Does it share the Drag Show's stage and seating (proposed), or run
    anywhere with a stool, a microphone stand and some seats?
-2. Is the joke simply that it is amateur comedy (proposed), or does the
-   show get a Batshit twist, as the Drag Show has its singularity?
+2. The twist (answered): show quality from each set, and a mob if any
+   comic is bad enough. How often should it riot (about one set in ten
+   proposed), and should the brawl be social-fight fists (proposed) or a
+   real fight?
 3. The audience's memory: mixed (proposed), good, or bad?
 4. Research: Batshit Entertainment (proposed)?
