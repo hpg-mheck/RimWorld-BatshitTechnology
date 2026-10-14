@@ -17,6 +17,9 @@ open are marked *(proposal)* and listed under "Open Questions" and in
 - **One Water Bottle per comic,** from the Interstellar Delivery Locker
   (`docs/DELIVERY-LOCKER.md`). Comics sip between jokes, and each leaves
   an Empty Water Bottle behind.
+- **A bouncer** (specified 2026-10-13), posted outside the theatre, next
+  to its door, at a special piece of furniture called the **Velvet
+  Rope**. See "The Bouncer" below.
 
 ## The Show *(proposals)*
 
@@ -49,6 +52,39 @@ The specification names the requirements; the running order is proposed.
   in a riot.
 - **Research:** Batshit Entertainment, the same project as the Drag
   Show (approved 2026-10-13).
+
+## The Bouncer
+
+Specified 2026-10-13:
+
+- **The post:** the comedy show needs a bouncer, posted outside the
+  theatre next to the door, at the Velvet Rope.
+- **Useless on purpose:** the bouncer is the one pawn who will not try to
+  intervene in a fight. They stay at the rope, completely useless, until
+  the show is over.
+- **Everyone else outside:** other pawns outside the theatre may decide
+  to run in when a fight breaks out, or not.
+
+*(Proposals:)*
+
+- **The Velvet Rope** is a 1 by 2 piece of furniture: two brass
+  stanchions and a red velvet rope. It is one of the motif's rare
+  mundane exceptions, drawn plainly, and costs 10 steel and 10 cloth
+  under Batshit Entertainment.
+  - It must stand outdoors, or in another room, within two tiles of a
+    door into the theatre: the room holding the stage and seating.
+  - Its inspect pane names the bouncer on duty.
+- **The bouncer** can be any able pawn, chosen when the show starts. The
+  comics, the emcee role and the audience are chosen separately. The
+  show waits until the bouncer is at the rope.
+- **During a fight:** the bouncer keeps standing at the rope, arms
+  folded. Their status line reads "keeping the line orderly", and on a
+  riot, "not getting involved".
+- **Pawns outside who hear the fight:**
+  - Each decides once whether to run in. Bloodlust or Brawler make it
+    likely; Wimp or Kind make it unlikely; otherwise it is about even.
+  - Those who run in join the brawl, or the gunfight.
+  - The Spritzers foam them along with everyone else.
 
 ## Quality, and the Mob
 
@@ -133,3 +169,6 @@ really anywhere.
 1. Does it share the Drag Show's stage and seating (proposed), or run
    anywhere with a stool, a microphone stand and some seats? The
    proposal stands unless changed.
+2. The Velvet Rope and bouncer details above (proposed): its size,
+   placement rule and cost; who can be a bouncer; and how likely
+   pawns outside are to run in?
