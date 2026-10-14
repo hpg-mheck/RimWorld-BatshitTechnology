@@ -46,10 +46,14 @@ the surviving colonist gets the memory), and each device's pulverization
 blast (rock spewed, colonist stunned, bolts cooked off and
 none spilled, half-made bolts sprayed). It also packs up (minifies) every
 device and ticks the packages, watching RimWorld's log queue for errors,
-and checks a singularity's pull shoves no item away and loses none. The
-script counts an error as the mod's when its line or its stack trace
-mentions the mod. As its last check the runner reads RimWorld's own log
-queue and fails on any error (or any warning about the mod or about
+and checks a singularity's pull shoves no item away and loses none. It
+also hosts the shared implosion (Source/Implosion.cs) directly, as the
+Tractor Bomb will: everything within 10 tiles ends within 1.5 of its
+centre, some of it by slipping sideways into the pile; it reports itself
+gathered before its time is up, then settled; nothing is shoved away or
+lost. The script counts an error as the mod's when its line or its stack
+trace mentions the mod. As its last check the runner reads RimWorld's own
+log queue and fails on any error (or any warning about the mod or about
 statically held assets) logged during the run, since Player.log does not
 mark errors as errors. Before the destructive tests the
 runner removes the other devices with DestroyMode.Vanish, so a random 5%

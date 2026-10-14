@@ -351,7 +351,9 @@ The grenade's singularity is set by the `SingularityExtension` on
 (12, cells per second), `ripTicks` (120), `explosionDamageDef` (Bomb),
 `explosionRadius` (5.9), `explosionDamage` (65), `survivorDelayTicks` (30)
 and `survivorThought`. The 25 quips are in
-`Defs/Misc/BT_SingularityGrenade.xml`.
+`Defs/Misc/BT_SingularityGrenade.xml`. The pull itself is the shared
+implosion (`Source/Implosion.cs`, set by `ImplosionSettings` in the Core
+library), which the Tractor Bomb and the Colony Bomb reuse.
 
 ## Textures
 

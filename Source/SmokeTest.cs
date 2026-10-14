@@ -131,6 +131,7 @@ namespace BatshitTechnology
             TestDamageTrigger(map, center);
             TestArmedDeviceDestroyed(map, center);
             TestSingularityGrenade(map, center);
+            TestImplosionGathers(map, center);
             TestDeathBlasts(map, center);
             TestNoErrorsLogged();
         }
@@ -1338,6 +1339,205 @@ namespace BatshitTechnology
             Check("caught survivors feel ergonomically singularized",
                 pawn == null || pawn.Dead || (thought && SingularityField.SurvivorsComforted > comforted),
                 $"dead {pawn?.Dead}, thought {thought}");
+        }
+
+        /// <summary>
+        /// The shared implosion, hosted by the runner itself as the Tractor
+        /// Bomb will host it: 10 tiles in to within 1.5, with ten seconds to
+        /// run. It rips a stool loose and drags a colonist and a spread of
+        /// items into the 3 by 3 block around its centre, shoving nothing
+        /// away and losing nothing. Four of the items converge on one line,
+        /// so the last must slip sideways into the pile. It reports
+        /// everything gathered well before its time is up, and settles once
+        /// nothing more can move.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestImplosionGathers(Map map, IntVec3 center)
+        {
+            IntVec3 at = Clamp(map, center + new IntVec3(45, 0, -45));
+            PrepareGround(map, CellRect.CenteredOn(at, 14));
+            var loose = new List<Thing>();
+            foreach (var (def, x, z) in new[]
+            {
+                (ThingDefOf.Steel, 8, 0), (ThingDefOf.Steel, 6, -6),
+                (ThingDefOf.WoodLog, 0, 3), (ThingDefOf.Plasteel, 0, 6),
+                (ThingDefOf.Silver, 0, 9), (ThingDefOf.Gold, -7, -2),
+                (ThingDefOf.ComponentIndustrial, -4, 7),
+            })
+            {
+                Thing item = ThingMaker.MakeThing(def);
+                item.stackCount = Mathf.Min(10, def.stackLimit);
+                IntVec3 spot = at + new IntVec3(x, 0, z);
+                loose.Add(GenSpawn.Spawn(item, spot, map));
+            }
+
+            Dictionary<ThingDef, int> amounts = ItemAmounts(map, at, loose);
+            ThingDef stoolDef = DefDatabase<ThingDef>.GetNamed("Stool");
+            Thing stool = GenSpawn.Spawn(
+                ThingMaker.MakeThing(stoolDef, ThingDefOf.WoodLog),
+                at + new IntVec3(-5, 0, -5), map);
+            Pawn pawn = map.mapPawns.FreeColonistsSpawned
+                .FirstOrDefault(p => !p.Dead && !p.Downed);
+            if (pawn != null)
+            {
+                pawn.jobs.StopAll();
+                pawn.Position = at + new IntVec3(3, 0, -8);
+                pawn.Notify_Teleported();
+                pawn.drafter.Drafted = true; // stand still until it's seized
+            }
+
+            var settings = new ImplosionSettings
+            {
+                gatherRadius = 1.5f,
+                pullTicks = 600,
+            };
+            var implosion = new Implosion(at, settings);
+            var nearest = loose.ToDictionary(
+                t => t, t => t.Position.DistanceTo(at));
+            int pushedAway = 0;
+            bool sawOutstanding = false;
+            int gatheredAt = -1;
+            int settledAt = -1;
+            List<string> stragglers = null;
+            // The host's cap: half again its intended length, at the end
+            // rate.
+            int cap = implosion.PullTicks * 3 / 2;
+            while (implosion.ElapsedTicks < cap && settledAt < 0)
+            {
+                Tick(1);
+                implosion.Tick(map);
+                foreach (Thing t in loose.Where(t => t.Spawned))
+                {
+                    float d = t.Position.DistanceTo(at);
+                    if (d > nearest[t] + 0.01f)
+                    {
+                        pushedAway++;
+                    }
+
+                    nearest[t] = Mathf.Min(nearest[t], d);
+                }
+
+                sawOutstanding |= implosion.StepsTaken > 0
+                    && !implosion.AllGathered
+                    && implosion.ElapsedTicks > settings.ripTicks;
+                if (gatheredAt < 0 && implosion.AllGathered)
+                {
+                    gatheredAt = implosion.ElapsedTicks;
+                    stragglers = Stragglers(map, implosion);
+                }
+
+                if (gatheredAt >= 0 && implosion.Settled)
+                {
+                    settledAt = implosion.ElapsedTicks;
+                }
+            }
+
+            stragglers ??= Stragglers(map, implosion);
+            string movers = settledAt < 0 ? Movers(map, implosion, 60) : "";
+            Check("an implosion drags everything within 10 tiles to within 1.5",
+                gatheredAt >= 0 && stragglers.Count == 0,
+                $"gathered at tick {gatheredAt}; outside 1.5 tiles: "
+                    + string.Join(", ", stragglers));
+            Check("an implosion reports everything gathered early, then settles",
+                sawOutstanding && gatheredAt >= 0
+                    && gatheredAt < implosion.PullTicks
+                    && settledAt >= gatheredAt,
+                $"outstanding seen {sawOutstanding}, gathered at {gatheredAt}, "
+                    + $"settled at {settledAt}, of {implosion.PullTicks} ticks; "
+                    + $"still moving: {movers}");
+            Dictionary<ThingDef, int> after = ItemAmounts(map, at, loose);
+            Check("an implosion shoves nothing away and loses nothing",
+                pushedAway == 0 && amounts.All(kv =>
+                    after.TryGetValue(kv.Key, out int n) && n >= kv.Value),
+                $"{pushedAway} moves away from the centre; "
+                    + string.Join(", ", amounts.Select(kv =>
+                        $"{kv.Key.defName} {kv.Value}->"
+                        + $"{(after.TryGetValue(kv.Key, out int n) ? n : 0)}")));
+            Check("an implosion rips fixtures loose and catches pawns",
+                !stool.Spawned && implosion.Uninstalled >= 1
+                    && (pawn == null || implosion.Caught.Contains(pawn)),
+                $"stool spawned {stool.Spawned}, "
+                    + $"uninstalled {implosion.Uninstalled}, "
+                    + $"caught {implosion.CaughtCount}");
+            if (pawn != null && pawn.Spawned && pawn.drafter != null)
+            {
+                pawn.drafter.Drafted = false;
+            }
+        }
+
+        /// <summary>
+        /// The pawns and items within an implosion's reach that lie outside
+        /// its gather radius, described for a failure message.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="implosion">The implosion.</param>
+        /// <returns>
+        /// One "label (x, z)" entry per straggler, offsets from the centre.
+        /// </returns>
+        private static List<string> Stragglers(Map map, Implosion implosion)
+        {
+            IntVec3 c = implosion.Center;
+            return Pullables(map, implosion)
+                .Where(t => !t.Position.InHorDistOf(c, implosion.GatherRadius))
+                .Select(t => $"{t.LabelShort} "
+                    + $"({t.Position.x - c.x}, {t.Position.z - c.z})")
+                .ToList();
+        }
+
+        /// <summary>The pawns and items within an implosion's reach.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="implosion">The implosion.</param>
+        /// <returns>The things it pulls.</returns>
+        private static List<Thing> Pullables(Map map, Implosion implosion) =>
+            GenRadial.RadialDistinctThingsAround(
+                    implosion.Center, map, implosion.PullRadius, true)
+                .Where(t => t is Pawn || t.def.category == ThingCategory.Item)
+                .ToList();
+
+        /// <summary>
+        /// Ticks an implosion that should have settled a while longer and
+        /// names what still moves in its reach, for a failure message:
+        /// each pawn or item that changes cell, or arrives, with its def
+        /// and faction.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="implosion">The implosion.</param>
+        /// <param name="ticks">How long to watch.</param>
+        /// <returns>Up to a dozen moves, offsets from the centre.</returns>
+        private static string Movers(Map map, Implosion implosion, int ticks)
+        {
+            IntVec3 c = implosion.Center;
+            var was = Pullables(map, implosion)
+                .ToDictionary(t => t, t => t.Position);
+            var moves = new List<string>();
+            for (int i = 0; i < ticks && moves.Count < 12; i++)
+            {
+                Tick(1);
+                implosion.Tick(map);
+                var now = Pullables(map, implosion)
+                    .ToDictionary(t => t, t => t.Position);
+                foreach (var kv in now)
+                {
+                    bool known = was.TryGetValue(kv.Key, out IntVec3 from);
+                    if (known && from == kv.Value)
+                    {
+                        continue;
+                    }
+
+                    string start = known
+                        ? $"({from.x - c.x}, {from.z - c.z})" : "outside";
+                    moves.Add($"{kv.Key.LabelShort} [{kv.Key.def.defName}, "
+                        + $"{kv.Key.Faction?.Name ?? "no faction"}, stunned "
+                        + $"{(kv.Key as Pawn)?.stances?.stunner?.Stunned}] "
+                        + $"{start} -> ({kv.Value.x - c.x}, {kv.Value.z - c.z})"
+                        + $" at tick {implosion.ElapsedTicks}");
+                }
+
+                was = now;
+            }
+
+            return moves.Count == 0 ? "nothing" : string.Join("; ", moves);
         }
 
         /// <summary>

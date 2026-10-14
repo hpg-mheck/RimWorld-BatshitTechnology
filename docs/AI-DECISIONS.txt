@@ -265,3 +265,41 @@ the API may need patches. The API lives inside Batshit Technology under
 its own namespace for now and will be split into a framework mod later.
 Showcases declare their known issues with other mods; only those raise
 warnings, and a fatal one refuses to launch unless forced.
+2026-10-13 Claude: Tractor Bomb step 2, the reusable implosion. The
+singularity grenade's pull now lives in Implosion (Source/Implosion.cs),
+an IExposable that a host thing owns, ticks once per tick and saves with
+Scribe_Deep; SingularityField is its first host. Decisions:
+- Its settings are a plain class in Core, ImplosionSettings (pullRadius,
+  gatherRadius, pullTicks, pullRateStart, pullRateEnd, ripFixtures,
+  ripTicks), so a Def can carry them in XML and Dial-A-Yield can adjust
+  a copy. The defaults are the grenade's. Every implosion works from
+  Normalized() settings (radii within the engine's limit, the gather
+  radius within the pull, rates from 0 to 60 cells per second and never
+  slowing), and a Def reports Problems() as configuration errors. Both
+  are unit tested, including that normalized settings are always sound.
+- The implosion never ends itself; its host decides. The grenade ends at
+  TimeUp. A host may end early on AllGathered (everything in reach within
+  the gather radius, as of a drag step taken after the rip reach was
+  complete) or Settled (a drag step moved nothing: everything is gathered
+  or stuck, the Colony Bomb's "a full pass moves nothing"), or stop at a
+  cap of its own. Past TimeUp the drag keeps its end rate.
+- The gather radius is a target, not a stopping line: gathered things
+  keep settling toward the centre, so a large gather radius never leaves
+  a hollow ring. A thing blocked just outside it may slip sideways into
+  any free cell inside it (Core.ImplosionMath.StepsInward). Without the
+  slip, items converging along one axis queued outside a 1.5-tile pile:
+  a control build without it failed the new smoke checks with a
+  component and a silver stack stuck at (0, 2) and (0, 3). With a gather
+  radius of 0 the steps are exactly SingularityPull.StepsToward's (unit
+  tested from every offset), so the grenade moves things as before.
+- The grenade's numbers, visuals and smoke checks are unchanged. Its
+  diagnostics (StepsTaken, Uninstalled, TornDown, ItemsMoved,
+  CaughtCount) read through to its implosion; SurvivorsComforted stays a
+  static on the field. One deliberate difference: a plant that cannot be
+  destroyed is now left alone, as other indestructible things already
+  were.
+- A field saved mid-pull before this change has no implosion; on load it
+  opens a fresh one and pulls for its full five seconds.
+- A new smoke check hosts an implosion directly in the runner, with the
+  Tractor Bomb's 10 tiles in to 1.5, so the groundwork is tested before
+  the bomb exists.

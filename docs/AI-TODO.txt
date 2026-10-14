@@ -21,9 +21,12 @@
   open questions are in docs/AI-requests-for-humans.txt. Build in this
   order:
   - [ ] Groundwork: the AnyRim town generator with size and quality
-    tiers; a reusable implosion extracted from SingularityField; a shared
-    BatshitImmunity check honoured by every effect; the audio pipeline
-    (Tools/make_sounds.py, SoundDefs, an audio section in the motif).
+    tiers; a reusable implosion extracted from SingularityField (done for
+    the Tractor Bomb: Source/Implosion.cs; it still needs the shared
+    immunity check, and blasting natural rock and mountain roof); a
+    shared BatshitImmunity check honoured by every effect; the audio
+    pipeline (Tools/make_sounds.py, SoundDefs, an audio section in the
+    motif).
   - [ ] Colony Bomb: variant defs, recipe and research; install, arm
     (10 s) and the 15 s countdown (red ring, sawtooth warning triangle,
     bass, rising DTMF and TTMF tones); the post-T 0 sequence (echo,
@@ -109,6 +112,12 @@
   (proposed). Shares the generalized implosion with the Colony Bomb.
   Pawns and animals flee an armed bomb (a mod flee job giver, added to
   the think trees by XML patch), unless too close or in a mental state.
+  - [x] Step 2: the reusable implosion (Source/Implosion.cs, Core's
+    ImplosionSettings and ImplosionMath); the grenade runs on it.
+  - [ ] Step 5: the emplaced bomb hosts the implosion (gather radius 1.5)
+    and goes off at AllGathered or Settled, or a cap. The pile holds one
+    item stack per cell, nine within 1.5 tiles; decide whether overflow
+    stacks may pile up past the cell limit or simply wait outside.
 - [ ] Mirror Mirror (docs/MIRROR-MIRROR.md), requested by Matt
   "Breakpoint" Heck on 2026-10-13: a recreation mirror ("Allows pawns to
   pause and reflect on the possibility of alternate dimensions and/or

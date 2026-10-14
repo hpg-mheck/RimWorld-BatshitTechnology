@@ -25,3 +25,15 @@
   automatic targeting of real raiders is vanilla code but untested here.
 - The Ballista holds fire under a roof (its bolts arc overhead), as vanilla
   mortars do.
+- Smoke flakes seen on 2026-10-13 while building the implosion, each on
+  one random quick-test map and not on the next (rerun twice, both clean):
+  - "an implosion reports everything gathered early, then settles" saw
+    everything gathered at tick 336 but never settled within its 900-tick
+    cap. That map had a huge fire from the replicator test (1,920 fires,
+    against 51 to 524 elsewhere), so pawns or animals wandering into the
+    reach are the likely cause. The check now names whatever still moves
+    when it fails.
+  - Untouched code: during the Ballista test, "Not enough squares to get
+    to radius 329" was logged and the Artificer's "it works the next unit
+    on its own" saw +0 bolts. The Ballista probably fired at something
+    and spent them.

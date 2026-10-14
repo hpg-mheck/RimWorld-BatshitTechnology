@@ -56,6 +56,15 @@ Implementation *(proposals)*:
 - **If destroyed before it emplaces,** it gets a death of its own, per
   the motif: a sputtering miniature vortex that sucks in its own parts,
   and nothing else, before popping.
+- **The implosion** is built (roadmap step 2): `Implosion`
+  (`Source/Implosion.cs`), set by Core's `ImplosionSettings`, with a pull
+  radius of 10 and a gather radius of 1.5. The emplaced bomb owns it,
+  ticks it and saves it, and explodes as soon as it reports everything
+  `AllGathered` or `Settled` (nothing more can move), or at a cap of its
+  own (*proposal:* half again its drag time).
+  - The pile holds one item stack per cell: nine within 1.5 tiles, or
+    eight if the bomb's own building blocks the centre. Any more stacks
+    wait just outside, and the bomb goes off once they settle.
 
 ### Everyone Else Runs
 

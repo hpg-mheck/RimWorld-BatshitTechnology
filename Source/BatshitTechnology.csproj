@@ -71,6 +71,7 @@
     <Compile Include="Building_RandomReplicator.cs" />
     <Compile Include="CompRandomReplicator.cs" />
     <Compile Include="Detonations.cs" />
+    <Compile Include="Implosion.cs" />
     <Compile Include="MapComponent_AnyRim.cs" />
     <Compile Include="SelfDestruct.cs" />
     <Compile Include="SelfDestructAftermath.cs" />
