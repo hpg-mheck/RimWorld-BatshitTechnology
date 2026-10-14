@@ -141,7 +141,9 @@
   everything loose in the room to center stage (mild injuries, a mild
   recreation buff; structure untouched). Each participant has a 1%
   chance of losing a kidney, unless already short one; it shows up on
-  the floor.
+  the floor. The two outfits take any fabric, but Batshittium
+  Monofilament (a new fabric from a new Batshittium Extruder, unlocked
+  by Batshittium Lore) improves results.
 
 ## Test justifications
 

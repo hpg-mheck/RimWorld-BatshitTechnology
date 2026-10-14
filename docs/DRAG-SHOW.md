@@ -35,6 +35,35 @@ physics. Text follows the motif's rule: funny, never cruel.
   (decided 2026-10-13), so each stage keeps its own setting. When it is checked, any pawn can emcee, whatever they
   wear and whatever their gender.
 
+## The Outfits and Batshittium Monofilament
+
+Specified 2026-10-13:
+
+- **Any fabric.** The Prom Dress and the Luchador Onesie can be made from
+  any fabric.
+- **Batshittium Monofilament improves results.** It is a new fabric made
+  at a new building, the **Batshittium Extruder**, unlocked by the first
+  Batshit Technology research project, Batshittium Lore.
+
+*(Proposals:)*
+
+- **What "improves results" means.** As stuff, monofilament is a superior
+  fabric: high beauty, good insulation and armour, light, tough. That
+  works for any fabric apparel, not just these two.
+  - On the two outfits it also gives the show a bonus: an emcee in
+    monofilament makes a better show. That means more recreation for the
+    audience, and a higher quality score when Ideology's ritual layer is
+    active.
+- **The Extruder.**
+  - It turns batshittium into monofilament, about 1 batshittium to 25
+    monofilament, with power and work. It is staffed like a normal bench
+    (crafting), unlike the Artificer.
+  - Its art follows the motif: a steel chassis drawing a glowing magenta
+    thread from a batshittium porthole onto a spool.
+- **The look.** Things made from monofilament carry a faint magenta
+  glint, since magenta means batshittium. One thin accent, never a full
+  glow.
+
 ## The Show
 
 1. **Begin Drag Show.** With an eligible emcee available, the Center
@@ -137,7 +166,11 @@ physics. Text follows the motif's rule: funny, never cruel.
 
 1. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
    damage right, with a recreation boost and a short good-mood memory?
-2. Research and costs: which project unlocks it, and what do the stage
-   tiles, markers and the two outfits cost? The chairs are 5 steel.
-3. Disco music before the sound pipeline exists: silence, a vanilla
+2. Research and costs: which project unlocks the show, and what do the
+   stage tiles, markers and the two outfits cost? The chairs are 5 steel.
+3. Batshittium Monofilament: is "improves results" a better fabric (as
+   proposed) plus a show bonus? What are the Extruder's inputs and
+   yield (1 batshittium to 25 monofilament proposed)? Should
+   monofilament be usable for every fabric item, or only these outfits?
+4. Disco music before the sound pipeline exists: silence, a vanilla
    stand-in, or wait for the pipeline?
