@@ -404,7 +404,12 @@ namespace BatshitTechnology
             }
 
             Check("the colonist sat in the squeezer", sat,
-                $"colonist at {pawn.Position}, squeezer at {squeezer.Position}");
+                $"colonist at {pawn.Position}, squeezer at {squeezer.Position}; "
+                    + $"job now {pawn.CurJobDef?.defName ?? "none"}, downed "
+                    + $"{pawn.Downed}, mental state {pawn.MentalStateDef?.defName}, "
+                    + $"drafted {pawn.Drafted}, can reach "
+                    + $"{pawn.CanReach(squeezer, PathEndMode.OnCell, Danger.Deadly)}, "
+                    + $"reserved by {map.reservationManager.FirstRespectedReserver(squeezer, pawn)?.LabelShort ?? "nobody"}");
             Check("the colonist muttered monologue lines",
                 JobDriver_UseBrainSqueezer.MonologuesShown > mutteredBefore,
                 "no lines shown");
@@ -1732,6 +1737,31 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// A colonist for a scenario, drafted and holding fire at a spot:
+        /// one of the colony's, if any is still standing after the earlier
+        /// blasts, or a fresh one. A sabotage run showed the protest and
+        /// recipe checks passing vacuously once every colonist was dead.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="spot">Where to stand it.</param>
+        /// <returns>The colonist, spawned.</returns>
+        private static Pawn TestColonist(Map map, IntVec3 spot)
+        {
+            Pawn p = map.mapPawns.FreeColonistsSpawned.FirstOrDefault(
+                c => !c.Dead && !c.Downed && !c.InMentalState);
+            if (p == null)
+            {
+                p = PawnGenerator.GeneratePawn(new PawnGenerationRequest(
+                    PawnKindDefOf.Colonist, Faction.OfPlayer,
+                    forceGenerateNewPawn: true, dontGiveWeapon: true));
+                GenSpawn.Spawn(p, spot, map);
+            }
+
+            HoldColonist(map, p, spot);
+            return p;
+        }
+
+        /// <summary>
         /// A hostile raider who will not move or shoot: unarmed and stunned
         /// for longer than any scenario lasts.
         /// </summary>
@@ -1903,25 +1933,19 @@ namespace BatshitTechnology
             ClearTractorStage(map, center);
             RecipeDef recipe =
                 DefDatabase<RecipeDef>.GetNamed("BT_AssembleTractorBomb");
-            Pawn crafter = map.mapPawns.FreeColonistsSpawned
-                .FirstOrDefault(p => !p.Dead && !p.Downed);
+            Pawn crafter = TestColonist(map, center + new IntVec3(8, 0, 8));
             int before = TractorBombUtility.CountOnMap(map, Faction.OfPlayer);
-            if (crafter != null)
-            {
-                recipe.Worker.Notify_IterationCompleted(
-                    crafter, new List<Thing>());
-            }
-
+            recipe.Worker.Notify_IterationCompleted(crafter, new List<Thing>());
             Pawn robot = map.mapPawns.AllPawnsSpawned.FirstOrDefault(
                 p => p.TryGetComp<CompTractorBomb>() != null);
             Check("the temporary recipe drives a robot out beside the crafter",
-                crafter == null || (robot != null
+                robot != null
                     && robot.Position.InHorDistOf(crafter.Position, 5f)
                     && TractorBombUtility.CountOnMap(map, Faction.OfPlayer)
                         == before + 1
                     && DefDatabase<ThingDef>.GetNamed("TableMachining")
-                        .AllRecipes.Contains(recipe)),
-                $"robot {robot?.Position}, crafter {crafter?.Position}");
+                        .AllRecipes.Contains(recipe),
+                $"robot {robot?.Position}, crafter {crafter.Position}");
             robot?.Destroy(DestroyMode.Vanish);
         }
 
@@ -2064,13 +2088,9 @@ namespace BatshitTechnology
         private void TestTractorBombProtest(Map map, IntVec3 center)
         {
             ClearTractorStage(map, center);
-            Pawn colonist = map.mapPawns.FreeColonistsSpawned
-                .FirstOrDefault(p => !p.Dead && !p.Downed);
             Pawn robot = SpawnTestRobot(map, center + new IntVec3(-6, 0, 0));
-            if (colonist != null)
-            {
-                HoldColonist(map, colonist, robot.Position + new IntVec3(0, 0, 4));
-            }
+            Pawn colonist = TestColonist(
+                map, robot.Position + new IntVec3(0, 0, 4));
 
             SpawnStunnedHostile(map, center + new IntVec3(6, 0, 0));
             var comp = robot.TryGetComp<CompTractorBomb>();
@@ -2087,17 +2107,16 @@ namespace BatshitTechnology
                 .OfType<Building_TractorBomb>().FirstOrDefault(b => b.Spawned);
             int delay = bomb == null ? -1 : bomb.EmplacedTick - bomb.ReadyTick;
             Check("a colonist in the pull radius delays emplacing about 3 s",
-                colonist == null || (protested && bomb != null
-                    && delay >= 170 && delay <= 190),
-                $"protested {protested}, bomb {bomb != null}, delay {delay}");
+                protested && bomb != null && delay >= 170 && delay <= 190,
+                $"protested {protested}, bomb {bomb != null}, delay {delay}, "
+                    + $"colonist {colonist.Position.DistanceTo(robot.Position):F1}"
+                    + " tiles off");
             Check("after its protest it emplaces anyway",
-                colonist == null || (bomb != null && bomb.ProtestTicks >= 170));
+                bomb != null && bomb.ProtestTicks >= 170,
+                $"bomb {bomb != null}, protest {bomb?.ProtestTicks} ticks");
 
             // Get the colonist clear before the pull, and let it go off.
-            if (colonist != null)
-            {
-                HoldColonist(map, colonist, Clamp(map, center + new IntVec3(0, 0, 70)));
-            }
+            HoldColonist(map, colonist, Clamp(map, center + new IntVec3(0, 0, 70)));
 
             for (int i = 0; i < 1200 && bomb != null && bomb.Spawned; i++)
             {
@@ -2203,14 +2222,9 @@ namespace BatshitTechnology
             steel.stackCount = 20;
             steel = GenSpawn.Spawn(steel, at + new IntVec3(2, 0, 0), map);
             IntVec3 steelAt = steel.Position;
-            Pawn colonist = map.mapPawns.FreeColonistsSpawned
-                .FirstOrDefault(p => !p.Dead && !p.Downed);
-            IntVec3 colonistAt = IntVec3.Invalid;
-            if (colonist != null)
-            {
-                HoldColonist(map, colonist, at + new IntVec3(-3, 0, 0));
-                colonistAt = colonist.Position;
-            }
+            Pawn colonist = TestColonist(map, at + new IntVec3(-3, 0, 0));
+            IntVec3 colonistAt = colonist.Position;
+            int injuries = colonist.health.hediffSet.GetInjuredParts().Count;
 
             int letters = Find.LetterStack.LettersListForReading.Count;
             int wrecked = CompTractorBomb.Wrecked;
@@ -2229,12 +2243,12 @@ namespace BatshitTechnology
                     + $"letters +{Find.LetterStack.LettersListForReading.Count - letters}");
             Tick(DeathVortexMath.TotalTicks + 5);
             bool untouched = steel.Spawned && steel.Position == steelAt
-                && steel.stackCount == 20 && (colonist == null
-                    || (colonist.Position == colonistAt
-                        && !colonist.stances.stunner.Stunned
-                        && !colonist.health.hediffSet.GetInjuredParts().Any()));
+                && steel.stackCount == 20 && colonist.Position == colonistAt
+                && !colonist.stances.stunner.Stunned
+                && colonist.health.hediffSet.GetInjuredParts().Count
+                    == injuries;
             Check("its vortex sucks in its own parts, nothing else, and pops",
-                (vortex == null || vortex.Destroyed)
+                vortex != null && vortex.Destroyed
                     && TractorBombDeathVortex.Pops == pops + 1 && untouched,
                 $"vortex gone {vortex?.Destroyed}, pops "
                     + $"+{TractorBombDeathVortex.Pops - pops}, others untouched "
