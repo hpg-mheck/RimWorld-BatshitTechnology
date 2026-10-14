@@ -2075,15 +2075,21 @@ namespace BatshitTechnology
                     && (!quarry.Spawned || quarry.Position == quarryAt),
                 $"steel {outsiderAt} -> {outsider.Position}, raider "
                     + $"{quarryAt} -> {quarry.Position}");
+            // An explosion's wave takes a few ticks to reach anyone, even
+            // at its centre: checking on the tick it went off read the
+            // raider as unhurt on one run.
+            Tick(30);
             bool hurt = second.Dead
                 || second.health.hediffSet.GetInjuredParts().Any();
+            float secondAt = last[second].DistanceTo(eye);
             Check("the bomb explodes over 5 tiles",
                 bomb.Destroyed && Building_TractorBomb.Explosions == explosions + 1
                     && Building_TractorBomb.LastBlastRadius == 5f && hurt,
                 $"destroyed {bomb.Destroyed}, explosions "
                     + $"+{Building_TractorBomb.Explosions - explosions}, radius "
-                    + $"{Building_TractorBomb.LastBlastRadius}, raider hurt {hurt}");
-            Tick(60);
+                    + $"{Building_TractorBomb.LastBlastRadius}, raider "
+                    + $"{secondAt:F1} tiles out hurt {hurt}");
+            Tick(30);
         }
 
         /// <summary>
