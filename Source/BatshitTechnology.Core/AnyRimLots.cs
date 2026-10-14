@@ -31,29 +31,35 @@ internal sealed partial class AnyRimBuilder
     /// <summary>Public Works' front door, under the incident board.</summary>
     internal static readonly Cell PublicWorksDoor = new(7, -11);
 
+    /// <summary>The Ergonomic Singularity Grenade, which the guard carries.</summary>
+    internal const string GrenadeDef = "BT_ErgonomicSingularityGrenade";
+
     /// <summary>
     /// The residents (docs/SHOWCASE.md, "Residents"): key, names, sex, age,
-    /// home and the apparel worn over generated clothes.
+    /// home, the apparel worn over generated clothes, and the weapon
+    /// carried (only Ned, the Savings and Loan's guard, has one).
     /// </summary>
     private static readonly (string Key, string First, string Nick, string Last,
-        bool Female, int Age, string Home, string[] Apparel)[] Cast =
+        bool Female, int Age, string Home, string[] Apparel, string? Weapon)[] Cast =
     {
         ("Hugh", "Hugh", "Lame Duck", "Moribund", false, 63, "E2",
-            new[] { "Apparel_BowlerHat", "Apparel_CollarShirt" }),
+            new[] { "Apparel_BowlerHat", "Apparel_CollarShirt" }, null),
         ("Wendy", "Wendy", "Any Minute", "Now", true, 34, "W2",
-            Array.Empty<string>()),
+            Array.Empty<string>(), null),
         ("Ernest", "Ernest", "Next", "Inline", false, 41, "W2",
-            new[] { "Apparel_CowboyHat" }),
+            new[] { "Apparel_CowboyHat" }, null),
         ("Shirley", "Shirley", "Probably Fine", "Knott", true, 52, "W3",
-            new[] { "Apparel_PsychicFoilHelmet" }),
+            new[] { "Apparel_PsychicFoilHelmet" }, null),
         ("Constance", "Constance", "Collateral", "Damage", true, 46, "E3",
-            Array.Empty<string>()),
+            Array.Empty<string>(), null),
         ("Barry", "Barry", "Six Feet", "Graves", false, 58, "W4",
-            new[] { "Apparel_Duster", "Apparel_BowlerHat" }),
+            new[] { "Apparel_Duster", "Apparel_BowlerHat" }, null),
         ("Bea", "Bea", "Right Back", "Shortly", true, 29, "W1",
-            Array.Empty<string>()),
+            Array.Empty<string>(), null),
         ("Morty", "Morty", "Two Weeks", "Tallis", false, 64, "E1",
-            new[] { "Apparel_SimpleHelmet" }),
+            new[] { "Apparel_SimpleHelmet" }, null),
+        ("Ned", "Ned", "Overkill", "Lessly", false, 44, "E4",
+            new[] { "Apparel_FlakVest" }, GrenadeDef),
     };
 
     // ===== Lots =====
@@ -248,7 +254,7 @@ internal sealed partial class AnyRimBuilder
 
     /// <summary>
     /// E2, Town Hall and the Volunteer Fire Department (wood): a council
-    /// chamber seating all eight residents, a fire bay of three firefoam
+    /// chamber of eight chairs (the guard stands), a fire bay of three firefoam
     /// poppers, and the mayor's office with his bed.
     /// </summary>
     private void TownHall()
@@ -373,7 +379,8 @@ internal sealed partial class AnyRimBuilder
     /// <summary>
     /// E4, the Savings and Loan (granite, marble tile): a teller counter,
     /// and a plasteel vault with a plasteel door holding 2,000 silver and
-    /// 50 gold; marble columns and an ATM out front. Nobody lives here.
+    /// 50 gold; marble columns and an ATM out front. Ned, the guard, sleeps
+    /// on a cot behind the north counter.
     /// </summary>
     private void SavingsAndLoan()
     {
@@ -400,6 +407,14 @@ internal sealed partial class AnyRimBuilder
         Add(Furniture(Thing("Stool", new Cell(11, 36), Facing.West), key));
         Add(Furniture(Thing("Stool", new Cell(11, 42), Facing.West), key));
         Add(Thing("StandingLamp", new Cell(8, 36)) with { BuildingKey = key });
+
+        // The guard's cot behind the north counter, and a heater at the
+        // far end of the south one, where it blocks no one's way.
+        Add(Furniture(Over("Bed", new Box(13, 42, 14, 42), Facing.West), key) with
+        {
+            ReservedFor = "Ned",
+        });
+        Add(Heater(new Cell(14, 36), key));
 
         foreach (Cell c in new[]
         {
@@ -696,8 +711,8 @@ internal sealed partial class AnyRimBuilder
 
     /// <summary>
     /// AnyRim Memorial Gardens, where Main Street's road ends: a wooden
-    /// fence, a lawn, two oaks, and ten graves in two rows, eight reserved
-    /// (one per resident, Barry's included) and two not.
+    /// fence, a lawn, two oaks, and ten graves in two rows, nine reserved
+    /// (one per resident, Barry's included) and one not.
     /// </summary>
     private void Cemetery()
     {
@@ -711,7 +726,7 @@ internal sealed partial class AnyRimBuilder
         string?[] reserved =
         {
             "Hugh", "Wendy", "Ernest", "Shirley", "Constance",
-            "Barry", "Bea", "Morty", null, null,
+            "Barry", "Bea", "Morty", "Ned", null,
         };
         int i = 0;
         foreach (int west in new[] { -5, 4 })
@@ -757,7 +772,7 @@ internal sealed partial class AnyRimBuilder
     // ===== Residents =====
 
     /// <summary>
-    /// The eight residents, each waiting just inside their own front door.
+    /// The nine residents, each waiting just inside their own front door.
     /// </summary>
     private void Residents()
     {
@@ -771,6 +786,7 @@ internal sealed partial class AnyRimBuilder
                 r.Key, r.First, r.Nick, r.Last, r.Female, r.Age, r.Home, door + inward)
             {
                 Apparel = r.Apparel,
+                Weapon = r.Weapon,
             });
         }
     }

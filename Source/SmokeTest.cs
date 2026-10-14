@@ -1042,10 +1042,12 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// The residents: eight named non-colonists, each in a lord, each
+        /// The residents: nine named non-colonists, each in a lord, the
+        /// bank's guard holding his grenade and nobody else armed, each
         /// still within <see cref="AnyRimHomeReach"/> tiles of its own
-        /// household's home after 600 ticks; then the census drops by one
-        /// when one is killed, and the incident clock restarts.
+        /// household's home after 600 ticks (the guard still holding it,
+        /// unthrown); then the census drops by one when one is killed, and
+        /// the incident clock restarts.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="plan">The plan built.</param>
@@ -1057,14 +1059,28 @@ namespace BatshitTechnology
             var nicks = plan.Residents.Select(r => r.Nick).ToList();
             bool named = residents.Count == plan.Residents.Count
                 && residents.Select(p => (p.Name as NameTriple)?.Nick).SequenceEqual(nicks);
-            Check("AnyRim has its eight named residents",
-                plan.Residents.Count == 8 && named,
+            Check("AnyRim has its nine named residents",
+                plan.Residents.Count == 9 && named,
                 $"{residents.Count} residents: {string.Join(", ", residents.Select(p => p.LabelShort))}");
             Check("AnyRim's residents are not colonists and each has a lord",
                 residents.All(p => !p.IsColonist && p.Faction != Faction.OfPlayer && p.GetLord() != null),
                 string.Join(", ", residents.Select(p => $"{p.LabelShort}: {p.Faction}, lord {p.GetLord() != null}")));
 
+            string arms = ResidentArms(plan, residents, out bool armedAsPlanned);
+            Check("AnyRim's guard holds his grenade and no one else is armed",
+                armedAsPlanned && plan.Residents.Count(r => r.Weapon != null) == 1,
+                arms);
+            var implosionsBefore = new HashSet<Implosion>(
+                MapComponent_Implosions.For(map)?.Active ?? new List<Implosion>());
+
             Tick(600);
+            arms = ResidentArms(plan, residents, out armedAsPlanned);
+            int newImplosions = (MapComponent_Implosions.For(map)?.Active
+                    ?? new List<Implosion>())
+                .Count(i => !implosionsBefore.Contains(i));
+            Check("AnyRim's guard keeps his grenade to himself for 600 ticks",
+                armedAsPlanned && newImplosions == 0,
+                $"{arms}; new implosions {newImplosions}");
             var strays = new List<string>();
             foreach (Pawn p in residents)
             {
@@ -1101,6 +1117,29 @@ namespace BatshitTechnology
                 record.Population == before - 1 && record.LastIncidentTick >= killedAt,
                 $"population {before} -> {record.Population}, last incident tick "
                     + $"{record.LastIncidentTick} (killed at {killedAt})");
+        }
+
+        /// <summary>
+        /// What each resident holds, against the plan: the guard his
+        /// grenade, everyone else nothing.
+        /// </summary>
+        /// <param name="plan">The plan built.</param>
+        /// <param name="residents">The residents, in plan order.</param>
+        /// <param name="asPlanned">Whether every resident holds what the plan says.</param>
+        /// <returns>Each resident and what they hold, for the check's detail.</returns>
+        private static string ResidentArms(
+            TownPlan plan, List<Pawn> residents, out bool asPlanned)
+        {
+            asPlanned = residents.Count == plan.Residents.Count;
+            var held = new List<string>();
+            for (int i = 0; i < residents.Count && i < plan.Residents.Count; i++)
+            {
+                string holds = residents[i].equipment?.Primary?.def.defName;
+                asPlanned &= holds == plan.Residents[i].Weapon;
+                held.Add($"{residents[i].LabelShort}: {holds ?? "nothing"}");
+            }
+
+            return string.Join(", ", held);
         }
 
         /// <summary>

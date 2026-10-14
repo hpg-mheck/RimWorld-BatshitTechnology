@@ -7,20 +7,22 @@
   literally; \n makes one), so their lines run long.
 -->
 <Defs>
-  <!-- The directed tour (docs/SHOWCASE.md, "The Directed Tour"): nine
+  <!-- The directed tour (docs/SHOWCASE.md, "The Directed Tour"): ten
        scenes over the demo base Source/Showcase.cs builds, run by
        BatshitTourDirector. The keys and narration moments follow Core's
        TourScript; TourXmlTests hold the two together. Narration is The
        Story's voice: deadpan, one line, at most 120 characters (raised
        from 96 for the operator's stampede volley line, 2026-10-14). Start
-       lines wait 90 ticks, so the previous scene's outcome lands first. -->
+       lines wait 90 ticks, so the previous scene's outcome lands first;
+       an outcome's second line waits 60, so it still comes before the
+       next scene's start line. -->
   <BatshitTechnology.Showcases.ShowcaseDef>
     <defName>BT_Showcase</defName>
     <label>living better with batshittium</label>
     <summary>A public information film: every device at work, then several of them exploding on cue.</summary>
-    <description>A working Batshit Technology base, built on a fresh map with every project researched, toured scene by scene: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, and the Artificer making bolts for a Batshit Ballista, which fires one 16-bolt volley, then meets a stampede of manhunting boomalopes from the east with one of 256.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners; the camera walks AnyRim, a small test town built for exactly this; a colonist throws an Ergonomic Singularity Grenade at a junk pile with a volunteer in it; a Tractor Bomb from the Tractor Barn finds a party of raiders; and two Tractor Bombs settle a junkyard full of them.\n\nA scene this map cannot stage is left out. Colonists are moved clear of each blast. The volunteer was not consulted.</description>
+    <description>A working Batshit Technology base, built on a fresh map with every project researched, toured scene by scene: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, and the Artificer making bolts for a Batshit Ballista, which fires one 16-bolt volley, then meets a stampede of manhunting boomalopes from the east with one of 256.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners; the camera walks AnyRim, a small test town built for exactly this; a colonist throws an Ergonomic Singularity Grenade at a junk pile with a volunteer in it; AnyRim's bank guard deals with a rabid raccoon on Main Street, with the same grenade; a Tractor Bomb from the Tractor Barn finds a party of raiders; and two Tractor Bombs settle a junkyard full of them.\n\nA scene this map cannot stage is left out. Colonists are moved clear of each blast. The volunteer was not consulted.</description>
     <previewTexPath>UI/Showcases/BT_Showcase</previewTexPath>
-    <estimatedMinutes>6</estimatedMinutes>
+    <estimatedMinutes>7</estimatedMinutes>
     <order>0</order>
     <mapSize>250</mapSize>
     <workerClass>BatshitTechnology.BatshitTourDirector</workerClass>
@@ -85,6 +87,16 @@
         <timeoutTicks>1800</timeoutTicks>
         <settleTicks>180</settleTicks>
         <shots><li><zoom>22</zoom></li></shots>
+      </li>
+      <!-- AnyRim's guard and a manhunting raccoon (docs/SHOWCASE.md, "Reel
+           9"). Declines without AnyRim, or when its scene was skipped. -->
+      <li Class="BatshitTechnology.RaccoonScene">
+        <key>raccoon</key>
+        <title>The Raccoon Incident</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>3600</timeoutTicks>
+        <settleTicks>120</settleTicks>
+        <shots><li><zoom>20</zoom></li></shots>
       </li>
       <li Class="BatshitTechnology.TractorBombScene">
         <key>tractor</key>
@@ -179,6 +191,26 @@
         <text>Our volunteer has been comforted. Completely.</text></li>
       <li><scene>grenade</scene><when>completed</when>
         <text>Everything is exactly where it belongs now.</text></li>
+      <!-- raccoon: the census between the throw and the outcome is
+           AnyRim's own line, said with the real count by the scene -->
+      <li><scene>raccoon</scene><when>start</when><delayTicks>90</delayTicks>
+        <text>Every community has its pests.</text></li>
+      <li><scene>raccoon</scene><when>guard</when>
+        <text>In AnyRim, pest control is in the capable hands of Ned Lessly, AnyRim Savings &amp; Loan Security.</text></li>
+      <li><scene>raccoon</scene><when>pest</when>
+        <text>A raccoon has wandered onto Main Street, foaming slightly.</text></li>
+      <li><scene>raccoon</scene><when>thrown</when>
+        <text>Ned believes in a proportionate response.</text></li>
+      <li><scene>raccoon</scene><when>raccoonSurvived</when>
+        <text>The raccoon has been reassured.</text></li>
+      <li><scene>raccoon</scene><when>raccoonSurvived</when><delayTicks>60</delayTicks>
+        <text>AnyRim thanks Ned for his service. Unfortunately.</text></li>
+      <li><scene>raccoon</scene><when>raccoonLost</when>
+        <text>The raccoon will not be troubling anyone.</text></li>
+      <li><scene>raccoon</scene><when>raccoonLost</when><delayTicks>60</delayTicks>
+        <text>AnyRim thanks Ned for his service. Unfortunately.</text></li>
+      <li><scene>raccoon</scene><when>completed</when>
+        <text>AnyRim thanks Ned for his service. Unfortunately.</text></li>
       <!-- tractor -->
       <li><scene>tractor</scene><when>start</when><delayTicks>90</delayTicks>
         <text>The Tractor Barn builds it. The tractor finds the problem.</text></li>

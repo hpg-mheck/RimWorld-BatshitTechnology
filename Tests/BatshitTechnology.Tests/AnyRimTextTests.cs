@@ -13,14 +13,14 @@ namespace BatshitTechnology.Tests;
 /// </summary>
 public sealed class AnyRimTextTests
 {
-    /// <summary>The welcome sign at full strength.</summary>
-    [Fact(DisplayName = "Welcome sign at 8")]
-    public void WelcomeSign_should_read_eight()
+    /// <summary>The welcome sign at full strength: nine residents.</summary>
+    [Fact(DisplayName = "Welcome sign at 9")]
+    public void WelcomeSign_should_read_nine()
     {
         Assert.Equal(
-            "WELCOME TO ANYRIM\nA Typical Rim Community\nPop. 8, subject to change\n"
+            "WELCOME TO ANYRIM\nA Typical Rim Community\nPop. 9, subject to change\n"
             + "Est. this morning. Re-est. as needed.",
-            AnyRimText.WelcomeSign(8));
+            AnyRimText.WelcomeSign(9));
     }
 
     /// <summary>One resident left: the count changes, nothing else.</summary>
@@ -32,6 +32,27 @@ public sealed class AnyRimTextTests
         Assert.Equal("Pop. 1, subject to change", lines[2]);
         Assert.Equal(AnyRimText.WelcomeSign(8).Split('\n').Where((_, i) => i != 2),
             lines.Where((_, i) => i != 2));
+    }
+
+    /// <summary>
+    /// The narrator's census after an incident: the census message when
+    /// the count fell, a hold otherwise (a rise reads as a hold).
+    /// </summary>
+    [Fact(DisplayName = "Census report: revised when it fell, holds otherwise")]
+    public void CensusReport_should_revise_or_hold()
+    {
+        Assert.Equal(
+            "AnyRim census revised to 6. The sign has been updated. Please remain calm.",
+            AnyRimText.CensusReport(9, 6));
+        Assert.Equal(AnyRimText.CensusMessage(0), AnyRimText.CensusReport(9, 0));
+        Assert.Equal(
+            "AnyRim census holds at 9. Please remain calm.",
+            AnyRimText.CensusReport(9, 9));
+        Assert.Equal(
+            "AnyRim census holds at 10. Please remain calm.",
+            AnyRimText.CensusReport(9, 10));
+        Assert.Throws<ArgumentOutOfRangeException>(() => AnyRimText.CensusReport(-1, 3));
+        Assert.Throws<ArgumentOutOfRangeException>(() => AnyRimText.CensusReport(3, -1));
     }
 
     /// <summary>At zero the population line thanks the town.</summary>

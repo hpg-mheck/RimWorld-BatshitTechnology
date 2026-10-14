@@ -21,7 +21,8 @@
 #                                         # PASS/FAIL and DONE, and the game
 #                                         # quits; -TourSkip names scenes
 #                                         # forced to decline (default
-#                                         # anyrim; '' runs all eight)
+#                                         # anyrim, which the raccoon
+#                                         # scene follows; '' runs all ten)
 # Runs left open for a person to watch (-Showcase without -Verify, and
 # -KeepOpen) get a maximized window and 2x UI scale; test runs, -Verify
 # included, stay small and muted.

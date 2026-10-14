@@ -13,17 +13,19 @@ namespace BatshitTechnology.Tests;
 public sealed class TourScriptTests
 {
     /// <summary>
-    /// The tour has nine scenes with unique keys, in the order the plan
-    /// gives (the stampede after the defence), ending on the twins.
+    /// The tour has ten scenes with unique keys, in the order the plan
+    /// gives (the stampede after the defence, the raccoon after the
+    /// grenade), ending on the twins.
     /// </summary>
-    [Fact(DisplayName = "The tour runs nine unique scenes, ending with the twins")]
-    public void Keys_should_be_nine_unique_in_order()
+    [Fact(DisplayName = "The tour runs ten unique scenes, ending with the twins")]
+    public void Keys_should_be_ten_unique_in_order()
     {
         Assert.Equal(
             new[]
             {
                 "home", "defence", "stampede", "retire-replicator",
-                "retire-reactor", "anyrim", "grenade", "tractor", "twins",
+                "retire-reactor", "anyrim", "grenade", "raccoon", "tractor",
+                "twins",
             },
             TourScript.Keys);
         Assert.Equal(
@@ -53,8 +55,8 @@ public sealed class TourScriptTests
 
     /// <summary>
     /// A scene's narrated moments start with "start", include its beats,
-    /// "completed" and its own outcomes, and only the grenade has outcomes
-    /// of its own.
+    /// "completed" and its own outcomes; only the grenade and the raccoon
+    /// have outcomes of their own.
     /// </summary>
     [Fact(DisplayName = "Narrated moments cover start, beats, completion and outcomes")]
     public void NarratedMoments_should_cover_the_scene()
@@ -68,8 +70,51 @@ public sealed class TourScriptTests
             },
             grenade.NarratedMoments());
         Assert.Equal(
-            new[] { TourScript.Grenade },
+            new[] { TourScript.Grenade, TourScript.Raccoon },
             TourScript.Scenes.Where(s => s.Outcomes.Count > 0).Select(s => s.Key));
+    }
+
+    /// <summary>
+    /// The raccoon's census is a computed beat: a moment it plays (and the
+    /// verifier requires), which the def gives no line because the scene
+    /// says the real count; it is left out of the narrated moments. No
+    /// other scene computes its words.
+    /// </summary>
+    [Fact(DisplayName = "The raccoon's census is its one computed beat")]
+    public void Raccoon_census_should_be_computed()
+    {
+        TourSceneScript raccoon = TourScript.For(TourScript.Raccoon)!;
+        Assert.Equal(new[] { "guard", "pest", "thrown", "census" }, raccoon.Moments);
+        Assert.Equal(new[] { TourScript.Census }, raccoon.Computed);
+        Assert.Equal(
+            new[]
+            {
+                "start", "guard", "pest", "thrown", "completed",
+                "raccoonSurvived", "raccoonLost",
+            },
+            raccoon.NarratedMoments());
+        Assert.True(TourScript.Knows("raccoon", "census"));
+        Assert.True(TourScript.Knows("raccoon", "raccoonLost"));
+        Assert.False(TourScript.Knows("grenade", "census"));
+        Assert.Equal(
+            new[] { TourScript.Raccoon },
+            TourScript.Scenes.Where(s => s.Computed.Count > 0).Select(s => s.Key));
+        Assert.All(TourScript.Scenes, s => Assert.All(s.Computed,
+            c => Assert.Contains(c, s.Moments)));
+    }
+
+    /// <summary>
+    /// The raccoon's outcome reads its fate: dead or destroyed is lost;
+    /// anything else, downed included, survived.
+    /// </summary>
+    [Fact(DisplayName = "RaccoonOutcome: dead is lost, anything else survived")]
+    public void RaccoonOutcome_should_read_the_fate()
+    {
+        Assert.Equal(TourScript.RaccoonLost, TourScript.RaccoonOutcome(true, false));
+        Assert.Equal(TourScript.RaccoonLost, TourScript.RaccoonOutcome(false, true));
+        Assert.Equal(TourScript.RaccoonLost, TourScript.RaccoonOutcome(true, true));
+        Assert.Equal(
+            TourScript.RaccoonSurvived, TourScript.RaccoonOutcome(false, false));
     }
 
     /// <summary>
@@ -108,6 +153,9 @@ public sealed class TourScriptTests
         Assert.Equal(
             new[] { "herd", "volley", "aftermath" },
             TourScript.RequiredMoments("stampede"));
+        Assert.Equal(
+            new[] { "guard", "pest", "thrown", "census" },
+            TourScript.RequiredMoments("raccoon"));
         Assert.Equal("stragglers", TourScript.StandsFor("stragglers"));
         Assert.Equal(
             TourScript.For("home")!.Moments, TourScript.RequiredMoments("home"));

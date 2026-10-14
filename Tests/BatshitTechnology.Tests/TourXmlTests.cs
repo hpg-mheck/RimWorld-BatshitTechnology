@@ -192,6 +192,57 @@ public sealed class TourXmlTests
     }
 
     /// <summary>
+    /// A computed beat (the raccoon's census) has no line in the def: the
+    /// scene says the words, and a declared line would be said as well.
+    /// </summary>
+    [Fact(DisplayName = "No tour line names a computed beat")]
+    public void Computed_beats_should_have_no_lines()
+    {
+        var declared = Lines()
+            .Where(l => TourScript.For(l.Scene)?.Computed
+                .Contains(l.When, StringComparer.OrdinalIgnoreCase) == true)
+            .Select(l => $"{l.Scene}/{l.When}")
+            .ToList();
+
+        Assert.Empty(declared);
+    }
+
+    /// <summary>
+    /// The Raccoon Incident speaks as docs/SHOWCASE.md's Reel 9 has it:
+    /// each fate its own line, then "AnyRim thanks Ned for his service.
+    /// Unfortunately." 60 ticks later, either way, before the next scene's
+    /// start line (90 ticks), so the lines keep their cue order.
+    /// </summary>
+    [Fact(DisplayName = "The raccoon's verdict reads its fate, then thanks Ned")]
+    public void Raccoon_verdict_should_follow_the_story()
+    {
+        const string Thanks = "AnyRim thanks Ned for his service. Unfortunately.";
+        var lines = Lines().Where(l => l.Scene == TourScript.Raccoon).ToList();
+        (int, string)[] Said(string when) => lines
+            .Where(l => l.When == when).Select(l => (l.Delay, l.Text)).ToArray();
+
+        Assert.Equal(
+            new[] { (0, "The raccoon has been reassured."), (60, Thanks) },
+            Said(TourScript.RaccoonSurvived));
+        Assert.Equal(
+            new[] { (0, "The raccoon will not be troubling anyone."), (60, Thanks) },
+            Said(TourScript.RaccoonLost));
+        Assert.Equal(
+            new[] { (0, "Ned believes in a proportionate response.") },
+            Said(TourScript.Thrown));
+        Assert.Contains(
+            "Ned Lessly, AnyRim Savings & Loan Security",
+            Said(TourScript.Guard).Single().Item2,
+            StringComparison.Ordinal);
+        int nextStart = Lines()
+            .Where(l => l.Scene == TourScript.Tractor && l.When == NarrationScript.Start)
+            .Min(l => l.Delay);
+        Assert.All(
+            lines.Where(l => l.When is TourScript.RaccoonSurvived or TourScript.RaccoonLost),
+            l => Assert.True(l.Delay < nextStart, $"{l.When} waits {l.Delay}"));
+    }
+
+    /// <summary>
     /// The film ends on the twins: their completed line, then the byline
     /// 240 ticks later, word for word.
     /// </summary>

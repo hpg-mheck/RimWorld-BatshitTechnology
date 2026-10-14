@@ -220,6 +220,12 @@ public sealed record ResidentPlan(
 {
     /// <summary>Apparel ThingDef defNames to wear, over generated clothes.</summary>
     public IReadOnlyList<string> Apparel { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// The weapon's ThingDef defName, equipped at generation; null for the
+    /// unarmed (everyone but the bank's guard).
+    /// </summary>
+    public string? Weapon { get; init; }
 }
 
 /// <summary>Which text a map label shows (see <see cref="AnyRimText.Label"/>).</summary>

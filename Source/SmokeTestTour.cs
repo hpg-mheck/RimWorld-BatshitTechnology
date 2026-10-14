@@ -374,6 +374,8 @@ namespace BatshitTechnology
                     return stage.HasAnyRim
                         && map.GetComponent<MapComponent_AnyRim>()?.Built == true
                         ? "AnyRim stands" : null;
+                case TourScript.Raccoon:
+                    return RaccoonDeclineUnjustified(stage, map);
                 case TourScript.Grenade:
                     return stage.GrenadeTarget.IsValid
                         && map.mapPawns.FreeColonistsSpawned.Any(p =>
@@ -587,6 +589,9 @@ namespace BatshitTechnology
             /// <summary>The stampede's watch, once it has begun.</summary>
             private StampedeWatch stampedeWatch;
 
+            /// <summary>The raccoon scene's watch, once it has begun.</summary>
+            private RaccoonWatch raccoonWatch;
+
             /// <summary>The clock on the scene showing, or null.</summary>
             private SceneClock clock;
 
@@ -654,10 +659,17 @@ namespace BatshitTechnology
                 if (current != null && !ReferenceEquals(current, showing))
                 {
                     StopClock(now);
+                    Log.Message($"[BT-SMOKE] NOTE {current.key} begins: "
+                        + Bystanders(Director.Map));
                     clock = new SceneClock(current.key, now);
                     if (current is StampedeScene stampede)
                     {
                         stampedeWatch = new StampedeWatch(stampede, Director);
+                    }
+
+                    if (current is RaccoonScene incident)
+                    {
+                        raccoonWatch = new RaccoonWatch(incident, Director);
                     }
 
                     showing = current;
@@ -684,6 +696,11 @@ namespace BatshitTechnology
                 if (showing is StampedeScene && current == showing)
                 {
                     stampedeWatch?.Sample();
+                }
+
+                if (showing is RaccoonScene && current == showing)
+                {
+                    raccoonWatch?.Sample();
                 }
 
                 foreach (Pawn p in colonists.Keys.ToList())
@@ -770,6 +787,18 @@ namespace BatshitTechnology
                         Fact(scene, $"one more implosion ({implosionsInScene})",
                             implosionsInScene >= 1);
                         break;
+                    case RaccoonScene _:
+                        Fact(scene, $"one more implosion ({implosionsInScene})",
+                            implosionsInScene >= 1);
+                        if (raccoonWatch == null)
+                        {
+                            Fact(scene, "the raccoon scene was watched", false);
+                            break;
+                        }
+
+                        raccoonWatch.Check(
+                            (what, ok) => Fact(scene, what, ok), EndOutcome(scene.key));
+                        break;
                     case StampedeScene _:
                         if (stampedeWatch == null)
                         {
@@ -808,6 +837,35 @@ namespace BatshitTechnology
                     Log.Message("[BT-SMOKE] NOTE " + clock.Note(now));
                     clock = null;
                 }
+            }
+
+            /// <summary>
+            /// Who else is about as a scene begins: AnyRim's population, if
+            /// the town stands, and the map's hostile pawns by faction (a
+            /// raid the storyteller sends is not the tour's doing, but it
+            /// explains deaths the tour did not cause).
+            /// </summary>
+            /// <param name="map">The tour's map.</param>
+            /// <returns>The note's text.</returns>
+            private static string Bystanders(Map map)
+            {
+                if (map == null)
+                {
+                    return "no map";
+                }
+
+                MapComponent_AnyRim town = map.GetComponent<MapComponent_AnyRim>();
+                string anyRim = town != null && town.Built
+                    ? $"AnyRim population {town.Population}"
+                    : "no AnyRim";
+                List<string> hostiles = map.mapPawns.AllPawnsSpawned
+                    .Where(p => !p.Dead && !p.Downed
+                        && p.HostileTo(Faction.OfPlayer))
+                    .GroupBy(p => p.Faction?.Name ?? p.kindDef.defName)
+                    .Select(g => $"{g.Key} {g.Count()}")
+                    .ToList();
+                return $"{anyRim}; hostiles on the map: "
+                    + (hostiles.Count == 0 ? "none" : string.Join(", ", hostiles));
             }
 
             /// <summary>Records one world fact.</summary>

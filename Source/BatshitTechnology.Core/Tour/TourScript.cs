@@ -17,13 +17,23 @@ public sealed record TourSceneScript(
     string Key, IReadOnlyList<string> Moments, IReadOnlyList<string> Outcomes)
 {
     /// <summary>
+    /// Gets the beats whose words the scene computes from the world (the
+    /// raccoon's census, which reads the real count) rather than the def
+    /// declaring them; each is one of <see cref="Moments"/>, and the def
+    /// gives it no line. Usually none.
+    /// </summary>
+    public IReadOnlyList<string> Computed { get; init; } = Array.Empty<string>();
+
+    /// <summary>
     /// Every narration moment the scene can reach that its lines should
-    /// cover: the start, its beats, completion, and its own outcomes.
+    /// cover: the start, its beats (less the computed ones), completion,
+    /// and its own outcomes.
     /// </summary>
     /// <returns>The moments, without duplicates, in that order.</returns>
     public IReadOnlyList<string> NarratedMoments() =>
         new[] { NarrationScript.Start }
-            .Concat(Moments)
+            .Concat(Moments.Where(m =>
+                !Computed.Contains(m, StringComparer.OrdinalIgnoreCase)))
             .Concat(new[] { TourScript.Completed })
             .Concat(Outcomes)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -66,10 +76,16 @@ public static class TourScript
     /// <summary>Scene 7: the Ergonomic Singularity Grenade.</summary>
     public const string Grenade = "grenade";
 
-    /// <summary>Scene 8: one Tractor Bomb, from the barn to the blast.</summary>
+    /// <summary>
+    /// Scene 8: the Raccoon Incident. AnyRim's bank guard meets a
+    /// manhunting raccoon on Main Street with the grenade.
+    /// </summary>
+    public const string Raccoon = "raccoon";
+
+    /// <summary>Scene 9: one Tractor Bomb, from the barn to the blast.</summary>
     public const string Tractor = "tractor";
 
-    /// <summary>Scene 9: two Tractor Bombs in a junkyard; the finale.</summary>
+    /// <summary>Scene 10: two Tractor Bombs in a junkyard; the finale.</summary>
     public const string Twins = "twins";
 
     /// <summary>
@@ -93,6 +109,24 @@ public static class TourScript
     /// </summary>
     public const string ThrownAlone = "thrownAlone";
 
+    /// <summary>The raccoon scene's first beat: the guard at the bank.</summary>
+    public const string Guard = "guard";
+
+    /// <summary>The raccoon scene's beat as the raccoon comes to town.</summary>
+    public const string Pest = "pest";
+
+    /// <summary>
+    /// The raccoon scene's computed beat after the singularity: the
+    /// census, read with the real count of surviving residents.
+    /// </summary>
+    public const string Census = "census";
+
+    /// <summary>The raccoon scene's outcome when the raccoon lives.</summary>
+    public const string RaccoonSurvived = "raccoonSurvived";
+
+    /// <summary>The raccoon scene's outcome when the raccoon dies.</summary>
+    public const string RaccoonLost = "raccoonLost";
+
     /// <summary>The scenes, in running order.</summary>
     public static IReadOnlyList<TourSceneScript> Scenes { get; } =
         new[]
@@ -106,6 +140,12 @@ public static class TourScript
             new TourSceneScript(
                 Grenade, new[] { Thrown, ThrownAlone },
                 new[] { VolunteerSurvived, VolunteerLost }),
+            new TourSceneScript(
+                Raccoon, new[] { Guard, Pest, Thrown, Census },
+                new[] { RaccoonSurvived, RaccoonLost })
+            {
+                Computed = new[] { Census },
+            },
             Scene(Tractor, "barn", "delivered", "spotted", "protest",
                 "emplaced", "doom", "pull", "blast"),
             Scene(Twins, "planted", "pull", "blast"),
@@ -198,6 +238,18 @@ public static class TourScript
         string.Equals(moment, ThrownAlone, StringComparison.OrdinalIgnoreCase)
             ? Thrown
             : moment;
+
+    /// <summary>
+    /// The raccoon scene's outcome when it completes, read from the
+    /// world: lost if the raccoon is dead (or gone from the world
+    /// altogether), survived otherwise, downed included. The scene and the
+    /// tour verifier both read the raccoon's fate this way.
+    /// </summary>
+    /// <param name="raccoonDead">Whether the raccoon is dead.</param>
+    /// <param name="raccoonDestroyed">Whether it was destroyed outright.</param>
+    /// <returns><see cref="RaccoonLost"/> or <see cref="RaccoonSurvived"/>.</returns>
+    public static string RaccoonOutcome(bool raccoonDead, bool raccoonDestroyed) =>
+        raccoonDead || raccoonDestroyed ? RaccoonLost : RaccoonSurvived;
 
     /// <summary>A scene with beats and no outcomes of its own.</summary>
     /// <param name="key">The key.</param>

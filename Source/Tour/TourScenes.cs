@@ -157,6 +157,23 @@ namespace BatshitTechnology
         /// <returns>True while one runs.</returns>
         protected bool ImplosionActive() => RunningImplosions().Any();
 
+        /// <summary>
+        /// Whether a singularity grenade's field is on the map: from the
+        /// tick the grenade lands until the survivors have been comforted,
+        /// after its explosion.
+        /// </summary>
+        /// <remarks>
+        /// The field spawns as the projectile is destroyed, and its
+        /// implosion joins the map's field only on its first tick, so on
+        /// the landing tick neither a projectile nor a running implosion
+        /// shows. A scene that waited on those alone could take that tick
+        /// for the end of the singularity, and end before its explosion.
+        /// </remarks>
+        /// <returns>True while one is on the map.</returns>
+        protected bool SingularityOpen() =>
+            Map != null && Map.listerThings
+                .ThingsOfDef(BT_SingularityDefOf.BT_SingularityField).Count > 0;
+
         /// <summary>The implosions running on the map now.</summary>
         /// <returns>Each open implosion that ticked this tick or the last.</returns>
         protected IEnumerable<Implosion> RunningImplosions()
@@ -708,12 +725,15 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Done once the grenade has flown, landed and finished imploding.
+        /// Done once the grenade has flown, landed, finished imploding and
+        /// exploded: no projectile, no running implosion, and no field left
+        /// (see <see cref="TourScene.SingularityOpen"/>).
         /// </summary>
         /// <returns>True when the demonstration is over.</returns>
         public override bool IsDone() =>
             thrownAt >= 0 && Elapsed >= thrownAt + 60
-            && !BatshitProjectileInFlight() && !ImplosionActive();
+            && !BatshitProjectileInFlight() && !ImplosionActive()
+            && !SingularityOpen();
 
         /// <summary>
         /// Stands the grenadier down and takes the grenade back, so no
