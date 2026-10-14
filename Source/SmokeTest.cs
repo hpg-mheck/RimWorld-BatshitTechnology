@@ -1643,7 +1643,8 @@ namespace BatshitTechnology
         /// <summary>
         /// The Tractor Bomb, on a cleared stage at the middle of the map:
         /// the robot itself, its patrol, the temporary recipe, a hunt from
-        /// patrol to explosion, a protest, Dial-A-Yield and a robot's death.
+        /// patrol to explosion, a protest, everyone else running from an
+        /// armed bomb, Dial-A-Yield and a robot's death.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -1662,6 +1663,7 @@ namespace BatshitTechnology
             TestTractorBombRecipe(map, center);
             TestTractorBombHunt(map, center);
             TestTractorBombProtest(map, center);
+            TestTractorBombFlee(map, center);
             TestTractorBombDialAYield(map, center);
             TestTractorBombDeath(map, center);
             Check("the Tractor Bomb scenarios logged no errors",
@@ -2137,6 +2139,401 @@ namespace BatshitTechnology
             }
 
             Tick(60);
+        }
+
+        /// <summary>
+        /// Everyone else runs (docs/TRACTOR-BOMB.md, "Everyone Else Runs"):
+        /// pawns and animals that can see an armed bomb run beyond its pull
+        /// radius plus 8 tiles; one inside its blast radius freezes with
+        /// one of the twenty "making peace" lines; berserk and manhunting
+        /// ones do neither; and the pull takes over cleanly from a pawn
+        /// that is frozen or still running. Nothing logs an error.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombFlee(Map map, IntVec3 center)
+        {
+            var mark = ErrorMark();
+            TestTractorBombRunAndFreeze(map, center);
+            TestTractorBombMentalStatesStay(map, center);
+            TestTractorBombPullTakesARunner(map, center);
+            Check("running from tractor bombs logs no errors",
+                !NewErrorSince(mark), "an error was logged (see the log)");
+        }
+
+        /// <summary>
+        /// A bomb armed with a colonist and a muffalo 8 tiles off (inside
+        /// its 10-tile pull, outside its 5-tile blast) and a second
+        /// colonist 3 tiles off. The two outside the blast run beyond 18
+        /// tiles before the pull starts; the one inside freezes where it
+        /// stands, showing one "making peace" line throughout, until the
+        /// pull seizes it and its freeze ends. The countdown is held at its
+        /// longest, 5 s, so that a slow-footed colonist (traits, apparel)
+        /// is not failed by a 3 s roll; how far pawns get in 3 s is a
+        /// matter of balance, not of the behaviour checked here.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombRunAndFreeze(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            Building_TractorBomb bomb = PlantTestBomb(map, center, 5f);
+            int flee = TractorBombFlee.FleeDistance(
+                bomb.PullRadius, bomb.BlastRadius);
+            Pawn runner = FreshColonist(map, center + new IntVec3(8, 0, 0));
+            Pawn critter = FreshAnimal(map, center + new IntVec3(-8, 0, 0));
+            Pawn frozen = FreshColonist(map, center + new IntVec3(0, 0, 3));
+            IntVec3 frozenAt = IntVec3.Invalid;
+            List<string> lines = BT_TractorBombDefOf.BT_TractorBombFreeze
+                .GetModExtension<TractorBombFreezeLines>()?.lines
+                ?? new List<string>();
+            var reports = new HashSet<string>();
+            bool runnerRan = false;
+            bool critterRan = false;
+            bool stayedPut = true;
+            bomb.StartCountdown();
+            for (int i = 0; i < 600 && bomb.Spawned
+                && bomb.CurrentStage != Building_TractorBomb.Stage.Imploding;
+                i++)
+            {
+                Tick(1);
+                runnerRan |= runner.CurJobDef
+                    == BT_TractorBombDefOf.BT_TractorBombFlee;
+                critterRan |= critter.CurJobDef
+                    == BT_TractorBombDefOf.BT_TractorBombFlee;
+                if (frozen.CurJobDef
+                    == BT_TractorBombDefOf.BT_TractorBombFreeze)
+                {
+                    // Where it stands when it freezes, it stays.
+                    frozenAt = frozenAt.IsValid ? frozenAt : frozen.Position;
+                    reports.Add(frozen.jobs.curDriver.GetReport());
+                }
+
+                stayedPut &= !frozenAt.IsValid || frozen.Position == frozenAt;
+            }
+
+            bool pulling = bomb.Spawned
+                && bomb.CurrentStage == Building_TractorBomb.Stage.Imploding;
+            float runnerOut = runner.Spawned
+                ? runner.Position.DistanceTo(bomb.Position) : -1f;
+            float critterOut = critter.Spawned
+                ? critter.Position.DistanceTo(bomb.Position) : -1f;
+            int armed = bomb.ImplosionStartedTick - bomb.CountdownStartedTick;
+            Log.Message($"[BT-SMOKE] NOTE flee distance {flee}: colonist "
+                + $"{runnerOut:F1} and muffalo {critterOut:F1} tiles out when "
+                + $"the pull started, {armed} ticks after arming");
+            Check("a colonist and an animal in reach run past pull + 8 "
+                    + "before the pull",
+                pulling && runnerRan && critterRan && runnerOut > flee
+                    && critterOut > flee,
+                $"pulling {pulling}, flee distance {flee}; colonist ran "
+                    + $"{runnerRan}, {runnerOut:F1} tiles out; muffalo ran "
+                    + $"{critterRan}, {critterOut:F1} tiles out");
+
+            bool frozeToTheEnd = frozen.CurJobDef
+                == BT_TractorBombDefOf.BT_TractorBombFreeze;
+            string report = reports.FirstOrDefault();
+            bool isLine = report != null
+                && lines.Any(l => TractorBombFlee.AsReport(l) == report);
+            Log.Message("[BT-SMOKE] NOTE frozen colonist's status: "
+                + frozen.GetJobReport());
+            Check("a colonist in the blast radius freezes, making peace",
+                lines.Count == 20 && frozeToTheEnd && stayedPut
+                    && reports.Count == 1 && isLine,
+                $"{lines.Count} lines; frozen when the pull started "
+                    + $"{frozeToTheEnd} ({frozen.CurJobDef?.defName}), "
+                    + $"stayed put {stayedPut}, reports: "
+                    + string.Join(" | ", reports));
+
+            CheckPullTakesOver(bomb, frozen, frozeToTheEnd, "frozen colonist");
+            RemoveTestPawns(runner, critter, frozen);
+        }
+
+        /// <summary>
+        /// A berserk colonist and a manhunting muffalo, 8 tiles either side
+        /// of an armed bomb, in plain sight: neither runs nor freezes. To
+        /// keep the check honest, each must have spent at least a second
+        /// and a half of the countdown in its mental state, on its feet,
+        /// awake, unstunned, in sight of the bomb and in reach of it.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombMentalStatesStay(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            Building_TractorBomb bomb = PlantTestBomb(map, center, 5f);
+            int flee = TractorBombFlee.FleeDistance(
+                bomb.PullRadius, bomb.BlastRadius);
+            Pawn berserker = FreshColonist(
+                map, center + new IntVec3(0, 0, 8));
+            Pawn manhunter = FreshAnimal(map, center + new IntVec3(0, 0, -8));
+            bool berserk = berserker.mindState.mentalStateHandler
+                .TryStartMentalState(
+                    MentalStateDefOf.Berserk, forced: true, forceWake: true,
+                    transitionSilently: true);
+            bool hunting = manhunter.mindState.mentalStateHandler
+                .TryStartMentalState(
+                    MentalStateDefOf.Manhunter, forced: true,
+                    forceWake: true, transitionSilently: true);
+            int berserkerSaw = 0;
+            int manhunterSaw = 0;
+            bool berserkerReacted = false;
+            bool manhunterReacted = false;
+            bomb.StartCountdown();
+            for (int i = 0; i < 600 && bomb.Spawned
+                && bomb.CurrentStage != Building_TractorBomb.Stage.Imploding;
+                i++)
+            {
+                Tick(1);
+                berserkerSaw += MindlessInReach(berserker, bomb, flee) ? 1 : 0;
+                manhunterSaw += MindlessInReach(manhunter, bomb, flee) ? 1 : 0;
+                berserkerReacted |= RunningOrFrozen(berserker);
+                manhunterReacted |= RunningOrFrozen(manhunter);
+            }
+
+            Log.Message($"[BT-SMOKE] NOTE in reach and in sight: berserker "
+                + $"{berserkerSaw} ticks, manhunter {manhunterSaw}");
+            Check("berserk and manhunting pawns neither run nor freeze",
+                berserk && hunting && berserkerSaw >= 90
+                    && manhunterSaw >= 90 && !berserkerReacted
+                    && !manhunterReacted,
+                $"berserk {berserk}, {berserkerSaw} ticks in reach, reacted "
+                    + $"{berserkerReacted}; manhunter {hunting}, "
+                    + $"{manhunterSaw} ticks in reach, reacted "
+                    + $"{manhunterReacted}");
+
+            for (int i = 0; i < 1200 && bomb.Spawned; i++)
+            {
+                Tick(1);
+            }
+
+            RemoveTestPawns(berserker, manhunter);
+        }
+
+        /// <summary>
+        /// A muffalo 7 tiles from a bomb starts to run; the pull is then
+        /// started at once (the DEV "Implode now"), so it seizes the muffalo
+        /// mid-run. Its flee must end and not come back.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombPullTakesARunner(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            Building_TractorBomb bomb = PlantTestBomb(map, center, 5f);
+            Pawn runner = FreshAnimal(map, center + new IntVec3(7, 0, 0));
+            bomb.StartCountdown();
+            for (int i = 0; i < 90 && runner.CurJobDef
+                != BT_TractorBombDefOf.BT_TractorBombFlee; i++)
+            {
+                Tick(1);
+            }
+
+            bool running = runner.CurJobDef
+                == BT_TractorBombDefOf.BT_TractorBombFlee;
+            bomb.ImplodeNow();
+            CheckPullTakesOver(bomb, runner, running, "running muffalo");
+            RemoveTestPawns(runner);
+        }
+
+        /// <summary>
+        /// Ticks a bomb until it has gone off, and checks its pull takes
+        /// over cleanly from a pawn that was running or frozen: the pull
+        /// catches it, its flee or freeze job ends, and it is given neither
+        /// again while the implosion has it.
+        /// </summary>
+        /// <param name="bomb">The bomb, counting down or pulling.</param>
+        /// <param name="pawn">The pawn.</param>
+        /// <param name="reacted">
+        /// Whether the pawn was running or frozen when the pull began.
+        /// </param>
+        /// <param name="label">What the pawn is, for the check's name.</param>
+        private void CheckPullTakesOver(
+            Building_TractorBomb bomb, Pawn pawn, bool reacted, string label)
+        {
+            bool caught = false;
+            bool released = false;
+            bool again = false;
+            for (int i = 0; i < 1500 && bomb.Spawned && pawn.Spawned; i++)
+            {
+                Tick(1);
+
+                // Judged only while the pull runs: the explosion sends a
+                // wild survivor fleeing vanilla's way, and a sabotage run
+                // showed that passing for a clean release.
+                if (!bomb.Spawned || !pawn.Spawned)
+                {
+                    break;
+                }
+
+                caught |= bomb.Implosion?.Caught.Contains(pawn) == true;
+                if (!caught)
+                {
+                    continue;
+                }
+
+                if (!RunningOrFrozen(pawn))
+                {
+                    released = true;
+                }
+                else if (released)
+                {
+                    again = true;
+                }
+            }
+
+            for (int i = 0; i < 1500 && bomb.Spawned; i++)
+            {
+                Tick(1);
+            }
+
+            Check($"the pull takes over cleanly from a {label}",
+                reacted && caught && released && !again && !bomb.Spawned,
+                $"was reacting {reacted}, caught {caught}, its job ended "
+                    + $"{released}, given one again {again}, bomb gone "
+                    + $"{!bomb.Spawned}");
+            Tick(30);
+        }
+
+        /// <summary>
+        /// Plants a player's bomb directly, as a robot would, optionally
+        /// with a fixed countdown (the def's range is restored at once).
+        /// It flips its tyres until armed with StartCountdown.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="at">Where to plant it.</param>
+        /// <param name="countdownSeconds">A fixed countdown, or null.</param>
+        /// <returns>The bomb, spawned.</returns>
+        private static Building_TractorBomb PlantTestBomb(
+            Map map, IntVec3 at, float? countdownSeconds)
+        {
+            TractorBombExtension settings = BT_TractorBombDefOf
+                .BT_TractorBombEmplaced
+                .GetModExtension<TractorBombExtension>();
+            FloatRange rolled = settings?.countdownSeconds ?? default;
+            if (settings != null && countdownSeconds.HasValue)
+            {
+                settings.countdownSeconds = new FloatRange(
+                    countdownSeconds.Value, countdownSeconds.Value);
+            }
+
+            try
+            {
+                Thing thing = ThingMaker.MakeThing(
+                    BT_TractorBombDefOf.BT_TractorBombEmplaced);
+                thing.SetFaction(Faction.OfPlayer);
+                return (Building_TractorBomb)GenSpawn.Spawn(
+                    thing, at, map, WipeMode.Vanish);
+            }
+            finally
+            {
+                if (settings != null)
+                {
+                    settings.countdownSeconds = rolled;
+                }
+            }
+        }
+
+        /// <summary>
+        /// A brand-new colonist, undrafted, rested and fed, exactly on a
+        /// spot: one free to react, unlike the colony's own, which the
+        /// stage holds drafted.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="spot">Where to put it.</param>
+        /// <returns>The colonist, spawned.</returns>
+        private static Pawn FreshColonist(Map map, IntVec3 spot)
+        {
+            Pawn p = PawnGenerator.GeneratePawn(new PawnGenerationRequest(
+                PawnKindDefOf.Colonist, Faction.OfPlayer,
+                forceGenerateNewPawn: true, dontGiveWeapon: true));
+            GenSpawn.Spawn(p, spot, map);
+            Refresh(p);
+            return p;
+        }
+
+        /// <summary>
+        /// A brand-new wild muffalo (or any animal, if muffalo are
+        /// missing), rested and fed, exactly on a spot.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="spot">Where to put it.</param>
+        /// <returns>The animal, spawned.</returns>
+        private static Pawn FreshAnimal(Map map, IntVec3 spot)
+        {
+            PawnKindDef kind =
+                DefDatabase<PawnKindDef>.GetNamedSilentFail("Muffalo")
+                ?? DefDatabase<PawnKindDef>.AllDefs.First(
+                    k => k.RaceProps.Animal);
+            Pawn p = PawnGenerator.GeneratePawn(new PawnGenerationRequest(
+                kind, null, forceGenerateNewPawn: true));
+            GenSpawn.Spawn(p, spot, map);
+            Refresh(p);
+            return p;
+        }
+
+        /// <summary>
+        /// Tops up a pawn's rest, food and joy, so it neither lies down to
+        /// sleep (a sleeping pawn sees nothing) nor wanders off to eat.
+        /// </summary>
+        /// <param name="p">The pawn.</param>
+        private static void Refresh(Pawn p)
+        {
+            if (p.needs?.rest != null)
+            {
+                p.needs.rest.CurLevel = 1f;
+            }
+
+            if (p.needs?.food != null)
+            {
+                p.needs.food.CurLevel = p.needs.food.MaxLevel;
+            }
+
+            if (p.needs?.joy != null)
+            {
+                p.needs.joy.CurLevel = 1f;
+            }
+        }
+
+        /// <summary>
+        /// Whether a pawn is running from, or frozen by, a bomb.
+        /// </summary>
+        /// <param name="p">The pawn.</param>
+        /// <returns>True if it is.</returns>
+        private static bool RunningOrFrozen(Pawn p) =>
+            p.CurJobDef == BT_TractorBombDefOf.BT_TractorBombFlee
+            || p.CurJobDef == BT_TractorBombDefOf.BT_TractorBombFreeze;
+
+        /// <summary>
+        /// Whether a pawn in a mental state is one that would run if it
+        /// were sane: on its feet, awake, unstunned, within the flee
+        /// distance and in sight of the bomb.
+        /// </summary>
+        /// <param name="p">The pawn.</param>
+        /// <param name="bomb">The bomb.</param>
+        /// <param name="flee">The flee distance, in tiles.</param>
+        /// <returns>True if it is.</returns>
+        private static bool MindlessInReach(
+            Pawn p, Building_TractorBomb bomb, int flee) =>
+            p.Spawned && !p.Dead && !p.Downed && p.InMentalState
+            && p.Awake() && !p.stances.stunner.Stunned
+            && p.Position.InHorDistOf(bomb.Position, flee)
+            && TractorBombFleeUtility.Sees(p, bomb);
+
+        /// <summary>
+        /// Takes a scenario's own pawns off the map, quietly, if they are
+        /// still on it, so they trouble no later scenario.
+        /// </summary>
+        /// <param name="pawns">The pawns.</param>
+        private static void RemoveTestPawns(params Pawn[] pawns)
+        {
+            foreach (Pawn p in pawns)
+            {
+                if (p != null && p.Spawned && !p.Destroyed)
+                {
+                    p.Destroy(DestroyMode.Vanish);
+                }
+            }
         }
 
         /// <summary>

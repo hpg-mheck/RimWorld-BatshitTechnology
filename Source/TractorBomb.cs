@@ -49,6 +49,18 @@ namespace BatshitTechnology
         /// <summary>Protesting if need be, then emplacing.</summary>
         public static JobDef BT_TractorBombEmplace;
 
+        /// <summary>
+        /// Anyone else: sprinting clear of an armed bomb
+        /// (TractorBombFlee.cs).
+        /// </summary>
+        public static JobDef BT_TractorBombFlee;
+
+        /// <summary>
+        /// Anyone else, too close to run: frozen, making peace
+        /// (TractorBombFlee.cs).
+        /// </summary>
+        public static JobDef BT_TractorBombFreeze;
+
         /// <summary>The project that unlocks the bomb.</summary>
         public static ResearchProjectDef BT_Research_TractorBomb;
 
@@ -556,8 +568,8 @@ namespace BatshitTechnology
 
     /// <summary>
     /// Shared Tractor Bomb helpers: making robots, finding their quarry,
-    /// and the queries a later step needs (the Tractor Barn counts bombs;
-    /// the flee job giver finds armed ones).
+    /// and the queries other steps need (the flee job giver finds armed
+    /// bombs; the Tractor Barn will count them).
     /// </summary>
     public static class TractorBombUtility
     {
@@ -636,8 +648,9 @@ namespace BatshitTechnology
 
         /// <summary>
         /// The emplaced bombs on a map that are armed (counting down or
-        /// imploding): what the flee job giver will run from, at each one's
-        /// <see cref="Building_TractorBomb.PullRadius"/>.
+        /// imploding): what everyone else runs from
+        /// (<see cref="JobGiver_FleeTractorBomb"/>), at each one's
+        /// <see cref="Building_TractorBomb.PullRadius"/> plus 8 tiles.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <returns>The armed bombs.</returns>

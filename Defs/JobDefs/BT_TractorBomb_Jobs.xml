@@ -31,4 +31,57 @@
     <checkOverrideOnDamage>Never</checkOverrideOnDamage>
     <alwaysShowReport>true</alwaysShowReport>
   </JobDef>
+
+  <!-- Everyone else (Source/TractorBombFlee.cs): pawns and animals that
+       can see an armed bomb sprint clear of its pull radius plus 8 tiles;
+       those inside its blast radius freeze. Given from the constant think
+       trees (Patches/BT_TractorBomb_Flee.xml). -->
+  <JobDef>
+    <defName>BT_TractorBombFlee</defName>
+    <driverClass>BatshitTechnology.JobDriver_TractorBombFlee</driverClass>
+    <reportString>running from a tractor bomb.</reportString>
+    <casualInterruptible>false</casualInterruptible>
+    <checkOverrideOnDamage>OnlyIfInstigatorNotJobTarget</checkOverrideOnDamage>
+  </JobDef>
+
+  <!-- Frozen inside the blast radius until the bomb goes off or its pull
+       seizes the pawn. Its status is one of the twenty lines below
+       (docs/TRACTOR-BOMB.md, "Making Peace"), picked per pawn; the report
+       string shows only if they are missing. Translators: DefInjected
+       BT_TractorBombFreeze.modExtensions.0.lines. -->
+  <JobDef>
+    <defName>BT_TractorBombFreeze</defName>
+    <driverClass>BatshitTechnology.JobDriver_TractorBombFreeze</driverClass>
+    <reportString>frozen in place.</reportString>
+    <casualInterruptible>false</casualInterruptible>
+    <suspendable>false</suspendable>
+    <checkOverrideOnDamage>Never</checkOverrideOnDamage>
+    <alwaysShowReport>true</alwaysShowReport>
+    <modExtensions>
+      <li Class="BatshitTechnology.TractorBombFreezeLines">
+        <lines>
+          <li>making peace with their impending doom</li>
+          <li>reconsidering every decision that led here</li>
+          <li>composing a very short memoir</li>
+          <li>wishing they had read the manual</li>
+          <li>accepting the tractor's terms</li>
+          <li>saying goodbye to a favourite chair</li>
+          <li>counting down along with it</li>
+          <li>hoping it's a dud</li>
+          <li>bargaining with physics</li>
+          <li>regretting not running sooner</li>
+          <li>thinking about the good times</li>
+          <li>admiring the engineering, briefly</li>
+          <li>standing very, very still</li>
+          <li>pretending to be furniture</li>
+          <li>revising their will, mentally</li>
+          <li>squinting hopefully at the countdown</li>
+          <li>apologising to everyone they ever knew</li>
+          <li>wondering who built this thing</li>
+          <li>finding inner peace on a deadline</li>
+          <li>waving at the tractor</li>
+        </lines>
+      </li>
+    </modExtensions>
+  </JobDef>
 </Defs>

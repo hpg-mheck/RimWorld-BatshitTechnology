@@ -14,8 +14,8 @@
 // where the blast still catches them. Pawns share cells and all fit.
 //
 // It cannot be damaged and no other implosion rips it loose: once planted,
-// it goes off. The flee step (roadmap step 6) finds armed bombs through
-// TractorBombUtility.ArmedBombs and reads each one's PullRadius.
+// it goes off. Everyone else runs from it while it is armed
+// (TractorBombFlee.cs), finding it through TractorBombUtility.ArmedBombs.
 
 using System.Collections.Generic;
 using System.Text;
@@ -163,8 +163,8 @@ namespace BatshitTechnology
         public Stage CurrentStage => stage;
 
         /// <summary>
-        /// Whether it is armed: counting down or imploding. What the flee
-        /// step will run from.
+        /// Whether it is armed: counting down or imploding. What everyone
+        /// else runs from (<see cref="JobGiver_FleeTractorBomb"/>).
         /// </summary>
         public bool IsArmed => Spawned && stage != Stage.Deploying;
 
@@ -415,6 +415,18 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// Cuts a running countdown short, so the pull starts on the next
+        /// tick (DEV and smoke-test hook). Does nothing at any other stage.
+        /// </summary>
+        public void ImplodeNow()
+        {
+            if (Spawned && stage == Stage.CountingDown)
+            {
+                stageTicks = Mathf.Max(stageTicks, countdownTicks - 1);
+            }
+        }
+
+        /// <summary>
         /// Opens the implosion: the countdown's alarm and warnings end and
         /// the pull begins.
         /// </summary>
@@ -604,7 +616,7 @@ namespace BatshitTechnology
                 {
                     defaultLabel = "DEV: Implode now",
                     icon = BT_TractorBombAssets.DevIcon,
-                    action = () => stageTicks = countdownTicks - 1,
+                    action = ImplodeNow,
                 };
             }
         }

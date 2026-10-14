@@ -29,6 +29,16 @@
       <Link>Fixtures\Defs\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\Patches\**\*.xml">
+      <Link>Fixtures\Patches\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- The Tractor Bomb's spec, whose "Making Peace" list the freeze
+         job's lines must match. -->
+    <None Include="..\..\docs\TRACTOR-BOMB.md">
+      <Link>Fixtures\docs\TRACTOR-BOMB.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\..\Textures\**\*.png">
       <Link>Fixtures\Textures\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

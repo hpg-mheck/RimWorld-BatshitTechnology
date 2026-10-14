@@ -14,7 +14,7 @@ namespace BatshitTechnology.Tests;
 /// RimWorld 1.6) and the cross-references between them, and run without the
 /// game binaries present.
 /// </summary>
-public sealed class XmlDefinitionTests
+public sealed partial class XmlDefinitionTests
 {
     private const string ReplicatorCompClass =
         "BatshitTechnology.CompProperties_RandomReplicator";

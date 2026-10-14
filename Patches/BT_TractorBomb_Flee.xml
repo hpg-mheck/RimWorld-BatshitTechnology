@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Patch>
+  <!-- Everyone else runs (docs/TRACTOR-BOMB.md; Source/TractorBombFlee.cs).
+       The Tractor Bomb's flee job giver goes first inside the gate of each
+       constant think tree that pawns and critters use: humanlikes
+       (colonists, raiders, visitors, prisoners, wild men, children),
+       animals (dryads included) and insects. The gate,
+       ThinkNode_ConditionalCanDoConstantThinkTreeJobNow, already turns
+       away pawns in a mental state (berserk, manhunting), drafted pawns,
+       downed pawns that cannot crawl, and burning or sleeping ones. First
+       inside it means ahead of vanilla's own flee from an explosive about
+       to go off (humanlikes) and from danger (animals and insects).
+
+       The constant tree, not the main one: it is asked every half second,
+       while the main tree is asked only when a job ends, which can be too
+       late for a three-second countdown. Mechanoids, drones and Anomaly's
+       entities keep their own trees: they do not run. Each XPath is split
+       over lines between its steps, which XPath allows, to keep the lines
+       short. -->
+  <Operation Class="PatchOperationAdd">
+    <xpath>Defs/ThinkTreeDef[defName="HumanlikeConstant"]
+      /thinkRoot/subNodes
+      /li[@Class="ThinkNode_ConditionalCanDoConstantThinkTreeJobNow"]
+      /subNodes</xpath>
+    <order>Prepend</order>
+    <value>
+      <li Class="BatshitTechnology.JobGiver_FleeTractorBomb" />
+    </value>
+  </Operation>
+
+  <Operation Class="PatchOperationAdd">
+    <xpath>Defs/ThinkTreeDef[defName="AnimalConstant"]
+      /thinkRoot/subNodes
+      /li[@Class="ThinkNode_ConditionalCanDoConstantThinkTreeJobNow"]
+      /subNodes</xpath>
+    <order>Prepend</order>
+    <value>
+      <li Class="BatshitTechnology.JobGiver_FleeTractorBomb" />
+    </value>
+  </Operation>
+
+  <Operation Class="PatchOperationAdd">
+    <xpath>Defs/ThinkTreeDef[defName="InsectConstant"]
+      /thinkRoot/subNodes
+      /li[@Class="ThinkNode_ConditionalCanDoConstantThinkTreeJobNow"]
+      /subNodes</xpath>
+    <order>Prepend</order>
+    <value>
+      <li Class="BatshitTechnology.JobGiver_FleeTractorBomb" />
+    </value>
+  </Operation>
+</Patch>
