@@ -222,6 +222,12 @@ Between phases, or alongside them (not phases themselves):
 - **RimWorld 1.7 beta** ("Waylith" engine): a trial build and smoke run;
   stay on 1.6 until 1.7 is released.
 - **Art:** hand-drawn replacements for the procedural sprites, if wanted.
+- **Def validation in the build** (next, after phase 4000 merges): run
+  `Tools/validate-defs.ps1` as a post-build step that fails the build on any
+  problem, with an opt-out for quick iterations, and prove it with a
+  misspelled `Class=` (which in 1.6 drops the whole Def at runtime). Then
+  document the pattern in the RimWorld pack's Def-validation knack and,
+  with an ECR, in FieldManual's `dotnet/framework-builds` knack.
 - **Records migration:** proposal BT-PROP-2026-001 (moving these records
   into FieldManual's layout) awaits a decision; proposed for right after
   a phase merges.
