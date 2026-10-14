@@ -16,6 +16,16 @@
 - Fire counts as damage, so a burning self-destruct device rolls its 5%
   trigger on every fire tick and will almost certainly go off. That is
   probably the most batshit outcome, but worth watching in play.
+- Multi-bomb physics (2026-10-14): pulls of constant strength cancel all
+  along the line between two equal centres, so things in an overlap
+  gather on that line and creep along it at a few per cent of the rate;
+  both bombs then run to their 8 s maximum. A bomb planted within
+  another's reach makes its own pile a balance point too: a thing at its
+  centre leaves it only if the other pull is the one it favours. Both
+  are the physics as specified, and worth watching in play.
+- Stretching acts on any pawn under more than one strong pull, colonists
+  included; three points a second between two bombs head on will hurt
+  but rarely kill in eight seconds. Tune in play.
 - The singularity moves pawns by teleporting them a cell at a time (with
   the draw position tweened), and holds every pawn in reach stunned from
   the moment it opens; there is no true physics, and natural rock is never
@@ -65,6 +75,10 @@
     ran. Once more (2026-10-13) it sat but left before the 600 ticks its
     effects need; the check now feeds and rests the colonist first and
     reports how long it sat.
+  - Seen again while building the multi-bomb physics (about twenty
+    runs on 2026-10-14): the AnyRim lamp check three times, and once the
+    Artificer's "it works the next unit on its own" (bolts +4, 28 fired,
+    none carried), both before any implosion code runs.
   - The Random Replicator was gone, with nothing logged, when its
     detonation test began, after AnyRim, and the runner crashed (once in
     about thirty runs). The runner now fails a check saying how it went

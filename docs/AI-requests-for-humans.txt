@@ -56,3 +56,12 @@ Matt "Breakpoint" Heck:
 12. The Interstellar Delivery Locker and Drone (docs/DELIVERY-LOCKER.md,
     "Open Questions"): visit and delivery rhythm and cost; what each item
     does; the drone's blast; research.
+13. Tractor Bomb multi-bomb physics (built 2026-10-14; docs/TRACTOR-BOMB.md,
+    "As Built"): the proposals stand unless changed. Matt "Breakpoint"
+    Heck, please confirm or retune: 2 s minimum and 8 s maximum per
+    pull; the jitter (a persistent 6-degree turn and a per-thing
+    preference among pulls 4 per cent apart, plus a 3-degree, 1 per
+    cent flicker per step); and the optional stretching, which was
+    built: none below 6 cells a second of opposing pull, then a point
+    per 6, at most 4 a second, leaving a "stretch mark" ("{0} has been
+    spaghettified.").

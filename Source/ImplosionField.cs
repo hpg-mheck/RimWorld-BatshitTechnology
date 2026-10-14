@@ -197,34 +197,6 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// The net pull on a cell from the implosions running now, with no
-        /// jitter, and the rates it sums (diagnostics and the smoke test).
-        /// </summary>
-        /// <param name="cell">The cell.</param>
-        /// <param name="totalRate">
-        /// The sum of the reaching pulls' rates.
-        /// </param>
-        /// <returns>
-        /// The net pull, in cells per second along x and z.
-        /// </returns>
-        public (double X, double Z) NetPull(
-            IntVec3 cell, out double totalRate)
-        {
-            var reaching = new List<PullSource>();
-            totalRate = 0;
-            foreach (Implosion i in active)
-            {
-                if (!i.Closed && cell.InHorDistOf(i.Center, i.PullRadius))
-                {
-                    reaching.Add(Source(i));
-                    totalRate += i.CurrentRate;
-                }
-            }
-
-            return PullSuperposition.NetPull(cell.x, cell.z, reaching);
-        }
-
-        /// <summary>
         /// Saves and loads each caught thing's step clock and last try.
         /// </summary>
         public override void ExposeData()

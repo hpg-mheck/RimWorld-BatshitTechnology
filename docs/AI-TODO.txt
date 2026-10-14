@@ -162,6 +162,20 @@
     once per bomb, a third each flee at once, hesitate 2 s or ignore it;
     everyone else bails at once. Core's TractorBombHostiles with unit
     tests; two seeded smoke checks proved by sabotage.
+  - [x] Step 11, multi-bomb physics (2026-10-14): absolute minimum and
+    maximum implosion durations in ImplosionSettings (Tractor Bomb 2 to
+    8 s, grenade exactly 5 s); superposed pulls through a map-level
+    MapComponent_Implosions (Source/ImplosionField.cs) with Core's
+    PullSuperposition; random bias jitter (a persistent per-thing
+    preference order and turn, a flicker from Rand per step); stretching
+    damage between opposing pulls (BT_Stretch, BT_StretchMark); shelves
+    wait to be ripped until their extra stacks are dragged off. Core and
+    XML tests (459 to 510), and the twin-bomb junkyard and superposed
+    chain-reaction smoke checks, each proved by a sabotage run.
+  - [ ] Tune the multi-bomb physics in play: the jitter (6 degrees and
+    a 4 per cent preference gap, 3 degrees and 1 per cent of flicker),
+    how slowly things creep along a balance line (a few per cent of the
+    rate), and stretching (3 a second for two bombs head on).
   - [ ] Step 12: showcase scene and docs.
   - [ ] Replace the protest's TrapArm click with a beep from the sound
     pipeline (feature/audio).
@@ -242,6 +256,16 @@ SmokeTest.TractorBombHits.cs, TestDeathBlasts), each check proved to
 fail by a sabotage run; XML tests pin the barn's defs and the
 stopgap's removal; the barn's art is checked by eye at full size and
 downsampled.
+
+The multi-bomb physics follows it too. Its arithmetic is in Core with
+unit tests (ImplosionMath.IsOver: the durations; PullSuperposition: the
+superposed steps and rates, the jitter, rounding, tension and stretching
+damage), and XML tests pin the bomb's durations and the stretching
+defs. The map-level drag (MapComponent_Implosions), the implosions'
+tallies, stretching a real pawn and the shelf rule need a live map, so
+the smoke runner covers them (SmokeTest.TractorBombTwins.cs: the
+twin-bomb junkyard and the superposed chain reaction, watched tick by
+tick), each check proved to fail by a sabotage run.
 
 Comps, buildings and job drivers depend on RimWorld's runtime (map, ticks,
 power nets, Unity), so they are not unit-testable in this project. They are

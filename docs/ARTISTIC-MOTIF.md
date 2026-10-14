@@ -217,6 +217,11 @@ its blast radius, are the model: the pawn is doomed and knows it, and
 the line stays small and human ("saying goodbye to a favourite chair").
 They live in XML, without the full stop, which the code adds.
 
+Injuries a device inflicts are named in plain medical words, lowercase as
+vanilla's are ("stretch mark", scarring to a "stretch scar"), with the
+joke left to the description and the death message, which may land it
+in one word: "{0} has been spaghettified."
+
 ### Places and People
 
 AnyRim, the showcase's test town (`docs/SHOWCASE.md`), adds signs and

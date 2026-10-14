@@ -8,7 +8,9 @@ run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
     dotnet test Tests/BatshitTechnology.Tests/BatshitTechnology.Tests.csproj
 
 - Core library logic: WeightedSelector, ReactorHeat, and whatever else
-  moves into BatshitTechnology.Core.
+  moves into BatshitTechnology.Core, including the multi-bomb physics
+  (PullSuperposition, with property-style tests over many seeds through
+  its seedable SeededUnitRandom).
 - XML regression tests over Defs/, About and Textures/: the corrected v0.2
   values (so those bugs cannot return), research, recipes, the reactor,
   every BT_ cross-reference, every mod texture path, and two RimWorld
@@ -100,6 +102,22 @@ Core's TractorBombHostiles gives them and act on it (flee on the think
 they notice it, hesitate two to two and a half seconds, or never react),
 at least four of each, and no roll changes; a colonist among them bails
 at once without rolling.
+Twin bombs (SmokeTest.TractorBombTwins.cs, seeded): in a junkyard of
+slag, rock chunks, loose stacks, shelves of items and ancient crates,
+fourteen armed raiders hold position (stunned until both robots plant,
+then reacting as they roll) while two Nosy robots drive in from either
+side and plant 14 tiles apart; both pulls start on the same tick. Watched
+every tick: both bombs go off; each pull keeps to its 2 s minimum and 8 s
+maximum; the junk's totals never fall without a blast; no move goes
+against the net pull (under one pull it must be strictly closer, under
+two the unjittered potential may rise no more than the jitter allows)
+and nothing is shoved; a pawn any pull holds stays held; things that were
+in the overlap end merged, tipped off to one bomb, in a pile, at a
+balance point or blocked, at least one at a balance point; and a raider
+held between the pulls is stretched, none that never was. Then two
+superposed bombs four tiles apart: one is hit and goes off within two
+ticks, its pull closes and leaves the drag at the next tick, its blast
+sets off the other while it pulls, and no pull outlives its bomb.
 Shooting planted bombs (SmokeTest.TractorBombHits.cs): a revolver bullet
 striking a bomb in its countdown starts its pull within two ticks; a
 second, striking it while it pulls, sets off its blast within two ticks,
@@ -119,8 +137,15 @@ and refitted for exactly the steel and time Core's TractorBarnRepair
 predicts, then drives off on patrol. A destroyed barn flings its spare
 tyres (TestDeathBlasts). Unit tests cover its pure logic
 (TractorBombYield, TractorBombTiming, DeathVortexMath, TractorBombFlee,
-TractorBarnRepair, TractorBombApproach, TractorBombHostiles). Each new
-check was proved by a run that broke its behaviour first.
+TractorBarnRepair, TractorBombApproach, TractorBombHostiles,
+ImplosionMath.IsOver, PullSuperposition: one jittered pull never moves
+anything away from its centre and gathers it in as many steps as ever,
+over many seeds and positions; two equal pulls cancel along the line
+between them without jitter, and with it a thing at the midpoint tips
+off at once toward the pull its bias favours; net directions round to
+grid steps; the durations' minimum and maximum; the jitter's bounds and
+seedability; tension and stretching damage). Each new check was proved
+by a run that broke its behaviour first.
 
 The runner silences the storyteller at the start, so no raid lands in
 the middle of a check (one raid sent pirates round a long-range Ballista

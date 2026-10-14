@@ -651,3 +651,93 @@ before its detonation test (seen once, nothing logged): a check fails
 with what is known and a fresh replicator stands in, so the rest of the
 run is still tested. Both are logged in docs/AI-KNOWN-ISSUES.txt for
 whoever next works on AnyRim and the self-destructs.
+2026-10-14 Claude: Tractor Bomb multi-bomb physics (ROADMAP.md, step 11,
+"Multi-bomb physics"; docs/TRACTOR-BOMB.md, "As Built"). Decisions:
+- Durations live in ImplosionSettings (minDurationTicks,
+  maxDurationTicks), not in each host, so every implosion has them and a
+  Def can set them; Core's ImplosionMath.IsOver decides and
+  Implosion.Over reports. The Tractor Bomb runs 2 to 8 s (the roadmap's
+  proposal), replacing TractorBombTiming's 7.5 s cap, which is gone. The
+  grenade's minimum and maximum are both its ramp, so it ends exactly when
+  TimeUp said; saves from before the durations get that rule too.
+- Superposition is a potential: each pull contributes its rate times the
+  distance to its centre, and the net pull the roadmap describes (a unit
+  direction per centre scaled by its rate) is that potential's downhill
+  slope. A step must go strictly downhill, which for one pull is exactly
+  "strictly closer to the centre" (checked in whole numbers), so the
+  lone-pull guarantee does not depend on the jitter at all, and no cycle
+  can repeat while the weights hold. Allowed steps are tried in order of
+  how well they line up with the jittered net direction, so the best is
+  that direction rounded to a grid step.
+- With constant-strength pulls, two equal ones cancel along the whole
+  line between their centres. That is the physics the roadmap asked for,
+  so things in the overlap gather on that line and creep along it at the
+  few per cent the bias gives them; the 8 s maximum ends the tug-of-war.
+- The drag moved to a map-level owner, MapComponent_Implosions
+  (Source/ImplosionField.cs). Implosions still seize, rip and keep their
+  own clocks and save themselves; the first to tick in a game tick drags
+  everything once. Each thing keeps its own step clock at its net rate
+  (saved by thing id), and a newly caught thing joins the strongest
+  pull's clock, so under one implosion everything steps exactly when the
+  old shared clock said: the grenade's and the single bomb's smoke checks
+  pass unchanged. Implosions not ticked for a tick drop out; hosts close
+  theirs when they explode or leave, so a survivor's pull lurches free at
+  once.
+- Settled now means every thing in reach either sits on the centre or
+  failed its last try to step (restless otherwise), counted on the
+  implosion's own clock. Under one pull that is what "the last step moved
+  nothing" meant; under two, a thing creeping at a balance point keeps
+  both unsettled, as the roadmap expects.
+- The jitter's strength part is a per-thing preference order among the
+  pulls it feels, 4 per cent apart (hashed from the thing's id and each
+  implosion's seed), not an independent random per pull: independent
+  biases can come arbitrarily close, and then the flicker, not the bias,
+  would decide, so a thing at a midpoint could hover. With the order and a
+  flicker of 1 per cent, the bias always decides, as the roadmap's "at a
+  balance point, the bias decides which pull wins" and "always tips off
+  within a few steps" ask. Turns: 6 degrees persistent, 3 flicker, 9 in
+  all, under the 22.5 that would let rounding pick a slower step. The
+  flicker is RimWorld's Rand in game and a seedable SplitMix64
+  (SeededUnitRandom) in the tests, through Core's IUnitRandom.
+- Stretching (optional in the roadmap) fitted cleanly, so it is built: a
+  pawn under more than one pull is checked once a second, and the damage
+  follows Core's Tension (the pulls' rates less their net pull, a pull it
+  sits at the centre of holding it up to its own rate): none to 6 cells a
+  second, a point per 6 beyond, at most 4. BT_Stretch has no armour
+  category, so armour does not help; it leaves BT_StretchMark. The
+  instigator is the strongest pull's (the bomb).
+- Found by the twin-bomb smoke test, and fixed in the shared implosion:
+  ripping a shelf holding several stacks made RimWorld's Building.DeSpawn
+  re-place the extra stacks near, often away from the pull (and drop any
+  it found no room for). A fixture whose cells hold more stacks than bare
+  ground can now waits to be ripped until the drag has taken them off.
+- The twin-bomb smoke scenario: armed raiders (Mercenary_Gunner, given a
+  rifle if they have none) under a defend-point lord that never flees,
+  stunned until both robots have planted so the robots arrive whole (the
+  test is of the physics, not the robots' survival), then free to react
+  as rolled for two and a half seconds. The countdowns are held at 30 s
+  while the robots come and both pulls are started on the same tick
+  (ImplodeNow), so the two are equally strong and the overlap is a true
+  tug-of-war. RimWorld's Rand is pushed to a fixed seed for the scenario
+  and both bombs' hostile rolls use it. Moves are judged only on ticks
+  when the same pulls ran before and after; a move under several pulls
+  may raise their unjittered potential by no more than the jitter allows
+  (with each pull's rate from before or after the tick, whichever is
+  kinder, since the drag runs mid-tick). The overlap's end is judged when
+  the first bomb goes off: each thing that was ever under both pulls must
+  be merged, tipped off to one bomb, in a pile (within 4 tiles of a
+  centre), at a balance point (net pull at most a tenth of the pulls'
+  sum), or blocked (every clearly downhill cell full), now or within the
+  last 15 ticks; and at least one must be at a balance point, which a
+  drag that ignored all but one pull fails. Loss is a fall in the junk's
+  totals on a tick with no explosion spreading before or after it (an
+  explosion destroys itself on the tick it affects its last cells).
+- Proof: every new unit test and smoke check was run against a sabotage
+  first (Core: lone steps that may go away, no bias, truncated rounding,
+  unseeded noise, flicker as large as the bias, steps not downhill, only
+  the first pull counting, 30-degree turns, the minimum ignored; smoke:
+  no maximum, a late maximum, items spawned into full cells, items lost,
+  steps away from the strongest centre, only the first pull counting,
+  short stuns, a 1.5 s pull, pulls not closed, an error logged, a bomb
+  that never goes off, no stretching, stretching under one pull). Each
+  failed the check it was aimed at.

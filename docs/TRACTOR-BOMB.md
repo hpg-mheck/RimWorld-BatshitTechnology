@@ -6,7 +6,7 @@ answered every open question the same day. A few smaller details are
 still marked *(proposal)*; they stand unless he says otherwise. Roadmap
 steps 2 to 10 are built, the Tractor Barn (8) last (see "As Built"
 below), with the decisions taken after the core build applied alongside
-it.
+it, and so is step 11's multi-bomb physics (2026-10-14).
 
 ## The Tractor Bomb
 
@@ -63,9 +63,11 @@ Implementation (proposed, then built; see "As Built"):
 - **The implosion** is built (roadmap step 2): `Implosion`
   (`Source/Implosion.cs`), set by Core's `ImplosionSettings`, with a pull
   radius of 10 and a gather radius of 1.5. The emplaced bomb owns it,
-  ticks it and saves it, and explodes as soon as it reports everything
-  `AllGathered` or `Settled` (nothing more can move), or at a cap of its
-  own: half again its drag time (built).
+  ticks it and saves it, and explodes when it reports itself `Over`:
+  never before its 2-second minimum, then as soon as everything is
+  `AllGathered` or `Settled` (nothing more can move), and at its
+  8-second maximum however things stand (built; see "Multi-bomb
+  physics" under "As Built").
   - The pile holds one item stack per cell: nine within 1.5 tiles, since
     the planted bomb lets things pass over it. Any more stacks wait just
     outside, the bomb goes off once they settle, and its blast catches
@@ -192,8 +194,11 @@ build settled a detail, it is recorded here; the decisions log
   band (`CountdownWarningBand`, shared with the self-destructs) and its
   rings. The implosion pulls at the bomb's pull radius, gathers to 1.5
   tiles, drags at the grenade's rates and rips fixtures loose as the
-  grenade does; the bomb explodes (Bomb damage, 65) as soon as
-  everything is gathered or settled, or at 450 ticks.
+  grenade does; the bomb explodes (Bomb damage, 65) when its pull is
+  over: not before 2 seconds (120 ticks), then as soon as everything is
+  gathered or settled, and at 8 seconds (480 ticks) however things
+  stand. The two limits are the implosion settings' `minDurationTicks`
+  and `maxDurationTicks` in the bomb's XML.
   - **The pile:** pawns and items pass over the planted bomb, like
     sandbags, so its own cell is part of the pile: nine item stacks fit
     within 1.5 tiles, pawns without limit. Stacks beyond nine that cannot
@@ -320,6 +325,72 @@ build settled a detail, it is recorded here; the decisions log
   - **Its death:** destroyed, it blows its doors off (a 3.9-tile Bomb
     blast, 25) and 6 to 10 spare tyres stampede out up to 14 tiles,
     bowling over what they land on (Blunt, 12).
+- **Multi-bomb physics** (roadmap step 11, built 2026-10-14). Several
+  pulls at once, without changing anything when there is only one.
+  - **Absolute durations:** every implosion's settings carry a minimum
+    and a maximum (`ImplosionSettings.minDurationTicks`,
+    `maxDurationTicks`; Core's `ImplosionMath.IsOver`). Before the
+    minimum it keeps pulling even if everything is gathered or settled;
+    at the maximum it ends however things stand. The Tractor Bomb runs 2
+    to 8 seconds (its build used a 7.5-second cap); the grenade's minimum
+    and maximum are both its five-second ramp, so it ends exactly when
+    it always did.
+  - **Superposition** (`Source/ImplosionField.cs`, Core's
+    `PullSuperposition`): the drag belongs to the map
+    (`MapComponent_Implosions`). Each implosion still seizes pawns, rips
+    fixtures and keeps its own clock, but the first to tick in a game
+    tick drags every caught pawn and item once, under all of them. A
+    thing feels the sum of every pull that reaches it, a direction
+    toward each centre scaled by that pull's current rate, and steps one
+    cell along the net direction at the net rate (a clock of its own).
+    The pulls add up as a potential (each rate times the distance to its
+    centre): a step must go strictly downhill, which under one pull is
+    exactly "strictly closer to its centre", and the allowed steps are
+    tried in order of how well they line up with the net direction, so
+    the best is that direction rounded to a grid step. Items still merge
+    or wait, never spawning into a full cell; pawns any pull reaches are
+    held stunned while any pull holds them.
+  - **Balance points:** pulls of constant strength cancel all along the
+    line between two equal centres, not just at its midpoint, so things
+    in the overlap are drawn onto that line and creep along it. A creeping
+    thing keeps both pulls unsettled, so a tug-of-war runs to the
+    8-second maximum; when one bomb goes off, its pull closes at once and
+    everything lurches toward the survivor.
+  - **Random bias jitter:** every pull calculation for a thing is turned
+    by a few degrees and scaled by a few per cent. The persistent part is
+    hashed from the thing's id and each implosion's seed (drawn from
+    RimWorld's `Rand` when it opens): a turn of up to 6 degrees, and a
+    strength set by the thing's own preference order among the pulls it
+    feels, 4 per cent apart (with two, one at plus 2 per cent and one at
+    minus 2). A fresh flicker from `Rand` on every step adds up to 3
+    degrees and 1 per cent. Two flickers can never close the bias's gap,
+    so at a balance point the bias always decides which pull wins, and
+    the turns, under 22.5 degrees together, never point a thing away
+    from a lone pull nor slow its gathering by a step.
+  - **One pull alone** drags exactly as before: at its own rate (a
+    newly caught thing joins its clock), only ever closer to its centre,
+    and in as many steps (the cell path may differ by the jitter). An
+    implosion tallies on its own clock: outstanding things (outside its
+    gather radius) and restless ones (not yet tried, or moved at their
+    last try).
+  - **Stretching** (the roadmap's optional joke about spaghettification):
+    a pawn held between strong opposing pulls takes stretching damage
+    once a second (`BT_Stretch`, leaving a `BT_StretchMark`, "stretch
+    mark"; armour does not help; "{0} has been spaghettified."). The
+    damage follows how hard the pulls strain against each other (Core's
+    `PullSuperposition.Tension`: their rates less their net pull): none
+    up to 6 cells a second, then a point per 6 beyond, rounded up, at
+    most 4; two Tractor Bombs head on at full pull do 3 a second.
+  - **Shelves wait to be ripped** (found by the twin-bomb test): a
+    fixture holding more stacks on a cell than bare ground can (a shelf)
+    is ripped loose only once the drag has taken its extra stacks off
+    it. Ripped at once, RimWorld re-placed the extra stacks near, away
+    from the pull as often as not, and would drop any it found no room
+    for. This applies to the grenade too.
+  - **Chain reactions** behave: a bomb that goes off closes its pull,
+    which leaves the drag at the next tick; its blast sets off a planted
+    neighbour, pulling or not. `IImplosionProof` (a planted bomb) is now
+    exempt from the drag as well as from being ripped loose.
 - **For the next steps.** Robots are made with
   `TractorBombUtility.MakeRobot` or `SpawnRobot`, and a faction's bombs,
   planted ones included, are counted with `CountOnMap`. Armed bombs are
