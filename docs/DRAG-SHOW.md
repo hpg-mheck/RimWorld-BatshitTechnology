@@ -32,8 +32,9 @@ physics. Text follows the motif's rule: funny, never cruel.
 - **An emcee:** a male colonist wearing a **Prom Dress**, or a female
   colonist wearing a **Luchador Onesie**. Both are new apparel.
 - **Relax Historical Accuracy:** a checkbox on the Center Stage marker
-  (decided 2026-10-13), so each stage keeps its own setting. When it is checked, any pawn can emcee, whatever they
-  wear and whatever their gender.
+  (decided 2026-10-13), so each stage keeps its own setting. When it is
+  checked, any pawn can emcee, whatever they wear and whatever their
+  gender.
 
 ## The Outfits and Batshittium Monofilament
 
@@ -47,9 +48,14 @@ Specified 2026-10-13:
 
 *(Proposals:)*
 
-- **What "improves results" means.** As stuff, monofilament is a superior
-  fabric: high beauty, good insulation and armour, light, tough. That
-  works for any fabric apparel, not just these two.
+- **What "improves results" means.** As stuff, monofilament is slightly
+  better than hyperweave (specified 2026-10-13).
+  - *(Proposal:)* about 10% better on each of hyperweave's stuff stats:
+    sharp armour 2.2, blunt 0.6, heat 3.15, insulation 29 and 29, beauty
+    factor 6.
+  - Its market value is set to match.
+  - Like any fabric, it works for all fabric apparel, not just these
+    two.
   - On the two outfits it also gives the show a bonus: an emcee in
     monofilament makes a better show. That means more recreation for the
     audience, and a higher quality score when Ideology's ritual layer is
@@ -168,9 +174,10 @@ Specified 2026-10-13:
    damage right, with a recreation boost and a short good-mood memory?
 2. Research and costs: which project unlocks the show, and what do the
    stage tiles, markers and the two outfits cost? The chairs are 5 steel.
-3. Batshittium Monofilament: is "improves results" a better fabric (as
-   proposed) plus a show bonus? What are the Extruder's inputs and
-   yield (1 batshittium to 25 monofilament proposed)? Should
-   monofilament be usable for every fabric item, or only these outfits?
+3. Batshittium Monofilament (slightly better than hyperweave: answered):
+   about 10% better per stat, plus a show bonus for the emcee's outfit?
+   What are the Extruder's inputs and yield (1 batshittium to 25
+   monofilament proposed)? Usable for every fabric item, as any fabric
+   is, or only these outfits?
 4. Disco music before the sound pipeline exists: silence, a vanilla
    stand-in, or wait for the pipeline?

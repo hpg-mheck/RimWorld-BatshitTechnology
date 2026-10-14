@@ -49,7 +49,8 @@ Matt "Breakpoint" Heck:
     moderate; Relax Historical Accuracy is a checkbox on the Center Stage
     marker; outdoors the drag is capped at 15 tiles, and trees go
     flying; chairs should face the stage but it is not enforced. Still
-    open: the injury and buff numbers; research and costs; what
-    Batshittium Monofilament's "improves results" means, the Extruder's
-    yield, and whether monofilament works for all fabric items; and disco
-    music before the sound pipeline exists.
+    open: the injury and buff numbers; research and costs; Batshittium
+    Monofilament's exact stats (slightly better than hyperweave; about
+    10% proposed), the show bonus, the Extruder's yield, and whether it
+    works for all fabric items; and disco music before the sound
+    pipeline exists.
