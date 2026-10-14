@@ -10,11 +10,15 @@
   (three new areas), drafted on `04bcec5`
 - Request owner: Matt "Breakpoint" Heck
 - Drafted: 2026-10-14
-- Submitted: Not yet submitted
-- Submitted-content digest: Not yet recorded
-- Source lifecycle: Open
-- Target handling status as reported: Not submitted
-- Target intake ID or authoritative reference: None
+- Submitted: 2026-10-14, as pull request
+  Hard-Problems-Group-LLC/FieldManual#1
+- Submitted-content digest: branch `knacks/from-batshit-technology`
+  at commit `d354450`
+- Source lifecycle: Closed
+- Target handling status as reported: Accepted and merged,
+  2026-10-14
+- Target intake ID or authoritative reference:
+  https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1
 - Sensitivity and reuse classification: Public; stock reusable guidance
   with no project-specific content
 - Related, duplicate, or superseded ECR IDs: siblings, one per knack area:
@@ -39,17 +43,17 @@ or directed showcases.
 
 ### Requested Outcome
 
-- Add `testing/in-host-smoke-testing.knack/`,
-  `procedural-generation/data-first-generation.knack/`,
-  `procedural-generation/procedural-sprite-generation.knack/` and
-  `demonstrations/directed-showcases.knack/`, with area READMEs (18 files,
-  about 18,200 words).
+- Add `testing/in-host-smoke.knack/`, `testing/proving-checks.knack/`,
+  `procedural-generation/data-first.knack/`,
+  `procedural-generation/sprites.knack/` and
+  `demonstrations/showcases.knack/`, with area READMEs (21 files, about 22,900
+  words).
 - Update `knacks/software-engineering/README.md`.
 
-The proposed files are commit `0486ac3` on the local branch
-`knacks/from-batshit-technology` of a FieldManual checkout, based on
-`04bcec5`. The branch is not pushed; it will be offered as a pull request when
-the operator approves.
+The proposed files are on the branch `knacks/from-batshit-technology` of
+Hard-Problems-Group-LLC/FieldManual (added in `a32a511`, renamed to their
+final paths in `d354450`), offered as a pull request against `main` at
+`04bcec5`.
 
 ### Acceptance Criteria
 
@@ -82,6 +86,8 @@ the operator approves.
 
 ### Evidence At Submission
 
+- Sabotage runs in the source project exposed several vacuous checks; 8 of 9
+  behavioural sabotage runs logged no error, so a clean log is no test.
 - Derived from an in-host smoke runner that grew to 137 checks, a procedurally
   planned town with unit-tested invariants, and screen-captured showcases.
 - The sketch code ran: the summed-area table against brute force, the flood
@@ -100,9 +106,36 @@ until the knacks are available from the FieldManual submodule.
 ### Transport And Receipt Log
 
 - 2026-10-14 — Drafted locally; not yet submitted.
+- 2026-10-14 — Submitted, revision 1, as pull request
+  Hard-Problems-Group-LLC/FieldManual#1 from branch
+  `knacks/from-batshit-technology` at `d354450`.
+- 2026-10-14 — Pull request FieldManual#1 updated to `d5af082` after the
+  operator's review.
+- 2026-10-14 — Pull request history rebuilt so every commit adds files at
+  their final paths; head `19fcd4f`. Content unchanged.
+- 2026-10-14 — Pull request FieldManual#1 merged into `main` as `b981327` by
+  the FieldManual owner; branch deleted.
 
 ### Discussion And Amendments
 
+- 2026-10-14 — The operator returned FieldManual#1 because file names repeated
+  their path. Under BT-ECR-2026-009 revision 2 the files were renamed in
+  `d5af082`: no `.knack` directory suffix, and no topic or `api.` prefix in
+  file names. The knacks are now at `knacks/software-engineering/` with
+  `testing/in-host-smoke/`, `testing/proving-checks/`,
+  `procedural-generation/data-first/`, `procedural-generation/sprites/` and
+  `demonstrations/showcases/`. Their content is unchanged; the request stands
+  as submitted.
+
 ### Target Disposition
 
+- Accepted and implemented, 2026-10-14. FieldManual merged pull request #1
+  (https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1) into `main`
+  as `b981327`, after review and two rounds of requested naming changes, which
+  are recorded above.
+
 ### Source Closure
+
+- 2026-10-14 — Closed on merge by Claude Code for Matt "Breakpoint" Heck,
+  who merged the pull request; disposition accepted and implemented. Batshit Technology picks the
+  change up by advancing its `FieldManual/` submodule.

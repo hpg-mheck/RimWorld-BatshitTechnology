@@ -561,3 +561,16 @@ Tools/smoke-test.ps1 -Showcase reached READY 28 seconds after launch
 through the main menu and the launcher, then THROW and FINISHED (AnyRim
 found no site on that map and said so), with no error-shaped lines and
 no files in Saves; the game, our own, was then closed.
+
+2026-10-14 - Def validation runs in every build. In RimWorld 1.6 an
+unresolvable Class= drops the whole Def at load (confirmed in game with a
+probe def: "Could not find type named ..." from
+DirectXmlToObjectNew.ResolveTypeForNode, then failed cross-references from
+anything that refers to it), so a typo silently removes content. The
+ValidateDefs target in Source/BatshitTechnology.csproj runs
+Tools/validate-defs.ps1 after Build against the assembly just built
+(-Assembly $(TargetPath), so Debug builds check the Debug DLL) and fails
+the build on any problem; -MSBuild prints each problem as
+"<file>: error BTDEF: ...". It adds about four seconds. Skip it once with
+-p:SkipDefValidation=true. Proved by sabotage: a misspelt Class= in
+Defs/Misc/BT_AnyRim.xml failed the build with one BTDEF error.

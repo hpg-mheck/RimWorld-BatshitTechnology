@@ -169,7 +169,8 @@ Answered on 2026-10-13 (details in `docs/TRACTOR-BOMB.md`, "Decisions"):
 
 In order, each on its own branch:
 
-- **Phase 5000, Sound pipeline** (`feature/audio`):
+- **Phase 5000, Sound pipeline** (`feature/audio`, `docs/SOUND-PIPELINE.md`,
+  drafted 2026-10-14 with 13 open questions):
   `Tools/make_sounds.py`, SoundDefs, and an audio section in the motif.
   Needed by the Colony Bomb and Mirror Mirror. Once it works, it also
   makes the Drag Show's original disco track, which replaces the party
@@ -222,6 +223,9 @@ Between phases, or alongside them (not phases themselves):
 - **RimWorld 1.7 beta** ("Waylith" engine): a trial build and smoke run;
   stay on 1.6 until 1.7 is released.
 - **Art:** hand-drawn replacements for the procedural sprites, if wanted.
+- **Def validation in the build:** done 2026-10-14 (the ValidateDefs
+  target; `docs/AI-DECISIONS.txt`), documented in the RimWorld pack and
+  offered to FieldManual as #3 (BT-ECR-2026-012).
 - **Records migration:** proposal BT-PROP-2026-001 (moving these records
   into FieldManual's layout) awaits a decision; proposed for right after
   a phase merges.
