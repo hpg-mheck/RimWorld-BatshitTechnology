@@ -546,3 +546,18 @@ commit after them). Decisions:
   Static tests were proved the same way: HarmonyLib used in another file,
   god mode set outside the loan, the old namespace regex, and Core and
   Python sabotage each failed their tests.
+Verification after the review fixes, on 254da8e: a full rebuild with 0
+warnings and 0 errors, and no 0Harmony.dll in Assemblies/;
+Tools/validate-defs.ps1, 0 problems; 317 unit and XML tests pass; 18
+Python tests pass with Pillow and BT_REQUIRE_PILLOW=1 (8 skip without
+Pillow). Two consecutive smoke runs passed 131 of 131, exit 0, with no
+mod errors (the only error-shaped lines were Mono's two routine
+"Fallback handler" lines; the five messages provoked on purpose were
+left out). The two runs before them each failed one old check on map
+noise, "AnyRim's devices and lamps are powered" (two and three of 23
+unpowered, each on a net with no generator: "connected; net surplus 0
+W"); it is now tracked in docs/AI-KNOWN-ISSUES.txt and docs/AI-TODO.txt.
+Tools/smoke-test.ps1 -Showcase reached READY 28 seconds after launch
+through the main menu and the launcher, then THROW and FINISHED (AnyRim
+found no site on that map and said so), with no error-shaped lines and
+no files in Saves; the game, our own, was then closed.

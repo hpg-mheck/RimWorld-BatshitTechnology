@@ -38,3 +38,9 @@
 - Showcases: a showcase's DEV buttons disappear from the throwaway colony
   when it stops or finishes, because god mode is given back then; turn
   god mode on from the dev toolbar to keep using them.
+- Smoke-test flakes on some random maps, not yet explained: "AnyRim's
+  devices and lamps are powered" fails when two or three of AnyRim's 23
+  consumers sit on a power net with no generator ("connected; net
+  surplus 0 W"; 2 of 6 runs on 2026-10-14, and once in slice 7000), and
+  "the colonist sat in the squeezer" fails when the colonist never sits
+  (twice in slice 6000). Both passed on the other maps.

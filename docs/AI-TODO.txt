@@ -188,6 +188,11 @@ Three review fixes have no automated check, for these reasons:
   and a map size other than 250. (The -quicktest plus -showcase=
   fallback was run by hand in slice 8000 and reached READY.) Worth a
   look by Matt "Breakpoint" Heck, or a capture run.
+- [ ] Investigate the two smoke-test flakes in docs/AI-KNOWN-ISSUES.txt:
+  AnyRim consumers on a power net with no generator (find which conduit
+  or building splits the net on those maps; the build report shows no
+  failures), and the Brain Squeezer's colonist never sitting down. Each
+  needs a check that fails before its fix.
 - [ ] Offer the FieldManual-RimWorld knack pack three lessons from phase
   4000, slices 6000 and 7000 (docs/AI-DECISIONS.txt): RimWorld 1.6 puts a
   "[Ref XXXXXXXX]" line between a logged error and its stack trace, which
