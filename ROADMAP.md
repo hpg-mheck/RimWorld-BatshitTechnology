@@ -82,11 +82,26 @@ repairs bombs on its own. Everyone with sense runs.
       - pawns and animals outside the "too close" range flee, and
         berserk ones don't;
       - the interlock, Dial-A-Yield and repair docking work;
+      - **twin bombs** (requested 2026-10-13): two Tractor Bombs
+        approach one hostile from opposite directions in the middle of
+        a junkyard, so their fields overlap. The checks:
+        - nothing is lost;
+        - nothing ping-pongs between the two pulls forever;
+        - both bombs go off;
+        - nothing logs an error;
       - nothing logs an error.
+    - **Rules the twin-bomb test will settle** *(proposals)*:
+      - **Ownership:** anything in the overlap belongs to the pull that
+        caught it first, so items and pawns are never shuttled between
+        two centres, the churn bug's cousin.
+      - **Chain reaction:** planted bombs are damageable, so the first
+        blast sets off the second at once, wherever its pull has got
+        to.
 12. **Showcase and docs.** The showcase becomes a directed tour (see
     `docs/SHOWCASE.md`, "The Directed Tour"): it takes the camera, shows
     one major feature at a time with on-screen commentary, and the
-    Tractor Bomb gets its own scene. Then the README, the decisions log,
+    Tractor Bomb gets its own scene, ending on the twin bombs in a
+    junkyard ("Two tractors are better than one."). Then the README, the decisions log,
     and a merge into `trunk`.
 
 ### Done When
