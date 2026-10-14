@@ -286,6 +286,14 @@ It then logs "[BT-SMOKE] DONE" and quits, and the script reports as a
 smoke run does. A tour that never finishes fails at a deadline: the sum
 of the scenes' timeouts plus 3,000 ticks.
 
+Sabotage runs in slice 12000, step 5 proved checks 1, 2 and 6, and
+check 5 caught a real death on one map (see docs/AI-DECISIONS.txt);
+checks 3 and 4 are not yet proved by sabotage. The captions check
+compares each caption with the scenes that actually ran, so a G1 filter
+that ignores the forced skip is caught by check 1's "every forced skip
+declined", not by the captions.
+
+## Manual checks still worth doing
 
 Matt "Breakpoint" Heck, in a real colony: the UI (gizmos, inspect pane,
 storage tab, rings), hauling by real colonists over a few days, the

@@ -1200,3 +1200,25 @@ unless -KeepOpen. Fixed in smoke-test.ps1 on the way: $runnerFlags came
 back from an if expression as a single string for -Showcase (PowerShell
 unwraps a one-element array), so += joined the new flags onto it;
 @(...) keeps it an array.
+Sabotage runs, each built and confirmed by the DLL's timestamp, then
+restored byte for byte (.local/scratch/tour-step5/sabotage.py): with
+SelfDestructScene.IsDone true at once, the world-facts check failed on
+both pads ("pad device destroyed"), 8 passed and 1 failed; with a
+Log.Error in GrenadeScene's set-up, the final log check failed, 8 and
+1; and with the G1 filter ignoring the forced skip, "every forced skip
+declined" failed. The captions check did not fail on that run: it
+compares each caption with the scenes that actually ran, which stay
+consistent when nothing is skipped, so the forced-skip check is the
+one that guards G1 here. That run, on a map where all eight scenes
+ran, also failed "no colonist dies but the volunteer": a colonist died
+during the tractor scene (docs/AI-TODO.txt). The verifier now records
+each colonist's last job, draft state and cell, so a death says what
+the colonist was doing and where.
+The final verify run on the restored build (DLL 04:51:42, AnyRim
+skipped) failed on a real fault rather than a sabotage: all three
+colonists died during the first scene, which played none of its device
+beats, and "Home Defence" timed out. Its log has no error and no clue
+to the cause, so it is logged in docs/AI-TODO.txt and
+docs/AI-KNOWN-ISSUES.txt for a fix that starts with a failing check;
+the verifier did what it is for. One rerun on the same build, on a new
+map, passed: 9 passed, 0 failed, exit 0.

@@ -340,6 +340,13 @@ namespace BatshitTechnology
             private readonly Dictionary<Pawn, bool> colonists =
                 new Dictionary<Pawn, bool>();
 
+            /// <summary>
+            /// Each living colonist's job and cell on the last tick, so a
+            /// death can say what the colonist was doing and where.
+            /// </summary>
+            private readonly Dictionary<Pawn, string> lastSeen =
+                new Dictionary<Pawn, string>();
+
             /// <summary>The scene last seen running.</summary>
             private ShowcaseScene showing;
 
@@ -438,14 +445,25 @@ namespace BatshitTechnology
 
                 foreach (Pawn p in colonists.Keys.ToList())
                 {
-                    if (!colonists[p] && (p.Dead || p.Destroyed))
+                    if (colonists[p])
                     {
-                        colonists[p] = true;
-                        bool volunteer = current is GrenadeScene g
-                            && ReferenceEquals(g.Volunteer, p);
-                        Deaths.Add((p.LabelShort,
-                            current?.key ?? "between scenes", volunteer));
+                        continue;
                     }
+
+                    if (!p.Dead && !p.Destroyed)
+                    {
+                        lastSeen[p] = $"{p.CurJobDef?.defName ?? "no job"}"
+                            + $"{(p.Drafted ? ", drafted" : string.Empty)}, "
+                            + $"at {p.Position}";
+                        continue;
+                    }
+
+                    colonists[p] = true;
+                    bool volunteer = current is GrenadeScene g
+                        && ReferenceEquals(g.Volunteer, p);
+                    lastSeen.TryGetValue(p, out string last);
+                    Deaths.Add(($"{p.LabelShort} (last: {last ?? "unseen"})",
+                        current?.key ?? "between scenes", volunteer));
                 }
             }
 

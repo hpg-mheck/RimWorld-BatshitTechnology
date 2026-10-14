@@ -238,7 +238,30 @@
 - [ ] Tour: watch the colonist protest in scene 7 (the drafted stray is
   walked 30 tiles north when the robot protests) across several maps;
   the step 5 verifier's "no colonist dies" check should catch a stray
-  that is still caught by the pull.
+  that is still caught by the pull. It did once, in step 5: on the map
+  of the G1 sabotage run (all eight scenes ran), the colonist Gransier
+  died during the tractor scene, and every scene still ended Completed
+  (.local/scratch/tour-step5/sab-no-g1-player.log). The three other
+  verify runs lost nobody. Whether Gransier was the stray, frozen in
+  place by the countdown (Flee and Freeze) inside the pull, is not yet
+  known: the verifier now records each colonist's last job, draft state
+  and cell, so the next death says. Likely fixes: send the stray away
+  as soon as the protest starts and wait for it to leave the pull
+  before the robot may emplace, or let the stray be immune to the
+  freeze while its order stands.
+- [ ] Tour: find why every colonist died in scene 1 on one map. The
+  step 5 verify run "pass2" (.local/scratch/tour-step5/pass2-player.log,
+  AnyRim skipped) lost all three colonists during "The Home of
+  Tomorrow" (Aly downed and then dead at (142,137); Corbiene wandering
+  at (142,143); Grace hauling at (149,139)), and the scene played none
+  of its device beats; "Home Defence" then timed out. The log holds no
+  error, letter or incident line, so the cause is unknown. Suspects, in
+  order: the Ballista firing at a hostile animal or pawn within its
+  least range (10) between scenes, its bolts setting off the base's
+  armed devices (damage triggers, the reactor's barrage); a device's
+  own self-destruct or heat; something native to the map. Add a check
+  that fails first (the verifier's death record and a per-scene device
+  census would show it), then fix it.
 
 ## Test justifications
 

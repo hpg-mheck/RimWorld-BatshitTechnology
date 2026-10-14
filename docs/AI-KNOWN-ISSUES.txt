@@ -132,3 +132,9 @@
   surplus 0 W"; 2 of 6 runs on 2026-10-14, and once in slice 7000), and
   "the colonist sat in the squeezer" fails when the colonist never sits
   (twice in slice 6000). Both passed on the other maps.
+- Tour (BT_Showcase): on some random maps colonists die. The step 5
+  verifier (smoke-test.ps1 -Showcase -Verify) caught it twice on
+  2026-10-14: one colonist died during the tractor scene on one map,
+  and all three died during the first scene on another, after which
+  "Home Defence" timed out. Two other verify runs lost nobody. Causes
+  not yet known; see docs/AI-TODO.txt. A viewer may see the same.
