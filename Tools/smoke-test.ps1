@@ -14,8 +14,17 @@
 #                                         # sound, and leave it running;
 #                                         # exits 1 if it is refused, fails,
 #                                         # or logs a mod error before READY
-# Runs left open for a person to watch (-Showcase, -KeepOpen) get a
-# maximized window and 2x UI scale; plain test runs stay small and muted.
+#   .\Tools\smoke-test.ps1 -Showcase -Verify
+#                                         # verify the tour instead: the
+#                                         # runner's Source/SmokeTestTour.cs
+#                                         # watches it at Superfast, logs
+#                                         # PASS/FAIL and DONE, and the game
+#                                         # quits; -TourSkip names scenes
+#                                         # forced to decline (default
+#                                         # anyrim; '' runs all eight)
+# Runs left open for a person to watch (-Showcase without -Verify, and
+# -KeepOpen) get a maximized window and 2x UI scale; test runs, -Verify
+# included, stay small and muted.
 # Defaults: the repository this script sits in, $env:RIMWORLD_DIR, and a
 # data folder under %TEMP%. The first run links the repository into
 # RimWorld's Mods folder (a directory junction).
@@ -27,7 +36,11 @@ param(
   # than 600 s on a slow map.
   [int]$TimeoutSeconds = 900,
   [switch]$KeepOpen,
-  [switch]$Showcase
+  [switch]$Showcase,
+  # With -Showcase: verify the tour and quit, rather than leave it to watch.
+  [switch]$Verify,
+  # With -Verify: scene keys, comma-separated, forced to decline (G1).
+  [string]$TourSkip = 'anyrim'
 )
 $ErrorActionPreference = 'Stop'
 if (-not $RimWorld -or -not (Test-Path (Join-Path $RimWorld 'RimWorldWin64.exe'))) {
@@ -98,8 +111,11 @@ $(& $li $expansions)
   </knownExpansions>
 </ModsConfigData>
 "@ | Set-Content -Encoding UTF8 (Join-Path $config 'ModsConfig.xml')
-$forViewing = $Showcase -or $KeepOpen
-$volume = if ($Showcase) { '0.6' } else { '0' }
+if ($Verify -and -not $Showcase) { throw '-Verify verifies the tour; pass -Showcase too.' }
+# A verify run is a test run: small and muted unless kept open.
+$watching = $Showcase -and -not $Verify
+$forViewing = $watching -or $KeepOpen
+$volume = if ($watching) { '0.6' } else { '0' }
 $width, $height = if ($forViewing) { 1600, 900 } else { 1280, 720 }
 $uiScale = if ($forViewing) { '2' } else { '1' }
 @"
@@ -124,7 +140,13 @@ Remove-Item $log -ErrorAction SilentlyContinue
 # A showcase starts through the Showcase API, as a player's would: the
 # main menu acts on -showcase=<defName> and generates a fresh game for it.
 # A smoke run skips the menu with -quicktest.
-$runnerFlags = if ($Showcase) { @('-showcase=BT_Showcase') } else { @('-quicktest', '-btsmoketest') }
+# @(...) keeps it an array: PowerShell unwraps a one-element array that an
+# if expression returns, and += would then join strings.
+$runnerFlags = @(if ($Showcase) { '-showcase=BT_Showcase' } else { '-quicktest', '-btsmoketest' })
+if ($Verify) {
+  $runnerFlags += '-bttourverify'
+  if ($TourSkip) { $runnerFlags += "-bttourskip=$TourSkip" }
+}
 $gameArgs = @("-savedatafolder=`"$DataFolder`"") + $runnerFlags + @(
   '-logFile', "`"$log`"", '-screen-fullscreen', '0',
   '-screen-width', "$width", '-screen-height', "$height")
@@ -194,7 +216,7 @@ public static extern bool ShowWindowAsync(System.IntPtr hWnd, int nCmdShow);
   }
 }
 
-if ($Showcase) {
+if ($watching) {
   # Waits for READY, then leaves the game running for the viewer. A
   # REFUSED or FAILED cue ends the wait at once (the showcase will never
   # come), and the log up to READY must hold no mod error.

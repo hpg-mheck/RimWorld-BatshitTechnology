@@ -85,6 +85,7 @@
     <Compile Include="SmokeTest.TractorBombHostiles.cs" />
     <Compile Include="SmokeTest.TractorBombTwins.cs" />
     <Compile Include="SmokeTestShowcases.cs" />
+    <Compile Include="SmokeTestTour.cs" />
     <Compile Include="Tour\BatshitTourDirector.cs" />
     <Compile Include="Tour\TourScenes.cs" />
     <Compile Include="Tour\TourStage.cs" />

@@ -56,10 +56,14 @@ namespace BatshitTechnology
         /// </summary>
         private readonly HashSet<LogMessage> expectedLogs = new HashSet<LogMessage>();
 
-        /// <summary>Created by RimWorld for every game.</summary>
+        /// <summary>
+        /// Created by RimWorld for every game. In a tour verify run, arms
+        /// the scenes forced to decline before the tour is set up.
+        /// </summary>
         /// <param name="game">The game this component belongs to.</param>
         public GameComponent_SmokeTest(Game game)
         {
+            ArmTourSkips();
         }
 
         /// <summary>

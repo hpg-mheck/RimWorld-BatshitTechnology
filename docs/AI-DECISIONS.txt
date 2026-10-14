@@ -1173,3 +1173,30 @@ range by itself. The stray now holds its fire (FireAtWill off while the
 scene runs) and is never the grenadier, the grenade scene takes the
 grenade back when it ends, and a tractor scene that times out logs what
 the yard held (robot, bombs, raiders, implosions) as a message.
+
+2026-10-14 Claude: Tractor Bomb slice 12000, step 5: the tour verifier.
+Source/SmokeTestTour.cs extends the smoke runner (GameComponent_SmokeTest)
+and runs only with -bttourverify, which Tools/smoke-test.ps1 -Showcase
+-Verify passes with -bttourskip=anyrim (-TourSkip changes the list). It
+reuses the runner's Check, its final log check and its DONE and quit
+path, switches to Superfast once the tour is READY, and samples the tour
+every game tick rather than reading only the log: the caption as each
+scene begins, the counters then (bolts fired, tractor explosions,
+superposed pulls), new implosions, the world facts as each scene ends,
+and colonists' deaths with the scene they happened in. The cues (SCENE,
+BEAT, END, SKIPPED, FINISHED) are read from RimWorld's log queue after
+the farewell, from the run's START cue on, and drive the cue-order and
+narration checks; the queue holds 1,000 messages, ample for one tour.
+Forcing a scene to decline needs a seam the scenes cannot override, so
+TourScene.UnavailableReason is now sealed: it reports the verifier's
+forced skip (TourScene.SkippedForTest, filled from -bttourskip in the
+runner's constructor, before the tour is set up) and otherwise the
+scene's own WhyUnavailable, which the eight scenes now override instead.
+GrenadeScene exposes its Volunteer, the one colonist whose death the
+verifier excuses. A tour that never finishes fails at a deadline, the
+sum of the scenes' timeouts plus 3,000 ticks, so the run still logs
+DONE. -Verify runs are test runs: small, muted, and closed afterwards
+unless -KeepOpen. Fixed in smoke-test.ps1 on the way: $runnerFlags came
+back from an if expression as a single string for -Showcase (PowerShell
+unwraps a one-element array), so += joined the new flags onto it;
+@(...) keeps it an array.

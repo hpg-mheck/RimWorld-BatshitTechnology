@@ -41,7 +41,7 @@ namespace BatshitTechnology
         /// Gets why the scene cannot run: no yard, or no hostile faction
         /// to send.
         /// </summary>
-        public override string UnavailableReason
+        protected override string WhyUnavailable
         {
             get
             {

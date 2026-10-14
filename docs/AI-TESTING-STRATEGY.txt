@@ -255,7 +255,37 @@ scenarios go last. Checks that need drawing or input run as frame steps
 in a repaint event: GUI calls need a repaint event, and Event.Use()
 belongs on input events only, never on a repaint or layout event.
 
-## Manual checks still worth doing
+## 4. The tour verifier (a few minutes)
+
+    .\Tools\smoke-test.ps1 -Showcase -Verify
+
+starts BT_Showcase through the Showcase API, as -Showcase does, and adds
+-bttourverify and -bttourskip=anyrim (-TourSkip changes the list; pass
+-TourSkip '' to run all eight scenes). The verifier
+(Source/SmokeTestTour.cs, part of the smoke runner) forces the listed
+scenes to decline, waits for READY, switches to Superfast and watches
+every tick: the scene running and its caption, the counters as each scene
+begins, the world facts as each ends, and colonists' deaths. After
+FINISHED and the farewell it checks that:
+
+1. FINISHED was reached, with SCENE and END cues in TourScript order,
+   less any SKIPPED, and every forced skip declined;
+2. every scene ended Completed, with its world facts: the pad device
+   destroyed and the aftermath idle; at least 16 bolts spent; one more
+   implosion; tractor explosions up by 1, then by 2; superposed pulls up
+   for the twins;
+3. the captions read "i of N: title", N counting only the scenes that
+   run (7 with AnyRim skipped);
+4. the narration log holds every line the def gives for each SCENE,
+   BEAT and END cue, in cue order, under its scene, with a target;
+5. no colonist died but the grenade's volunteer;
+6. nothing logged an error or a mod warning (the smoke runner's own
+   final check).
+
+It then logs "[BT-SMOKE] DONE" and quits, and the script reports as a
+smoke run does. A tour that never finishes fails at a deadline: the sum
+of the scenes' timeouts plus 3,000 ticks.
+
 
 Matt "Breakpoint" Heck, in a real colony: the UI (gizmos, inspect pane,
 storage tab, rings), hauling by real colonists over a few days, the

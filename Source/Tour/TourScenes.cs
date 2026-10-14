@@ -42,8 +42,30 @@ namespace BatshitTechnology
         public TourStage Stage =>
             (Director as BatshitTourDirector)?.Stage ?? TourStage.Empty;
 
+        /// <summary>
+        /// Scene keys the tour verifier forces to decline (its
+        /// -bttourskip argument), so a verify run exercises the API's
+        /// declining (G1) on any map. Empty outside that run.
+        /// </summary>
+        internal static readonly HashSet<string> SkippedForTest =
+            new HashSet<string>();
+
         /// <summary>Gets the game tick this run began, or -1 before it.</summary>
         public int StartTick => startTick;
+
+        /// <summary>
+        /// Gets why the scene cannot run on this map: skipped by the tour
+        /// verifier, or the scene's own reason (<see cref="WhyUnavailable"/>).
+        /// </summary>
+        public sealed override string UnavailableReason =>
+            key != null && SkippedForTest.Contains(key)
+                ? "skipped for the tour verifier"
+                : WhyUnavailable;
+
+        /// <summary>
+        /// Gets why this scene cannot run on this map, or null when it can.
+        /// </summary>
+        protected virtual string WhyUnavailable => null;
 
         /// <summary>Gets the ticks since this run began; 0 before it.</summary>
         protected int Elapsed => startTick < 0
@@ -176,7 +198,7 @@ namespace BatshitTechnology
         public override Thing Subject => Alive(shown) ? shown : null;
 
         /// <summary>Gets why the scene cannot run: the base has no device.</summary>
-        public override string UnavailableReason =>
+        protected override string WhyUnavailable =>
             Devices().Count > 0 ? null : "the base has no devices";
 
         /// <summary>Finds the base's devices, in parade order.</summary>
@@ -280,7 +302,7 @@ namespace BatshitTechnology
             !ordered && Alive(Stage.Artificer) ? Stage.Artificer : Stage.Ballista;
 
         /// <summary>Gets why the scene cannot run: no Ballista.</summary>
-        public override string UnavailableReason =>
+        protected override string WhyUnavailable =>
             Alive(Stage.Ballista) && Stage.BallistaTarget.IsValid
                 ? null
                 : "the base has no Ballista";
@@ -397,7 +419,7 @@ namespace BatshitTechnology
                 : padCell.IsValid ? padCell : base.FocusCell;
 
         /// <summary>Gets why the scene cannot run: no pad for it.</summary>
-        public override string UnavailableReason =>
+        protected override string WhyUnavailable =>
             PadDevice()?.TryGetComp<CompSelfDestruct>() != null
                 ? null
                 : "no pad for it clears AnyRim and the yard";
@@ -496,7 +518,7 @@ namespace BatshitTechnology
             look.IsValid ? look : base.FocusCell;
 
         /// <summary>Gets why the scene cannot run: AnyRim was skipped.</summary>
-        public override string UnavailableReason =>
+        protected override string WhyUnavailable =>
             Stage.HasAnyRim
             && Map?.GetComponent<MapComponent_AnyRim>()?.Built == true
                 ? null
@@ -610,6 +632,12 @@ namespace BatshitTechnology
         [Unsaved]
         private Pawn volunteer;
 
+        /// <summary>
+        /// Gets the volunteer cast at the throw, or null before it (the
+        /// tour verifier excuses only this colonist's death).
+        /// </summary>
+        public Pawn Volunteer => volunteer;
+
         /// <summary>Gets the grenadier.</summary>
         public override Thing Subject =>
             Alive(grenadier) ? grenadier
@@ -623,7 +651,7 @@ namespace BatshitTechnology
         /// Gets why the scene cannot run: no pile, or no colonist able to
         /// throw.
         /// </summary>
-        public override string UnavailableReason =>
+        protected override string WhyUnavailable =>
             Stage.GrenadeTarget.IsValid && Able().Any()
                 ? null
                 : "no colonist can throw the grenade";
