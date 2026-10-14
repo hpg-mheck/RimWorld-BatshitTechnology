@@ -722,6 +722,219 @@ def singularity_vortex_outer():
     save(img, size, 'Things/Mote/BT_SingularityVortexOuter.png')
 
 
+RUBBER = (46, 44, 52, 255)           # tyres
+RUBBER_LIGHT = (78, 76, 86, 255)     # tyre treads, lit
+
+
+class Frame:
+    """Lays out a part drawn facing north (front up, at -y) in any of the
+    four facings, about a centre. Every shape stays axis-aligned because
+    the turns are quarter turns, and the light stays at the top left in
+    every facing because gradients are applied in image space."""
+
+    TURNS = {'north': 0, 'east': 1, 'south': 2, 'west': 3}
+
+    def __init__(self, cx, cy, facing='north'):
+        self.cx, self.cy = cx, cy
+        self.turns = self.TURNS[facing]
+
+    def p(self, x, y):
+        """A point in the frame, in final-pixel image coordinates."""
+        for _ in range(self.turns):
+            x, y = -y, x  # a quarter turn clockwise, as seen on screen
+        return (self.cx + x, self.cy + y)
+
+    def box(self, x0, y0, x1, y1):
+        """An axis-aligned box in the frame, as (left, top, right, bottom)."""
+        (ax, ay), (bx, by) = self.p(x0, y0), self.p(x1, y1)
+        return (min(ax, bx), min(ay, by), max(ax, bx), max(ay, by))
+
+
+def tyre(img, f, x, y, tread_w, dia, flip):
+    """A tractor tyre at (x, y) in the frame f: upright (flip 0), seen from
+    above as a treaded bar tread_w wide and dia long; flipped out flat
+    (flip 1), a ring round a steel hub, like a stabiliser pad; or part-way
+    between."""
+    t = max(0.0, min(1.0, flip))
+    w = tread_w + (dia - tread_w) * math.sin(t * math.pi / 2)
+    d = draw(img)
+    box = f.box(x - w / 2, y - dia / 2, x + w / 2, y + dia / 2)
+    radius = min(box[2] - box[0], box[3] - box[1]) / 2 * (0.35 + 0.65 * t)
+    d.rounded_rectangle(s(*box), radius=radius * SS, fill=RUBBER,
+                        outline=OUTLINE, width=3 * SS)
+    if t < 0.6:  # tread bars across the upright tyre
+        for k in range(-int(dia / 2) + 6, int(dia / 2) - 3, 8):
+            a, b = f.p(x - w / 2 + 3, y + k), f.p(x + w / 2 - 3, y + k)
+            d.line(s(*a, *b), fill=(*RUBBER_LIGHT[:3], int(255 * (1 - t))),
+                   width=3 * SS)
+    if t > 0.3:  # the rim and hub show as it lies down
+        cx, cy = f.p(x, y)
+        hub = min(w, dia) / 2 * 0.55
+        circle(d, cx, cy, hub, fill=STEEL, outline=OUTLINE, width=2)
+        circle(d, cx, cy, hub * 0.45, fill=STEEL_DEEP)
+        for k in range(5):
+            a = math.radians(k * 72 + 18)
+            circle(d, cx + hub * 0.72 * math.cos(a), cy + hub * 0.72 * math.sin(a),
+                   1.6, fill=STEEL_LIGHT)
+        bw, bh = (box[2] - box[0]) / 2, (box[3] - box[1]) / 2
+        for k in range(12):  # tread notches round the rim
+            a = math.radians(k * 30)
+            d.line(s(cx + bw * 0.80 * math.cos(a), cy + bh * 0.80 * math.sin(a),
+                     cx + bw * 0.96 * math.cos(a), cy + bh * 0.96 * math.sin(a)),
+                   fill=RUBBER_LIGHT, width=2 * SS)
+
+
+def tractor_beam_emitter(img, cx, cy, r, power=1.0, halo=1.45):
+    """The tractor-beam emitter, seen from above: a riveted steel collar
+    (where the exhaust stack should be) round a glowing batshittium orb.
+    The halo stays tight, so the steel around it stays grey."""
+    h = r * halo
+    glow(img, lambda g, c: g.ellipse(s(cx - h, cy - h, cx + h, cy + h), fill=c),
+         BS_GLOW, blur=r * 0.4, alpha=int(110 + 80 * power))
+    d = draw(img)
+    circle(d, cx, cy, r, fill=STEEL, outline=OUTLINE, width=3)
+    for k in range(8):
+        a = math.radians(k * 45 + 22.5)
+        circle(d, cx + r * 0.82 * math.cos(a), cy + r * 0.82 * math.sin(a), 1.4,
+               fill=STEEL_LIGHT)
+    orb(d, cx, cy, r * 0.62, BS_DARK, BS_CORE)
+    d.ellipse(s(cx - r * 0.45, cy - r * 0.5, cx - r * 0.05, cy - r * 0.15),
+              fill=(255, 255, 255, 150))  # specular
+
+
+def tractor_bomb(img, facing='north', flip=0.0):
+    """The Tractor Bomb, straight top-down on a 256 px canvas (2 tiles at
+    128 px a tile): a little steel farm tractor, hood forward, big rear
+    tyres under fenders, a control box where the seat would be with the
+    protest lamp on it, one hazard band across the hood, and the magenta
+    tractor-beam emitter where the exhaust stack should be. flip 0 drives
+    on upright tyres; flip 1 is planted, its tyres flipped out flat as
+    stabiliser pads on steel struts."""
+    f = Frame(128, 132, facing)
+    t = max(0.0, min(1.0, flip))
+    d = draw(img)
+    # where the tyres sit: upright, or out on struts once flipped flat
+    rear_x, front_x = 52 + 30 * t, 40 + 22 * t
+    rear_y, front_y = 42 + 4 * t, -50 - 10 * t
+    for x0, y0, x1, y1, wdt in ((-rear_x, rear_y, rear_x, rear_y, 10),
+                                (-front_x, front_y, front_x, front_y, 8)):
+        a, b = f.p(x0, y0), f.p(x1, y1)
+        d.line(s(*a, *b), fill=OUTLINE, width=(wdt + 4) * SS)
+        d.line(s(*a, *b), fill=STEEL_DEEP, width=wdt * SS)
+    for sx in (-1, 1):
+        tyre(img, f, sx * rear_x, rear_y, 30, 76 - 4 * t, t)
+        tyre(img, f, sx * front_x, front_y, 20, 44, t)
+    # hood, steel, lit from the top left
+    hood = f.box(-21, -86, 21, -2)
+    gradient_fill(img, lambda m: m.rounded_rectangle(s(*hood), radius=10 * SS, fill=255),
+                  STEEL_LIGHT, STEEL_DARK)
+    d = draw(img)
+    d.rounded_rectangle(s(*hood), radius=10 * SS, outline=OUTLINE, width=3 * SS)
+    grille = f.box(-15, -84, 15, -74)
+    d.rounded_rectangle(s(*grille), radius=3 * SS, fill=STEEL_DEEP, outline=OUTLINE,
+                        width=2 * SS)
+    for k in (-9, -3, 3, 9):  # grille slats
+        a, b = f.p(k, -83), f.p(k, -75)
+        d.line(s(*a, *b), fill=STEEL_DARK, width=2 * SS)
+    for sx in (-1, 1):  # engine louvres down each side
+        for k in range(-66, -46, 6):
+            a, b = f.p(sx * 16, k), f.p(sx * 10, k)
+            d.line(s(*a, *b), fill=STEEL_DEEP, width=2 * SS)
+    # one hazard band across the hood, behind the emitter
+    band = f.box(-21, -28, 21, -13)
+    hazard_patch(img, band, 2)
+    d = draw(img)
+    d.rectangle(s(*band), outline=OUTLINE, width=2 * SS)
+    # the footplate between the rear tyres
+    body = f.box(-34, -6, 34, 70)
+    gradient_fill(img, lambda m: m.rounded_rectangle(s(*body), radius=12 * SS, fill=255),
+                  STEEL, STEEL_DEEP)
+    d = draw(img)
+    d.rounded_rectangle(s(*body), radius=12 * SS, outline=OUTLINE, width=3 * SS)
+    if t < 0.5:  # fenders over the upright rear tyres
+        for sx in (-1, 1):
+            fender = f.box(sx * 34, 10, sx * 70, 44)
+            d.rounded_rectangle(s(*fender), radius=8 * SS, fill=STEEL,
+                                outline=OUTLINE, width=3 * SS)
+            a, b = f.p(sx * 40, 16), f.p(sx * 64, 16)
+            d.line(s(*a, *b), fill=STEEL_LIGHT, width=2 * SS)
+    # the control box, where a driver would sit, with the protest lamp
+    box = f.box(-19, 10, 19, 56)
+    d.rounded_rectangle(s(*box), radius=6 * SS, fill=STEEL_DARK, outline=OUTLINE,
+                        width=3 * SS)
+    panel = f.box(-12, 34, 12, 50)
+    d.rounded_rectangle(s(*panel), radius=3 * SS, fill=(36, 40, 46, 255),
+                        outline=OUTLINE, width=1 * SS)
+    lx, ly = f.p(-5, 42)
+    d.rectangle(s(lx - 3, ly - 3, lx + 3, ly + 3), fill=(70, 205, 145, 255))  # status screen
+    bx, by = f.p(5, 42)
+    bat(d, bx, by, 0.18, (20, 22, 26, 230))  # the house mark, stencilled small
+    lamp_x, lamp_y = f.p(0, 22)
+    circle(d, lamp_x, lamp_y, 7, fill=(120, 30, 30, 255), outline=OUTLINE, width=2)
+    circle(d, lamp_x, lamp_y, 4, fill=DANGER_RED)
+    d.ellipse(s(lamp_x - 4, lamp_y - 5, lamp_x - 1, lamp_y - 2), fill=(255, 210, 210, 190))
+    hitch = f.box(-7, 70, 7, 80)
+    d.rectangle(s(*hitch), fill=STEEL_DEEP, outline=OUTLINE, width=2 * SS)
+    # the emitter, where the exhaust stack should be
+    ex, ey = f.p(0, -46)
+    tractor_beam_emitter(img, ex, ey, 13, power=0.6 + 0.4 * t)
+
+
+def tractor_bomb_pawn():
+    """The robot in the three facings a pawn needs; RimWorld mirrors east
+    for west."""
+    for facing in ('north', 'east', 'south'):
+        img = new_canvas(256)
+        tractor_bomb(img, facing, 0.0)
+        save(img, 256, f'Things/Pawn/Robot/BT_TractorBomb_{facing}.png')
+
+
+def tractor_bomb_emplaced():
+    """The planted bomb, tyres flipped out flat, and the three frames of
+    the flip that the building shows as it emplaces."""
+    img = new_canvas(256)
+    tractor_bomb(img, 'north', 1.0)
+    save(img, 256, 'Things/Building/Security/BT_TractorBombEmplaced.png')
+    for i, t in enumerate((0.15, 0.45, 0.75), start=1):
+        img = new_canvas(256)
+        tractor_bomb(img, 'north', t)
+        save(img, 256, f'Things/Building/Security/BT_TractorBombEmplaced_Flip{i}.png')
+
+
+def tractor_bomb_parts():
+    """What a wrecked robot's vortex sucks back in: a tyre, a piece of the
+    hood with its hazard band, and the emitter, still glowing."""
+    img = new_canvas(64)
+    tyre(img, Frame(32, 32), 0, 0, 52, 52, 1.0)
+    save(img, 64, 'Things/Mote/BT_TractorBombPart_Wheel.png')
+
+    img = new_canvas(64)
+    gradient_fill(img, lambda m: m.rounded_rectangle(s(12, 6, 52, 58), radius=8 * SS, fill=255),
+                  STEEL_LIGHT, STEEL_DARK)
+    hazard_patch(img, (12, 34, 52, 44), 1)
+    d = draw(img)
+    d.rounded_rectangle(s(12, 6, 52, 58), radius=8 * SS, outline=OUTLINE, width=3 * SS)
+    for y in (14, 20, 26):  # louvres
+        d.line(s(18, y, 26, y), fill=STEEL_DEEP, width=2 * SS)
+    save(img, 64, 'Things/Mote/BT_TractorBombPart_Hood.png')
+
+    img = new_canvas(64)
+    tractor_beam_emitter(img, 32, 32, 15, power=1.0, halo=1.3)
+    save(img, 64, 'Things/Mote/BT_TractorBombPart_Emitter.png')
+
+
+def tractor_bomb_lamp():
+    """The protest lamp's glow: a soft white disc, tinted red or yellow in
+    game."""
+    size = 64
+    img = new_canvas(size)
+    glow(img, lambda g, c: g.ellipse(s(16, 16, 48, 48), fill=c), (255, 255, 255),
+         blur=7, alpha=255)
+    d = draw(img)
+    circle(d, 32, 32, 7, fill=(255, 255, 255, 255))
+    save(img, size, 'Things/Mote/BT_TractorBombLamp.png')
+
+
 if __name__ == '__main__':
     batshittium_item()
     transmogrifier()
@@ -739,3 +952,7 @@ if __name__ == '__main__':
     singularity_grenade_projectile()
     singularity_vortex()
     singularity_vortex_outer()
+    tractor_bomb_pawn()
+    tractor_bomb_emplaced()
+    tractor_bomb_parts()
+    tractor_bomb_lamp()

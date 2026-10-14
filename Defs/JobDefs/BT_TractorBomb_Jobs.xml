@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- The Tractor Bomb's jobs (Source/TractorBombAI.cs). A patrol leg is a
+       vanilla goto; the constant think tree breaks it off when a hostile
+       comes into view. -->
+  <JobDef>
+    <defName>BT_TractorBombPatrol</defName>
+    <driverClass>JobDriver_Goto</driverClass>
+    <reportString>patrolling.</reportString>
+    <casualInterruptible>true</casualInterruptible>
+  </JobDef>
+
+  <JobDef>
+    <defName>BT_TractorBombApproach</defName>
+    <driverClass>BatshitTechnology.JobDriver_TractorBombApproach</driverClass>
+    <reportString>closing in on TargetA.</reportString>
+    <casualInterruptible>false</casualInterruptible>
+    <checkOverrideOnDamage>Never</checkOverrideOnDamage>
+    <collideWithPawns>false</collideWithPawns>
+  </JobDef>
+
+  <!-- Once begun it cannot be called off: it protests if need be, then
+       emplaces. -->
+  <JobDef>
+    <defName>BT_TractorBombEmplace</defName>
+    <driverClass>BatshitTechnology.JobDriver_TractorBombEmplace</driverClass>
+    <reportString>emplacing.</reportString>
+    <casualInterruptible>false</casualInterruptible>
+    <playerInterruptible>false</playerInterruptible>
+    <suspendable>false</suspendable>
+    <checkOverrideOnDamage>Never</checkOverrideOnDamage>
+    <alwaysShowReport>true</alwaysShowReport>
+  </JobDef>
+</Defs>

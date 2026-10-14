@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- The Tractor Bomb's mind (Source/TractorBombAI.cs): hunt, else
+       patrol its allowed area. It has no needs, no mood and no fight in it
+       beyond the one it was built for. -->
+  <ThinkTreeDef>
+    <defName>BT_TractorBomb</defName>
+    <thinkRoot Class="ThinkNode_Priority">
+      <subNodes>
+        <li Class="ThinkNode_Subtree">
+          <treeDef>Despawned</treeDef>
+        </li>
+        <!-- A hostile it can see: emplace if in range, else close in -->
+        <li Class="BatshitTechnology.JobGiver_TractorBombHunt" />
+        <!-- Nobody about: patrol -->
+        <li Class="ThinkNode_Tagger">
+          <tagToGive>Idle</tagToGive>
+          <subNodes>
+            <li Class="BatshitTechnology.JobGiver_TractorBombPatrol" />
+          </subNodes>
+        </li>
+        <li Class="JobGiver_IdleError" />
+      </subNodes>
+    </thinkRoot>
+  </ThinkTreeDef>
+
+  <!-- Checked every half second: break off a patrol the moment a hostile
+       comes into view. Never interrupts an approach (it retargets itself)
+       or an emplacement. -->
+  <ThinkTreeDef>
+    <defName>BT_TractorBombConstant</defName>
+    <thinkRoot Class="ThinkNode_Priority">
+      <subNodes>
+        <li Class="ThinkNode_Subtree">
+          <treeDef>Despawned</treeDef>
+        </li>
+        <li Class="ThinkNode_ConditionalCanDoConstantThinkTreeJobNow">
+          <subNodes>
+            <li Class="BatshitTechnology.JobGiver_TractorBombHunt">
+              <interruptOnly>true</interruptOnly>
+            </li>
+          </subNodes>
+        </li>
+      </subNodes>
+    </thinkRoot>
+  </ThinkTreeDef>
+</Defs>

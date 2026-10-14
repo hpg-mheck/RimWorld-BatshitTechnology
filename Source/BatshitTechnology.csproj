@@ -70,6 +70,7 @@
     <Compile Include="BrainSqueezer.cs" />
     <Compile Include="Building_RandomReplicator.cs" />
     <Compile Include="CompRandomReplicator.cs" />
+    <Compile Include="CountdownWarning.cs" />
     <Compile Include="Detonations.cs" />
     <Compile Include="Implosion.cs" />
     <Compile Include="MapComponent_AnyRim.cs" />
@@ -78,6 +79,11 @@
     <Compile Include="Showcase.cs" />
     <Compile Include="SingularityGrenade.cs" />
     <Compile Include="SmokeTest.cs" />
+    <Compile Include="TractorBomb.cs" />
+    <Compile Include="TractorBombAI.cs" />
+    <Compile Include="TractorBombDeath.cs" />
+    <Compile Include="TractorBombEmplaced.cs" />
+    <Compile Include="TractorBombGizmos.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference

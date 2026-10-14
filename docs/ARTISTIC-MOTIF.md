@@ -74,10 +74,11 @@ reuse them by name rather than inventing near-duplicates.
 | Danger red | `DANGER_RED` | 214, 52, 52 |
 | Refrigeration | `FROST_LIGHT`, `FROST`, `FROST_DEEP` | 214, 242, 255 to 70, 130, 170 |
 | Status screen | (panel green) | 70, 205, 145 |
-| Self-destruct warning | (`CompSelfDestruct`) | 255, 158, 26, then 255, 26, 15 |
+| Countdown warning | (`CountdownWarningBand`) | 255, 158, 26, then 255, 26, 15 |
 | Rock | `ROCK_LIGHT`, `ROCK` | 150, 142, 140; 116, 110, 110 |
 | Cushioning | `CUSHION`, `CUSHION_DARK` | 118, 96, 138; 88, 68, 106 |
 | A singularity's core | `VOID` | 14, 6, 22 |
+| Tyres | `RUBBER`, `RUBBER_LIGHT` | 46, 44, 52; 78, 76, 86 |
 
 Colour rules:
 
@@ -89,15 +90,23 @@ Colour rules:
 - **Functional accents only.** Yellow and black stripes mark danger
   (reactor, Ballista, the replicator's self-destruct). Red is a button or
   warning light. Frost blue is refrigeration. Panel green is a working
-  screen. Never use these as decoration.
+  screen. Never use these as decoration. A warning light that objects
+  (the Tractor Bomb's protest lamp) blinks red and yellow, drawn in game
+  as a tinted glow over its unlit red dome.
+- **Rubber is not steel.** Tyres are their own near-black rubber
+  (`RUBBER`, with `RUBBER_LIGHT` treads), so a vehicle reads as one from
+  its wheels alone; steel stays grey around them.
 - **Countdowns pulse.** A device counting down to its own destruction
   wears a one-cell warning band that fades in and out in yellow-orange,
   then turns red and pulses four times as fast in the final seconds. Any
-  new countdown should reuse it (CompSelfDestruct) rather than invent one.
+  new countdown should reuse it (`CountdownWarningBand`, shared by the
+  self-destructs and the Tractor Bomb) rather than invent one.
 - **Every death is distinct.** Each device blows up in a way that echoes
   its job: the Transmogrifier spews rock, the Brain Squeezer squeezes
-  brains, Ballista hardware cooks off its bolts. A new device needs its own
-  pulverization, not a generic explosion.
+  brains, Ballista hardware cooks off its bolts, and a wrecked Tractor
+  Bomb's tractor beam sucks its own parts into a sputtering little vortex
+  that pops. A new device needs its own pulverization, not a generic
+  explosion.
 - **Steel stays neutral grey.** Do not tint housings; the glow does the
   talking.
 - **Rare mundane exceptions.** Once a motif is established, a few
@@ -142,6 +151,15 @@ helper in the generator.
   danger is its entire purpose (the Reactor, the Ballista).
 - **Plumbing.** Pipes and cables are an outlined stroke with a steel or
   batshittium-dark core, connecting the parts that exchange matter.
+- **Tyres.** `tyre()`: upright, a treaded rubber bar seen from above;
+  flipped out flat, a rubber ring round a riveted steel hub, like a
+  stabiliser pad. Tyres lying flat mean a machine has planted itself and
+  will not move again (the emplaced Tractor Bomb); the frames between
+  show the flip.
+- **Emitters.** `tractor_beam_emitter()`: a riveted steel collar round a
+  glowing batshittium orb, with a tight halo so the steel around it stays
+  grey. It stands where something ordinary should be (on the Tractor
+  Bomb, the exhaust stack).
 
 ## Composition
 
@@ -151,6 +169,17 @@ helper in the generator.
 - **Orientation.** Rotatable buildings use one `Graphic_Single` sprite
   that RimWorld rotates, so draw them facing north with the front band at
   the bottom. Projectiles point north.
+- **Robots.** A machine that is a pawn but not a mechanoid (the Tractor
+  Bomb) is drawn straight top-down like a building, not in the vanilla
+  pawns' three-quarter view, at 256 px for a `drawSize` of 2 (128 px a
+  tile, as buildings). Draw it once facing north and lay it out with the
+  generator's `Frame`, which turns it for each facing a pawn needs
+  (`_north`, `_east`, `_south`; RimWorld mirrors east for west) while the
+  light stays at the top left. Robots live in `Things/Pawn/Robot`, which
+  vanilla does not have; mechanoids keep `Things/Pawn/Mechanoid`.
+- **Overlays and pieces.** Glows drawn in game (a lamp) are soft white
+  discs tinted by their material; pieces a death flings about are 64 px
+  sprites in `Things/Mote`, drawn at about half a tile.
 - **Read at a glance.** The device's purpose must be legible zoomed out:
   check every new sprite downsampled to 64 px. Big shapes first; details
   that vanish at 64 px are a bonus, not the message.

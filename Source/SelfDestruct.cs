@@ -195,25 +195,21 @@ namespace BatshitTechnology
     /// the device and anything stored in it and sets off its detonation.
     /// Damage can trigger it, and destroying an armed device sets it off.
     /// </summary>
-    public class CompSelfDestruct : ThingComp
+    public class CompSelfDestruct : ThingComp, ICountdownWarning
     {
         private const int TicksPerSecond = 60;
-
-        // How many opacity levels the warning uses; each colour and level
-        // is one pooled material.
-        private const int PulseLevels = 12;
 
         private static readonly Color BlastRingColor = new Color(1f, 0.25f, 0.15f);
         private static readonly Color BlastRingDimColor = new Color(1f, 0.25f, 0.15f, 0.3f);
         private static readonly Color FleeRingColor = new Color(1f, 0.85f, 0.2f);
-        private static readonly Color WarningColor = new Color(1f, 0.62f, 0.1f);   // yellow-orange
-        private static readonly Color FinalWarningColor = new Color(1f, 0.1f, 0.06f); // red
 
         private int ticksLeft; // > 0 while counting down
         private bool detonateOnDestroy; // destroyed by damage while armed
         private Sustainer alarmSustainer;
-        private List<IntVec3> warningOutline;
-        private List<IntVec3> warningBand;
+
+        // The shared pulsing band (CountdownWarning.cs).
+        private readonly CountdownWarningBand warningBand =
+            new CountdownWarningBand();
 
         /// <summary>Typed access to this comp's XML properties.</summary>
         public CompProperties_SelfDestruct Props => (CompProperties_SelfDestruct)props;
@@ -239,7 +235,7 @@ namespace BatshitTechnology
         public override void PostSpawnSetup(bool respawningAfterLoad)
         {
             base.PostSpawnSetup(respawningAfterLoad);
-            warningOutline = null; // rebuilt for the new position on first draw
+            warningBand.Reset(); // rebuilt for the new position on first draw
             if (IsCountingDown)
             {
                 Overlay(parent.Map).Register(this);
@@ -489,39 +485,9 @@ namespace BatshitTechnology
             GenDraw.DrawRadiusRing(
                 parent.Position, Props.blastRadius, bright ? BlastRingColor : BlastRingDimColor);
 
-            var (final, alpha) = CountdownPulse.At(
-                SecondsLeft, Props.finalWarningSeconds, Props.pulsePeriodSeconds,
-                Props.finalPulsePeriodSeconds, Time.realtimeSinceStartup);
-            float a = (float)CountdownPulse.Quantize(alpha, PulseLevels);
-            Color color = final ? FinalWarningColor : WarningColor;
-            EnsureWarningCells();
-
-            // A translucent band one cell wide around the device, edged with
-            // a brighter line at its outside.
-            Material band = SolidColorMaterials.SimpleSolidColorMaterial(
-                new Color(color.r, color.g, color.b, a * 0.45f));
-            for (int i = 0; i < warningBand.Count; i++)
-            {
-                CellRenderer.RenderCell(warningBand[i], band);
-            }
-
-            GenDraw.DrawFieldEdges(warningOutline, new Color(color.r, color.g, color.b, a));
-        }
-
-        /// <summary>
-        /// Caches the cells the warning covers: the device's footprint
-        /// grown by one, and that ring without the footprint.
-        /// </summary>
-        private void EnsureWarningCells()
-        {
-            if (warningOutline != null)
-            {
-                return;
-            }
-
-            CellRect footprint = parent.OccupiedRect();
-            warningOutline = footprint.ExpandedBy(1).Cells.ToList();
-            warningBand = warningOutline.Where(c => !footprint.Contains(c)).ToList();
+            warningBand.Draw(
+                parent.OccupiedRect(), SecondsLeft, Props.finalWarningSeconds,
+                Props.pulsePeriodSeconds, Props.finalPulsePeriodSeconds);
         }
 
         // ===== UI =====
@@ -614,7 +580,8 @@ namespace BatshitTechnology
     /// </summary>
     public class MapComponent_SelfDestructOverlay : MapComponent
     {
-        private readonly List<CompSelfDestruct> countingDown = new List<CompSelfDestruct>();
+        private readonly List<ICountdownWarning> countingDown =
+            new List<ICountdownWarning>();
 
         /// <summary>Created by RimWorld for every map.</summary>
         /// <param name="map">The map this component belongs to.</param>
@@ -624,18 +591,21 @@ namespace BatshitTechnology
         }
 
         /// <summary>Starts drawing a device's countdown warnings.</summary>
-        /// <param name="comp">The device's self-destruct.</param>
-        public void Register(CompSelfDestruct comp)
+        /// <param name="warning">
+        /// The device's countdown: a self-destruct or a Tractor Bomb.
+        /// </param>
+        public void Register(ICountdownWarning warning)
         {
-            if (!countingDown.Contains(comp))
+            if (warning != null && !countingDown.Contains(warning))
             {
-                countingDown.Add(comp);
+                countingDown.Add(warning);
             }
         }
 
         /// <summary>Stops drawing a device's countdown warnings.</summary>
-        /// <param name="comp">The device's self-destruct.</param>
-        public void Deregister(CompSelfDestruct comp) => countingDown.Remove(comp);
+        /// <param name="warning">The device's countdown.</param>
+        public void Deregister(ICountdownWarning warning) =>
+            countingDown.Remove(warning);
 
         /// <summary>Draws every registered warning on the visible map.</summary>
         public override void MapComponentUpdate()

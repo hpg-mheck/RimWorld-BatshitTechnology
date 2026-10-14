@@ -31,4 +31,59 @@
       <BT_Batshittium>1</BT_Batshittium>
     </products>
   </RecipeDef>
+
+  <!-- TEMPORARY (docs/TRACTOR-BOMB.md, roadmap step 8): the Tractor Barn
+       will build Tractor Bombs. Until it exists, a crafter assembles them
+       at the vanilla machining table. The recipe makes no item: when it is
+       done, RecipeWorker_AssembleTractorBomb drives a robot out beside the
+       crafter. Remove this recipe when the barn lands. -->
+  <RecipeDef>
+    <defName>BT_AssembleTractorBomb</defName>
+    <label>assemble tractor bomb</label>
+    <description>Assemble one tractor bomb from 60 steel, 3 components and 5 batshittium. It drives off to patrol as soon as it is finished, so stand clear of the table.</description>
+    <jobString>Assembling a tractor bomb.</jobString>
+    <workerClass>BatshitTechnology.RecipeWorker_AssembleTractorBomb</workerClass>
+    <workAmount>3000</workAmount>
+    <workSpeedStat>GeneralLaborSpeed</workSpeedStat>
+    <effectWorking>Smith</effectWorking>
+    <soundWorking>Recipe_Machining</soundWorking>
+    <workSkill>Crafting</workSkill>
+    <recipeUsers>
+      <li>TableMachining</li>
+    </recipeUsers>
+    <researchPrerequisite>BT_Research_TractorBomb</researchPrerequisite>
+    <ingredients>
+      <li>
+        <filter>
+          <thingDefs>
+            <li>Steel</li>
+          </thingDefs>
+        </filter>
+        <count>60</count>
+      </li>
+      <li>
+        <filter>
+          <thingDefs>
+            <li>ComponentIndustrial</li>
+          </thingDefs>
+        </filter>
+        <count>3</count>
+      </li>
+      <li>
+        <filter>
+          <thingDefs>
+            <li>BT_Batshittium</li>
+          </thingDefs>
+        </filter>
+        <count>5</count>
+      </li>
+    </ingredients>
+    <fixedIngredientFilter>
+      <thingDefs>
+        <li>Steel</li>
+        <li>ComponentIndustrial</li>
+        <li>BT_Batshittium</li>
+      </thingDefs>
+    </fixedIngredientFilter>
+  </RecipeDef>
 </Defs>

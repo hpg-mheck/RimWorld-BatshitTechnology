@@ -19,6 +19,15 @@ using Verse;
 namespace BatshitTechnology
 {
     /// <summary>
+    /// A thing no implosion rips loose, though it could be destroyed: an
+    /// armed bomb (the Tractor Bomb's), which must go off where it stands,
+    /// not be torn down to nothing by its neighbour's pull.
+    /// </summary>
+    public interface IImplosionProof
+    {
+    }
+
+    /// <summary>
     /// One implosion: a singularity pull around a fixed centre, owned and
     /// ticked by a host thing and saved with it.
     /// </summary>
@@ -334,7 +343,8 @@ namespace BatshitTechnology
         /// Rips loose the fixtures its reach has grown to cover: minifiable
         /// buildings are uninstalled, other buildings torn down to their
         /// materials, plants uprooted. Natural rock holds, and nothing that
-        /// cannot be destroyed (a steam geyser) is touched.
+        /// cannot be destroyed (a steam geyser) or is
+        /// <see cref="IImplosionProof"/> (an armed bomb) is touched.
         /// </summary>
         /// <param name="map">The map.</param>
         private void RipLoose(Map map)
@@ -354,7 +364,7 @@ namespace BatshitTechnology
                 foreach (Thing t in c.GetThingList(map).ToList())
                 {
                     if (t == host || t.Destroyed || !t.Spawned
-                        || !t.def.destroyable)
+                        || !t.def.destroyable || t is IImplosionProof)
                     {
                         continue;
                     }

@@ -44,6 +44,71 @@ namespace BatshitTechnology
         /// <summary>The vortex's outer, counter-rotating layer.</summary>
         public static readonly Material OuterVortex =
             MaterialPool.MatFrom(OuterVortexPath, ShaderDatabase.Transparent);
+
+        /// <summary>
+        /// The texture of the vortex's main layer, for hosts whose own
+        /// graphic is something else (the Tractor Bomb).
+        /// </summary>
+        public const string InnerVortexPath = "Things/Mote/BT_SingularityVortex";
+
+        /// <summary>The vortex's main layer.</summary>
+        public static readonly Material InnerVortex =
+            MaterialPool.MatFrom(InnerVortexPath, ShaderDatabase.Transparent);
+    }
+
+    /// <summary>
+    /// Draws a singularity's vortex, for every implosion host: the
+    /// grenade's field and the Tractor Bomb.
+    /// </summary>
+    public static class SingularityVortex
+    {
+        /// <summary>
+        /// Draws the vortex in two layers: the main one spinning faster and
+        /// growing as the pull goes on, and a fainter outer one, larger,
+        /// beneath it and spinning the other way, for depth. Both throb in
+        /// the final second.
+        /// </summary>
+        /// <param name="drawLoc">Where to draw; its height is replaced.</param>
+        /// <param name="seconds">Seconds the pull has run.</param>
+        /// <param name="totalSeconds">
+        /// The pull's intended length, in seconds; must be positive.
+        /// </param>
+        /// <param name="radius">The pull radius, in tiles.</param>
+        /// <param name="inner">The main layer's material.</param>
+        public static void Draw(
+            Vector3 drawLoc, float seconds, float totalSeconds, float radius,
+            Material inner)
+        {
+            if (inner == null || !(totalSeconds > 0f))
+            {
+                return;
+            }
+
+            float progress = Mathf.Clamp01(seconds / totalSeconds);
+            // Turns: 0.3 per second at the start, accelerating to 3.
+            float turns = (0.3f * seconds)
+                + (2.7f * seconds * seconds / (2f * totalSeconds));
+            float pulse = (float)SingularityPull.FinalPulse(
+                totalSeconds - seconds);
+            float size = radius * 2f * (0.35f + (0.65f * progress)) * pulse;
+
+            Vector3 pos = drawLoc;
+            pos.y = AltitudeLayer.MoteOverhead.AltitudeFor();
+            float outer = size * 1.25f;
+            Graphics.DrawMesh(
+                MeshPool.plane10,
+                Matrix4x4.TRS(
+                    pos - new Vector3(0f, 0.002f, 0f),
+                    Quaternion.AngleAxis(turns * 0.6f * 360f, Vector3.up),
+                    new Vector3(outer, 1f, outer)),
+                BT_SingularityAssets.OuterVortex, 0);
+            Graphics.DrawMesh(
+                MeshPool.plane10,
+                Matrix4x4.TRS(
+                    pos, Quaternion.AngleAxis(-turns * 360f, Vector3.up),
+                    new Vector3(size, 1f, size)),
+                inner, 0);
+        }
     }
 
     /// <summary>The singularity's settings, on its ThingDef.</summary>
@@ -321,27 +386,10 @@ namespace BatshitTechnology
                 return;
             }
 
-            float seconds = implosion.ElapsedTicks / (float)TicksPerSecond;
-            float total = implosion.PullTicks / (float)TicksPerSecond;
-            float progress = Mathf.Clamp01(seconds / total);
-            // Turns: 0.3 per second at the start, accelerating to 3.
-            float turns = (0.3f * seconds) + (2.7f * seconds * seconds / (2f * total));
-            float pulse = (float)SingularityPull.FinalPulse(total - seconds);
-            float size = implosion.PullRadius * 2f
-                * (0.35f + (0.65f * progress)) * pulse;
-
-            Vector3 pos = drawLoc;
-            pos.y = AltitudeLayer.MoteOverhead.AltitudeFor();
-            float outer = size * 1.25f;
-            Graphics.DrawMesh(
-                MeshPool.plane10,
-                Matrix4x4.TRS(pos - new Vector3(0f, 0.002f, 0f),
-                    Quaternion.AngleAxis(turns * 0.6f * 360f, Vector3.up), new Vector3(outer, 1f, outer)),
-                BT_SingularityAssets.OuterVortex, 0);
-            Graphics.DrawMesh(
-                MeshPool.plane10,
-                Matrix4x4.TRS(pos, Quaternion.AngleAxis(-turns * 360f, Vector3.up), new Vector3(size, 1f, size)),
-                Graphic.MatSingle, 0);
+            SingularityVortex.Draw(
+                drawLoc, implosion.ElapsedTicks / (float)TicksPerSecond,
+                implosion.PullTicks / (float)TicksPerSecond,
+                implosion.PullRadius, Graphic.MatSingle);
         }
     }
 
