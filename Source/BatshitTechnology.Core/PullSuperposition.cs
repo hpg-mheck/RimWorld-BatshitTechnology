@@ -26,7 +26,9 @@ public interface IUnitRandom
 /// </summary>
 public sealed class SeededUnitRandom : IUnitRandom
 {
-    /// <summary>One over two to the 53rd: a 53-bit integer to [0, 1).</summary>
+    /// <summary>
+    /// One over two to the 53rd: takes a 53-bit integer to [0, 1).
+    /// </summary>
     private const double Inverse53 = 1.0 / 9007199254740992.0;
 
     private readonly SeededStream stream;
@@ -75,7 +77,9 @@ public readonly struct PullSource
     /// <summary>Its centre's z.</summary>
     public int CenterZ { get; }
 
-    /// <summary>Its current drag rate, in cells per second, as given.</summary>
+    /// <summary>
+    /// Its current drag rate, in cells per second, as given.
+    /// </summary>
     public double Rate { get; }
 
     /// <summary>Its seed, for each thing's persistent bias.</summary>
@@ -110,7 +114,9 @@ public readonly struct PullJitter
     /// <summary>The fraction the strength changes by.</summary>
     public double Scale { get; }
 
-    /// <summary>Both deviations at once: a bias with a flicker on top.</summary>
+    /// <summary>
+    /// Both deviations at once: a bias with a flicker on top.
+    /// </summary>
     /// <param name="other">The other deviation.</param>
     /// <returns>The sum.</returns>
     public PullJitter Plus(PullJitter other) =>

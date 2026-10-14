@@ -16,7 +16,9 @@ namespace BatshitTechnology.Tests;
 /// </summary>
 public sealed class PullSuperpositionTests
 {
-    /// <summary>A drag rate at the end of a pull, in cells per second.</summary>
+    /// <summary>
+    /// A drag rate at the end of a pull, in cells per second.
+    /// </summary>
     private const double EndRate = 12;
 
     /// <summary>
@@ -72,7 +74,7 @@ public sealed class PullSuperpositionTests
     /// offset, which is how many the pull always took. Only the cell path
     /// may differ.
     /// </summary>
-    [Fact(DisplayName = "One jittered pull gathers everything in the same time")]
+    [Fact(DisplayName = "One jittered pull gathers all in the same time")]
     public void Lone_jittered_pull_should_gather_in_the_same_steps()
     {
         var rng = new SeededUnitRandom(7);
@@ -135,7 +137,7 @@ public sealed class PullSuperpositionTests
     /// its persistent bias favours, over many things and seeds: the
     /// flicker on top can never overturn the bias.
     /// </summary>
-    [Fact(DisplayName = "With jitter a thing at the midpoint tips off at once")]
+    [Fact(DisplayName = "With jitter a thing at the midpoint tips off")]
     public void Jitter_should_tip_a_thing_off_the_midpoint()
     {
         PullSource[] pulls = EqualPulls();
@@ -269,7 +271,8 @@ public sealed class PullSuperpositionTests
             {
                 int x = (int)(rng.NextUnit() * 31) - 15;
                 int z = (int)(rng.NextUnit() * 31) - 15;
-                PullJitter[] jitter = Jitter((layout * 100) + probe, pulls, rng);
+                PullJitter[] jitter =
+                    Jitter((layout * 100) + probe, pulls, rng);
                 foreach (var (dx, dz) in PullSuperposition.Steps(
                     x, z, pulls, jitter))
                 {
@@ -435,7 +438,9 @@ public sealed class PullSuperpositionTests
             0, EqualPulls(), new PullJitter[1]));
     }
 
-    /// <summary>Two equal pulls twenty tiles apart, at the end rate.</summary>
+    /// <summary>
+    /// Two equal pulls twenty tiles apart, at the end rate.
+    /// </summary>
     /// <returns>The pulls: west, then east.</returns>
     private static PullSource[] EqualPulls() => new[]
     {

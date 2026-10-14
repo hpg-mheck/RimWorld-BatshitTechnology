@@ -6,7 +6,11 @@
 // to their materials, plants uprooted, natural rock and indestructible
 // things left alone); and it drags pawns and items toward its centre a cell
 // at a time, ever faster, never shoving an item aside or losing one. Its
-// host owns it, ticks it, saves it and decides when it ends.
+// host owns it, ticks it, saves it and ends it when it reports itself over.
+//
+// The drag itself belongs to the map (ImplosionField.cs): when several
+// implosions run at once, every caught thing feels the sum of their pulls
+// and moves once per step, not once per implosion.
 
 using System;
 using System.Collections.Generic;
@@ -19,9 +23,10 @@ using Verse;
 namespace BatshitTechnology
 {
     /// <summary>
-    /// A thing no implosion rips loose, though it could be destroyed: an
-    /// armed bomb (the Tractor Bomb's), which must go off where it stands,
-    /// not be torn down to nothing by its neighbour's pull.
+    /// A thing no implosion rips loose or drags, though it could be
+    /// destroyed: an armed bomb (the Tractor Bomb's), which must go off
+    /// where it stands, not be torn down to nothing by its neighbour's
+    /// pull.
     /// </summary>
     public interface IImplosionProof
     {
@@ -33,12 +38,12 @@ namespace BatshitTechnology
     /// </summary>
     /// <remarks>
     /// <para>
-    /// A host (the grenade's <see cref="SingularityField"/>; later the
-    /// Tractor Bomb and the Colony Bomb) makes one with
+    /// A host (the grenade's <see cref="SingularityField"/>, the Tractor
+    /// Bomb, later the Colony Bomb) makes one with
     /// <c>new Implosion(center, settings, host, instigator)</c>, calls
     /// <see cref="Tick"/> once per game tick for as long as it wants the
-    /// pull to run, and saves it with
-    /// <c>Scribe_Deep.Look(ref implosion, "implosion")</c>.
+    /// pull to run, calls <see cref="Close"/> when it ends it, and saves it
+    /// with <c>Scribe_Deep.Look(ref implosion, "implosion")</c>.
     /// </para>
     /// <para>
     /// Its settings say how long it runs: never less than their minimum,
@@ -50,11 +55,23 @@ namespace BatshitTechnology
     /// dust it sucks in: the vortex, the explosion and any aftermath are
     /// the host's.
     /// </para>
+    /// <para>
+    /// It seizes pawns and rips fixtures loose itself, but hands the drag
+    /// to its map's <see cref="MapComponent_Implosions"/>, which superposes
+    /// every implosion running there. Its own step clock, at its own rate,
+    /// still sets when it tallies what is gathered and what can still move,
+    /// so one implosion alone reports exactly as it always did.
+    /// </para>
     /// </remarks>
     public sealed class Implosion : IExposable
     {
         /// <summary>Game ticks per second.</summary>
         public const int TicksPerSecond = 60;
+
+        /// <summary>
+        /// How long a dragged pawn stays stunned, in ticks.
+        /// </summary>
+        internal const int DragStunTicks = 45;
 
         /// <summary>
         /// How often it re-seizes the pawns in reach, in ticks.
@@ -66,11 +83,6 @@ namespace BatshitTechnology
         /// next seizure, so nobody strolls out between them.
         /// </summary>
         private const int GrabStunTicks = GrabIntervalTicks + 15;
-
-        /// <summary>
-        /// How long a dragged pawn stays stunned, in ticks.
-        /// </summary>
-        private const int DragStunTicks = 45;
 
         /// <summary>
         /// How often a puff of dust is sucked in, in ticks.
@@ -86,6 +98,7 @@ namespace BatshitTechnology
         private ImplosionSettings settings = new ImplosionSettings();
         private Thing host;
         private Thing instigator;
+        private int seed;
         private int elapsed;
         private double pendingSteps;
         private int nextRipCell;
@@ -95,8 +108,10 @@ namespace BatshitTechnology
         private int tornDown;
         private int itemsMoved;
         private int lastStepAt;
-        private int lastMoved;
+        private int lastRestless = 1;
         private int lastOutstanding;
+        private bool closed;
+        private int lastTickedAt = -1;
 
         /// <summary>
         /// For loading a saved implosion only: Scribe_Deep needs a
@@ -148,6 +163,7 @@ namespace BatshitTechnology
                 settings.Normalized(GenRadial.MaxRadialPatternRadius);
             this.host = host;
             this.instigator = instigator;
+            seed = Rand.Int;
         }
 
         /// <summary>Its centre.</summary>
@@ -176,8 +192,23 @@ namespace BatshitTechnology
             set => instigator = value;
         }
 
+        /// <summary>
+        /// Its seed, drawn when it opens: what every caught thing's
+        /// persistent bias toward it is hashed from
+        /// (<see cref="PullSuperposition"/>'s Biases).
+        /// </summary>
+        public int Seed => seed;
+
         /// <summary>Ticks it has run.</summary>
         public int ElapsedTicks => elapsed;
+
+        /// <summary>
+        /// How hard it drags now, in cells per second: its start rate,
+        /// accelerating to its end rate over its ramp.
+        /// </summary>
+        public double CurrentRate => SingularityPull.Rate(
+            ImplosionMath.Progress(elapsed, settings.pullTicks),
+            settings.pullRateStart, settings.pullRateEnd);
 
         /// <summary>
         /// The shortest it runs, in ticks, however soon everything is
@@ -201,21 +232,30 @@ namespace BatshitTechnology
             AllGathered, Settled);
 
         /// <summary>
-        /// Whether everything in reach was gathered at its last drag step:
+        /// Whether its host has ended it: it pulls no more, even if ticked.
+        /// </summary>
+        public bool Closed => closed;
+
+        /// <summary>
+        /// Whether everything in reach was gathered at its last tally:
         /// every pawn and item within the pull radius lay within the gather
         /// radius, and its reach to rip fixtures loose was already complete,
-        /// so nothing more will be torn loose. False before the first step.
-        /// Things may still be settling closer to the centre.
+        /// so nothing more will be torn loose. False before the first
+        /// tally. Things may still be settling closer to the centre, and in
+        /// a tug-of-war with another implosion they may never all come.
         /// </summary>
         public bool AllGathered => SawEverything && lastOutstanding == 0;
 
         /// <summary>
-        /// Whether its last drag step moved nothing, with its reach to rip
-        /// fixtures loose already complete: everything is gathered or stuck
-        /// (behind rock, or waiting for room in a full pile), and only a
-        /// newcomer can change that. False before the first step.
+        /// Whether nothing in reach could still move at its last tally,
+        /// with its reach to rip fixtures loose already complete: every
+        /// pawn and item was gathered at the centre or stuck at its last
+        /// try (behind rock, or waiting for room in a full pile), and only
+        /// a newcomer can change that. A thing at a balance point between
+        /// two implosions, creeping however slowly, keeps it unsettled.
+        /// False before the first tally.
         /// </summary>
-        public bool Settled => SawEverything && lastMoved == 0;
+        public bool Settled => SawEverything && lastRestless == 0;
 
         /// <summary>
         /// The pawns it has caught, for a host's aftermath.
@@ -225,7 +265,10 @@ namespace BatshitTechnology
         /// <summary>How many pawns it has caught.</summary>
         public int CaughtCount => caught.Count;
 
-        /// <summary>Drag steps taken so far (diagnostics).</summary>
+        /// <summary>
+        /// Tallies taken so far, one per drag step on its own clock
+        /// (diagnostics).
+        /// </summary>
         public int StepsTaken => stepsTaken;
 
         /// <summary>Fixtures uninstalled so far (diagnostics).</summary>
@@ -238,28 +281,43 @@ namespace BatshitTechnology
         public int ItemsMoved => itemsMoved;
 
         /// <summary>
-        /// Whether a drag step has run since the reach to rip fixtures
-        /// loose completed, and so has seen everything there will be.
+        /// The game tick it was last ticked, or -1: how its map's field
+        /// tells a running implosion from one its host stopped ticking.
+        /// </summary>
+        internal int LastTickedAt => lastTickedAt;
+
+        /// <summary>
+        /// Its own step clock's carried fraction, which a newly caught
+        /// thing joins so that it steps in time with the pull.
+        /// </summary>
+        internal double PendingSteps => pendingSteps;
+
+        /// <summary>
+        /// Whether a tally has run since the reach to rip fixtures loose
+        /// completed, and so has seen everything there will be.
         /// </summary>
         private bool SawEverything =>
             stepsTaken > 0
             && (!settings.ripFixtures || lastStepAt >= settings.ripTicks);
 
         /// <summary>
-        /// One tick: seize the pawns in reach, rip fixtures loose, drag
-        /// everything in by however many cells are due, and suck in dust.
+        /// One tick: seize the pawns in reach, rip fixtures loose, have the
+        /// map drag everything in by however many cells are due, tally, and
+        /// suck in dust.
         /// </summary>
         /// <param name="map">
-        /// The host's map. Nothing happens, and no time passes, without one.
+        /// The host's map. Nothing happens, and no time passes, without one,
+        /// or once it is closed.
         /// </param>
         public void Tick(Map map)
         {
-            if (map == null || !center.InBounds(map))
+            if (closed || map == null || !center.InBounds(map))
             {
                 return;
             }
 
             elapsed++;
+            lastTickedAt = Find.TickManager.TicksGame;
             if (elapsed % GrabIntervalTicks == 1)
             {
                 GrabPawns(map);
@@ -270,14 +328,13 @@ namespace BatshitTechnology
                 RipLoose(map);
             }
 
-            double rate = SingularityPull.Rate(
-                ImplosionMath.Progress(elapsed, settings.pullTicks),
-                settings.pullRateStart, settings.pullRateEnd);
+            MapComponent_Implosions field = MapComponent_Implosions.For(map);
+            field?.Pull(this);
             int due = BlastSchedule.DueThisTick(
-                ref pendingSteps, rate, TicksPerSecond);
-            for (int i = 0; i < due; i++)
+                ref pendingSteps, CurrentRate, TicksPerSecond);
+            if (due > 0)
             {
-                PullStep(map);
+                Tally(map, field, due);
             }
 
             if (elapsed % DustIntervalTicks == 0)
@@ -288,6 +345,13 @@ namespace BatshitTechnology
                     dust, map, Rand.Range(1.2f, 2.4f), DustColor);
             }
         }
+
+        /// <summary>
+        /// Ends it for good: it pulls no more, and its map's field drops it
+        /// before its next drag. Hosts call this when they explode, or
+        /// leave the map.
+        /// </summary>
+        public void Close() => closed = true;
 
         /// <summary>Saves and loads its settings and progress.</summary>
         public void ExposeData()
@@ -307,6 +371,7 @@ namespace BatshitTechnology
                 ref settings.maxDurationTicks, "maxDurationTicks", -1);
             Scribe_References.Look(ref host, "host");
             Scribe_References.Look(ref instigator, "instigator");
+            Scribe_Values.Look(ref seed, "seed");
             Scribe_Values.Look(ref elapsed, "elapsed");
             Scribe_Values.Look(ref pendingSteps, "pendingSteps");
             Scribe_Values.Look(ref nextRipCell, "nextRipCell");
@@ -316,8 +381,10 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref tornDown, "tornDown");
             Scribe_Values.Look(ref itemsMoved, "itemsMoved");
             Scribe_Values.Look(ref lastStepAt, "lastStepAt");
-            Scribe_Values.Look(ref lastMoved, "lastMoved");
+            // Restless until its next tally, if the save predates it.
+            Scribe_Values.Look(ref lastRestless, "lastRestless", 1);
             Scribe_Values.Look(ref lastOutstanding, "lastOutstanding");
+            Scribe_Values.Look(ref closed, "closed");
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 // A save from before the durations existed: the released
@@ -335,12 +402,33 @@ namespace BatshitTechnology
                     settings.Normalized(GenRadial.MaxRadialPatternRadius);
                 caught ??= new List<Pawn>();
                 caught.RemoveAll(p => p == null);
+                lastTickedAt = -1;
             }
         }
 
         /// <summary>
+        /// Records a pawn its map's drag moved, or tried to, as caught.
+        /// </summary>
+        /// <param name="pawn">The pawn.</param>
+        internal void NoteCaught(Pawn pawn)
+        {
+            if (pawn != null && !caught.Contains(pawn))
+            {
+                caught.Add(pawn);
+            }
+        }
+
+        /// <summary>
+        /// Counts an item its map's drag moved under its pull
+        /// (diagnostics).
+        /// </summary>
+        internal void NoteItemMoved() => itemsMoved++;
+
+        /// <summary>
         /// Seizes every pawn in reach: caught (for a host's aftermath) and
         /// held stunned, so nobody strolls out while the drag is still slow.
+        /// While any implosion's reach holds a pawn, its seizures keep it
+        /// held.
         /// </summary>
         /// <param name="map">The map.</param>
         private void GrabPawns(Map map)
@@ -353,20 +441,10 @@ namespace BatshitTechnology
                     continue;
                 }
 
-                Catch(pawn);
+                NoteCaught(pawn);
                 pawn.stances?.stunner?.StunFor(
                     GrabStunTicks, instigator, addBattleLog: false,
                     showMote: false);
-            }
-        }
-
-        /// <summary>Records a pawn as caught, once.</summary>
-        /// <param name="pawn">The pawn.</param>
-        private void Catch(Pawn pawn)
-        {
-            if (!caught.Contains(pawn))
-            {
-                caught.Add(pawn);
             }
         }
 
@@ -443,146 +521,45 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Drags every pawn and item within reach one cell closer, where
-        /// the way is clear, and tallies what is still outside the gather
-        /// radius. Pawns are stunned so they can't walk back out. Things
-        /// already in the gather radius keep settling toward the centre.
+        /// One of its own drag steps: tallies, after the map's drag, what in
+        /// its reach is still outside the gather radius and what could
+        /// still move. A thing could still move unless it sits on this
+        /// centre, or its last try to step failed; see
+        /// <see cref="MapComponent_Implosions.Restless"/>.
         /// </summary>
         /// <param name="map">The map.</param>
-        private void PullStep(Map map)
+        /// <param name="field">Its map's field, or null.</param>
+        /// <param name="due">How many steps fell due this tick.</param>
+        private void Tally(Map map, MapComponent_Implosions field, int due)
         {
-            stepsTaken++;
+            stepsTaken += due;
             lastStepAt = elapsed;
-            int moved = 0;
+            int restless = 0;
             int outstanding = 0;
-            List<Thing> inReach = GenRadial.RadialDistinctThingsAround(
-                center, map, settings.pullRadius, true).ToList();
-            foreach (Thing t in inReach)
+            foreach (Thing t in GenRadial.RadialDistinctThingsAround(
+                center, map, settings.pullRadius, true))
             {
-                if (t == host || t.Destroyed || !t.Spawned
-                    || t.Position == center)
+                if (!MapComponent_Implosions.Pullable(t) || t == host)
                 {
                     continue;
                 }
 
-                if (t is Pawn pawn)
-                {
-                    Catch(pawn);
-                    if (TryNextCell(pawn.Position, map, out IntVec3 next))
-                    {
-                        pawn.Position = next;
-                        pawn.Notify_Teleported(
-                            endCurrentJob: true, resetTweenedPos: false);
-                        moved++;
-                    }
-
-                    pawn.stances?.stunner?.StunFor(
-                        DragStunTicks, instigator, addBattleLog: false,
-                        showMote: false);
-                }
-                else if (t.def.category == ThingCategory.Item)
-                {
-                    if (PullItem(t, map))
-                    {
-                        moved++;
-                    }
-                }
-                else
-                {
-                    continue;
-                }
-
-                if (t.Spawned && !Gathered(t.Position))
+                bool atCentre = t.Position == center;
+                if (!atCentre && !Gathered(t.Position))
                 {
                     outstanding++;
                 }
+
+                if (field == null
+                    ? !atCentre
+                    : field.Restless(t, atCentre))
+                {
+                    restless++;
+                }
             }
 
-            lastMoved = moved;
+            lastRestless = restless;
             lastOutstanding = outstanding;
-        }
-
-        /// <summary>
-        /// Drags an item one cell closer: into a cell with room for another
-        /// item, or onto a matching stack there, which absorbs it. Otherwise
-        /// it waits. (Spawning an item into a full cell makes RimWorld shove
-        /// the cell's item aside, or destroy it if there's no room: that
-        /// churned items back and forth in a line beside the singularity.)
-        /// </summary>
-        /// <param name="item">The item.</param>
-        /// <param name="map">The map.</param>
-        /// <returns>True if it moved or merged, even in part.</returns>
-        private bool PullItem(Thing item, Map map)
-        {
-            foreach (IntVec3 next in StepsFrom(item.Position))
-            {
-                if (!next.InBounds(map) || !next.Walkable(map))
-                {
-                    continue;
-                }
-
-                Thing stack = next.GetThingList(map).FirstOrDefault(
-                    o => o != item && o.def.category == ThingCategory.Item
-                        && o.CanStackWith(item));
-                if (stack != null && stack.stackCount < stack.def.stackLimit)
-                {
-                    // Absorbing a spawned item destroys it once it's all
-                    // merged; a partial merge leaves the rest where it was.
-                    stack.TryAbsorbStack(item, respectStackLimit: true);
-                    itemsMoved++;
-                    return true;
-                }
-
-                if (next.GetItemCount(map)
-                    < next.GetMaxItemsAllowedInCell(map))
-                {
-                    item.DeSpawn();
-                    GenSpawn.Spawn(item, next, map);
-                    itemsMoved++;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// The next walkable cell closer to the centre, best first.
-        /// </summary>
-        /// <param name="from">Where the thing is.</param>
-        /// <param name="map">The map.</param>
-        /// <param name="next">
-        /// The cell to move to; where it is if none.
-        /// </param>
-        /// <returns>False if every step is blocked.</returns>
-        private bool TryNextCell(IntVec3 from, Map map, out IntVec3 next)
-        {
-            foreach (IntVec3 cell in StepsFrom(from))
-            {
-                if (cell.InBounds(map) && cell.Walkable(map))
-                {
-                    next = cell;
-                    return true;
-                }
-            }
-
-            next = from;
-            return false;
-        }
-
-        /// <summary>
-        /// The cells one step closer to the centre, best first
-        /// (<see cref="ImplosionMath.StepsInward"/>).
-        /// </summary>
-        /// <param name="from">Where the thing is.</param>
-        /// <returns>The candidate cells.</returns>
-        private IEnumerable<IntVec3> StepsFrom(IntVec3 from)
-        {
-            foreach (var (dx, dz) in ImplosionMath.StepsInward(
-                from.x, from.z, center.x, center.z, settings.gatherRadius))
-            {
-                yield return new IntVec3(from.x + dx, 0, from.z + dz);
-            }
         }
 
         /// <summary>Whether a cell lies within the gather radius.</summary>

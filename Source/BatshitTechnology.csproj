@@ -73,6 +73,7 @@
     <Compile Include="CountdownWarning.cs" />
     <Compile Include="Detonations.cs" />
     <Compile Include="Implosion.cs" />
+    <Compile Include="ImplosionField.cs" />
     <Compile Include="MapComponent_AnyRim.cs" />
     <Compile Include="SelfDestruct.cs" />
     <Compile Include="SelfDestructAftermath.cs" />

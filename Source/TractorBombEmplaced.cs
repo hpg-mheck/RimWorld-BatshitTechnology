@@ -428,14 +428,15 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Leaving the map ends its alarm and warnings. (It leaves only by
-        /// exploding, or by a developer's hand.)
+        /// Leaving the map ends its alarm, warnings and pull. (It leaves
+        /// only by exploding, or by a developer's hand.)
         /// </summary>
         /// <param name="mode">How it is leaving.</param>
         public override void DeSpawn(DestroyMode mode = DestroyMode.Vanish)
         {
             Map map = Map;
             StopAlarm();
+            implosion?.Close();
             if (map != null)
             {
                 Overlay(map)?.Deregister(this);
@@ -670,11 +671,13 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// The explosion, on whatever has piled up around it. The bomb is
+        /// The explosion, on whatever has piled up around it. Its pull ends
+        /// at once (so a neighbour's lurches free of it), and the bomb is
         /// gone first, as vanilla explosives are.
         /// </summary>
         private void Explode()
         {
+            implosion?.Close();
             Map map = Map;
             IntVec3 center = Position;
             float blast = BlastRadius;

@@ -79,7 +79,7 @@ public sealed class ImplosionDurationTests
     /// balance point or a tug-of-war cannot hold it open.
     /// </summary>
     /// <param name="elapsed">Ticks run, at or past the maximum.</param>
-    [Theory(DisplayName = "Implosion ends at its maximum however things stand")]
+    [Theory(DisplayName = "Implosion ends at its maximum, however it stands")]
     [InlineData(480)]
     [InlineData(481)]
     [InlineData(int.MaxValue)]

@@ -291,6 +291,17 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// Leaving the map ends its pull, if it has not exploded yet (a
+        /// developer's hand).
+        /// </summary>
+        /// <param name="mode">How it is leaving.</param>
+        public override void DeSpawn(DestroyMode mode = DestroyMode.Vanish)
+        {
+            implosion?.Close();
+            base.DeSpawn(mode);
+        }
+
+        /// <summary>
         /// Saves and loads its progress, its implosion's included.
         /// </summary>
         public override void ExposeData()
@@ -332,11 +343,15 @@ namespace BatshitTechnology
             }
         }
 
-        /// <summary>The explosion, on whatever has piled up at the centre.</summary>
+        /// <summary>
+        /// The explosion, on whatever has piled up at the centre. Its pull
+        /// ends at once.
+        /// </summary>
         /// <param name="s">The settings.</param>
         private void Explode(SingularityExtension s)
         {
             exploded = true;
+            implosion?.Close();
             GenExplosion.DoExplosion(
                 Position, Map, s.explosionRadius, s.explosionDamageDef ?? DamageDefOf.Bomb,
                 instigator, s.explosionDamage);
