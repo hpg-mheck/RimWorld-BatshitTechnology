@@ -58,6 +58,16 @@ physics. Text follows the motif's rule: funny, never cruel.
      healthy pawn on its own).
    - They also gain a mild recreation buff *(proposal: a recreation boost
      and a short good-mood memory with a line of its own)*.
+   - **The kidney** (specified 2026-10-13): every participant, the emcee
+     included, has a 1% chance of losing a kidney, unless they are
+     already short one. The kidney just shows up on the floor.
+     *(Proposals:)*
+     - Only pawns with both natural kidneys can lose one.
+     - The kidney is a vanilla Kidney item placed near its owner, never
+       shoved into an occupied cell, and can be transplanted back.
+     - A quiet message reads, in the house voice, "<name> appears to
+       have mislaid a kidney. It is on the floor."
+     - Animals dragged along are not participants.
 
 ## Implementation Notes
 

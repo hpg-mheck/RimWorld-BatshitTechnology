@@ -139,7 +139,9 @@
   stage until two thirds of the seats fill. Then come magenta lights,
   disco and dancing, and then a mild singularity drags everyone and
   everything loose in the room to center stage (mild injuries, a mild
-  recreation buff; structure untouched).
+  recreation buff; structure untouched). Each participant has a 1%
+  chance of losing a kidney, unless already short one; it shows up on
+  the floor.
 
 ## Test justifications
 
