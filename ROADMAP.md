@@ -92,13 +92,35 @@ repairs bombs on its own. Everyone with sense runs.
         - both bombs go off;
         - nothing logs an error;
       - nothing logs an error.
-    - **Rules the twin-bomb test will settle** *(proposals)*:
-      - **Ownership:** anything in the overlap belongs to the pull that
-        caught it first, so items and pawns are never shuttled between
-        two centres, the churn bug's cousin.
-      - **Chain reaction:** planted bombs are damageable, so the first
-        blast sets off the second at once, wherever its pull has got
-        to.
+    - **Multi-bomb physics** (requested 2026-10-13): the physics gets
+      more complicated with several pulls, without changing anything
+      when there is only one. *(Proposals:)*
+      - **Superposition.** Everything caught feels the sum of every
+        active pull: a direction toward each centre, scaled by that
+        pull's current rate. Each drag step moves it one cell along the
+        net direction, at the net rate.
+      - **The emergent effects:**
+        - tug-of-war across the overlap;
+        - things stalling and jittering at the balance point between
+          two equal pulls, hovering in the junk;
+        - a sudden lurch toward the survivor when one pull ends.
+      - **Stretching:** a pawn held between two strong pulls takes a
+        little extra stretching damage, the stronger the opposing pulls,
+        the worse. *(Optional; it is a joke about spaghettification.)*
+      - **One pull alone** takes exactly today's path: the same steps,
+        rates and checks. The existing single-bomb and grenade smoke
+        checks must pass unchanged, and a Core unit test proves the
+        superposition of one pull equals the single pull, step for step.
+      - **More tests:**
+        - Core: two equal pulls cancel at their midpoint, and net
+          directions round to grid steps;
+        - smoke: in the twin-bomb junkyard, nothing is lost, nothing
+          moves against the net pull, things in the overlap end in a
+          pile or at a balance point, and nothing logs an error.
+      - **Chain reaction:** planted bombs are damageable, so one bomb's
+        blast sets off the other. Damage during a countdown starts that
+        bomb's pull at once; damage during its pull sets off its blast
+        at once.
 12. **Showcase and docs.** The showcase becomes a directed tour (see
     `docs/SHOWCASE.md`, "The Directed Tour"): it takes the camera, shows
     one major feature at a time with on-screen commentary, and the
