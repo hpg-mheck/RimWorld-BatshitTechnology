@@ -29,8 +29,8 @@ physics. Text follows the motif's rule: funny, never cruel.
 - **House Seats:** a ritual marker placed on the seating area.
 - **An emcee:** a male colonist wearing a **Prom Dress**, or a female
   colonist wearing a **Luchador Onesie**. Both are new apparel.
-- **Relax Historical Accuracy:** a checkbox *(proposal: on the Center
-  Stage marker)*. When it is checked, any pawn can emcee, whatever they
+- **Relax Historical Accuracy:** a checkbox on the Center Stage marker
+  (decided 2026-10-13), so each stage keeps its own setting. When it is checked, any pawn can emcee, whatever they
   wear and whatever their gender.
 
 ## The Show
@@ -116,12 +116,10 @@ physics. Text follows the motif's rule: funny, never cruel.
 ## Open Questions
 
 1. Must the chairs face the stage? (Sizes are minimums: answered.)
-2. Where does "Relax Historical Accuracy" live: on the Center Stage
-   marker (proposed), or as a mod setting?
-3. An outdoor stage: limit the drag to a radius (15 tiles proposed)?
-4. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
+2. An outdoor stage: limit the drag to a radius (15 tiles proposed)?
+3. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
    damage right, with a recreation boost and a short good-mood memory?
-5. Research and costs: which project unlocks it, and what do the stage
+4. Research and costs: which project unlocks it, and what do the stage
    tiles, markers and the two outfits cost? The chairs are 5 steel.
-6. Disco music before the sound pipeline exists: silence, a vanilla
+5. Disco music before the sound pipeline exists: silence, a vanilla
    stand-in, or wait for the pipeline?
