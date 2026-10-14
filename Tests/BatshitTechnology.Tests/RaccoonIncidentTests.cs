@@ -41,7 +41,8 @@ public sealed class RaccoonIncidentTests
 
     /// <summary>
     /// The raccoon comes in on Main Street's road, at its south end, and
-    /// the guard's post is on the same road; neither cell is built on.
+    /// the guard's post is on the same road; it runs to the sidewalk at the
+    /// Damages' gate; none of those cells is built on.
     /// </summary>
     [Fact(DisplayName = "Entry and post are open road on Main Street")]
     public void Entry_and_post_should_be_open_road()
@@ -51,6 +52,12 @@ public sealed class RaccoonIncidentTests
         Assert.Equal(road, TerrainAt(RaccoonIncident.GuardPost));
         Assert.DoesNotContain(RaccoonIncident.Entry, Built());
         Assert.DoesNotContain(RaccoonIncident.GuardPost, Built());
+        Assert.DoesNotContain(RaccoonIncident.DamageGate, Built());
+        BuildingPlan damages = Plan.Buildings.Single(b => b.Key == "E3");
+        Assert.Equal(damages.FrontDoor!.Value.Z, RaccoonIncident.DamageGate.Z);
+        Assert.Equal(3, RaccoonIncident.DamageGate.X);
+        Assert.Contains(Plan.Placements, p => p.Def == "FenceGate"
+            && p.At == RaccoonIncident.DamageGate + new Cell(1, 0));
         Assert.InRange(Math.Abs(RaccoonIncident.GuardPost.X), 0, 2);
     }
 

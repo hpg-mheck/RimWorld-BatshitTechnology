@@ -71,6 +71,17 @@ namespace BatshitTechnology
         /// <summary>The zoom on the welcome sign for the census.</summary>
         public float signZoom = 16f;
 
+        /// <summary>
+        /// Ticks after the raccoon comes before Ned, if he has not thrown,
+        /// leaves his post and goes after it.
+        /// </summary>
+        public int pursueTicks = 900;
+
+        /// <summary>
+        /// How often the scene logs why the throw is still waiting.
+        /// </summary>
+        private const int WaitNoteTicks = 600;
+
         /// <summary>How often Ned is kept to his orders, in ticks.</summary>
         private const int OrderCheckTicks = 60;
 
@@ -95,9 +106,16 @@ namespace BatshitTechnology
         [Unsaved]
         private Pawn raccoon;
 
-        /// <summary>The jobs this scene gave Ned, to stand him down.</summary>
+        /// <summary>
+        /// Whether this scene has given Ned orders, so it stands him down
+        /// at the end.
+        /// </summary>
         [Unsaved]
-        private List<Job> nedOrders;
+        private bool ordered;
+
+        /// <summary>The scene tick the raccoon came, or -1.</summary>
+        [Unsaved]
+        private int pestAt = -1;
 
         /// <summary>Constance's wait in her chair, to end it.</summary>
         [Unsaved]
@@ -265,7 +283,8 @@ namespace BatshitTechnology
             constance = FindResident(Stage, Map, RaccoonIncident.NeighbourKey);
             grenade = ned?.equipment?.Primary;
             raccoon = null;
-            nedOrders = new List<Job>();
+            ordered = false;
+            pestAt = -1;
             chairWait = null;
             populationBefore =
                 Map.GetComponent<MapComponent_AnyRim>()?.Population ?? 0;
@@ -342,6 +361,12 @@ namespace BatshitTechnology
                     KeepNedOnTask();
                 }
 
+                if (pestAt >= 0 && Elapsed > pestAt
+                    && (Elapsed - pestAt) % WaitNoteTicks == 0)
+                {
+                    NoteTheWait();
+                }
+
                 return;
             }
 
@@ -396,14 +421,14 @@ namespace BatshitTechnology
                 raccoon.jobs?.StopAll();
             }
 
-            if (ned != null && !ned.Dead && !ned.Destroyed && ned.jobs != null)
+            if (ordered && ned != null && !ned.Dead && !ned.Destroyed
+                && ned.jobs != null)
             {
-                if (nedOrders != null && nedOrders.Contains(ned.CurJob))
+                ned.jobs.ClearQueuedJobs();
+                if (Attacking(ned.CurJob) || Sent(ned.CurJob))
                 {
                     ned.jobs.EndCurrentJob(JobCondition.InterruptForced);
                 }
-
-                ned.jobs.ClearQueuedJobs();
             }
 
             if (grenade != null && grenade.Spawned && !grenade.Destroyed)
@@ -463,15 +488,31 @@ namespace BatshitTechnology
                 forceWake: true, transitionSilently: true);
             if (Alive(constance) && !constance.Downed)
             {
+                // Up Main Street to the Damages' gate first: left to path
+                // straight to her, it went through the yards, chewing the
+                // picket fences, and stalled at Town Hall's.
                 Job bite = JobMaker.MakeJob(JobDefOf.AttackMelee, constance);
                 bite.canBashDoors = true;
                 bite.canBashFences = true;
                 bite.attackDoorIfTargetLost = true;
                 bite.playerForced = true;
-                raccoon.jobs.StartJob(bite, JobCondition.InterruptForced);
+                IntVec3 gate = MapCell(RaccoonIncident.DamageGate);
+                if (gate.Standable(Map))
+                {
+                    Job run = JobMaker.MakeJob(JobDefOf.Goto, gate);
+                    run.locomotionUrgency = LocomotionUrgency.Sprint;
+                    run.playerForced = true;
+                    raccoon.jobs.StartJob(run, JobCondition.InterruptForced);
+                    raccoon.jobs.jobQueue.EnqueueFirst(bite);
+                }
+                else
+                {
+                    raccoon.jobs.StartJob(bite, JobCondition.InterruptForced);
+                }
             }
 
-            OrderNed(walk: true);
+            pestAt = Elapsed;
+            OrderNed(MapCell(RaccoonIncident.GuardPost));
             Cell entryCell = RaccoonIncident.Entry;
             Cell post = RaccoonIncident.GuardPost;
             look = MapCell(new Cell(
@@ -484,31 +525,29 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Gives Ned his orders: walk to his post (when asked and not
-        /// there), then throw at the raccoon once, from where he stands,
-        /// as soon as it is in range. Forced, so his household's duty
-        /// does not call him back.
+        /// Gives Ned his orders: sprint to a cell (when given and he is not
+        /// on it), then throw at the raccoon once, from where he stands, as
+        /// soon as it is in range and in sight. Forced, so his household's
+        /// duty does not call him back.
         /// </summary>
-        /// <param name="walk">Whether to walk to the post first.</param>
-        private void OrderNed(bool walk)
+        /// <param name="walkTo">Where to go first, or Invalid to stay.</param>
+        private void OrderNed(IntVec3 walkTo)
         {
             if (!OnDuty(ned) || raccoon == null || ned.jobs == null)
             {
                 return;
             }
 
+            ordered = true;
             Job attack = JobMaker.MakeJob(JobDefOf.AttackStatic, raccoon);
             attack.maxNumStaticAttacks = 1;
             attack.playerForced = true;
-            nedOrders.Add(attack);
-            IntVec3 post = MapCell(RaccoonIncident.GuardPost);
             ned.jobs.ClearQueuedJobs();
-            if (walk && ned.Position != post && post.Standable(Map))
+            if (walkTo.IsValid && ned.Position != walkTo && walkTo.Standable(Map))
             {
-                Job goTo = JobMaker.MakeJob(JobDefOf.Goto, post);
+                Job goTo = JobMaker.MakeJob(JobDefOf.Goto, walkTo);
                 goTo.locomotionUrgency = LocomotionUrgency.Sprint;
                 goTo.playerForced = true;
-                nedOrders.Add(goTo);
                 ned.jobs.StartJob(goTo, JobCondition.InterruptForced);
                 ned.jobs.jobQueue.EnqueueFirst(attack);
             }
@@ -519,18 +558,79 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Puts Ned back to his throw if something else (a raccoon at his
-        /// ankles, a stray thought) took his attention before it.
+        /// Keeps Ned to his throw. Before <see cref="pursueTicks"/> have
+        /// passed, he is put back to it if something else (a raccoon at his
+        /// ankles, a stray thought) took him off it. After that, if the
+        /// raccoon is still out of his range or sight, he goes after it:
+        /// a sprint to where it is now, the throw queued behind it.
         /// </summary>
         private void KeepNedOnTask()
         {
-            if (!OnDuty(ned) || nedOrders == null || nedOrders.Contains(ned.CurJob)
-                || ned.jobs.jobQueue.Any(q => nedOrders.Contains(q.job)))
+            if (!OnDuty(ned) || raccoon == null || !raccoon.Spawned)
             {
                 return;
             }
 
-            OrderNed(walk: false);
+            bool onOrders = Attacking(ned.CurJob)
+                || (Sent(ned.CurJob) && ned.jobs.jobQueue.Any(q => Attacking(q.job)));
+            if (pestAt < 0 || Elapsed - pestAt < pursueTicks)
+            {
+                if (!onOrders)
+                {
+                    OrderNed(IntVec3.Invalid);
+                }
+
+                return;
+            }
+
+            bool inReach = ned.Position.InHorDistOf(
+                    raccoon.Position, (float)RaccoonIncident.ThrowRange - 1f)
+                && GenSight.LineOfSight(ned.Position, raccoon.Position, Map);
+            if (!inReach)
+            {
+                OrderNed(raccoon.Position);
+            }
+            else if (!Attacking(ned.CurJob))
+            {
+                OrderNed(IntVec3.Invalid);
+            }
+        }
+
+        /// <summary>Whether a job is Ned's throw at the raccoon.</summary>
+        /// <param name="job">The job, or null.</param>
+        /// <returns>True for a forced AttackStatic at the raccoon.</returns>
+        private bool Attacking(Job job) =>
+            job != null && job.def == JobDefOf.AttackStatic
+            && job.playerForced && ReferenceEquals(job.targetA.Thing, raccoon);
+
+        /// <summary>Whether a job is a sprint this scene sent Ned on.</summary>
+        /// <param name="job">The job, or null.</param>
+        /// <returns>True for a forced Goto.</returns>
+        private static bool Sent(Job job) =>
+            job != null && job.def == JobDefOf.Goto && job.playerForced;
+
+        /// <summary>
+        /// Logs why the throw is still waiting: where the raccoon and Ned
+        /// are and what each is doing, the distance and the line of sight.
+        /// </summary>
+        private void NoteTheWait()
+        {
+            string racc = raccoon == null ? "none"
+                : $"{Fate(raccoon)} at {raccoon.PositionHeld}, "
+                    + $"{raccoon.CurJobDef?.defName ?? "no job"}, "
+                    + $"{raccoon.MentalStateDef?.defName ?? "calm"}";
+            string guard = ned == null ? "none"
+                : $"{Fate(ned)} at {ned.PositionHeld}, "
+                    + $"{ned.CurJobDef?.defName ?? "no job"}, holding "
+                    + $"{ned.equipment?.Primary?.def.defName ?? "nothing"}";
+            string apart = raccoon != null && ned != null && raccoon.Spawned
+                && ned.Spawned
+                    ? $"{ned.Position.DistanceTo(raccoon.Position):0.0} tiles, sight "
+                        + GenSight.LineOfSight(ned.Position, raccoon.Position, Map)
+                    : "not both on the map";
+            Log.Message($"{ShowcaseLog.Prefix} raccoon: still waiting for the "
+                + $"throw at scene tick {Elapsed}: raccoon {racc}; Ned {guard}; "
+                + apart);
         }
 
         /// <summary>

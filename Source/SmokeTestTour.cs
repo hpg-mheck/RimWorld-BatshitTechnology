@@ -7,8 +7,9 @@
 // captions and narration, then logs "[BT-SMOKE] DONE" through the smoke
 // runner's own Finish, which also checks the log for errors. The
 // -bttourskip=<key,key> argument makes those scenes decline, so the
-// API's declining (G1) runs on any map. Without -bttourverify it does
-// nothing.
+// API's declining (G1) runs on any map. At READY it silences the
+// storyteller, as the smoke run does, so no raid lands mid-tour. Without
+// -bttourverify it does nothing.
 
 using System;
 using System.Collections.Generic;
@@ -117,6 +118,14 @@ namespace BatshitTechnology
                     && session.Running)
                 {
                     tourWatch = new TourWatch(director, now);
+
+                    // A raid or other incident from the storyteller is not
+                    // the tour's doing, and killed colonists in four of six
+                    // runs in slice 15000; the verifier tests the tour, as
+                    // the smoke run tests the devices, without it. Hostiles
+                    // already on the map stay, and each scene's start notes
+                    // them.
+                    SilenceStoryteller(director.Map);
                     Log.Message($"[BT-SMOKE] NOTE tour READY at tick {now}; "
                         + $"{director.Scenes.Count} scenes run, deadline tick "
                         + $"{tourWatch.DeadlineTick}");

@@ -66,6 +66,13 @@ public static class RaccoonIncident
     public static readonly Cell LawnChair = new(5, 28);
 
     /// <summary>
+    /// The sidewalk at the Damages' front gate, where the raccoon runs up
+    /// Main Street to before it goes for Constance (left to path to her
+    /// directly, it went through the front yards, chewing their fences).
+    /// </summary>
+    public static readonly Cell DamageGate = new(3, 25);
+
+    /// <summary>
     /// The row at which a raccoon coming north along Main Street's centre
     /// line first comes within <see cref="ThrowRange"/> of
     /// <see cref="GuardPost"/>.
