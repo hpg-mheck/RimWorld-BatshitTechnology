@@ -1961,11 +1961,12 @@ namespace BatshitTechnology
                     && bomb.EmplacedTick - bomb.ReadyTick <= 2,
                 $"protest {bomb.ProtestTicks}, ready {bomb.ReadyTick}, "
                     + $"emplaced {bomb.EmplacedTick}");
-            Check("an emplaced bomb is armed, flagged for the flee step",
-                TractorBombUtility.ArmedBombs(map).Contains(bomb)
-                    == bomb.IsArmed
-                    && bomb.CurrentStage == Building_TractorBomb.Stage.Deploying
-                    && bomb.PullRadius == 10f && bomb.BlastRadius == 5f);
+            // Not armed while its tyres flip; armed (and found by the flee
+            // step's query) once its countdown starts.
+            bool armedEarly = bomb.IsArmed
+                || TractorBombUtility.ArmedBombs(map).Contains(bomb);
+            bool defaults = bomb.PullRadius == 10f && bomb.BlastRadius == 5f;
+            bool armedLater = false;
 
             // Stage the pull while its tyres flip: eleven stacks that cannot
             // merge, a second raider inside the reach and one item outside.
@@ -2003,8 +2004,17 @@ namespace BatshitTechnology
                     last[t] = t.Position;
                 }
 
+                armedLater |= bomb.CurrentStage
+                        == Building_TractorBomb.Stage.CountingDown
+                    && bomb.IsArmed
+                    && TractorBombUtility.ArmedBombs(map).Contains(bomb);
                 Tick(1);
             }
+
+            Check("a bomb is armed once its countdown starts, for the flee step",
+                !armedEarly && armedLater && defaults,
+                $"armed while flipping {armedEarly}, while counting down "
+                    + $"{armedLater}, default yield {defaults}");
 
             int countdown = bomb.ImplosionStartedTick - bomb.CountdownStartedTick;
             Check("the countdown is 3 to 5 s",
