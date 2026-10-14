@@ -117,6 +117,17 @@ repairs bombs on its own. Everyone with sense runs.
         - smoke: in the twin-bomb junkyard, nothing is lost, nothing
           moves against the net pull, things in the overlap end in a
           pile or at a balance point, and nothing logs an error.
+      - **Absolute timeouts** (requested 2026-10-13): every implosion
+        gets a minimum and a maximum duration in its settings.
+        - Before the minimum, it keeps pulling even if everything is
+          already gathered or settled, so there is always a show.
+        - At the maximum, it ends however things stand, so balance
+          points and tug-of-war can never hold a bomb open for ever.
+        - *(Proposals:)* the Tractor Bomb runs 2 s minimum and 8 s
+          maximum (its build used a 7.5 s cap). The grenade keeps
+          exactly 5 s, with minimum and maximum equal, so its results
+          are unchanged.
+        - Unit tests pin both ends.
       - **Chain reaction:** planted bombs are damageable, so one bomb's
         blast sets off the other. Damage during a countdown starts that
         bomb's pull at once; damage during its pull sets off its blast
