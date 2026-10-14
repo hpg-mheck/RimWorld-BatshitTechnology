@@ -1686,3 +1686,113 @@ was downed in two and stood in three; the census read 9 -> 6 to 9 -> 8.
 The raccoon scene ran 2,356 to 2,868 ticks; the overlay pacing NOTE
 showed 49 to 54 of 49 to 54 lines, the longest wait 5.7 s. No RimWorld of
 this session is left running; the operator's data folder was never used.
+
+2026-10-14 Claude: Tractor Bomb slice 16000: named yield settings, as the
+operator confirmed them ("Named settings look good; keep the default in
+the middle. However, bump up the middle and large settings by 50% each.").
+- Three settings, three stops each, the default in the middle: Proximity
+  (Timid, Prudent, Nosy; Disposition's Cautious, Moderate, Nosy, same
+  behaviour), Pull (Intimate 6, Neighborly 15, Popular 22.5 tiles) and
+  Blast (Birthday Cake 3, Firework 7.5, Block Party 12). Core:
+  TractorBombYield (stops, radii, Effective before Dial-A-Yield,
+  NearestPull/NearestBlast for old saves, ClampPull/ClampBlast for any
+  radius), TractorBombApproach (Proximity stops, FromDisposition) and the
+  new TractorBombDials (names, menu entries, pane summary;
+  TractorBombSettings holds all three). The enums are saved by name
+  (Scribe_Values writes an enum's name), so the names must not change.
+- The radii are exact. Caps and snapping checked: the old whole-tile
+  rounding and the 20 and 10 caps are gone (no custom values remain);
+  GenRadial's pattern reaches about 79.8 tiles in 1.6, far beyond 22.5 +
+  8 + 1; DrawRadiusRing, NumCellsInRadius, the implosion's settings and
+  GenExplosion take fractional radii; the flee flood fill (12,000 cells)
+  covers a 31.5-tile circle (about 3,100). The flee distance is now a
+  double, pull plus 8 (30.5 at Popular), and Core's React compares
+  squared doubles, so InHorDistOf's edge still counts.
+- Gating: Proximity needs no research (as Disposition); Pull and Blast
+  only after Dial-A-Yield, and before it every bomb pulls and blasts at
+  Neighborly and Firework whatever is set. A robot's or the barn's
+  setter (the buttons) changes only what CanDial allows; SetSettings sets
+  all three outright for staging (the barn fitting a new robot, the tour,
+  the smoke test).
+- Buttons: Command_TractorBombDial, one per setting, a menu of the three
+  stops with sizes ("Popular, 22.5 tiles"; "Prudent, stops 14 tiles
+  out", worked out with the first thing's pull). Grouped across the
+  selection through MergeWith (RimWorld's GizmoGridDrawer merges a
+  group into its first gizmo); InheritInteractionsFrom is false, so one
+  menu sets them all; a mixed selection reads "Pull: mixed". A planted
+  bomb shows Pull and Blast until its pull starts.
+- The Tractor Barn keeps production settings (saved; its pane says "New
+  tractors: ..."); a robot it builds leaves with them. "Apply to every
+  tractor" copies them to the owner's robots on the map and to planted
+  bombs not yet pulling, as far as each may be changed, and reports the
+  counts in a silent message (it answers the player's click).
+- Old saves: a robot's "disposition" (Cautious, Moderate, Nosy, or their
+  numbers) loads as Timid, Prudent, Nosy; "dialledPull" and
+  "dialledBlast" snap to the nearest stop, ties to the larger (3-10
+  Intimate, 11-18 Neighborly, 19-20 Popular; 2-5 Birthday Cake, 6-9
+  Firework, 10 Block Party). The old version never wrote a radius equal
+  to its default (Scribe_Values skips defaults), so a robot it saved at
+  10 and 5 has no node and loads at the new defaults, which is also what
+  "never dialled" should mean. TractorBombSaves.LoadLegacy reads these
+  only in LoadingVars; the smoke test loads a small file through
+  RimWorld's own loader.
+- Building_TractorBomb.Settings (its def's mod extension) was renamed
+  Extension, to free Settings for the interface.
+- The tour's tractors run Popular and Block Party (Core's
+  TourStagePlanner.TourPull and TourBlast). TractorReach became the flee
+  distance at those settings, rounded up: 31 (was 18). The yard
+  candidates moved from z -55/-52/-55 to -62 below the base, so the
+  yard's top edge is 32 tiles below the base square; the pads keep the
+  same choices. The single tractor's barn moved from x -24 to -30 and
+  the party from x 8 to 12: Prudent at Popular stops 15 tiles short (one
+  inside 22.5 would be 21.5), planting about (-3,-1), and the barn's
+  nearest cell is 26 tiles away, beyond the 22.5-tile pull, which would
+  otherwise rip the barn down. The twins stay Nosy, planting 14 tiles
+  apart, outside each other's 12-tile blast.
+- The smoke checks keep the defaults (Neighborly, Firework) and were
+  re-measured for them: the hunt's outsider steel moved from 12 to 20
+  tiles (and its quarry, at the very edge of a 15-tile pull from a Timid
+  stop, is now pulled in, so it left that check); the flee runners from
+  8 to 12 and 13 tiles (inside the pull, outside the 7.5 blast); the
+  seized muffalo from 7 to 10 (7 is inside the blast, so it would
+  freeze); the shooter from 14 to 20 tiles. Proximity's stops are 15, 14
+  and 3.
+- Icons: BT_Proximity{Timid,Prudent,Nosy} (the Disposition drawings,
+  renamed), BT_Pull{Intimate,Neighborly,Popular} (a magenta ring with
+  inward chevrons round a planted tractor), BT_Blast{BirthdayCake,
+  Firework,BlockParty} (a red-to-yellow blast star round it) and
+  BT_ApplyToEveryTractor (the barn's gable, dashed lines to three
+  tractors), from Tools/make_textures.py; the motif's Buttons rule now
+  describes them, with a new "Setting names" rule.
+- The tour's stray (the colonist the single tractor protests about) now
+  falls back to the colonist in the Brain Squeezer, then the grenadier
+  (drafted, holding fire, so it throws nothing), when no colonist is
+  free, and the scene logs whom it chose. The first all-scene run on this
+  slice's code missed the "protest" beat after the grenade's volunteer
+  was lost, as run A of slice 15000 had; the old rule excluded both and
+  left nobody. Why that run had no free colonist was not logged then; the
+  next run chose a free colonist and played the beat.
+- Not sabotaged this slice (time): the new smoke checks are listed in
+  docs/AI-TODO.txt with a sabotage that would prove each.
+Runs (each build confirmed by the DLL's timestamp; 0 warnings, 0 errors,
+0 Def problems): 726 unit and XML tests (was 686; TractorBombDialsTests
+new, the yield, proximity, flee, planner and layout tests rewritten), 18
+Python tests. DLL 13:26:11 (before the stray fallback and comment
+rewraps): full smoke 200 passed, 0 failed (four new checks); all-scene
+verify 10 passed, 1 failed ("tractor: beats missing [protest]"; FINISHED,
+every scene Completed, the volunteer lost). Final DLL 13:36:16: all-scene
+verify 11 passed, 0 failed (stray "Missy (free)", protest played, every
+scene Completed, FINISHED); full smoke 200 passed, 0 failed; default
+verify 11 passed, 0 failed (anyrim and raccoon SKIPPED, tractor and
+twins Completed). Measured: the tour's tractor scene ran 1,842 and
+1,970 ticks, the twins 1,597 and 1,596 ticks at 82 ticks a second and 24
+fps, longest tick gap 49 to 53 ms (the slice 15000 runs: 1,562 to 1,642
+ticks at 81 to 84 ticks a second), so the larger pulls cost no frame
+rate. In the smoke test's twin junkyard (Neighborly, Firework) both pulls
+caught 14 things each, 56 things lay in the overlap (26 to 28 piled, 11
+to 12 balanced, 13 to 14 blocked) and all 14 raiders were stretched (5
+and 6 of 14 at the old 10-tile pull). The flee check's colonist reached
+33.5 tiles and its muffalo 24.0 (the flee distance is 23). Overlay
+pacing: 54 of 54 lines shown, longest wait 5.7 s. No RimWorld of this
+session is left running; the operator's data folder was never used, and
+no -KeepOpen or plain -Showcase run was made.

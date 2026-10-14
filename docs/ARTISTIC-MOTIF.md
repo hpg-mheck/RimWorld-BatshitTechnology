@@ -189,9 +189,23 @@ helper in the generator.
   vanilla does not have; mechanoids keep `Things/Pawn/Mechanoid`.
 - **Buttons.** A setting with a few values gets one 128 px icon per
   value in `UI/Commands`, named `BT_<Setting><Value>`, drawn on
-  transparent, with the thing it sets as the subject. The Disposition
-  icons show the tractor bomb from above, nose up a dashed track toward
-  a danger-red target reticle, stopping far, near or touching it.
+  transparent, with the thing it sets as the subject. The Tractor Bomb's
+  named settings: the Proximity icons show the tractor bomb from above,
+  nose up a dashed track toward a danger-red target reticle, stopping
+  far, near or touching it; the Pull icons show a planted tractor bomb
+  inside a glowing magenta ring (the tractor beam's colour) with
+  chevrons on it pointing in, the ring small, middling or filling the
+  button; the Blast icons show it at the heart of a jagged blast star,
+  danger red at the edge through orange to hazard yellow, small,
+  middling or filling the button. The size of the ring or star is the
+  setting; the tractor stays one size. A button that acts on many things
+  at once (the Tractor Barn's "Apply to every tractor") shows the source
+  at the top and dashed magenta lines down to three of its subjects.
+- **Setting names.** A setting with named stops gets plain, homely
+  names that understate it (Intimate, Neighborly, Popular; Birthday
+  Cake, Firework, Block Party), smallest first, the default in the
+  middle. Menus give each name with its size ("Popular, 22.5 tiles"),
+  and sizes show a decimal only when they have one.
 - **Overlays and pieces.** Glows drawn in game (a lamp) are soft white
   discs tinted by their material; pieces a death flings about are 64 px
   sprites in `Things/Mote`, drawn at about half a tile.

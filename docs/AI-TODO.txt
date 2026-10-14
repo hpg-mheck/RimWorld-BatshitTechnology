@@ -531,3 +531,30 @@ Three review fixes have no automated check, for these reasons:
     another scene needs computed words, consider a Showcase API feature
     (a line with a value the scene supplies) instead of more computed
     beats.
+- [ ] Named settings follow-ups (slice 16000, 2026-10-14):
+  - Watch by eye at 2x on 4K in slice 17000: the nine setting icons and
+    the "Apply to every tractor" icon beside vanilla's (checked here only
+    at full size and at 64 px on a contact sheet), the menus, the barn's
+    buttons and pane, and the tour's tractors at Popular and Block Party
+    (the single tractor's pull reaching its party and the stray; the
+    twins' 22.5-tile pulls over the whole junkyard).
+  - Not sabotaged: the new smoke checks (the barn's settings going with
+    a new robot, "Apply to every tractor" sparing a pulling bomb, older
+    saves loading as named stops, the Proximity menu). A run that, say,
+    skips SetSettings in Notify_FormingCompleted, lets Apply reach a
+    pulling bomb and ignores "dialledPull" would prove them.
+  - A save-and-reload of a whole game with robots, planted bombs and a
+    barn on their new settings was not run; the smoke test loads only the
+    comps' own nodes through RimWorld's loader.
+  - The tour's stray now falls back to the Brain Squeezer's user, then
+    the grenadier, when the volunteer is lost (the robot had nobody to
+    protest about, and the verifier failed the missed "protest" beat).
+    The colonist-safety step (plan, "Colonist Safety and Tourists") may
+    want a tourist as the stray instead.
+  - The flee check's muffalo, 13 tiles out, reached 24.0 tiles (the
+    destination it chose) against the 23 needed: it passes on reaching
+    any clear cell, but watch it for flakes.
+  - Settings on several selected things of different kinds (robots,
+    planted bombs and a barn together) group by setting, and the first
+    selected thing's pull sizes the Proximity menu; fine as built, but a
+    review may prefer the barn's buttons not to group with the robots'.

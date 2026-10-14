@@ -6,7 +6,9 @@ answered every open question the same day. A few smaller details are
 still marked *(proposal)*; they stand unless he says otherwise. Roadmap
 steps 2 to 10 are built, the Tractor Barn (8) last (see "As Built"
 below), with the decisions taken after the core build applied alongside
-it, and so is step 11's multi-bomb physics (2026-10-14).
+it, and so is step 11's multi-bomb physics (2026-10-14). On 2026-10-14 the
+operator replaced Disposition and the Dial-A-Yield sliders with three named
+settings ("Named Settings", below; built in slice 16000).
 
 ## The Tractor Bomb
 
@@ -22,7 +24,7 @@ bomb when it finds them.
   vanilla allowed area set per bomb, which defaults to the whole map. Draw
   an area to fence it in.
 - **Approach:** when it finds any, it moves to within 15 tiles of them,
-  or closer, as its Disposition says (built; see "As Built"). "Hostile
+  or closer, as its Proximity says (built; see "Named Settings"). "Hostile
   forces" means pawns hostile to the player that it can see; it retargets
   if they move before it has emplaced (built).
 - **Emplacement:** it permanently emplaces itself, becoming a fixed bomb
@@ -38,10 +40,12 @@ bomb when it finds them.
   warning band, yellow-orange then red, as the motif requires of every
   countdown.
 - **Detonation:** a singularity effect like the Ergonomic Singularity
-  Grenade's. Everything within 10 tiles is sucked in to within 1.5 tiles
-  of the centre, then it explodes with a 5-tile radius. It is built on
-  the shared implosion extracted from the grenade, which the Colony Bomb
-  reuses later.
+  Grenade's. Everything within its pull is sucked in to within 1.5 tiles
+  of the centre, then it explodes. As specified the pull was 10 tiles and
+  the blast 5; since the named settings (2026-10-14) a bomb pulls 15
+  tiles (Neighborly) and blasts 7.5 (Firework) unless set otherwise. It
+  is built on the shared implosion extracted from the grenade, which the
+  Colony Bomb reuses later.
 - **Research:** a new project, Tractor Bomb, after the Ergonomic
   Singularity Grenade.
 - **Cost:** 60 steel, 3 components and 5 batshittium per bomb.
@@ -82,14 +86,15 @@ enraged and the like (specified 2026-10-13).
 - **The vanilla flee is too short.** Vanilla already makes pawns sprint
   from an explosive that is about to go off
   (`JobGiver_FleePotentialExplosion`, through
-  `Pawn_MindState.knownExploder`), but only to 9 tiles, short of the
-  10-tile pull. It also applies only to humanlike-intelligence pawns.
+  `Pawn_MindState.knownExploder`), but only to 9 tiles, short of even
+  the 10-tile pull first specified. It also applies only to
+  humanlike-intelligence pawns.
 - **A mod flee job giver** (built): `JobGiver_FleeTractorBomb`,
   inserted into the Humanlike and Animal think trees by an XML patch, not
   Harmony. As built, it goes into their constant trees (see "As Built").
   - When an emplaced bomb arms, every pawn that can see it and stands
     within its pull radius plus 8 tiles sprints to a cell outside that
-    distance. The distance follows the bomb's dialled pull radius.
+    distance. The distance follows the bomb's Pull setting.
   - Animals count, as "critters" requires.
   - It sits below the mental-state branch of the think tree, so pawns who
     are berserk, manhunting (rabid or enraged), or otherwise out of their
@@ -130,10 +135,55 @@ They live in the job def's XML, so they can be translated.
 
 ## Tractor Bomb Dial-A-Yield
 
-A further research project, after Tractor Bomb. Once it is researched,
-each Tractor Bomb has two sliders, independent of each other: its
-tractor-beam (pull) radius, 3 to 20 tiles, and its blast radius, 2 to 10
-tiles. The defaults stay 10 and 5.
+A further research project, after Tractor Bomb. As first specified, once
+it was researched each Tractor Bomb had two sliders: its tractor-beam
+(pull) radius, 3 to 20 tiles, and its blast radius, 2 to 10 tiles, with
+defaults of 10 and 5. The named settings below replaced them on
+2026-10-14; Dial-A-Yield now unlocks Pull and Blast.
+
+## Named Settings
+
+Specified by the operator on 2026-10-14 ("three amusing names for each
+of three settings"), with one amendment the same day: "keep the default in
+the middle. However, bump up the middle and large settings by 50% each."
+Built in slice 16000.
+
+- **Proximity** (how close it drives): **Timid** stops 15 tiles out;
+  **Prudent** (the default) at 15 tiles or one inside its pull, whichever
+  is nearer; **Nosy** drives up to 3 tiles.
+- **Pull** (the tractor beam): **Intimate**, 6 tiles; **Neighborly** (the
+  default), 15; **Popular**, 22.5.
+- **Blast:** **Birthday Cake**, 3 tiles; **Firework** (the default), 7.5;
+  **Block Party**, 12.
+
+- **Proximity** replaces Disposition and behaves the same: Timid was
+  Cautious, Prudent was Moderate. It needs no research. Prudent stops 14
+  tiles out at Neighborly, 5 at Intimate and 15 at Popular (its 15-tile
+  emplacing range is nearer than 21.5).
+- **Pull and Blast** need Tractor Bomb Dial-A-Yield; before it, every bomb
+  pulls and blasts at the defaults, whatever is set. There are no custom
+  values, only the three stops. The radii are exact: RimWorld's radial
+  patterns and explosions take fractional radii.
+- **Per unit:** a robot shows a button for each setting it may change; a
+  planted bomb shows Pull and Blast until its pull starts. A click opens a
+  menu of the three names with their sizes ("Popular, 22.5 tiles";
+  "Prudent, stops 14 tiles out"). With several selected, the buttons
+  group, and the choice applies to all of them.
+- **Production defaults:** the Tractor Barn shows the same three buttons,
+  which set what its new robots leave with. Robots from anywhere else
+  take the defaults.
+- **All units at once:** the barn's "Apply to every tractor" button copies
+  its settings to every robot of its owner on its map, and to every
+  planted bomb whose pull has not started (as far as each may be changed:
+  before Dial-A-Yield, only a robot's Proximity).
+- **The inspect pane** names the settings ("Prudent, Popular, Block
+  Party"), then their sizes and the robot's stop.
+- **Saves:** an older save's dialled numbers snap to the nearest stop (a
+  pull of 3 to 10 tiles is Intimate, 11 to 18 Neighborly, 19 and 20
+  Popular; a blast of 2 to 5 is Birthday Cake, 6 to 9 Firework, 10 Block
+  Party). A radius the old version left at its default it never wrote,
+  so that setting loads at the new default. Cautious, Moderate and Nosy
+  load as Timid, Prudent and Nosy.
 
 ## As Built
 
@@ -166,16 +216,14 @@ build settled a detail, it is recorded here; the decisions log
     is within its stopping distance of the nearest one, inside its area;
     it never leaves its area to chase. It looks again every half second,
     following or switching targets.
-  - **Disposition** (decided after the core build): how close it drives
-    before it plants itself, set per robot with a button that steps
-    through the three (one click sets the whole selection) and saved
-    with it. **Cautious** stops 15 tiles out. **Moderate**, the default,
-    stops one tile inside its tractor beam or 15 tiles out, whichever is
-    nearer: 9 tiles at the default yield, following Dial-A-Yield (2 to
-    15). **Nosy** drives right up, to 3 tiles (2 with a 3-tile beam).
-    The arithmetic is Core's `TractorBombApproach`. Once planted the
-    setting no longer matters, so a planted bomb has none; the robot's
-    inspect pane says how far it stops.
+  - **Proximity** (Disposition until 2026-10-14; see "Named
+    Settings"): how close it drives before it plants itself, saved with
+    it. **Timid** stops 15 tiles out. **Prudent**, the default, stops one
+    tile inside its tractor beam or 15 tiles out, whichever is nearer: 14
+    tiles at the default pull. **Nosy** drives right up, to 3 tiles. The
+    arithmetic is Core's `TractorBombApproach`. Once planted the setting
+    no longer matters, so a planted bomb has none; the robot's inspect
+    pane says how far it stops.
   - **Protest:** decided once, when it is ready: a colonist (free or
     enslaved) inside its pull radius. Three seconds of a beep every half
     second (vanilla's `TrapArm` click, for now) and a lamp on its control
@@ -183,9 +231,9 @@ build settled a detail, it is recorded here; the decisions log
   - **Emplacing** takes the robot off the map for good, as a Gauranlen
     dryad returning to its tree is, and spawns the bomb facing the way
     the robot did.
-  - **Inspect pane:** its yield, its patrol area, its job ("patrolling",
-    "closing in on ...", "protesting ...") and any protest timer; Health
-    and Log tabs.
+  - **Inspect pane:** its settings by name, their sizes and its stop,
+    its patrol area, its job ("patrolling", "closing in on ...",
+    "protesting ...") and any protest timer; Health and Log tabs.
   - **Building one:** the Tractor Barn builds them (below). The
     machining-table stopgap that stood in until the barn is gone.
 - **The emplaced bomb** (`Source/TractorBombEmplaced.cs`). Its tyres flip
@@ -202,8 +250,9 @@ build settled a detail, it is recorded here; the decisions log
   - **The pile:** pawns and items pass over the planted bomb, like
     sandbags, so its own cell is part of the pile: nine item stacks fit
     within 1.5 tiles, pawns without limit. Stacks beyond nine that cannot
-    merge wait just outside, about 2 tiles out, and the 5-tile blast
-    catches them. The smoke test stages eleven such stacks.
+    merge wait just outside, about 2 tiles out, and the blast (7.5 tiles
+    at Firework; 3 at Birthday Cake still reaches them) catches them. The
+    smoke test stages eleven such stacks.
   - **It cannot be stopped, only hurried** (decided after the core
     build): a hit that harms (a bullet, a blast, fire) before its pull
     starts, while its tyres flip or it counts down, starts the pull on
@@ -216,10 +265,18 @@ build settled a detail, it is recorded here; the decisions log
     robot's death vortex is only for robots wrecked before they plant;
     a hit planted bomb leaves none. The player sees a message, and DEV
     mode has a "Hit it" button.
-- **Dial-A-Yield.** Whole tiles: tractor beam 3 to 20, blast 2 to 10.
-  Each robot has the two sliders, and so does a planted bomb until its
-  pull starts; with several selected, one slider sets them all. Before
-  the project is researched a bomb uses 10 and 5, whatever was dialled.
+- **Named settings** (slice 16000, replacing the Dial-A-Yield sliders
+  and the Disposition button; see "Named Settings"). Core's
+  `TractorBombYield` (the stops and radii, the effective stops before
+  research, old saves' snapping), `TractorBombApproach` (Proximity's
+  stops, old Dispositions) and `TractorBombDials` (the names, menu
+  entries and pane summary, with `TractorBombSettings` holding all
+  three). In game, `Command_TractorBombDial` (one button per setting,
+  menu of three, grouped across a selection), `ITractorBombDials`
+  (robot, planted bomb, barn) and `TractorBombSaves.LoadLegacy`. Robots
+  and bombs save `proximity`, `pull` and `blast` by name. Icons:
+  `UI/Commands/BT_<Setting><Stop>` and `BT_ApplyToEveryTractor`, from
+  `Tools/make_textures.py`.
 - **The death** (`Source/TractorBombDeath.cs`). Its six parts (four
   tyres, a piece of the hood, the emitter) burst out up to about 2 tiles,
   hang, and spiral back into a sputtering vortex over about two seconds;
@@ -239,8 +296,8 @@ build settled a detail, it is recorded here; the decisions log
   runs one of the three trees; mechanoids, drones, babies and Anomaly's
   entities do not run.
   - **Who reacts:** anyone in a clear line of sight of an armed bomb
-    (counting down or pulling) within its pull radius plus 8 tiles: 18 at
-    the default yield, 11 to 28 as dialled.
+    (counting down or pulling) within its pull radius plus 8 tiles: 23 at
+    the default pull, 14 at Intimate and 30.5 at Popular.
   - **Hostiles react individually** (Decisions 9): anyone not hostile to
     the bomb (colonists, guests, neutrals, wild animals) reacts at once.
     A pawn hostile to it (a raider, or an animal or insect of a hostile
@@ -317,6 +374,12 @@ build settled a detail, it is recorded here; the decisions log
     breaks it off. Its status reads "returning to the tractor barn for
     repairs.", "being repaired at the tractor barn." or "waiting at the
     tractor barn for repair steel."
+  - **Settings:** the barn's Proximity, Pull and Blast buttons (Pull and
+    Blast once Dial-A-Yield is researched) set what its new robots leave
+    with, saved with the barn and shown on its pane ("New tractors:
+    Prudent, Neighborly, Firework"). "Apply to every tractor" copies them
+    to its owner's robots on the map and to planted bombs not yet
+    pulling, and says how many it set.
   - **Repair hopper:** the steel for repairs, a vanilla refuelable store
     of 20 that haulers top up below 75%. A work table with one takes no
     bills while it is empty, so the player can neither switch refuelling
@@ -448,3 +511,10 @@ Answered by Matt "Breakpoint" Heck on 2026-10-13:
    Everyone else (colonists, guests, neutrals and animals) bails at
    once. The roll is kept per pawn per bomb, so a hostile does not
    re-roll every half second. To be built with step 8.
+10. **Named settings** (2026-10-14, replacing decision 3 and Disposition):
+    Proximity (Timid, Prudent, Nosy), Pull (Intimate, Neighborly,
+    Popular) and Blast (Birthday Cake, Firework, Block Party), the default
+    in the middle, the middle and large sizes raised by half: pull 6, 15
+    and 22.5 tiles; blast 3, 7.5 and 12. Settable per unit, for a whole
+    selection, as the barn's production defaults, and for every tractor at
+    once. See "Named Settings".

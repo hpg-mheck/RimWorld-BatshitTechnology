@@ -98,6 +98,20 @@ and before the grenade and the tractors, colonists in reach are moved
 clear. The Ballista picks no target of its own during the tour
 (`AutoTargetHeld`): it fires only the volleys it is ordered to.
 
+The tour's tractors run one setting up from the defaults: Popular (a
+22.5-tile pull) and Block Party (a 12-tile blast), as the operator asked on
+2026-10-14 ("bump up to the next setting"; slice 16000, Core's
+`TourStagePlanner.TourPull` and `TourBlast`). The barn in the Tractor of
+Tomorrow is set the same, and says so on its pane. That robot is Prudent,
+so it stops 15 tiles short of the party (its emplacing range is nearer
+than 21.5); the barn stands 30 tiles west of the yard's centre and the
+party 12 east, so the pull, reaching 22.5 tiles from where the robot
+plants, falls more than 2 tiles short of the barn. The stray it protests
+about is a colonist with nothing to do, else the one in the Brain
+Squeezer, else the grenadier (drafted and holding fire); the scene logs
+whom it chose. The twins stay Nosy and plant 14 tiles apart, each outside
+the other's blast.
+
 ### Scene 3: Uninvited Guests (the Stampede)
 
 Requested by Matt "Breakpoint" Heck on 2026-10-14 ("a 256 bolt volley
@@ -391,10 +405,12 @@ right?".
   spreading, and no live boomalope outlasts the scene (see "Scene 3"
   above).
 - **The tractor yard and the pads are planned together** (Core's
-  `TourStagePlanner`, slice 12000). The yard, 65 by 29 tiles, keeps 18
-  tiles (a robot's default pull plus 8) from the base square, the grenade
-  clearing and every part of AnyRim; its candidates lie south-west, south
-  and south-east of the base. Each pad keeps 87.6 tiles from AnyRim and
+  `TourStagePlanner`, slice 12000). The yard, 65 by 29 tiles, keeps 31
+  tiles from the base square, the grenade clearing and every part of
+  AnyRim: as far as anyone runs from one of the tour's Popular tractors
+  (its 22.5-tile pull plus 8), rounded up (18 before slice 16000). Its
+  candidates lie south-west, south and south-east of the base, 62 tiles
+  south of it, so the yard's top edge is 32 tiles below the square's. Each pad keeps 87.6 tiles from AnyRim and
   from the yard, measured from the device's own cell. The first yard that
   leaves two pads wins; failing that, the one that leaves the most. Every
   keep-away goes through one rule, `Clears(Box, KeepAway)`, and AnyRim

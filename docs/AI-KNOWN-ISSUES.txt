@@ -90,9 +90,10 @@
   monolith no site anywhere qualified. That is the site search working
   as designed on an unlucky map, not a fault; rerun.
 - The Tractor Bomb (docs/TRACTOR-BOMB.md, "As Built"):
-  - A Cautious robot stops 15 tiles from its target but pulls only 10,
-    so a target that stands still escapes; Moderate, the default, stops
-    inside the pull.
+  - A Timid robot stops 15 tiles from its target, so with an Intimate
+    (6-tile) pull a target that stands still escapes, and at Neighborly
+    (15) it is only just inside; Prudent, the default, stops inside the
+    pull.
   - A planted bomb cannot be stopped: a hit only starts its pull, or sets
     off its blast, at once.
   - The protest beep is vanilla's TrapArm click until the sound pipeline
