@@ -114,10 +114,36 @@
   the think trees by XML patch), unless too close or in a mental state.
   - [x] Step 2: the reusable implosion (Source/Implosion.cs, Core's
     ImplosionSettings and ImplosionMath); the grenade runs on it.
-  - [ ] Step 5: the emplaced bomb hosts the implosion (gather radius 1.5)
-    and goes off at AllGathered or Settled, or a cap. The pile holds one
-    item stack per cell, nine within 1.5 tiles; decide whether overflow
-    stacks may pile up past the cell limit or simply wait outside.
+  - [x] Step 3: research, BT_Research_TractorBomb after the grenade and
+    BT_Research_TractorBombDialAYield after it.
+  - [x] Step 4: the robot (BT_TractorBomb; Source/TractorBomb.cs,
+    TractorBombAI.cs, TractorBombGizmos.cs): its own race and flesh type,
+    no needs or mood, patrol inside a vanilla per-pawn allowed area (its
+    own "Patrol:" button), hunt within 45 tiles of sight, close to 15,
+    protest, emplace.
+  - [x] Step 5: the emplaced bomb (Source/TractorBombEmplaced.cs): tyre
+    flip, a rolled 3-5 s countdown under the shared CountdownWarningBand,
+    the implosion (gather 1.5) and a 5-tile blast at AllGathered,
+    Settled or 450 ticks. Decided: overflow stacks wait just outside the
+    nine-cell pile and the blast catches them; they never pile past the
+    cell limit.
+  - [x] Step 7: Dial-A-Yield sliders on robots and planted bombs.
+  - [x] Step 9: a robot's own death (Source/TractorBombDeath.cs).
+  - [x] Step 10: art through Tools/make_textures.py; motif extended.
+  - [ ] Step 6: the flee job giver. Seams ready:
+    TractorBombUtility.ArmedBombs(map), Building_TractorBomb.IsArmed,
+    PullRadius, BlastRadius and TicksUntilImplosion.
+  - [ ] Step 8: the Tractor Barn. Then delete the temporary recipe
+    BT_AssembleTractorBomb and RecipeWorker_AssembleTractorBomb (machining
+    table); the barn should make robots with TractorBombUtility.MakeRobot
+    or SpawnRobot and count them with CountOnMap.
+  - [ ] Step 11 (rest): smoke checks for the barn, the flee step and
+    repair docking; Core tests for the flee distance.
+  - [ ] Step 12: showcase scene and docs.
+  - [ ] Replace the protest's TrapArm click with a beep from the sound
+    pipeline (feature/audio).
+  - [ ] Matt "Breakpoint" Heck to decide: a robot stops 15 tiles from its
+    target but pulls only 10 (docs/AI-requests-for-humans.txt).
 - [ ] Mirror Mirror (docs/MIRROR-MIRROR.md), requested by Matt
   "Breakpoint" Heck on 2026-10-13: a recreation mirror ("Allows pawns to
   pause and reflect on the possibility of alternate dimensions and/or
@@ -152,7 +178,11 @@
 - [ ] The Stand-Up Comedy Showcase (docs/STAND-UP-COMEDY.md), requested by
   Matt "Breakpoint" Heck on 2026-10-13: another performance type. Four to
   eight comics with Social below 5, a stool, a Microphone Stand and a
-  Water Bottle per comic.
+  Water Bottle per comic. Each set adds to the show's quality; a bad
+  enough set starts an audience riot (a social fight; 1% of riots are
+  true gunfights). Riot Suppression Spritzers, popper-like, foam the room
+  a few seconds into any fight, ending hostility and knocking everyone
+  out.
 - [ ] The Interstellar Delivery Locker and Drone (docs/DELIVERY-LOCKER.md),
   requested the same day: a semi-vanilla locker that pawns open with a
   beeping code (click, hinge, SLAM) for mundane items (Water Bottle,
@@ -161,6 +191,15 @@
   destroyed and is replaced the next day.
 
 ## Test justifications
+
+The Tractor Bomb follows the same split. Its pure logic is in Core with
+unit tests (TractorBombYield: the Dial-A-Yield clamps and slider stops;
+TractorBombTiming: the protest, flip, countdown roll, cap, lamp and
+beeps; DeathVortexMath: the death's parts and sputter), and XML tests pin
+its defs, research and textures. The robot's AI, the emplaced bomb, the
+death vortex and the gizmos need a live map, so the smoke runner's
+TestTractorBomb scenarios cover them instead; drawing (the flip frames,
+the vortex, the lamp, the sliders' look) is checked by eye.
 
 Comps, buildings and job drivers depend on RimWorld's runtime (map, ticks,
 power nets, Unity), so they are not unit-testable in this project. They are

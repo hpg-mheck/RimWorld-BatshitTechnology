@@ -37,7 +37,18 @@ Matt "Breakpoint" Heck:
    hit rate (60% proposed); world-map flight; and how the blimp is built
    and researched.
 8. The Tractor Bomb: all answered on 2026-10-13 (docs/TRACTOR-BOMB.md,
-   "Decisions").
+   "Decisions"). New questions from building steps 3 to 10:
+   a. A robot stops 15 tiles from its target, as specified, but its
+      tractor beam reaches 10, so a target that stands still is outside
+      the pull and only hostiles that keep coming are caught. Keep it, or
+      stop at whichever is nearer: 15 tiles, or a tile inside the pull
+      radius (proposed)?
+   b. A planted bomb takes no damage, so nothing can stop it once it has
+      emplaced (built that way; proposed to keep). Should shooting it do
+      something instead?
+   c. Until the Tractor Barn exists, bombs are assembled on a bill at
+      vanilla's machining table, because the Artificer takes no bills.
+      Acceptable as a stopgap?
 9. Mirror Mirror (docs/MIRROR-MIRROR.md, "Open Questions"): duplicates
    belong to an enemy faction, but which (its own, proposed, or an
    existing one); is the trait-inversion
@@ -47,8 +58,10 @@ Matt "Breakpoint" Heck:
     remaining proposals (costs, the Brain Squeezer as the research
     prerequisite, the show bonus) stand unless changed.
 11. The Stand-Up Comedy Showcase (docs/STAND-UP-COMEDY.md, "Open
-    Questions"): shared stage or anywhere; how often a set should end in
-    a riot, and fists or a real fight; the audience's memory; research.
+    Questions"): shared stage or anywhere; the gunfight's shape (1% of
+    riots); the Riot Suppression Spritzers' trigger, radius and reuse;
+    the audience's memory; research. (Answered: about one riot in ten
+    sets, as social fights.)
 12. The Interstellar Delivery Locker and Drone (docs/DELIVERY-LOCKER.md,
     "Open Questions"): visit and delivery rhythm and cost; what each item
     does; the drone's blast; research.

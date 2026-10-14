@@ -59,11 +59,12 @@ Specified by Matt "Breakpoint" Heck on 2026-10-13:
   audience's recreation and memory. With Ideology active, it feeds the
   ritual's quality.
 - **"Bad enough"** means a set in roughly the bottom tenth, rolled per
-  set. A full bill of eight comics should end in a riot now and then,
-  not every time.
+  set (approved 2026-10-13). A full bill of eight comics should end in a
+  riot now and then, not every time.
 - **The attack:**
   - Every member of the audience who can fight goes for the comic at
-    once, in vanilla's social-fight state: fists and whatever is in hand.
+    once, in vanilla's social-fight state (approved 2026-10-13): fists
+    and whatever is in hand.
   - It stops when the comic is down, or flees past the seating.
   - The comic is "treated as hostile" for the length of the brawl, not
     turned into an enemy of the colony, so nobody's faction changes and
@@ -73,13 +74,54 @@ Specified by Matt "Breakpoint" Heck on 2026-10-13:
   line of narration in the house voice: "The management thanks you for
   your patience."
 
+### The Gunfight
+
+A riot has a 1% chance of being a true gunfight instead (specified
+2026-10-13).
+
+- *(Proposal:)* each rioter goes into vanilla's murderous rage against
+  the comic and uses whatever weapon they carry, guns included.
+- It is lethal, unlike the social fight, and ends like any murderous
+  rage, or when the Spritzers go off.
+
+## Riot Suppression Spritzers
+
+Specified 2026-10-13: to deal with a potentially hostile audience, Riot
+Suppression Spritzers may be installed in the corners of the room, or
+really anywhere.
+
+- **Trigger:** if any are available, they engage a few seconds after a
+  fight starts.
+- **Like a firefoam popper:** they are similar to vanilla's Firefoam
+  Poppers, but dispense **Pacification Foam**.
+- **The foam** ends hostility and knocks people out.
+
+*(Proposals:)*
+
+- **When it fires:** a Spritzer goes off about 3 seconds after any fight
+  starts within its radius. That covers comedy riots and gunfights, and
+  also ordinary social fights, berserk pawns and murderous rages.
+- **What it does:** a foam burst, about a 7-tile radius, the size of a
+  popper's.
+  - It ends every hostile and fighting mental state it touches.
+  - It puts everyone it reaches to sleep for an hour or two, as
+    anaesthetic does, guilty and innocent alike, the comic included.
+  - It leaves a slick of pale foam on the floor.
+- **Single use,** like a popper: it is spent when it fires, and is
+  rebuilt to rearm.
+- **Batshittium** makes the foam work, so it carries a faint magenta
+  tint, the motif's one accent. Destroyed, a Spritzer spritzes
+  everything near it, a death of its own as the motif requires.
+- **Research:** Batshit Entertainment, with the shows it polices.
+
 ## Open Questions
 
 1. Does it share the Drag Show's stage and seating (proposed), or run
    anywhere with a stool, a microphone stand and some seats?
-2. The twist (answered): show quality from each set, and a mob if any
-   comic is bad enough. How often should it riot (about one set in ten
-   proposed), and should the brawl be social-fight fists (proposed) or a
-   real fight?
-3. The audience's memory: mixed (proposed), good, or bad?
-4. Research: Batshit Entertainment (proposed)?
+2. The twist (answered): about one set in ten riots, as a social fight,
+   with a 1% chance of a true gunfight. Is murderous rage against the
+   comic (proposed) the right shape for the gunfight?
+3. The Spritzers: firing on any fight in range (proposed) or only on
+   show riots; a 7-tile radius and an hour or two of sleep; single use?
+4. The audience's memory: mixed (proposed), good, or bad?
+5. Research: Batshit Entertainment (proposed)?
