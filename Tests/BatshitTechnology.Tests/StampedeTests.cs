@@ -247,4 +247,64 @@ public sealed class StampedeTests
         Assert.Equal(0, BallistaPower.LongestRangeWithin(256, 500));
         Assert.Equal(325, BallistaPower.LongestRangeWithin(256, 990_000));
     }
+
+    /// <summary>
+    /// A volley's footprint is its scatter, a bolt's blast and a
+    /// boomalope's burst added together; nonsense parts count as nothing.
+    /// </summary>
+    [Fact(DisplayName = "A volley's footprint adds scatter, blast and burst")]
+    public void Footprint_should_add_its_three_parts()
+    {
+        Assert.Equal(7.9 + 3.9 + Stampede.BurstTiles,
+            Stampede.Footprint(7.9, 3.9), 9);
+        Assert.Equal(Stampede.BurstTiles, Stampede.Footprint(-3, double.NaN), 9);
+    }
+
+    /// <summary>
+    /// SafeAim refuses an aim on the base's square or within the
+    /// footprint of it, and allows one just beyond.
+    /// </summary>
+    [Fact(DisplayName = "SafeAim keeps a volley's footprint off the base")]
+    public void SafeAim_should_keep_the_footprint_off_the_base()
+    {
+        const double Footprint = 10;
+        int edge = Base.X + 16; // the square's east edge
+
+        Assert.False(Stampede.SafeAim(Base, Base, Footprint));
+        Assert.False(Stampede.SafeAim(Base, new Cell(edge + 10, Base.Z), Footprint));
+        Assert.True(Stampede.SafeAim(Base, new Cell(edge + 11, Base.Z), Footprint));
+        Assert.False(Stampede.SafeAim(
+            Base, new Cell(edge + 50, Base.Z), double.NaN));
+    }
+
+    /// <summary>
+    /// A worked case with the demo grid's Ballista at the base's centre
+    /// plus (4, -5) and its scatter of 2 tiles plus a quarter a tile: a
+    /// 128-bolt cleanup aimed 11 tiles east of the square is refused, and
+    /// one aimed 35 tiles out is allowed.
+    /// </summary>
+    [Fact(DisplayName = "A cleanup volley near the base is refused, far is allowed")]
+    public void SafeAim_should_refuse_a_cleanup_near_the_base()
+    {
+        var ballista = new Cell(Base.X + 4, Base.Z - 5);
+        int edge = Base.X + 16;
+
+        Assert.False(DemoVolleyAllowed(ballista, new Cell(edge + 11, Base.Z)));
+        Assert.True(DemoVolleyAllowed(ballista, new Cell(edge + 35, Base.Z)));
+    }
+
+    /// <summary>
+    /// Whether the demo Ballista (scatter 2 tiles plus a quarter a tile,
+    /// explosive bolts) may aim at a cell, by <see cref="Stampede.SafeAim"/>.
+    /// </summary>
+    /// <param name="ballista">Where the Ballista stands.</param>
+    /// <param name="aim">The aim.</param>
+    /// <returns>True if the volley is allowed.</returns>
+    private static bool DemoVolleyAllowed(Cell ballista, Cell aim)
+    {
+        double distance = Spot.Of(ballista).DistanceTo(Spot.Of(aim));
+        double scatter = 2 + (0.25 * distance);
+        return Stampede.SafeAim(
+            Base, aim, Stampede.Footprint(scatter, Stampede.DefaultBoltBlastTiles));
+    }
 }

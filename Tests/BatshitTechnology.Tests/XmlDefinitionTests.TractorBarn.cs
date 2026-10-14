@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Xml.Linq;
+using BatshitTechnology.Core;
 using Xunit;
 
 namespace BatshitTechnology.Tests;
@@ -190,4 +192,51 @@ public sealed partial class XmlDefinitionTests
             e => !e.HasElements && e.Value.Contains(
                 "RecipeWorker_AssembleTractorBomb", StringComparison.Ordinal));
     }
+
+    /// <summary>
+    /// The robot's and the research's descriptions give the factory
+    /// settings' real sizes (Neighborly and Firework, from Core) and the
+    /// named Proximity stops, never the retired Disposition's names or the
+    /// old 10-tile pull and 5-tile blast (review of slice 16000).
+    /// </summary>
+    [Fact(DisplayName = "Tractor Bomb descriptions give the named settings' sizes")]
+    public void TractorBombDescriptions_should_match_named_settings()
+    {
+        string pull = Tiles(TractorBombYield.DefaultPullRadius);
+        string blast = Tiles(TractorBombYield.DefaultBlastRadius);
+        string robot = ThingDef("BT_TractorBomb").Element("description")?.Value
+            ?? string.Empty;
+        string research = SingleDef("ResearchProjectDef", "BT_Research_TractorBomb")
+            .Element("description")?.Value ?? string.Empty;
+        foreach ((string what, string text) in new[]
+            { ("robot", robot), ("research", research) })
+        {
+            Assert.Contains($"within {pull} tiles", text, StringComparison.Ordinal);
+            Assert.Contains($"over {blast} tiles", text, StringComparison.Ordinal);
+            foreach (string retired in new[]
+                { "Cautious", "Moderate", "disposition" })
+            {
+                Assert.False(
+                    text.Contains(retired, StringComparison.OrdinalIgnoreCase),
+                    $"the {what} description still says '{retired}'");
+            }
+
+            // "10 tiles" or "5 tiles" on its own, not "15" or "7.5".
+            Assert.DoesNotMatch(@"(?<![\d.])(10|5) tiles", text);
+        }
+
+        foreach (string stop in new[] { "Timid", "Prudent", "Nosy" })
+        {
+            Assert.Contains(stop, robot, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// A radius as the descriptions write it: whole numbers bare, others
+    /// with one decimal place.
+    /// </summary>
+    /// <param name="radius">The radius, in tiles.</param>
+    /// <returns>"15" or "7.5".</returns>
+    private static string Tiles(double radius) =>
+        radius.ToString("0.#", CultureInfo.InvariantCulture);
 }

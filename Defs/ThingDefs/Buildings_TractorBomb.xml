@@ -45,7 +45,8 @@
     <modExtensions>
       <li Class="BatshitTechnology.TractorBombExtension">
         <implosion>
-          <!-- The pull radius is the bomb's own: 10 tiles, or as dialled -->
+          <!-- The pull radius is the bomb's own: Neighborly, 15 tiles,
+               unless set otherwise -->
           <gatherRadius>1.5</gatherRadius>
           <pullTicks>300</pullTicks> <!-- accelerates over five seconds -->
           <pullRateStart>0.6</pullRateStart>

@@ -43,10 +43,28 @@ namespace BatshitTechnology
             /// <summary>The base's centre.</summary>
             private readonly Cell baseCentre;
 
+            /// <summary>The tour's map.</summary>
+            private readonly Map map;
+
+            /// <summary>
+            /// Fires already inside the base's keep-away as the scene began
+            /// (left by an earlier scene), by thing ID, so they are not
+            /// blamed on the stampede.
+            /// </summary>
+            private readonly HashSet<int> firesBefore = new HashSet<int>();
+
+            /// <summary>
+            /// Colonists seen drafted with Fire At Will on during the scene.
+            /// </summary>
+            private readonly HashSet<string> firingAtWill = new HashSet<string>();
+
             /// <summary>
             /// The Ballista's bolts fired, as of the last tick.
             /// </summary>
             private int boltsSeen;
+
+            /// <summary>Ticks sampled so far: the scene's own clock.</summary>
+            private int sampled;
 
             /// <summary>
             /// Starts watching a stampede that has just begun.
@@ -56,6 +74,7 @@ namespace BatshitTechnology
             public StampedeWatch(StampedeScene scene, BatshitTourDirector director)
             {
                 Scene = scene;
+                map = director.Map;
                 TourStage s = director.Stage ?? TourStage.Empty;
                 baseCentre = s.BaseCentre.IsValid
                     ? AnyRim.ToCell(s.BaseCentre)
@@ -64,6 +83,11 @@ namespace BatshitTechnology
                 foreach (Pawn p in director.Map.mapPawns.FreeColonistsSpawned)
                 {
                     injuries[p] = Injuries(p);
+                }
+
+                foreach (Thing f in FiresNearBase())
+                {
+                    firesBefore.Add(f.thingIDNumber);
                 }
 
                 stage.AddRange(new Thing[]
@@ -94,9 +118,41 @@ namespace BatshitTechnology
             /// </summary>
             public IntVec3 FirstEntryCell { get; private set; } = IntVec3.Invalid;
 
+            /// <summary>
+            /// Gets the most new fires seen at once inside the base's
+            /// keep-away during the scene.
+            /// </summary>
+            public int MostFiresNearBase { get; private set; }
+
+            /// <summary>
+            /// Gets where and at which scene tick the first new fire inside
+            /// the keep-away was seen, or null.
+            /// </summary>
+            public string FirstFireNearBase { get; private set; }
+
+            /// <summary>Gets the most fires seen at once anywhere on the map.</summary>
+            public int MostFires { get; private set; }
+
+            /// <summary>
+            /// Gets what of a singularity grenade was seen during the scene
+            /// (its projectile or its field), or null.
+            /// </summary>
+            public string SingularitySeen { get; private set; }
+
             /// <summary>Samples the scene once.</summary>
             public void Sample()
             {
+                sampled++;
+                SampleFires();
+                SampleSingularity();
+                foreach (Pawn p in injuries.Keys)
+                {
+                    if (p.Spawned && p.Drafted && p.drafter?.FireAtWill == true)
+                    {
+                        firingAtWill.Add(p.LabelShort);
+                    }
+                }
+
                 int fired = Building_BatshittiumBallista.BoltsFired - boltsSeen;
                 boltsSeen = Building_BatshittiumBallista.BoltsFired;
                 if (fired > 0)
@@ -170,8 +226,87 @@ namespace BatshitTechnology
                     .Select(t => t.LabelShort).ToList();
                 fact($"the stage still stands (lost [{string.Join(", ", lost)}])",
                     lost.Count == 0);
+
+                // Measured while the scene ran: End puts every fire out, so
+                // a count after it shows only that the clean-up ran.
+                fact($"no fire reached the base (most {MostFiresNearBase} "
+                        + "inside the keep-away"
+                        + (FirstFireNearBase != null
+                            ? $", first {FirstFireNearBase}" : string.Empty)
+                        + ")",
+                    MostFiresNearBase == 0);
                 int fires = map?.listerThings.ThingsOfDef(ThingDefOf.Fire).Count ?? 0;
-                fact($"no fire left burning ({fires})", fires == 0);
+                fact($"no fire left after the scene's clean-up ({fires})", fires == 0);
+                fact("no singularity grenade during the stampede ("
+                        + (SingularitySeen ?? "none seen") + ")",
+                    SingularitySeen == null);
+                fact("the drafted colonists held their fire ("
+                        + $"[{string.Join(", ", firingAtWill)}] on Fire At Will)",
+                    firingAtWill.Count == 0);
+                Log.Message($"[BT-SMOKE] NOTE stampede fires: most {MostFires} "
+                    + $"on the map at once, {MostFiresNearBase} near the base; "
+                    + $"{Scene.VolleysRefused} volleys refused for safety");
+            }
+
+            /// <summary>
+            /// The spawned fires inside the base's keep-away now.
+            /// </summary>
+            /// <returns>The fires.</returns>
+            private IEnumerable<Thing> FiresNearBase() =>
+                (map?.listerThings.ThingsOfDef(ThingDefOf.Fire)
+                    ?? new List<Thing>())
+                .Where(f => f != null && f.Spawned
+                    && Stampede.InsideKeepAway(baseCentre, AnyRim.ToCell(f.Position)));
+
+            /// <summary>
+            /// Counts the fires this tick: on the map, and new ones inside
+            /// the base's keep-away, keeping the most of each and where the
+            /// first near the base was.
+            /// </summary>
+            private void SampleFires()
+            {
+                if (map == null)
+                {
+                    return;
+                }
+
+                MostFires = Mathf.Max(MostFires,
+                    map.listerThings.ThingsOfDef(ThingDefOf.Fire).Count);
+                List<Thing> near = FiresNearBase()
+                    .Where(f => !firesBefore.Contains(f.thingIDNumber)).ToList();
+                if (near.Count > MostFiresNearBase)
+                {
+                    MostFiresNearBase = near.Count;
+                }
+
+                if (near.Count > 0 && FirstFireNearBase == null)
+                {
+                    FirstFireNearBase = $"at {near[0].Position}, scene tick {sampled}";
+                }
+            }
+
+            /// <summary>
+            /// Notes a singularity grenade in the air or its field on the
+            /// map: the grenadier stands drafted in the base during the
+            /// stampede and must not throw at the herd.
+            /// </summary>
+            private void SampleSingularity()
+            {
+                if (map == null || SingularitySeen != null)
+                {
+                    return;
+                }
+
+                if (map.listerThings.ThingsInGroup(ThingRequestGroup.Projectile)
+                    .Any(t => t.def.defName == Showcase.GrenadeProjectileDef))
+                {
+                    SingularitySeen = $"a grenade in the air at scene tick {sampled}";
+                }
+                else if (map.listerThings
+                    .ThingsOfDef(BT_SingularityDefOf.BT_SingularityField).Count > 0)
+                {
+                    SingularitySeen = $"a singularity field at scene tick {sampled}";
+                }
             }
 
             /// <summary>A pawn's injuries and lost parts now.</summary>

@@ -1046,8 +1046,10 @@ namespace BatshitTechnology
         /// bank's guard holding his grenade and nobody else armed, each
         /// still within <see cref="AnyRimHomeReach"/> tiles of its own
         /// household's home after 600 ticks (the guard still holding it,
-        /// unthrown); then the census drops by one when one is killed, and
-        /// the incident clock restarts.
+        /// unthrown); then the census drops by one when one is killed, the
+        /// incident clock restarts, and, with no showcase narrating, the
+        /// census message posts to vanilla's stack (the counterpart of the
+        /// raccoon verifier's "left vanilla's message stack alone").
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="plan">The plan built.</param>
@@ -1111,12 +1113,27 @@ namespace BatshitTechnology
 
             int before = record.Population;
             int killedAt = Find.TickManager.TicksGame;
+            var messagesBefore = new HashSet<Message>(LiveMessages());
             victim.Kill(null);
             Tick(31); // one census interval
             Check("AnyRim's census drops by one when a resident dies",
                 record.Population == before - 1 && record.LastIncidentTick >= killedAt,
                 $"population {before} -> {record.Population}, last incident tick "
                     + $"{record.LastIncidentTick} (killed at {killedAt})");
+
+            // The counterpart of the tour verifier's "the census left
+            // vanilla's message stack alone": with no showcase narrating
+            // (this runs before any starts), the message still posts.
+            string expected = AnyRimText.CensusMessage(record.Population);
+            List<string> posted = LiveMessages()
+                .Where(m => !messagesBefore.Contains(m) && m?.text != null
+                    && m.text.StartsWith(AnyRimText.TownName + " census"))
+                .Select(m => m.text).ToList();
+            Check("AnyRim's census posts its message outside a showcase",
+                LiveMessagesField != null && posted.Count == 1
+                    && posted[0] == expected,
+                (LiveMessagesField == null ? "Messages.liveMessages not found; " : "")
+                    + $"wanted \"{expected}\", posted [{string.Join(" | ", posted)}]");
         }
 
         /// <summary>
@@ -2941,10 +2958,11 @@ namespace BatshitTechnology
         /// Popular and Birthday Cake; one saved Moderate with its radii
         /// left at the old defaults (which the old version never wrote)
         /// loads as Prudent with the new defaults; a planted bomb's dialled
-        /// 11 and 10 load as Neighborly and Block Party; and a robot saved
-        /// since loads exactly as saved. Read through RimWorld's own
-        /// loader from a small file, then stopped before anything else
-        /// loads.
+        /// 11 and 10 load as Neighborly and Block Party, through the bomb's
+        /// own ExposeData; and a robot saved since loads exactly as saved.
+        /// Read through RimWorld's own loader from a small file, then
+        /// stopped before anything else loads (no cross-references or
+        /// post-load pass; a whole-game reload is still a TODO).
         /// </summary>
         private void TestTractorBombOldSaves()
         {
@@ -2962,13 +2980,20 @@ namespace BatshitTechnology
             bool ok;
             try
             {
+                // The planted bomb loads through its own ExposeData (and
+                // so Thing's, which reads "def" and "id" first), so the
+                // check fails if that stops calling the legacy loader.
+                var bomb = (Building_TractorBomb)ThingMaker.MakeThing(
+                    BT_TractorBombDefOf.BT_TractorBombEmplaced);
                 System.IO.File.WriteAllText(path,
                     "<savegame>"
                     + "<old><disposition>Cautious</disposition>"
                     + "<dialledPull>19</dialledPull>"
                     + "<dialledBlast>4</dialledBlast></old>"
                     + "<plain><disposition>Moderate</disposition></plain>"
-                    + "<bomb><dialledPull>11</dialledPull>"
+                    + "<bomb><def>BT_TractorBombEmplaced</def>"
+                    + $"<id>{bomb.ThingID}</id>"
+                    + "<dialledPull>11</dialledPull>"
                     + "<dialledBlast>10</dialledBlast></bomb>"
                     + "<since><proximity>Nosy</proximity><pull>Popular</pull>"
                     + "<blast>BlockParty</blast></since>"
@@ -2976,17 +3001,12 @@ namespace BatshitTechnology
                 var old = new CompTractorBomb();
                 var plain = new CompTractorBomb();
                 var since = new CompTractorBomb();
-                TractorBombProximity unused = TractorBombApproach.Default;
-                TractorBombPull bombPull = TractorBombYield.DefaultPull;
-                TractorBombBlast bombBlast = TractorBombYield.DefaultBlast;
                 Scribe.loader.InitLoading(path);
                 try
                 {
                     Load("old", old.PostExposeData);
                     Load("plain", plain.PostExposeData);
-                    Load("bomb", () => TractorBombSaves.LoadLegacy(
-                        ref unused, ref bombPull, ref bombBlast,
-                        withProximity: false));
+                    Load("bomb", bomb.ExposeData);
                     Load("since", since.PostExposeData);
                 }
                 finally
@@ -2998,14 +3018,14 @@ namespace BatshitTechnology
                         TractorBombProximity.Timid, TractorBombPull.Popular,
                         TractorBombBlast.BirthdayCake)
                     && plain.Settings == TractorBombSettings.Default
-                    && bombPull == TractorBombPull.Neighborly
-                    && bombBlast == TractorBombBlast.BlockParty
+                    && bomb.Settings.Pull == TractorBombPull.Neighborly
+                    && bomb.Settings.Blast == TractorBombBlast.BlockParty
                     && since.Settings == new TractorBombSettings(
                         TractorBombProximity.Nosy, TractorBombPull.Popular,
                         TractorBombBlast.BlockParty);
                 found.Add($"old {old.Settings}");
                 found.Add($"plain {plain.Settings}");
-                found.Add($"bomb {bombPull}/{bombBlast}");
+                found.Add($"bomb {bomb.Settings}");
                 found.Add($"since {since.Settings}");
             }
             catch (System.Exception e)

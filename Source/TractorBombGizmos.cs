@@ -66,8 +66,9 @@ namespace BatshitTechnology
         /// <param name="target">The robot, planted bomb or barn.</param>
         /// <param name="dial">Which setting it sets.</param>
         /// <param name="forWhat">
-        /// What the setting is for, in the tooltip: "this tractor bomb",
-        /// "the tractor bombs this barn builds".
+        /// What the setting is for, in the tooltip, in the singular so the
+        /// sentence agrees: "this tractor bomb", "each tractor bomb this
+        /// barn builds".
         /// </param>
         public Command_TractorBombDial(
             ITractorBombDials target, TractorBombDial dial, string forWhat)

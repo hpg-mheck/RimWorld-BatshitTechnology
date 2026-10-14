@@ -23,14 +23,23 @@ namespace BatshitTechnology
     public abstract class TourScene : ShowcaseScene
     {
         /// <summary>
-        /// The earliest tick a scene's first beat plays, so the scene's
-        /// start line (delayed 90 ticks in the def) is said first.
+        /// The earliest tick on the scene's own clock its first beat plays.
+        /// The clock starts after the scene's intro (<see cref="IntroTicks"/>),
+        /// so the beat comes once the start lines have been read.
         /// </summary>
         public const int FirstBeatTick = 150;
 
         /// <summary>The game tick this run of the scene began, or -1.</summary>
         [Unsaved]
         private int startTick = -1;
+
+        /// <summary>
+        /// Ticks this run holds its own action after it begins, while its
+        /// start lines are read (Core's <see cref="TourPacing.IntroTicks"/>
+        /// over the def's start lines).
+        /// </summary>
+        [Unsaved]
+        private int introTicks;
 
         /// <summary>The beats this run has played, by moment.</summary>
         [Unsaved]
@@ -67,21 +76,49 @@ namespace BatshitTechnology
         /// </summary>
         protected virtual string WhyUnavailable => null;
 
-        /// <summary>Gets the ticks since this run began; 0 before it.</summary>
+        /// <summary>
+        /// Gets the scene's own clock: ticks since its intro ended,
+        /// negative during the intro, and 0 before the run begins. Every
+        /// beat and action is timed on it, so the intro shifts them all.
+        /// </summary>
         protected int Elapsed => startTick < 0
             ? 0
-            : Find.TickManager.TicksGame - startTick;
+            : Find.TickManager.TicksGame - startTick - introTicks;
 
         /// <summary>
-        /// Starts this run: records the start tick, forgets the beats, and
-        /// lets the scene build (<see cref="SetupScene"/>).
+        /// Gets whether the scene is still in its intro: begun, with its
+        /// start lines still being read. Its action waits.
+        /// </summary>
+        protected bool InIntro => startTick >= 0 && Elapsed < 0;
+
+        /// <summary>
+        /// Gets the ticks this run holds its action for its start lines.
+        /// </summary>
+        public int IntroTicks => introTicks;
+
+        /// <summary>
+        /// Starts this run: records the start tick, works out the intro
+        /// from the def's start lines, forgets the beats, and lets the
+        /// scene build (<see cref="SetupScene"/>).
         /// </summary>
         public sealed override void Setup()
         {
             startTick = Find.TickManager.TicksGame;
+            introTicks = TourPacing.IntroTicks(StartLines(), FirstBeatTick);
             played = new HashSet<string>();
+            held = new List<Pawn>();
             SetupScene();
         }
+
+        /// <summary>
+        /// This scene's start lines in the def, with their delays.
+        /// </summary>
+        /// <returns>The lines; empty outside a def.</returns>
+        private IEnumerable<(int Delay, string Text)> StartLines() =>
+            (Director?.def?.narration ?? new List<ShowcaseNarrationLine>())
+            .Where(l => l != null && l.scene == key
+                && l.when == NarrationScript.Start)
+            .Select(l => (l.delayTicks, l.text));
 
         /// <summary>Builds what this scene needs; runs once per run.</summary>
         protected virtual void SetupScene()
@@ -128,6 +165,85 @@ namespace BatshitTechnology
         /// <param name="radius">How far out counts as in danger.</param>
         protected void MoveColonistsClear(IntVec3 danger, float radius) =>
             Showcase.MoveColonistsClear(Map, danger, radius);
+
+        /// <summary>
+        /// How often a scene that holds its colonists clear checks that
+        /// none has come back into the danger, in ticks.
+        /// </summary>
+        protected const int KeepClearTicks = 30;
+
+        /// <summary>The colonists this run drafted to hold them clear.</summary>
+        [Unsaved]
+        private List<Pawn> held;
+
+        /// <summary>
+        /// Holds the colonists clear of a danger for the scene: any inside
+        /// it is moved back to the base, and every free colonist but those
+        /// spared is drafted with Fire At Will off, so no one walks back in
+        /// to haul, to look or to fight. <see cref="ReleaseHeldColonists"/>
+        /// lets them go at the scene's end.
+        /// </summary>
+        /// <param name="inDanger">Whether a cell is in danger.</param>
+        /// <param name="spare">Colonists the scene places itself.</param>
+        protected void HoldColonistsClear(
+            System.Func<IntVec3, bool> inDanger, params Pawn[] spare)
+        {
+            held ??= new List<Pawn>();
+            Showcase.MoveColonistsOut(Map, inDanger, spare);
+            foreach (Pawn p in Map.mapPawns.FreeColonistsSpawned.ToList())
+            {
+                if (spare.Contains(p) || held.Contains(p) || p.drafter == null
+                    || p.Downed || p.InMentalState || p.Drafted)
+                {
+                    continue;
+                }
+
+                p.drafter.Drafted = true;
+                p.drafter.FireAtWill = false; // the Drafted setter turns it on
+                held.Add(p);
+            }
+        }
+
+        /// <summary>
+        /// Every <see cref="KeepClearTicks"/>, moves back to the base any
+        /// colonist but those spared that has come into the danger (one
+        /// that could not be drafted, say), and logs it.
+        /// </summary>
+        /// <param name="inDanger">Whether a cell is in danger.</param>
+        /// <param name="spare">Colonists the scene places itself.</param>
+        protected void KeepColonistsClear(
+            System.Func<IntVec3, bool> inDanger, params Pawn[] spare)
+        {
+            if (Find.TickManager.TicksGame % KeepClearTicks != 0)
+            {
+                return;
+            }
+
+            int moved = Showcase.MoveColonistsOut(Map, inDanger, spare);
+            if (moved > 0)
+            {
+                Log.Message($"{ShowcaseLog.Prefix} {key}: moved {moved} "
+                    + "colonist(s) back out of the danger");
+            }
+        }
+
+        /// <summary>
+        /// Undrafts the colonists <see cref="HoldColonistsClear"/> drafted,
+        /// with Fire At Will back on.
+        /// </summary>
+        protected void ReleaseHeldColonists()
+        {
+            foreach (Pawn p in held ?? new List<Pawn>())
+            {
+                if (Alive(p) && p.drafter != null && p.Drafted)
+                {
+                    p.drafter.FireAtWill = true;
+                    p.drafter.Drafted = false;
+                }
+            }
+
+            held?.Clear();
+        }
 
         /// <summary>Whether a thing is on the map and whole.</summary>
         /// <param name="thing">The thing, or null.</param>
@@ -450,7 +566,10 @@ namespace BatshitTechnology
                 ? null
                 : "no pad for it clears AnyRim and the yard";
 
-        /// <summary>Finds the device and moves colonists clear of it.</summary>
+        /// <summary>
+        /// Finds the device and holds the colonists clear of everything
+        /// it can reach, until its aftermath is over.
+        /// </summary>
         protected override void SetupScene()
         {
             device = PadDevice();
@@ -458,11 +577,17 @@ namespace BatshitTechnology
             armed = false;
             blasted = false;
             ClearBlast();
+            HoldColonistsClear(InReach);
         }
 
-        /// <summary>Arms the device on time; plays the blast when it goes.</summary>
+        /// <summary>
+        /// Arms the device on time; plays the blast when it goes; keeps
+        /// every colonist out of its reach until its aftermath is over (a
+        /// hauler once walked back into the reactor's barrage).
+        /// </summary>
         public override void Tick()
         {
+            KeepColonistsClear(InReach);
             if (!armed && Elapsed >= armTick && Alive(device))
             {
                 ClearBlast();
@@ -489,6 +614,23 @@ namespace BatshitTechnology
         public override bool IsDone() =>
             blasted
             && Map?.GetComponent<MapComponent_SelfDestructAftermath>()?.Active != true;
+
+        /// <summary>Lets the colonists go however the scene ended.</summary>
+        /// <param name="ending">How it ended.</param>
+        public override void End(SceneEnd ending)
+        {
+            ReleaseHeldColonists();
+        }
+
+        /// <summary>
+        /// Whether a cell is within the pad's reach: its blast, fires,
+        /// secondaries and barrage, with the planner's margin.
+        /// </summary>
+        /// <param name="cell">The cell.</param>
+        /// <returns>True if the retirement could reach it.</returns>
+        private bool InReach(IntVec3 cell) =>
+            padCell.IsValid
+            && cell.InHorDistOf(padCell, (float)Showcase.DemoCornerReach);
 
         /// <summary>This scene's pad device, if it stands.</summary>
         /// <returns>The device, or null.</returns>
@@ -700,11 +842,16 @@ namespace BatshitTechnology
         /// <summary>Orders the throw; plays the beat once it flies.</summary>
         public override void Tick()
         {
+            if (ordered)
+            {
+                KeepColonistsClear(NearPile, grenadier, volunteer);
+            }
+
             if (!ordered && Elapsed >= throwTick)
             {
                 ordered = true;
                 Cast();
-                MoveColonistsClear(Stage.GrenadeTarget, clearRadius);
+                HoldColonistsClear(NearPile, grenadier, volunteer);
                 string why = Showcase.ThrowGrenade(
                     grenadier, volunteer, Stage.GrenadeTarget);
                 if (why != null)
@@ -712,6 +859,12 @@ namespace BatshitTechnology
                     Log.Warning($"{ShowcaseLog.Prefix} the grenade could not "
                         + $"be thrown ({why}); the scene will time out");
                 }
+            }
+
+            if (ordered && thrownAt < 0 && Elapsed > throwTick
+                && (Elapsed - throwTick) % WaitNoteTicks == 0)
+            {
+                NoteTheWait();
             }
 
             if (ordered && thrownAt < 0 && (GrenadeInFlight() || Landed()))
@@ -755,6 +908,8 @@ namespace BatshitTechnology
             {
                 grenadier.drafter.Drafted = false;
             }
+
+            ReleaseHeldColonists();
 
             // The director asks OutcomeKey after End, so the volunteer's
             // fate is fixed here, before healing. A volunteer who lived is
@@ -816,6 +971,44 @@ namespace BatshitTechnology
                 .Where(p => !p.Dead && !p.Downed && !p.InMentalState
                     && p.equipment != null && p.drafter != null)
             ?? Enumerable.Empty<Pawn>();
+
+        /// <summary>
+        /// How often the scene logs why the grenade has not yet flown, in
+        /// ticks: on maps with dark entities it has timed out unthrown,
+        /// with nothing logged to say why.
+        /// </summary>
+        private const int WaitNoteTicks = 600;
+
+        /// <summary>
+        /// Logs the grenadier's state while the throw is overdue: where it
+        /// is, what it is doing, and whether it is drafted, downed or in a
+        /// mental state, and what it holds.
+        /// </summary>
+        private void NoteTheWait()
+        {
+            Pawn p = grenadier;
+            string state = p == null ? "no grenadier"
+                : $"{p.LabelShort} at {p.PositionHeld} "
+                    + $"({p.PositionHeld.DistanceTo(Stage.GrenadeTarget):0} "
+                    + $"tiles from the pile), job "
+                    + $"{p.CurJobDef?.defName ?? "none"}, drafted {p.Drafted}, "
+                    + $"downed {p.Downed}, dead {p.Dead}, mental "
+                    + $"{p.MentalStateDef?.defName ?? "none"}, stance "
+                    + $"{p.stances?.curStance?.GetType().Name ?? "none"}, "
+                    + $"holding {p.equipment?.Primary?.def.defName ?? "nothing"}";
+            Log.Message($"{ShowcaseLog.Prefix} grenade: still waiting for the "
+                + $"throw at scene tick {Elapsed}: {state}");
+        }
+
+        /// <summary>
+        /// Whether a cell is near enough the pile for the singularity to
+        /// reach it: within <see cref="clearRadius"/>.
+        /// </summary>
+        /// <param name="cell">The cell.</param>
+        /// <returns>True if it is.</returns>
+        private bool NearPile(IntVec3 cell) =>
+            Stage.GrenadeTarget.IsValid
+            && cell.InHorDistOf(Stage.GrenadeTarget, clearRadius);
 
         /// <summary>Whether the grenade itself is in the air.</summary>
         /// <returns>True while it flies.</returns>

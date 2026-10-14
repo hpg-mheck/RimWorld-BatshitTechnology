@@ -206,13 +206,19 @@ namespace BatshitTechnology
                     Log.Message("[BT-SMOKE] NOTE raccoon: colonists hurt far from "
                         + $"AnyRim during the scene: {string.Join("; ", elsewhere)}");
                 }
-                fact("the census left vanilla's message stack alone (stacked "
-                        + $"[{string.Join(" | ", stacked)}])",
-                    stacked.Count == 0);
+                bool readable = LiveMessagesField != null;
+                fact("the census left vanilla's message stack alone ("
+                        + (readable
+                            ? $"stacked [{string.Join(" | ", stacked)}]"
+                            : "Messages.liveMessages not found")
+                        + ")",
+                    readable && stacked.Count == 0);
             }
 
             /// <summary>
-            /// AnyRim's census messages in vanilla's message stack now.
+            /// AnyRim's census messages in vanilla's message stack now;
+            /// empty when the stack cannot be read (Check then fails its
+            /// fact rather than passing on an empty list).
             /// </summary>
             /// <returns>The messages.</returns>
             private static IEnumerable<Message> CensusMessages() =>
@@ -287,7 +293,10 @@ namespace BatshitTechnology
         /// Why the raccoon scene, declining on its own, should not have:
         /// unless the AnyRim scene was forced to decline (the incident
         /// needs the town shown), the town stands, Ned is on duty with his
-        /// grenade, and the game has raccoons.
+        /// grenade, and the game has raccoons. Judged without the scene's
+        /// own helpers, whose answers are what is under test: Ned is found
+        /// among the map's pawns by the plan's names, his weapon is
+        /// compared with the plan's, and the raccoon's kind is looked up.
         /// </summary>
         /// <param name="stage">The tour's stage.</param>
         /// <param name="map">The tour's map.</param>
@@ -301,11 +310,39 @@ namespace BatshitTechnology
                 return null;
             }
 
-            Pawn guard = RaccoonScene.FindResident(stage, map, RaccoonIncident.GuardKey);
-            return RaccoonScene.OnDuty(guard)
-                && RaccoonScene.RaccoonKind != null
+            ResidentPlan plan = stage.AnyRimPlan?.Residents?
+                .FirstOrDefault(r => r.Key == RaccoonIncident.GuardKey);
+            if (plan == null)
+            {
+                return "AnyRim's plan has no guard";
+            }
+
+            Pawn ned = map.mapPawns.AllPawns.FirstOrDefault(p =>
+                p?.Name is NameTriple name
+                && name.First == plan.First && name.Last == plan.Last);
+            if (ned == null)
+            {
+                return $"AnyRim stands, but {plan.First} {plan.Last} was "
+                    + "never put on the map";
+            }
+
+            string weapon = ned.equipment?.Primary?.def.defName;
+            if (!ned.Spawned || ned.Dead || ned.Downed || ned.InMentalState)
+            {
+                return null; // he is down or gone: a fair decline
+            }
+
+            if (weapon != plan.Weapon)
+            {
+                // Nothing in the tour takes his grenade before his scene,
+                // and the storyteller is silenced: a stage fault.
+                return $"{plan.First} stands holding {weapon ?? "nothing"}, "
+                    + $"not the planned {plan.Weapon}";
+            }
+
+            return DefDatabase<PawnKindDef>.GetNamedSilentFail("Raccoon") != null
                 && AnyRim.ToMap(stage.AnyRimAnchor, RaccoonIncident.Entry).Standable(map)
-                    ? "AnyRim stands with Ned on duty"
+                    ? $"AnyRim stands with {plan.First} on duty, holding {weapon}"
                     : null;
         }
     }

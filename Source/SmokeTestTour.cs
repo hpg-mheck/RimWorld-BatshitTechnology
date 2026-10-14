@@ -18,6 +18,7 @@ using BatshitTechnology.Core;
 using BatshitTechnology.Showcases;
 using RimWorld;
 using Verse;
+using Verse.AI;
 
 namespace BatshitTechnology
 {
@@ -359,16 +360,20 @@ namespace BatshitTechnology
                     return Standing(stage.Ballista) && stage.BallistaTarget.IsValid
                         ? "the Ballista stands with a target" : null;
                 case TourScript.Stampede:
-                    // The open ground is the map's to judge: the same cell
-                    // query the scene uses, since the rule is the map's.
+                    // The open ground is judged by the verifier's own query
+                    // over Core's bands, not the scene's EntryCells, whose
+                    // answer is what is under test.
+                    int herd = Stampede.HerdSize(director.def?.scenes?
+                        .OfType<StampedeScene>().FirstOrDefault()?.herdSize
+                        ?? Stampede.TargetHerd);
                     return Standing(stage.Ballista)
                         && stage.Ballista.BoltsAvailable(
                             BT_BallistaDefOf.BT_BoltReallyPainful,
                             unpoweredToo: true) >= Stampede.MoneyShotBolts
                         && DefDatabase<PawnKindDef>.GetNamedSilentFail("Boomalope") != null
-                        && StampedeScene.EntryCells(
-                            map, stage.BaseCentre, Stampede.TargetHerd).Count > 0
-                        ? "the Ballista stands, loaded, with open ground east"
+                        && StampedeGround(map, stage.BaseCentre, herd) is string ground
+                        ? $"the Ballista stands, loaded, with open ground east "
+                            + $"({ground})"
                         : null;
                 case TourScript.RetireReplicator:
                 case TourScript.RetireReactor:
@@ -411,6 +416,67 @@ namespace BatshitTechnology
         /// <returns>True if spawned and not destroyed.</returns>
         private static bool Standing(Thing t) =>
             t != null && t.Spawned && !t.Destroyed;
+
+        /// <summary>
+        /// The verifier's own look for the stampede's entry: the first of
+        /// Core's bands on the east edge with enough standable cells from
+        /// which the base can be reached. Reachability is asked from the
+        /// base out to each cell, the other way round from the scene, so a
+        /// fault in the scene's query does not hide here.
+        /// </summary>
+        /// <param name="map">The tour's map.</param>
+        /// <param name="baseCentre">The demo base's centre.</param>
+        /// <param name="herd">The herd's size.</param>
+        /// <returns>
+        /// The band and its count when one has enough, else null.
+        /// </returns>
+        private static string StampedeGround(Map map, IntVec3 baseCentre, int herd)
+        {
+            if (map == null || !baseCentre.IsValid)
+            {
+                return null;
+            }
+
+            // The base's centre holds the reactor: start from the nearest
+            // standable cell to it instead.
+            IntVec3 start = GenRadial.RadialCellsAround(baseCentre, 8f, true)
+                .Where(c => c.InBounds(map) && c.Standable(map))
+                .DefaultIfEmpty(IntVec3.Invalid)
+                .First();
+            if (!start.IsValid)
+            {
+                return null;
+            }
+
+            int needed = Stampede.CellsNeeded(herd);
+            var bounds = new Box(0, 0, map.Size.x - 1, map.Size.z - 1);
+            TraverseParms parms = TraverseParms.For(
+                TraverseMode.PassDoors, Danger.Deadly);
+            foreach (Box band in Stampede.Bands(bounds, AnyRim.ToCell(baseCentre)))
+            {
+                int reaching = 0;
+                for (int x = band.MinX; x <= band.MaxX && reaching < needed; x++)
+                {
+                    for (int z = band.MinZ; z <= band.MaxZ && reaching < needed; z++)
+                    {
+                        var c = new IntVec3(x, 0, z);
+                        if (c.InBounds(map) && c.Standable(map)
+                            && map.reachability.CanReach(
+                                start, c, PathEndMode.OnCell, parms))
+                        {
+                            reaching++;
+                        }
+                    }
+                }
+
+                if (reaching >= needed)
+                {
+                    return $"band {band}: {reaching} reachable cells, {needed} needed";
+                }
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// The beats each completed scene should have played and did not:
@@ -604,6 +670,33 @@ namespace BatshitTechnology
             /// <summary>The clock on the scene showing, or null.</summary>
             private SceneClock clock;
 
+            /// <summary>
+            /// Each colonist's injuries as the scene showing began, for the
+            /// per-scene "no colonist harmed" fact.
+            /// </summary>
+            private readonly Dictionary<Pawn, HashSet<Hediff>> sceneInjuries =
+                new Dictionary<Pawn, HashSet<Hediff>>();
+
+            /// <summary>
+            /// Each colonist first seen hurt, downed or dead during the scene
+            /// showing: what and where, and why it is excused, if it is.
+            /// </summary>
+            private readonly Dictionary<Pawn, (string What, string Excuse)> sceneHarm =
+                new Dictionary<Pawn, (string What, string Excuse)>();
+
+            /// <summary>
+            /// The hostile pawns already on the map at READY (a mechhive's,
+            /// dark entities): not the tour's doing, so harm done beside one
+            /// is noted rather than failed.
+            /// </summary>
+            private readonly HashSet<Pawn> startingHostiles = new HashSet<Pawn>();
+
+            /// <summary>
+            /// How near a starting hostile a colonist's harm counts as that
+            /// hostile's doing, in tiles.
+            /// </summary>
+            private const float HostileExcuseTiles = 12f;
+
             /// <summary>Starts watching a tour that is READY.</summary>
             /// <param name="director">The tour's director.</param>
             /// <param name="now">The current tick.</param>
@@ -620,6 +713,14 @@ namespace BatshitTechnology
                 foreach (Pawn p in director.Map.mapPawns.FreeColonistsSpawned)
                 {
                     colonists[p] = false;
+                }
+
+                foreach (Pawn p in director.Map.mapPawns.AllPawnsSpawned)
+                {
+                    if (!p.Dead && p.HostileTo(Faction.OfPlayer))
+                    {
+                        startingHostiles.Add(p);
+                    }
                 }
             }
 
@@ -687,6 +788,20 @@ namespace BatshitTechnology
                     explosionsAtStart = Building_TractorBomb.Explosions;
                     superposedAtStart = MapComponent_Implosions.Superposed;
                     implosionsInScene = 0;
+                    sceneInjuries.Clear();
+                    sceneHarm.Clear();
+                    foreach (Pawn p in colonists.Keys)
+                    {
+                        if (!p.Dead && !p.Destroyed)
+                        {
+                            sceneInjuries[p] = Injuries(p);
+                        }
+                    }
+                }
+
+                if (current != null && current == showing)
+                {
+                    SampleHarm(current);
                 }
 
                 foreach (Implosion i in Running())
@@ -772,6 +887,22 @@ namespace BatshitTechnology
                         stray == 0);
                 }
 
+                // Colonists are never the casualties: in every scene, only
+                // the grenade's volunteer (during the grenade) may be hurt.
+                List<string> harmed = sceneHarm.Values
+                    .Where(h => h.Excuse == null).Select(h => h.What).ToList();
+                Fact(scene, "no colonist harmed during the scene "
+                        + $"([{string.Join("; ", harmed)}])",
+                    harmed.Count == 0);
+                List<string> excused = sceneHarm.Values
+                    .Where(h => h.Excuse != null)
+                    .Select(h => $"{h.What} ({h.Excuse})").ToList();
+                if (excused.Count > 0)
+                {
+                    Log.Message($"[BT-SMOKE] NOTE {scene.key}: colonist harm "
+                        + $"excused: {string.Join("; ", excused)}");
+                }
+
                 switch (scene)
                 {
                     case SelfDestructScene pad:
@@ -795,10 +926,12 @@ namespace BatshitTechnology
                     case GrenadeScene _:
                         Fact(scene, $"one more implosion ({implosionsInScene})",
                             implosionsInScene >= 1);
+                        SingularityOver(scene, map);
                         break;
                     case RaccoonScene _:
                         Fact(scene, $"one more implosion ({implosionsInScene})",
                             implosionsInScene >= 1);
+                        SingularityOver(scene, map);
                         if (raccoonWatch == null)
                         {
                             Fact(scene, "the raccoon scene was watched", false);
@@ -876,6 +1009,86 @@ namespace BatshitTechnology
                 return $"{anyRim}; hostiles on the map: "
                     + (hostiles.Count == 0 ? "none" : string.Join(", ", hostiles));
             }
+
+            /// <summary>
+            /// The fact that a grenade scene ended after its singularity
+            /// did: no singularity field on the map and no implosion still
+            /// ticking (what TourScene.SingularityOpen and ImplosionActive
+            /// promise), so its explosion cannot land in the next scene.
+            /// </summary>
+            /// <param name="scene">The scene that ended.</param>
+            /// <param name="map">The tour's map.</param>
+            private void SingularityOver(ShowcaseScene scene, Map map)
+            {
+                int fields = map?.listerThings
+                    .ThingsOfDef(BT_SingularityDefOf.BT_SingularityField).Count ?? 0;
+                int now = Find.TickManager.TicksGame;
+                int open = Running().Count(i => i.LastTickedAt >= now - 1);
+                Fact(scene, $"the singularity is over at the scene's end "
+                        + $"(fields {fields}, implosions still ticking {open})",
+                    fields == 0 && open == 0);
+            }
+
+            /// <summary>
+            /// Notes, once per colonist per scene, a colonist hurt, downed or
+            /// killed during the scene, and whether it is excused: the
+            /// grenade's volunteer during the grenade, or harm done with one
+            /// of the map's starting hostiles beside the colonist.
+            /// </summary>
+            /// <param name="scene">The scene showing.</param>
+            private void SampleHarm(ShowcaseScene scene)
+            {
+                foreach (KeyValuePair<Pawn, HashSet<Hediff>> was in sceneInjuries)
+                {
+                    Pawn p = was.Key;
+                    if (sceneHarm.ContainsKey(p))
+                    {
+                        continue;
+                    }
+
+                    List<string> fresh = Injuries(p)
+                        .Where(h => !was.Value.Contains(h))
+                        .Select(h => $"{h.def.defName} ({h.Part?.def.defName ?? "whole"})")
+                        .ToList();
+                    if (fresh.Count == 0 && !p.Dead && !p.Destroyed && !p.Downed)
+                    {
+                        continue;
+                    }
+
+                    IntVec3 at = p.PositionHeld;
+                    string state = p.Dead || p.Destroyed ? "dead"
+                        : p.Downed ? "downed" : "hurt";
+                    string what = $"{p.LabelShort} {state} at {at}, doing "
+                        + $"{p.CurJobDef?.defName ?? "nothing"}: "
+                        + string.Join(", ", fresh.Take(4));
+                    string excuse = null;
+                    if (scene is GrenadeScene g && ReferenceEquals(g.Volunteer, p))
+                    {
+                        excuse = "the volunteer";
+                    }
+                    else
+                    {
+                        Pawn hostile = startingHostiles.FirstOrDefault(h =>
+                            h.Spawned && !h.Dead && at.IsValid
+                            && h.Position.InHorDistOf(at, HostileExcuseTiles));
+                        if (hostile != null)
+                        {
+                            excuse = $"a starting hostile, {hostile.LabelShort}, "
+                                + $"at {hostile.Position}";
+                        }
+                    }
+
+                    sceneHarm[p] = (what, excuse);
+                }
+            }
+
+            /// <summary>A pawn's injuries and lost parts now.</summary>
+            /// <param name="p">The pawn.</param>
+            /// <returns>The hediffs.</returns>
+            private static HashSet<Hediff> Injuries(Pawn p) =>
+                new HashSet<Hediff>(p?.health?.hediffSet?.hediffs?
+                    .Where(h => h is Hediff_Injury || h is Hediff_MissingPart)
+                    ?? Enumerable.Empty<Hediff>());
 
             /// <summary>Records one world fact.</summary>
             /// <param name="scene">The scene it belongs to.</param>

@@ -459,19 +459,25 @@ namespace BatshitTechnology
                 if (CanDial(dial))
                 {
                     yield return new Command_TractorBombDial(
-                        this, dial, "the tractor bombs this barn builds");
+                        this, dial, "each tractor bomb this barn builds");
                 }
             }
 
-            yield return new Command_Action
+            var apply = new Command_Action
             {
-                defaultLabel = "Apply to every tractor",
+                defaultLabel = ApplyLabel,
                 defaultDesc = "Give every tractor bomb on this map this "
                     + "barn's settings: every robot, and every planted bomb "
                     + "that has not yet started to pull (a planted bomb has "
                     + "no Proximity to change). Pull and Blast need Tractor "
                     + "Bomb Dial-A-Yield.",
                 icon = BT_TractorBombAssets.ApplyToEveryTractorIcon,
+
+                // Several selected barns group into one button; vanilla
+                // would run every barn's action in turn (the last one
+                // winning, with a message each), so only the clicked
+                // barn's runs, and the button is disabled anyway below.
+                alsoClickIfOtherInGroupClicked = false,
                 action = () =>
                 {
                     ApplyToEveryTractor(out int robots, out int bombs);
@@ -483,7 +489,25 @@ namespace BatshitTechnology
                         this, MessageTypeDefOf.SilentInput, false);
                 },
             };
+            if (Find.Selector?.SelectedObjects?
+                    .OfType<Building_TractorBarn>().Take(2).Count() > 1)
+            {
+                apply.Disable(SelectOneBarnReason);
+            }
+
+            yield return apply;
         }
+
+        /// <summary>The "Apply to every tractor" button's label.</summary>
+        internal const string ApplyLabel = "Apply to every tractor";
+
+        /// <summary>
+        /// Why "Apply to every tractor" is disabled with several barns
+        /// selected: which barn's settings would win is not something the
+        /// player can see.
+        /// </summary>
+        internal const string SelectOneBarnReason =
+            "Select one barn: each barn has its own settings.";
 
         /// <summary>
         /// The next thing to repair: the lightest injury first, then a

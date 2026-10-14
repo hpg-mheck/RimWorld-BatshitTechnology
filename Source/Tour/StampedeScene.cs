@@ -50,9 +50,10 @@ namespace BatshitTechnology
         public int holdTicks = 420;
 
         /// <summary>
-        /// The least time from a volley to the aftermath's beat, in ticks:
-        /// the volley's line (115 characters) reads for 8.25 s on the
-        /// narration overlay, and the aftermath's line would replace it.
+        /// The least time from a volley to the next line, in ticks: the
+        /// volley's line (115 characters) reads for 8.25 s on the narration
+        /// overlay, and the stragglers' line (after the first volley) or
+        /// the aftermath's (after the last) would replace it.
         /// </summary>
         public int lineHoldTicks = 510;
 
@@ -163,6 +164,54 @@ namespace BatshitTechnology
         /// <summary>The tick the aftermath began, or -1.</summary>
         [Unsaved]
         private int aftermathAt = -1;
+
+        /// <summary>The tick the first volley left, or -1.</summary>
+        [Unsaved]
+        private int firstVolleyAt = -1;
+
+        /// <summary>
+        /// The tick the stragglers' line is due, or -1 when none waits: it
+        /// is held until the volley's line has had its reading time.
+        /// </summary>
+        [Unsaved]
+        private int stragglersDueAt = -1;
+
+        /// <summary>
+        /// Whether a cleanup volley was refused because its footprint
+        /// reached the base or a colonist; the scene then goes to its
+        /// aftermath instead of firing again.
+        /// </summary>
+        [Unsaved]
+        private bool cleanupRefused;
+
+        /// <summary>
+        /// Volleys refused in this run because their footprint reached the
+        /// base's square or a colonist.
+        /// </summary>
+        [Unsaved]
+        private int refusedForSafety;
+
+        /// <summary>How an order to fire went.</summary>
+        private enum OrderResult
+        {
+            /// <summary>The Ballista was ordered to fire.</summary>
+            Ordered,
+
+            /// <summary>The aim was inside the Ballista's least range.</summary>
+            TooNear,
+
+            /// <summary>
+            /// The volley's footprint would have reached the base's square
+            /// or a colonist.
+            /// </summary>
+            Unsafe,
+        }
+
+        /// <summary>
+        /// Gets how many volleys this run refused for the colonists'
+        /// safety, for the tour verifier's note.
+        /// </summary>
+        internal int VolleysRefused => refusedForSafety;
 
         /// <summary>
         /// Gets the herd as it entered (dead and alive), for the tour
@@ -319,6 +368,10 @@ namespace BatshitTechnology
             lastInFlightAt = -1;
             impact = IntVec3.Invalid;
             aftermathAt = -1;
+            firstVolleyAt = -1;
+            stragglersDueAt = -1;
+            cleanupRefused = false;
+            refusedForSafety = 0;
             boltsSeen = Building_BatshittiumBallista.BoltsFired;
             toSpawn = HerdPlanned;
             entry = EntryCells(Map, Stage.BaseCentre, toSpawn, out string band);
@@ -348,9 +401,9 @@ namespace BatshitTechnology
         /// </summary>
         public override void Tick()
         {
-            if (herd == null)
+            if (herd == null || InIntro)
             {
-                return;
+                return; // the herd comes once the start line has been read
             }
 
             int now = Find.TickManager.TicksGame;
@@ -370,6 +423,11 @@ namespace BatshitTechnology
             }
 
             SeeVolleys(ballista, now);
+            if (stragglersDueAt >= 0 && now >= stragglersDueAt)
+            {
+                PlayStragglers();
+            }
+
             if (aftermathAt < 0)
             {
                 Direct(ballista, now);
@@ -517,8 +575,9 @@ namespace BatshitTechnology
                 return;
             }
 
-            // A cleanup the grid never powers gives up as the first does.
-            bool canFire = Alive(ballista)
+            // A cleanup the grid never powers gives up as the first does,
+            // and one refused for the colonists' safety is not tried again.
+            bool canFire = Alive(ballista) && !cleanupRefused
                 && BoltsFor(ballista) >= cleanupBolts
                 && now < lastVolleyAt + giveUpTicks;
             if (alive.Count == 0 || volleys.Count >= Stampede.MaxVolleys || !canFire)
@@ -592,7 +651,13 @@ namespace BatshitTechnology
                     + $"{from.DistanceTo(centre.Value):0} tiles off, moving "
                     + $"{velocity.Length * GenTicks.TicksPerRealSecond:0.0} "
                     + "tiles a second");
-                Order(ballista, aim, Stampede.MoneyShotBolts);
+                if (Order(ballista, aim, Stampede.MoneyShotBolts)
+                    == OrderResult.Unsafe)
+                {
+                    // The herd is already too near to shell: it goes home
+                    // rather than the colonists being shelled with it.
+                    Aftermath(Find.TickManager.TicksGame);
+                }
             }
         }
 
@@ -619,24 +684,49 @@ namespace BatshitTechnology
 
             Spot aim = Stampede.Lead(
                 from, spots[best], TowardBase(spots[best], alive), ballista.BoltTilesPerTick);
-            Order(ballista, Stampede.Within(from, aim, reach), cleanupBolts);
+            if (Order(ballista, Stampede.Within(from, aim, reach), cleanupBolts)
+                == OrderResult.Unsafe)
+            {
+                cleanupRefused = true; // Direct goes to the aftermath
+            }
         }
 
         /// <summary>
         /// Sets the Ballista's count and range for a volley and orders it at
-        /// a cell, kept on the map and beyond the Ballista's least range.
+        /// a cell, kept on the map and beyond the Ballista's least range,
+        /// unless the volley's footprint (its scatter, a bolt's blast and a
+        /// boomalope's burst) would reach the base's square or a colonist.
         /// </summary>
         /// <param name="ballista">The Ballista.</param>
         /// <param name="aim">Where to aim.</param>
         /// <param name="bolts">Bolts in the volley.</param>
-        private void Order(Building_BatshittiumBallista ballista, Spot aim, int bolts)
+        /// <returns>How the order went.</returns>
+        private OrderResult Order(
+            Building_BatshittiumBallista ballista, Spot aim, int bolts)
         {
             Cell c = aim.ToCell();
             IntVec3 cell = new IntVec3(c.X, 0, c.Z).ClampInsideMap(Map);
             double distance = cell.DistanceTo(ballista.Position);
             if (distance < BallistaPower.MinRange)
             {
-                return;
+                return OrderResult.TooNear;
+            }
+
+            double footprint = Stampede.Footprint(
+                ballista.ScatterRadius((float)distance), BoltBlastTiles(ballista));
+            bool baseClear = Stampede.SafeAim(
+                AnyRim.ToCell(Stage.BaseCentre), AnyRim.ToCell(cell), footprint);
+            Pawn near = Map.mapPawns.FreeColonistsSpawned.FirstOrDefault(
+                p => p.Position.InHorDistOf(cell, (float)footprint));
+            if (!baseClear || near != null)
+            {
+                refusedForSafety++;
+                Log.Message($"{ShowcaseLog.Prefix} stampede: volley "
+                    + $"{volleys.Count + 1} of {bolts} at ({cell.x},{cell.z}) "
+                    + $"refused: its {footprint:0.0}-tile footprint reaches "
+                    + (baseClear ? $"{near.LabelShort}" : "the base")
+                    + $" at scene tick {Elapsed}; {Living().Count} standing");
+                return OrderResult.Unsafe;
             }
 
             ballista.SetCount(bolts);
@@ -652,6 +742,8 @@ namespace BatshitTechnology
             {
                 impact = cell;
             }
+
+            return OrderResult.Ordered;
         }
 
         /// <summary>
@@ -680,13 +772,44 @@ namespace BatshitTechnology
 
             if (volleys.Count == 1)
             {
+                firstVolleyAt = now;
                 look = Midway(ballista, impact);
                 BeatOnce("volley", Shot(56f), select: true);
             }
-            else
+            else if (!Played(TourScript.Stragglers) && stragglersDueAt < 0)
             {
-                BeatOnce(TourScript.Stragglers, null, select: false);
+                // The cleanup fires at once, to keep the herd off the base,
+                // but its line waits until the volley's line has been read.
+                stragglersDueAt = System.Math.Max(now, firstVolleyAt + lineHoldTicks);
             }
+        }
+
+        /// <summary>
+        /// Plays the stragglers' beat that was held back for the volley's
+        /// line, if one waits; its line has no camera move.
+        /// </summary>
+        private void PlayStragglers()
+        {
+            if (stragglersDueAt < 0)
+            {
+                return;
+            }
+
+            stragglersDueAt = -1;
+            BeatOnce(TourScript.Stragglers, null, select: false);
+        }
+
+        /// <summary>
+        /// The explosion radius of the bolt the Ballista fires, from its
+        /// projectile's def, or Core's default for the explosive bolt.
+        /// </summary>
+        /// <param name="ballista">The Ballista.</param>
+        /// <returns>Tiles.</returns>
+        private static double BoltBlastTiles(Building_BatshittiumBallista ballista)
+        {
+            float? radius = ballista?.AmmoDef?.GetModExtension<BoltExtension>()?
+                .projectile?.projectile?.explosionRadius;
+            return radius is float r && r > 0f ? r : Stampede.DefaultBoltBlastTiles;
         }
 
         /// <summary>
@@ -701,6 +824,8 @@ namespace BatshitTechnology
                 return;
             }
 
+            // A held stragglers' line always comes before the aftermath's.
+            PlayStragglers();
             aftermathAt = Elapsed;
             Log.Message($"{ShowcaseLog.Prefix} stampede: aftermath at scene "
                 + $"tick {Elapsed}; {Living().Count} standing, "
@@ -937,8 +1062,18 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Moves every colonist outside the base's square into it, and
-        /// drafts the able, so no one wanders east during the stampede.
+        /// drafts the able with Fire At Will off, so no one wanders east
+        /// during the stampede and no one fires at a boomalope near the
+        /// base (its burst would set fires among them).
         /// </summary>
+        /// <remarks>
+        /// The tour's grenadier holds the Ergonomic Singularity Grenade,
+        /// and a drafted pawn waiting with Fire At Will on throws at any
+        /// threat in range (JobDriver_Wait.CheckForAutoAttack), which here
+        /// would open a singularity among the colonists. The Drafted
+        /// setter turns Fire At Will back on, so it is turned off after.
+        /// Undrafting at the end turns it on again.
+        /// </remarks>
         private void GatherColonists()
         {
             Box square = Stampede.BaseSquare(AnyRim.ToCell(Stage.BaseCentre));
@@ -950,6 +1085,7 @@ namespace BatshitTechnology
                     && !p.InMentalState)
                 {
                     p.drafter.Drafted = true;
+                    p.drafter.FireAtWill = false; // as TractorScenes.PlaceStray
                     drafted.Add(p);
                 }
             }

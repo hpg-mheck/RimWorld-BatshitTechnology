@@ -390,4 +390,53 @@ public static class Stampede
 
         return best;
     }
+
+    /// <summary>
+    /// The radius of a boomalope's own burst when it dies, in tiles
+    /// (vanilla's boomalope explodes over 4.9): a volley landing among
+    /// the herd can set these off at the edge of its scatter.
+    /// </summary>
+    public const double BurstTiles = 4.9;
+
+    /// <summary>
+    /// The bolt explosion's radius assumed when the bolt's def cannot be
+    /// read: the explosive bolt's own 3.9 tiles.
+    /// </summary>
+    public const double DefaultBoltBlastTiles = 3.9;
+
+    /// <summary>
+    /// How far from its aim a volley can do harm: its scatter, plus a
+    /// bolt's explosion at the edge of the scatter, plus a boomalope's
+    /// burst set off there.
+    /// </summary>
+    /// <param name="scatter">The volley's scatter radius, in tiles.</param>
+    /// <param name="blast">A bolt's explosion radius, in tiles.</param>
+    /// <returns>
+    /// The footprint's radius; a negative or undefined part counts as 0.
+    /// </returns>
+    public static double Footprint(double scatter, double blast) =>
+        NonNegative(scatter) + NonNegative(blast) + BurstTiles;
+
+    /// <summary>
+    /// Whether a volley may be aimed at a cell: its footprint stays clear
+    /// of the base's square, where the colonists wait.
+    /// </summary>
+    /// <param name="baseCentre">The base's centre.</param>
+    /// <param name="aim">Where the volley would be aimed.</param>
+    /// <param name="footprint">
+    /// The volley's footprint (<see cref="Footprint"/>), in tiles.
+    /// </param>
+    /// <returns>
+    /// True when the square lies beyond the footprint; false on it, at
+    /// exactly the footprint, or for an undefined footprint.
+    /// </returns>
+    public static bool SafeAim(Cell baseCentre, Cell aim, double footprint) =>
+        !double.IsNaN(footprint)
+        && BaseSquare(baseCentre).DistanceTo(aim) > footprint;
+
+    /// <summary>A value with negatives and NaN taken as zero.</summary>
+    /// <param name="value">The value.</param>
+    /// <returns>The value, or 0.</returns>
+    private static double NonNegative(double value) =>
+        double.IsNaN(value) || value < 0 ? 0 : value;
 }

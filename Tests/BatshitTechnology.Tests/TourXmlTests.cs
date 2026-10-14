@@ -39,6 +39,18 @@ public sealed class TourXmlTests
     /// <summary>Game ticks in a minute at normal speed.</summary>
     private const int TicksPerMinute = 3600;
 
+    /// <summary>
+    /// The first beat on a tour scene's own clock (TourScene.FirstBeatTick,
+    /// in the game assembly, which the tests cannot load).
+    /// </summary>
+    private const int FirstBeatTick = 150;
+
+    /// <summary>
+    /// The least action time a scene's timeout leaves after its intro:
+    /// the shortest timeout before the intros (the defence and grenade).
+    /// </summary>
+    private const int MinActionTicks = 1800;
+
     /// <summary>The robot's ThingDef, whose sight Core's layouts assume.</summary>
     private const string RobotDef = "BT_TractorBomb";
 
@@ -192,6 +204,34 @@ public sealed class TourXmlTests
     }
 
     /// <summary>
+    /// The closing message is narration too: since slice 13000 it goes to
+    /// the narration overlay in the narrator's voice, so it keeps the same
+    /// rules as the def's lines, though it lives in the keyed file. It is
+    /// the line docs/SHOWCASE.md, "The End", gives.
+    /// </summary>
+    [Fact(DisplayName = "The closing message keeps the narrator's voice")]
+    public void Closing_message_should_keep_the_voice()
+    {
+        string path = Path.Combine(
+            FixturesDirectory, "Languages", "English", "Keyed", "BT_Showcases.xml");
+        string text = Assert.Single(
+            XDocument.Load(path).Root?.Elements("BT_Showcases_Finished")
+                ?? Enumerable.Empty<XElement>()).Value;
+        Assert.Equal(
+            "This concludes our presentation. The colony is yours. "
+                + "Please remain calm.",
+            text);
+        Assert.True(text.Length <= MaxLineLength, $"'{text}' is too long");
+        Assert.DoesNotContain("!", text, StringComparison.Ordinal);
+        foreach (string word in FourthWallWords)
+        {
+            Assert.False(
+                Regex.IsMatch(text, @"\b" + word + @"s?\b", RegexOptions.IgnoreCase),
+                $"'{text}' says '{word}'");
+        }
+    }
+
+    /// <summary>
     /// A computed beat (the raccoon's census) has no line in the def: the
     /// scene says the words, and a declared line would be said as well.
     /// </summary>
@@ -210,22 +250,24 @@ public sealed class TourXmlTests
     /// <summary>
     /// The Raccoon Incident speaks as docs/SHOWCASE.md's Reel 9 has it:
     /// each fate its own line, then "AnyRim thanks Ned for his service.
-    /// Unfortunately." 60 ticks later, either way, before the next scene's
-    /// start line (90 ticks), so the lines keep their cue order.
+    /// Unfortunately." once the fate has been read (460 ticks), either
+    /// way, before the next scene's start line, so the lines keep their
+    /// cue order.
     /// </summary>
     [Fact(DisplayName = "The raccoon's verdict reads its fate, then thanks Ned")]
     public void Raccoon_verdict_should_follow_the_story()
     {
         const string Thanks = "AnyRim thanks Ned for his service. Unfortunately.";
+        const int ThanksDelay = 460;
         var lines = Lines().Where(l => l.Scene == TourScript.Raccoon).ToList();
         (int, string)[] Said(string when) => lines
             .Where(l => l.When == when).Select(l => (l.Delay, l.Text)).ToArray();
 
         Assert.Equal(
-            new[] { (0, "The raccoon has been reassured."), (60, Thanks) },
+            new[] { (0, "The raccoon has been reassured."), (ThanksDelay, Thanks) },
             Said(TourScript.RaccoonSurvived));
         Assert.Equal(
-            new[] { (0, "The raccoon will not be troubling anyone."), (60, Thanks) },
+            new[] { (0, "The raccoon will not be troubling anyone."), (ThanksDelay, Thanks) },
             Said(TourScript.RaccoonLost));
         Assert.Equal(
             new[] { (0, "Ned believes in a proportionate response.") },
@@ -244,7 +286,7 @@ public sealed class TourXmlTests
 
     /// <summary>
     /// The film ends on the twins: their completed line, then the byline
-    /// 240 ticks later, word for word.
+    /// once that line has been read and cleared (430 ticks), word for word.
     /// </summary>
     [Fact(DisplayName = "The tour ends with the twins' line, then the byline")]
     public void Twins_should_close_with_the_byline()
@@ -258,9 +300,87 @@ public sealed class TourXmlTests
             new[]
             {
                 (0, "Two tractors are better than one."),
-                (240, "The Future: Sooner. Cheaper. Funnier. And ludicrously dangerous."),
+                (430, "The Future: Sooner. Cheaper. Funnier. And ludicrously dangerous."),
             },
             closing);
+    }
+
+    /// <summary>
+    /// On the narration overlay, a scene's start lines are due only once
+    /// the previous scene's outcome lines (any of its outcomes, in the
+    /// script's order) have been read and cleared, so each scene opens on
+    /// a clear screen (TourPacing.ClearAfter).
+    /// </summary>
+    [Fact(DisplayName = "Start lines wait for the previous scene's outcome to clear")]
+    public void Start_lines_should_wait_for_the_previous_outcome()
+    {
+        List<(string Scene, string When, int Delay, string Text)> lines = Lines();
+        var late = new List<string>();
+        for (int i = 1; i < TourScript.Scenes.Count; i++)
+        {
+            TourSceneScript before = TourScript.Scenes[i - 1];
+            string key = TourScript.Scenes[i].Key;
+            int needed = new[] { TourScript.Completed }
+                .Concat(before.Outcomes)
+                .Select(when => TourPacing.ClearAfter(lines
+                    .Where(l => l.Scene == before.Key && l.When == when)
+                    .Select(l => (l.Delay, l.Text))))
+                .Max();
+            int first = lines
+                .Where(l => l.Scene == key && l.When == NarrationScript.Start)
+                .Min(l => l.Delay);
+            if (first < needed)
+            {
+                late.Add($"{key} starts at {first}, needs {needed}");
+            }
+        }
+
+        Assert.Empty(late);
+    }
+
+    /// <summary>
+    /// The lines of one cue (a scene's start, an outcome) follow each
+    /// other on a clear screen: each is due once the one before has been
+    /// read and cleared (TourPacing.Spaced).
+    /// </summary>
+    [Fact(DisplayName = "A cue's lines follow each other on a clear screen")]
+    public void Cue_lines_should_be_spaced()
+    {
+        var crowded = Lines()
+            .GroupBy(l => (l.Scene, l.When))
+            .Where(g => !TourPacing.Spaced(g.Select(l => (l.Delay, l.Text))))
+            .Select(g => $"{g.Key.Scene}/{g.Key.When}")
+            .ToList();
+
+        Assert.Empty(crowded);
+    }
+
+    /// <summary>
+    /// Each scene's timeout covers the intro it holds for its start lines
+    /// (TourPacing.IntroTicks) and still leaves the 1,800 ticks of action
+    /// the shortest scene had before the intros, so no scene times out
+    /// for its narration.
+    /// </summary>
+    [Fact(DisplayName = "Scene timeouts cover the intro and the action")]
+    public void Timeouts_should_cover_the_intro()
+    {
+        List<(string Scene, string When, int Delay, string Text)> lines = Lines();
+        var cramped = new List<string>();
+        foreach (XElement scene in Scenes())
+        {
+            string key = Key(scene);
+            int intro = TourPacing.IntroTicks(
+                lines.Where(l => l.Scene == key && l.When == NarrationScript.Start)
+                    .Select(l => (l.Delay, l.Text)),
+                FirstBeatTick);
+            int timeout = Int(scene, "timeoutTicks", 0);
+            if (timeout - intro < MinActionTicks)
+            {
+                cramped.Add($"{key}: timeout {timeout}, intro {intro}");
+            }
+        }
+
+        Assert.Empty(cramped);
     }
 
     /// <summary>

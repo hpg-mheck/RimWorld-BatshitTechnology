@@ -195,6 +195,21 @@ namespace BatshitTechnology
                 .FirstOrDefault(c => c.defaultLabel == "Apply to every tractor");
             apply?.action?.Invoke();
 
+            // The counts the message reports, from a second call (the
+            // settings are already applied, so it changes nothing), against
+            // the robots and not-yet-pulling bombs counted here: removing
+            // Apply's own filter fails the bomb count, and removing the
+            // setter's gate fails pullingKept.
+            barn.ApplyToEveryTractor(out int robots, out int bombs);
+            int robotsHere = map.mapPawns.AllPawnsSpawned.Count(p =>
+                p.Faction == Faction.OfPlayer
+                && p.TryGetComp<CompTractorBomb>() != null);
+            int bombsHere = map.listerThings
+                .ThingsOfDef(BT_TractorBombDefOf.BT_TractorBombEmplaced)
+                .OfType<Building_TractorBomb>()
+                .Count(t => t.Spawned && t.Faction == Faction.OfPlayer
+                    && t.CurrentStage != Building_TractorBomb.Stage.Imploding);
+
             CompTractorBomb a = first.TryGetComp<CompTractorBomb>();
             CompTractorBomb b = second.TryGetComp<CompTractorBomb>();
             bool robotsSet = a.Settings == wanted && b.Settings == wanted;
@@ -204,16 +219,46 @@ namespace BatshitTechnology
             bool pullingKept = pulling.Settings.Pull == TractorBombPull.Intimate
                 && pulling.Settings.Blast == TractorBombBlast.BirthdayCake
                 && pulling.CurrentStage == Building_TractorBomb.Stage.Imploding;
+            bool counted = robots == robotsHere && robots >= 2
+                && bombs == bombsHere && bombs >= 1;
             Check("the barn's buttons set its settings, and \"Apply to every "
                     + "tractor\" copies them to robots and bombs not yet pulling",
                 dials.Count == 3 && barn.Settings == wanted && apply != null
-                    && robotsSet && waitingSet && pullingKept,
+                    && robotsSet && waitingSet && pullingKept && counted,
                 $"{dials.Count} barn buttons, barn {barn.Settings}, apply "
                     + $"{apply != null}; robots {a.Settings} and {b.Settings}; "
                     + $"waiting bomb {waiting.Settings.Pull}/"
                     + $"{waiting.Settings.Blast}; pulling bomb "
                     + $"{pulling.Settings.Pull}/{pulling.Settings.Blast} "
-                    + $"({pulling.CurrentStage})");
+                    + $"({pulling.CurrentStage}); Apply counted {robots} "
+                    + $"robots and {bombs} bombs, against {robotsHere} and "
+                    + $"{bombsHere} here");
+
+            // Two barns selected: the button would run once per barn, the
+            // last one winning, so it is disabled with its reason, and a
+            // click runs only the clicked barn's action. (The gizmo grid's
+            // own click path cannot be driven without a screen.)
+            Building_TractorBarn other = TractorStaging.SpawnBarn(
+                map, center + new IntVec3(-12, 0, -2));
+            Find.Selector.ClearSelection();
+            Find.Selector.Select(barn, playSound: false, forceDesignatorDeselect: false);
+            Find.Selector.Select(other, playSound: false, forceDesignatorDeselect: false);
+            Command_Action both = barn.GetGizmos().OfType<Command_Action>()
+                .FirstOrDefault(c => c.defaultLabel == Building_TractorBarn.ApplyLabel);
+            Find.Selector.ClearSelection();
+            Find.Selector.Select(barn, playSound: false, forceDesignatorDeselect: false);
+            Command_Action one = barn.GetGizmos().OfType<Command_Action>()
+                .FirstOrDefault(c => c.defaultLabel == Building_TractorBarn.ApplyLabel);
+            Find.Selector.ClearSelection();
+            Check("\"Apply to every tractor\" is disabled with two barns "
+                    + "selected, and never runs once per barn",
+                both != null && both.Disabled
+                    && both.disabledReason == Building_TractorBarn.SelectOneBarnReason
+                    && !both.alsoClickIfOtherInGroupClicked
+                    && one != null && !one.Disabled,
+                $"two selected: disabled {both?.Disabled} (\"{both?.disabledReason}\"), "
+                    + $"group click {both?.alsoClickIfOtherInGroupClicked}; "
+                    + $"one selected: disabled {one?.Disabled}");
 
             foreach (Building_TractorBomb bomb in new[] { waiting, pulling })
             {
@@ -224,9 +269,12 @@ namespace BatshitTechnology
             }
 
             RemoveTestPawns(first, second);
-            if (barn.Spawned)
+            foreach (Building_TractorBarn shed in new[] { barn, other })
             {
-                barn.Destroy(DestroyMode.Vanish);
+                if (shed.Spawned)
+                {
+                    shed.Destroy(DestroyMode.Vanish);
+                }
             }
 
             Tick(10);

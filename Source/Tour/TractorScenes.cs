@@ -69,9 +69,30 @@ namespace BatshitTechnology
         {
             CellRect yard = Stage.Yard.Value;
             TractorStaging.ClearYard(Map, yard);
-            CellRect reach = yard.ExpandedBy(TourStagePlanner.TractorReach);
-            Showcase.MoveColonistsOut(Map, c => reach.Contains(c));
+            Showcase.MoveColonistsOut(Map, InYardReach);
             explosionsAtStart = Building_TractorBomb.Explosions;
+        }
+
+        /// <summary>
+        /// Whether a cell is within a Tractor Bomb's reach of the yard:
+        /// the yard grown by <see cref="TourStagePlanner.TractorReach"/>,
+        /// the flee distance at the tour's settings.
+        /// </summary>
+        /// <param name="cell">The cell.</param>
+        /// <returns>True if a bomb in the yard could reach it.</returns>
+        protected bool InYardReach(IntVec3 cell) =>
+            Stage.Yard.HasValue
+            && Stage.Yard.Value.ExpandedBy(TourStagePlanner.TractorReach)
+                .Contains(cell);
+
+        /// <summary>
+        /// Lets the colonists the scene held clear of the yard go, however
+        /// it ended.
+        /// </summary>
+        /// <param name="ending">How it ended.</param>
+        public override void End(SceneEnd ending)
+        {
+            ReleaseHeldColonists();
         }
 
         /// <summary>
@@ -225,11 +246,13 @@ namespace BatshitTechnology
                 Map, Centre, SingleTractorLayout.Party, armed: false,
                 stunned: true);
             stray = PlaceStray();
+            HoldColonistsClear(InYardReach, stray);
         }
 
         /// <summary>Plays the scene's beats as the world reaches them.</summary>
         public override void Tick()
         {
+            KeepColonistsClear(InYardReach, stray);
             if (Elapsed >= barnTick)
             {
                 BeatOnce("barn", Shot(30f));
@@ -293,6 +316,7 @@ namespace BatshitTechnology
         /// <param name="ending">How it ended.</param>
         public override void End(SceneEnd ending)
         {
+            base.End(ending);
             if (Alive(stray) && stray.drafter != null)
             {
                 stray.drafter.FireAtWill = true;
@@ -442,6 +466,10 @@ namespace BatshitTechnology
         [Unsaved]
         private bool imploded;
 
+        /// <summary>Whether the robots have been sent in.</summary>
+        [Unsaved]
+        private bool robotsSent;
+
         /// <summary>Gets the first bomb, else the first robot.</summary>
         public override Thing Subject =>
             bombs?.FirstOrDefault(b => Alive(b))
@@ -463,6 +491,17 @@ namespace BatshitTechnology
                 Map, Centre, TwinJunkyardLayout.Army, armed: false,
                 stunned: true);
             robots = new List<Pawn>();
+            robotsSent = false;
+            HoldColonistsClear(InYardReach);
+        }
+
+        /// <summary>
+        /// Sends the two Nosy robots in from either side, once the scene's
+        /// start line has been read.
+        /// </summary>
+        private void SendInRobots()
+        {
+            robotsSent = true;
             foreach (Cell offset in TwinJunkyardLayout.DriveIn)
             {
                 IntVec3 cell = TractorStaging.At(Centre, offset);
@@ -481,6 +520,17 @@ namespace BatshitTechnology
         /// <summary>Plays the scene's beats as the world reaches them.</summary>
         public override void Tick()
         {
+            KeepColonistsClear(InYardReach);
+            if (InIntro)
+            {
+                return; // the robots come once the start line has been read
+            }
+
+            if (!robotsSent)
+            {
+                SendInRobots();
+            }
+
             NewBombs(bombs);
             if (plantedAt < 0 && bombs.Count >= 2 && bombs.All(b => Alive(b)
                 && b.CurrentStage == Building_TractorBomb.Stage.CountingDown))

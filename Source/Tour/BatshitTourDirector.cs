@@ -1,9 +1,10 @@
 // Batshit Technology - the directed tour's director.
-// BT_Showcase (Defs/Misc/BT_Showcases.xml) is a ShowcaseDirector tour of
-// eight scenes (docs/SHOWCASE.md, "The Directed Tour"). This director
-// builds the stage first (Showcase.Build), keeps it for the scenes, and
-// then lets the API's director run them: each scene declines a map that
-// lacks what it needs, so the caption counts only the scenes that run.
+// BT_Showcase (Defs/Misc/BT_Showcases.xml) is a ShowcaseDirector tour
+// whose scenes are listed in Core's TourScript.Scenes (docs/SHOWCASE.md,
+// "The Directed Tour"). This director builds the stage first
+// (Showcase.Build), keeps it for the scenes, and then lets the API's
+// director run them: each scene declines a map that lacks what it needs,
+// so the caption counts only the scenes that run.
 
 using System;
 using BatshitTechnology.Showcases;

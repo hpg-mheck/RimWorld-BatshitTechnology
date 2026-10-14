@@ -568,16 +568,31 @@ namespace BatshitTechnology
         /// <param name="inDanger">Whether a cell is in danger.</param>
         /// <param name="spare">A colonist to leave where it is, or null.</param>
         internal static void MoveColonistsOut(
-            Map map, Func<IntVec3, bool> inDanger, Pawn spare = null)
+            Map map, Func<IntVec3, bool> inDanger, Pawn spare = null) =>
+            MoveColonistsOut(
+                map, inDanger, spare == null ? null : new[] { spare });
+
+        /// <summary>
+        /// Showcase only: colonists standing where a test says is in
+        /// danger, but for those spared, are moved back to the base, near
+        /// the map's centre.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="inDanger">Whether a cell is in danger.</param>
+        /// <param name="spare">Colonists to leave where they are, or null.</param>
+        /// <returns>How many were moved.</returns>
+        internal static int MoveColonistsOut(
+            Map map, Func<IntVec3, bool> inDanger, ICollection<Pawn> spare)
         {
+            int moved = 0;
             if (map == null || inDanger == null)
             {
-                return;
+                return moved;
             }
 
             foreach (Pawn pawn in map.mapPawns.FreeColonistsSpawned.ToList())
             {
-                if (pawn == spare
+                if ((spare != null && spare.Contains(pawn))
                     || !inDanger(pawn.Position)
                     || !CellFinder.TryFindRandomCellNear(
                         map.Center, map, 8, c => c.Standable(map), out IntVec3 cell))
@@ -588,7 +603,10 @@ namespace BatshitTechnology
                 pawn.jobs?.StopAll();
                 pawn.Position = cell;
                 pawn.Notify_Teleported();
+                moved++;
             }
+
+            return moved;
         }
 
         /// <summary>
