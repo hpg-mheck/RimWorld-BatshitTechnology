@@ -603,3 +603,41 @@ after the core build; docs/TRACTOR-BOMB.md, "As Built"). Decisions:
   fail them. Sabotage runs (a countdown hit that starts nothing, a pull
   hit that sets off nothing, a hit that leaves a vortex; then damage
   ignored altogether) failed all three.
+2026-10-13 Claude: Tractor Bomb hostiles react individually
+(docs/TRACTOR-BOMB.md, "Decisions" 9 and "As Built"). Decisions:
+- "Hostile" is hostile to the bomb (GenHostility.HostileTo, the bomb's
+  faction): raiders, and animals and insects of a hostile faction, roll;
+  colonists, guests, neutrals and wild animals react at once as before.
+  Pawns in a mental state still never react (the gate and MayReact).
+- The roll is Core's TractorBombHostiles: a hash of the pawn's id, the
+  bomb's id and a seed the bomb draws when planted, cut into thirds. A
+  hash rather than Rand, so the smoke test can work out every raider's
+  roll before the bomb is armed (the "seeded run") and unit tests can
+  check the split and the per-bomb independence. The bomb also stores
+  each pawn's roll and first-sight tick (saved, keyed by thing id, so
+  no reference to a pawn that has gone), which is what makes the
+  hesitation work and keeps the roll from ever changing.
+- The roll is made on first sight: when the flee giver finds the pawn
+  in reach and in line of sight of the armed bomb. A pawn already
+  running from or frozen by the bomb keeps going without asking again.
+- Hesitation is 120 ticks from first sight; the constant think tree asks
+  every 30 ticks, so a hesitating hostile reacts 2 to 2.5 s late, and in
+  a 3 to 5 s countdown it often ends up frozen or caught. A hostile that
+  ignores the bomb is given nothing and carries on (its assault); the
+  pull still takes it if it is in reach.
+- Smoke: fifteen unarmed raiders, free to move, stand 9 to 11 tiles from
+  a bomb with a colonist among them; the test picks the first seed that
+  gives at least four of each reaction, then checks that each raider
+  noticed once, kept exactly the expected roll, and acted on it (fleeing
+  on the think it noticed, hesitating 120 to 151 ticks, or never
+  reacting), and that the colonist bailed at once without rolling.
+  Sabotage runs (a roll redrawn at every ask; hostiles all fleeing at
+  once, the step-6 behaviour) failed both checks.
+- Steadier smoke runs, while proving this: the flee check now asks how
+  far each runner got before the pull (its name: "run past pull + 8
+  before the pull") rather than where it stood at that instant; a
+  healthy muffalo that had arrived just past 19 tiles was twice seen to
+  wander back to 17.3 before the pull. And the Brain Squeezer check now
+  feeds and rests its colonist before the squeeze: a hungry or tired
+  colonist breaks off recreation before the 600-tick sit its effects
+  need, which failed one run.

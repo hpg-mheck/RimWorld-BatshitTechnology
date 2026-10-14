@@ -10,7 +10,11 @@
 //
 // A pawn that can see an armed bomb and stands within its pull radius
 // plus 8 tiles sprints to the nearest cell it can reach beyond that
-// (JobDriver_TractorBombFlee). One already inside the blast radius
+// (JobDriver_TractorBombFlee). Anyone not hostile to the bomb (colonists,
+// guests, neutrals, animals) does so at once; a hostile rolls once, on its
+// first sight of that bomb, whether it runs at once, hesitates about two
+// seconds, or ignores the bomb and carries on with its assault (the bomb
+// keeps the roll; Core's TractorBombHostiles). One already inside the blast radius
 // freezes where it stands, its status one of the twenty "making peace"
 // lines (JobDriver_TractorBombFreeze), until the bomb goes off or its pull
 // seizes it. Once the pull starts, whoever is inside it belongs to the
@@ -105,7 +109,9 @@ namespace BatshitTechnology
     /// <summary>
     /// Everyone else's reaction to an armed Tractor Bomb, given from the
     /// constant think trees every half second: run beyond its pull radius
-    /// plus 8 tiles, or freeze inside its blast radius, or nothing.
+    /// plus 8 tiles, or freeze inside its blast radius, or nothing. A
+    /// hostile reacts only as its once-rolled reaction allows
+    /// (<see cref="Building_TractorBomb.ShouldRunFrom"/>).
     /// </summary>
     public class JobGiver_FleeTractorBomb : ThinkNode_JobGiver
     {
@@ -153,8 +159,16 @@ namespace BatshitTechnology
                     return null; // the implosion has it
                 }
 
-                if (!TractorBombFleeUtility.ReactingTo(current, bomb)
-                    && !TractorBombFleeUtility.Sees(pawn, bomb))
+                bool reacting =
+                    TractorBombFleeUtility.ReactingTo(current, bomb);
+                if (!reacting && !TractorBombFleeUtility.Sees(pawn, bomb))
+                {
+                    continue;
+                }
+
+                // A hostile that ignores it, or has not yet noticed it,
+                // carries on; everyone else reacts.
+                if (!reacting && !bomb.ShouldRunFrom(pawn))
                 {
                     continue;
                 }

@@ -158,11 +158,16 @@
     a hit during the countdown starts the pull at once, a hit during the
     pull sets off the blast at once, so blasts chain; three smoke checks
     proved by sabotage.
+  - [x] Hostiles react individually (Decisions 9): each hostile rolls
+    once per bomb, a third each flee at once, hesitate 2 s or ignore it;
+    everyone else bails at once. Core's TractorBombHostiles with unit
+    tests; two seeded smoke checks proved by sabotage.
   - [ ] Step 12: showcase scene and docs.
   - [ ] Replace the protest's TrapArm click with a beep from the sound
     pipeline (feature/audio).
-  - [ ] Matt "Breakpoint" Heck to decide: a robot stops 15 tiles from its
-    target but pulls only 10 (docs/AI-requests-for-humans.txt).
+  - [x] Matt "Breakpoint" Heck decided: a robot that stopped 15 tiles out
+    but pulled only 10 now has a Disposition, Moderate by default, which
+    stops inside its pull.
 - [ ] Mirror Mirror (docs/MIRROR-MIRROR.md), requested by Matt
   "Breakpoint" Heck on 2026-10-13: a recreation mirror ("Allows pawns to
   pause and reflect on the possibility of alternate dimensions and/or

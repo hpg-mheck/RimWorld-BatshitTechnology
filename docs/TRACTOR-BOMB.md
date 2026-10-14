@@ -236,6 +236,19 @@ build settled a detail, it is recorded here; the decisions log
   - **Who reacts:** anyone in a clear line of sight of an armed bomb
     (counting down or pulling) within its pull radius plus 8 tiles: 18 at
     the default yield, 11 to 28 as dialled.
+  - **Hostiles react individually** (Decisions 9): anyone not hostile to
+    the bomb (colonists, guests, neutrals, wild animals) reacts at once.
+    A pawn hostile to it (a raider, or an animal or insect of a hostile
+    faction) rolls once, on its first sight of that bomb, a third each:
+    it **flees** at once; it **hesitates**, reacting two seconds after it
+    first saw the bomb (on its next half-second think, so 2 to 2.5 s);
+    or it **ignores** the bomb entirely and carries on with its assault,
+    until the pull, if it is in it, takes it anyway. The bomb keeps each
+    pawn's roll and first sighting (saved), so nothing re-rolls every
+    half second, and a pawn already running keeps running. The roll
+    hashes the pawn's id, the bomb's id and a seed the bomb draws when
+    planted (Core's `TractorBombHostiles`). Pawns in a mental state still
+    never react.
   - **Running:** a sprint to the nearest cell, by steps, more than a tile
     beyond that distance from every bomb in sight, that vanilla would
     accept as a flee destination (reachable, standable, unclaimed, not a

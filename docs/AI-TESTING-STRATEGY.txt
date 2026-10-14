@@ -84,9 +84,9 @@ emplaces anyway; Dial-A-Yield gives two groupable, clamped sliders and
 a 4-tile pull and 3-tile blast change what is caught; and a killed
 robot's vortex pops without touching anything, as does one that loses
 its wheels. Everyone else runs (TestTractorBombFlee, on freshly made,
-undrafted pawns, with the countdown held at 5 s): a colonist and a
-muffalo 8 tiles from an armed bomb sprint past 18 tiles before its pull
-starts; a colonist 3 tiles off freezes where it stands with one of the
+undrafted, healthy pawns, with the countdown held at 5 s): a colonist
+and a muffalo 8 tiles from an armed bomb sprint past 18 tiles before its
+pull starts; a colonist 3 tiles off freezes where it stands with one of the
 twenty "making peace" lines, unchanged, until the pull seizes it and
 its freeze ends; a berserk colonist and a manhunting muffalo in plain
 sight neither run nor freeze; a muffalo seized mid-run by a pull started
@@ -94,6 +94,12 @@ early (ImplodeNow) is released from its flee and given nothing while
 the pull runs; and none of it logs an error. Each disposition stops at
 its own distance from a raider standing still 37 tiles off (Cautious 15,
 Moderate 9, Nosy 3), and a new robot is Moderate with a working button.
+Hostiles react individually (SmokeTest.TractorBombHostiles.cs): in a
+seeded run, fifteen raiders in sight of an armed bomb each keep the roll
+Core's TractorBombHostiles gives them and act on it (flee on the think
+they notice it, hesitate two to two and a half seconds, or never react),
+at least four of each, and no roll changes; a colonist among them bails
+at once without rolling.
 Shooting planted bombs (SmokeTest.TractorBombHits.cs): a revolver bullet
 striking a bomb in its countdown starts its pull within two ticks; a
 second, striking it while it pulls, sets off its blast within two ticks,
@@ -113,8 +119,8 @@ and refitted for exactly the steel and time Core's TractorBarnRepair
 predicts, then drives off on patrol. A destroyed barn flings its spare
 tyres (TestDeathBlasts). Unit tests cover its pure logic
 (TractorBombYield, TractorBombTiming, DeathVortexMath, TractorBombFlee,
-TractorBarnRepair, TractorBombApproach). Each new check was proved by a
-run that broke its behaviour first.
+TractorBarnRepair, TractorBombApproach, TractorBombHostiles). Each new
+check was proved by a run that broke its behaviour first.
 
 The runner silences the storyteller at the start, so no raid lands in
 the middle of a check (one raid sent pirates round a long-range Ballista

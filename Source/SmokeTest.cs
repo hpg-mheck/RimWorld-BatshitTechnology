@@ -390,6 +390,10 @@ namespace BatshitTechnology
                 return;
             }
 
+            // Fed and rested first: a hungry or tired colonist breaks off
+            // recreation, and the squeeze needs a 600-tick sit for its
+            // effects (one run saw the memory and the calm missing).
+            Refresh(pawn);
             pawn.needs.joy.CurLevel = 0.2f;
             int mutteredBefore = JobDriver_UseBrainSqueezer.MonologuesShown;
             JobDef useSqueezer = BT_BrainSqueezerDefOf.BT_UseBrainSqueezer;
@@ -397,10 +401,12 @@ namespace BatshitTechnology
                 JobMaker.MakeJob(useSqueezer, squeezer, squeezer.Position),
                 JobCondition.InterruptForced);
             bool sat = false;
+            int satFor = 0;
             for (int t = 0; t < 4000 && pawn.CurJobDef == useSqueezer; t += 10)
             {
                 Tick(10);
                 sat |= pawn.Position == squeezer.Position;
+                satFor += pawn.Position == squeezer.Position ? 10 : 0;
             }
 
             Check("the colonist sat in the squeezer", sat,
@@ -418,11 +424,17 @@ namespace BatshitTechnology
                 as Thought_BrainSqueezed;
             List<string> lines = BT_BrainSqueezerDefOf.BT_BrainSqueezed
                 .GetModExtension<MonologueExtension>().lines;
+            string sitting = $"sat about {satFor} ticks; then "
+                + $"{pawn.CurJobDef?.defName ?? "no job"}, food "
+                + $"{pawn.needs.food?.CurLevelPercentage ?? -1f:P0}, rest "
+                + $"{pawn.needs.rest?.CurLevelPercentage ?? -1f:P0}, joy "
+                + $"{pawn.needs.joy.CurLevel:P0}";
             Check("the colonist got the memory, labelled with a monologue line",
                 thought != null && lines.Contains(thought.Line),
-                thought == null ? "no memory" : $"line '{thought.Line}'");
+                thought == null ? "no memory; " + sitting : $"line '{thought.Line}'");
             Check("the colonist got a day of calm",
-                pawn.health.hediffSet.HasHediff(BT_BrainSqueezerDefOf.BT_BrainSqueezedCalm));
+                pawn.health.hediffSet.HasHediff(BT_BrainSqueezerDefOf.BT_BrainSqueezedCalm),
+                sitting);
             Check("the colonist gained joy", pawn.needs.joy.CurLevel > 0.2f,
                 $"joy {pawn.needs.joy.CurLevel:F2}");
         }
@@ -1656,7 +1668,8 @@ namespace BatshitTechnology
         /// repairs it (SmokeTest.TractorBarn.cs), a hunt from patrol to
         /// explosion, each disposition's stop, a protest, everyone else
         /// running from an armed bomb, shooting planted bombs
-        /// (SmokeTest.TractorBombHits.cs), Dial-A-Yield and a robot's
+        /// (SmokeTest.TractorBombHits.cs), hostiles' rolled reactions
+        /// (SmokeTest.TractorBombHostiles.cs), Dial-A-Yield and a robot's
         /// death.
         /// </summary>
         /// <param name="map">The map.</param>
@@ -1679,6 +1692,7 @@ namespace BatshitTechnology
             TestTractorBombProtest(map, center);
             TestTractorBombFlee(map, center);
             TestTractorBombShot(map, center);
+            TestTractorBombHostileReactions(map, center);
             TestTractorBombDialAYield(map, center);
             TestTractorBombDeath(map, center);
             Check("the Tractor Bomb scenarios logged no errors",
@@ -2230,12 +2244,15 @@ namespace BatshitTechnology
         /// A bomb armed with a colonist and a muffalo 8 tiles off (inside
         /// its 10-tile pull, outside its 5-tile blast) and a second
         /// colonist 3 tiles off. The two outside the blast run beyond 18
-        /// tiles before the pull starts; the one inside freezes where it
-        /// stands, showing one "making peace" line throughout, until the
-        /// pull seizes it and its freeze ends. The countdown is held at its
-        /// longest, 5 s, so that a slow-footed colonist (traits, apparel)
-        /// is not failed by a 3 s roll; how far pawns get in 3 s is a
-        /// matter of balance, not of the behaviour checked here.
+        /// tiles before the pull starts (the farthest each gets counts: a
+        /// muffalo that arrived just past 19 tiles was seen twice to
+        /// wander back to 17.3 before the pull); the one inside freezes
+        /// where it stands, showing one "making peace" line throughout,
+        /// until the pull seizes it and its freeze ends. The countdown is
+        /// held at its longest, 5 s, so that a slow-footed colonist
+        /// (traits, apparel) is not failed by a 3 s roll; how far pawns get
+        /// in 3 s is a matter of balance, not of the behaviour checked
+        /// here.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -2257,6 +2274,8 @@ namespace BatshitTechnology
             bool critterRan = false;
             int runnerAt = -1;
             int critterAt = -1;
+            float runnerFarthest = 0f;
+            float critterFarthest = 0f;
             bool stayedPut = true;
             bomb.StartCountdown();
             for (int i = 0; i < 600 && bomb.Spawned
@@ -2270,6 +2289,10 @@ namespace BatshitTechnology
                     == BT_TractorBombDefOf.BT_TractorBombFlee;
                 runnerAt = runnerAt < 0 && runnerRan ? i : runnerAt;
                 critterAt = critterAt < 0 && critterRan ? i : critterAt;
+                runnerFarthest = Mathf.Max(runnerFarthest, runner.Spawned
+                    ? runner.Position.DistanceTo(bomb.Position) : 0f);
+                critterFarthest = Mathf.Max(critterFarthest, critter.Spawned
+                    ? critter.Position.DistanceTo(bomb.Position) : 0f);
                 if (frozen.CurJobDef
                     == BT_TractorBombDefOf.BT_TractorBombFreeze)
                 {
@@ -2289,17 +2312,20 @@ namespace BatshitTechnology
                 ? critter.Position.DistanceTo(bomb.Position) : -1f;
             int armed = bomb.ImplosionStartedTick - bomb.CountdownStartedTick;
             Log.Message($"[BT-SMOKE] NOTE flee distance {flee}: colonist "
-                + $"{runnerOut:F1} ({Legs(runner)}, ran at {runnerAt}) and "
-                + $"muffalo {critterOut:F1} ({Legs(critter)}, ran at "
-                + $"{critterAt}) tiles out when the pull started, {armed} "
-                + "ticks after arming");
+                + $"got {runnerFarthest:F1} out, {runnerOut:F1} when the "
+                + $"pull started ({Legs(runner)}, ran at {runnerAt}); "
+                + $"muffalo got {critterFarthest:F1} out, {critterOut:F1} "
+                + $"when the pull started ({Legs(critter)}, ran at "
+                + $"{critterAt}); the pull started {armed} ticks after "
+                + "arming");
             Check("a colonist and an animal in reach run past pull + 8 "
                     + "before the pull",
-                pulling && runnerRan && critterRan && runnerOut > flee
-                    && critterOut > flee,
+                pulling && runnerRan && critterRan && runnerFarthest > flee
+                    && critterFarthest > flee,
                 $"pulling {pulling}, flee distance {flee}; colonist ran "
-                    + $"{runnerRan}, {runnerOut:F1} tiles out; muffalo ran "
-                    + $"{critterRan}, {critterOut:F1} tiles out");
+                    + $"{runnerRan}, got {runnerFarthest:F1} tiles out; "
+                    + $"muffalo ran {critterRan}, got {critterFarthest:F1} "
+                    + "tiles out");
 
             bool frozeToTheEnd = frozen.CurJobDef
                 == BT_TractorBombDefOf.BT_TractorBombFreeze;

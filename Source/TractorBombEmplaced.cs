@@ -19,9 +19,12 @@
 // hit never destroys it, and one bomb's blast sets off the next. No other
 // implosion rips it loose (IImplosionProof: that is about the pull, not
 // damage). Everyone else runs from it while it is armed
-// (TractorBombFlee.cs), finding it through TractorBombUtility.ArmedBombs.
+// (TractorBombFlee.cs), finding it through TractorBombUtility.ArmedBombs;
+// a hostile that sees it rolls once how it reacts (flee, hesitate, or
+// ignore it), and the bomb keeps that roll (NoticedBy).
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using BatshitTechnology.Core;
 using RimWorld;
@@ -144,6 +147,15 @@ namespace BatshitTechnology
         private int countdownStartedTick = -1;
         private int implosionStartedTick = -1;
         private bool blastNow;
+        private int hostileSeed;
+        private Dictionary<int, TractorBombHostileReaction> hostileRolls =
+            new Dictionary<int, TractorBombHostileReaction>();
+        private Dictionary<int, int> hostileSeenAt =
+            new Dictionary<int, int>();
+        private List<int> rollKeys;
+        private List<TractorBombHostileReaction> rollValues;
+        private List<int> seenKeys;
+        private List<int> seenValues;
         private int lastHitTick = -1;
         private Stage lastHitStage;
         private Sustainer alarm;
@@ -180,6 +192,91 @@ namespace BatshitTechnology
         /// Where it was in its life when last hit (diagnostics).
         /// </summary>
         public Stage LastHitStage => lastHitStage;
+
+        /// <summary>
+        /// The seed its hostiles' rolls are drawn with: random per bomb,
+        /// drawn when it is planted.
+        /// </summary>
+        public int HostileSeed => hostileSeed;
+
+        /// <summary>How many hostiles have rolled for it (diagnostics).</summary>
+        public int HostileRollCount => hostileRolls.Count;
+
+        /// <summary>
+        /// Fixes the seed its hostiles' rolls are drawn with: the smoke
+        /// test's seeded run. Rolls already made stay as they are.
+        /// </summary>
+        /// <param name="seed">The seed.</param>
+        public void SeedHostileRolls(int seed) => hostileSeed = seed;
+
+        /// <summary>
+        /// Whether a pawn that can see it, and stands within its reach,
+        /// should run (or freeze) now. Anyone not hostile to it does, at
+        /// once. A hostile rolls once, on this first sight, how it reacts
+        /// (Core's <see cref="TractorBombHostiles"/>: a third each flee
+        /// at once, hesitate about two seconds, or ignore it entirely), and
+        /// the bomb keeps the roll and the moment, so asking again every
+        /// half second changes nothing.
+        /// </summary>
+        /// <param name="pawn">The pawn.</param>
+        /// <returns>True if it should react now.</returns>
+        public bool ShouldRunFrom(Pawn pawn)
+        {
+            if (pawn == null || !pawn.HostileTo(this))
+            {
+                return true;
+            }
+
+            TractorBombHostileReaction reaction =
+                NoticedBy(pawn, out int firstSeen);
+            return TractorBombHostiles.ReactsNow(
+                reaction, firstSeen, Find.TickManager.TicksGame);
+        }
+
+        /// <summary>
+        /// A hostile's reaction to this bomb, rolled and remembered with
+        /// the tick the first time it is asked (its first sight).
+        /// </summary>
+        /// <param name="pawn">The hostile.</param>
+        /// <param name="firstSeenTick">When it first saw the bomb.</param>
+        /// <returns>Its reaction.</returns>
+        public TractorBombHostileReaction NoticedBy(
+            Pawn pawn, out int firstSeenTick)
+        {
+            int now = Find.TickManager.TicksGame;
+            int id = pawn?.thingIDNumber ?? 0;
+            if (!hostileRolls.TryGetValue(
+                id, out TractorBombHostileReaction reaction))
+            {
+                reaction = TractorBombHostiles.Roll(
+                    id, thingIDNumber, hostileSeed);
+                hostileRolls[id] = reaction;
+                hostileSeenAt[id] = now;
+            }
+
+            firstSeenTick = hostileSeenAt.TryGetValue(id, out int seen)
+                ? seen
+                : now;
+            return reaction;
+        }
+
+        /// <summary>
+        /// A pawn's remembered reaction and first sighting, if it has
+        /// rolled for this bomb (diagnostics).
+        /// </summary>
+        /// <param name="pawn">The pawn.</param>
+        /// <param name="reaction">Its reaction.</param>
+        /// <param name="firstSeenTick">When it first saw the bomb.</param>
+        /// <returns>False if it never rolled.</returns>
+        public bool TryGetNotice(
+            Pawn pawn, out TractorBombHostileReaction reaction,
+            out int firstSeenTick)
+        {
+            firstSeenTick = -1;
+            int id = pawn?.thingIDNumber ?? 0;
+            return hostileRolls.TryGetValue(id, out reaction)
+                && hostileSeenAt.TryGetValue(id, out firstSeenTick);
+        }
 
         /// <summary>Its settings.</summary>
         public TractorBombExtension Settings =>
@@ -303,6 +400,7 @@ namespace BatshitTechnology
             if (!respawningAfterLoad && emplacedTick < 0)
             {
                 emplacedTick = Find.TickManager.TicksGame;
+                hostileSeed = Rand.Int;
                 FloatRange range = Settings.countdownSeconds;
                 countdownTicks = TractorBombTiming.RollCountdownTicks(
                     Rand.Value, range.min, range.max);
@@ -358,6 +456,13 @@ namespace BatshitTechnology
                 ref implosionStartedTick, "implosionStartedTick", -1);
             Scribe_Deep.Look(ref implosion, "implosion");
             Scribe_Values.Look(ref blastNow, "blastNow");
+            Scribe_Values.Look(ref hostileSeed, "hostileSeed");
+            Scribe_Collections.Look(
+                ref hostileRolls, "hostileRolls", LookMode.Value,
+                LookMode.Value, ref rollKeys, ref rollValues);
+            Scribe_Collections.Look(
+                ref hostileSeenAt, "hostileSeenAt", LookMode.Value,
+                LookMode.Value, ref seenKeys, ref seenValues);
             Scribe_Values.Look(ref lastHitTick, "lastHitTick", -1);
             Scribe_Values.Look(ref lastHitStage, "lastHitStage");
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
@@ -365,6 +470,14 @@ namespace BatshitTechnology
                 dialledPull = TractorBombYield.ClampPull(dialledPull);
                 dialledBlast = TractorBombYield.ClampBlast(dialledBlast);
                 countdownTicks = Mathf.Max(1, countdownTicks);
+                hostileRolls ??=
+                    new Dictionary<int, TractorBombHostileReaction>();
+                hostileSeenAt ??= new Dictionary<int, int>();
+                foreach (int id in hostileRolls.Keys.ToList())
+                {
+                    hostileRolls[id] =
+                        TractorBombHostiles.Sanitize(hostileRolls[id]);
+                }
                 if (stage == Stage.Imploding && implosion == null)
                 {
                     // A hand-edited save: start the pull afresh.
