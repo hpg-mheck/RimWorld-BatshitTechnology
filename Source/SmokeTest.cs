@@ -1654,8 +1654,10 @@ namespace BatshitTechnology
         /// The Tractor Bomb, on a cleared stage at the middle of the map:
         /// the robot itself, its patrol, the Tractor Barn that builds and
         /// repairs it (SmokeTest.TractorBarn.cs), a hunt from patrol to
-        /// explosion, a protest, everyone else running from an armed bomb,
-        /// Dial-A-Yield and a robot's death.
+        /// explosion, each disposition's stop, a protest, everyone else
+        /// running from an armed bomb, shooting planted bombs
+        /// (SmokeTest.TractorBombHits.cs), Dial-A-Yield and a robot's
+        /// death.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -1676,6 +1678,7 @@ namespace BatshitTechnology
             TestTractorBombDispositions(map, center);
             TestTractorBombProtest(map, center);
             TestTractorBombFlee(map, center);
+            TestTractorBombShot(map, center);
             TestTractorBombDialAYield(map, center);
             TestTractorBombDeath(map, center);
             Check("the Tractor Bomb scenarios logged no errors",

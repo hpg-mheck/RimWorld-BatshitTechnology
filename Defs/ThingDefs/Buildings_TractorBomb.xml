@@ -5,11 +5,13 @@
        tyres flat (the flip frames are loaded by path in code), counts down
        3 to 5 s under the shared warning band, hosts the implosion and
        explodes. Pawns and items pass over it, like sandbags, so its own
-       cell is part of the pile. It cannot be damaged. -->
+       cell is part of the pile. It has no hit points: damage cannot stop
+       it, only hurry it (its pull starts, or its blast goes off, at
+       once). -->
   <ThingDef ParentName="BuildingBase">
     <defName>BT_TractorBombEmplaced</defName>
     <label>emplaced tractor bomb</label>
-    <description>A tractor bomb that has found what it was looking for. Its tyres are flipped out flat as stabiliser pads, its tractor beam is warming up, and nothing can stop it now: in a few seconds it drags everything within reach into a heap at its feet and explodes.\n\nLeave.</description>
+    <description>A tractor bomb that has found what it was looking for. Its tyres are flipped out flat as stabiliser pads, its tractor beam is warming up, and nothing can stop it now: in a few seconds it drags everything within reach into a heap at its feet and explodes. Shooting it only hurries it along: hit before its pull starts, it starts pulling; hit while pulling, it goes off.\n\nLeave.</description>
     <thingClass>BatshitTechnology.Building_TractorBomb</thingClass>
     <graphicData>
       <texPath>Things/Building/Security/BT_TractorBombEmplaced</texPath>

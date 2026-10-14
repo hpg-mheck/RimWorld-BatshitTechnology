@@ -94,6 +94,12 @@ early (ImplodeNow) is released from its flee and given nothing while
 the pull runs; and none of it logs an error. Each disposition stops at
 its own distance from a raider standing still 37 tiles off (Cautious 15,
 Moderate 9, Nosy 3), and a new robot is Moderate with a working button.
+Shooting planted bombs (SmokeTest.TractorBombHits.cs): a revolver bullet
+striking a bomb in its countdown starts its pull within two ticks; a
+second, striking it while it pulls, sets off its blast within two ticks,
+before it has gathered anything; that blast sets off a bomb planted 4
+tiles off, which the pull never moved; and no hit leaves a death
+vortex.
 The Tractor Barn
 (SmokeTest.TractorBarn.cs): "Build one now" adds a "Do 1 times" bill; a
 colonist who may only haul loads that bill's parts into the barn and is

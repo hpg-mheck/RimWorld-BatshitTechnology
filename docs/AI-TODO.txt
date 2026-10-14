@@ -154,6 +154,10 @@
   - [x] Disposition (decided after the core build): Cautious, Moderate
     (default) and Nosy, per robot, with Core's TractorBombApproach, unit
     tests and a smoke check proved by sabotage.
+  - [x] Planted bombs are damageable (decided after the core build):
+    a hit during the countdown starts the pull at once, a hit during the
+    pull sets off the blast at once, so blasts chain; three smoke checks
+    proved by sabotage.
   - [ ] Step 12: showcase scene and docs.
   - [ ] Replace the protest's TrapArm click with a beep from the sound
     pipeline (feature/audio).
@@ -220,6 +224,19 @@ test, clear destinations, the line pick) is unit tested; its job giver,
 drivers and destination search need a live map and real think trees, so
 the smoke runner's TestTractorBombFlee covers them, and XML tests pin
 the patch against RimWorld's own think trees and races.
+
+The Tractor Barn and the decisions taken after the core build follow it
+too. Their arithmetic is unit tested in Core (TractorBarnRepair: who
+goes home, step costs, per-injury steps; TractorBombApproach: the
+dispositions' stops). The barn's bills, its hauling, its forming and
+docking, the Disposition button, a planted bomb's reaction to a hit
+(PreApplyDamage, stage changes on its own tick) and the barn's death
+need a live map, real pawns and real projectiles, so the smoke runner
+covers them (SmokeTest.TractorBarn.cs, TestTractorBombDispositions,
+SmokeTest.TractorBombHits.cs, TestDeathBlasts), each check proved to
+fail by a sabotage run; XML tests pin the barn's defs and the
+stopgap's removal; the barn's art is checked by eye at full size and
+downsampled.
 
 Comps, buildings and job drivers depend on RimWorld's runtime (map, ticks,
 power nets, Unity), so they are not unit-testable in this project. They are

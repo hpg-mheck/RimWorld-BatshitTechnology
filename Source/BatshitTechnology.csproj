@@ -80,6 +80,7 @@
     <Compile Include="SingularityGrenade.cs" />
     <Compile Include="SmokeTest.cs" />
     <Compile Include="SmokeTest.TractorBarn.cs" />
+    <Compile Include="SmokeTest.TractorBombHits.cs" />
     <Compile Include="TractorBarn.cs" />
     <Compile Include="TractorBomb.cs" />
     <Compile Include="TractorBombAI.cs" />

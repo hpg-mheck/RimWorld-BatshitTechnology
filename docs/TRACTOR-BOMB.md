@@ -199,8 +199,18 @@ build settled a detail, it is recorded here; the decisions log
     within 1.5 tiles, pawns without limit. Stacks beyond nine that cannot
     merge wait just outside, about 2 tiles out, and the 5-tile blast
     catches them. The smoke test stages eleven such stacks.
-  - **It cannot be stopped:** it takes no damage, cannot be
-    deconstructed or claimed, and no other implosion rips it loose.
+  - **It cannot be stopped, only hurried** (decided after the core
+    build): a hit that harms (a bullet, a blast, fire) before its pull
+    starts, while its tyres flip or it counts down, starts the pull on
+    the next tick; a hit while it pulls sets off its blast on the next
+    tick. So one bomb's blast sets off a planted neighbour. It has no hit
+    points to lose, so damage never destroys it, and damage that harms
+    nothing (an EMP, a stun, firefoam) does nothing. It cannot be
+    deconstructed or claimed, and no other implosion's pull rips it
+    loose (`IImplosionProof`, which is about the pull, not damage). A
+    robot's death vortex is only for robots wrecked before they plant;
+    a hit planted bomb leaves none. The player sees a message, and DEV
+    mode has a "Hit it" button.
 - **Dial-A-Yield.** Whole tiles: tractor beam 3 to 20, blast 2 to 10.
   Each robot has the two sliders, and so does a planted bomb until its
   pull starts; with several selected, one slider sets them all. Before

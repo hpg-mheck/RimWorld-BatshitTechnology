@@ -13,8 +13,12 @@
 // nine that cannot merge wait just outside the pile, at about 2 tiles,
 // where the blast still catches them. Pawns share cells and all fit.
 //
-// It cannot be damaged and no other implosion rips it loose: once planted,
-// it goes off. Everyone else runs from it while it is armed
+// Damage cannot stop it, only hurry it: hit before its pull starts (still
+// flipping its tyres, or counting down), it starts the pull at once; hit
+// while pulling, it explodes at once. It has no hit points to lose, so a
+// hit never destroys it, and one bomb's blast sets off the next. No other
+// implosion rips it loose (IImplosionProof: that is about the pull, not
+// damage). Everyone else runs from it while it is armed
 // (TractorBombFlee.cs), finding it through TractorBombUtility.ArmedBombs.
 
 using System.Collections.Generic;
@@ -139,6 +143,9 @@ namespace BatshitTechnology
         private int protestTicks;
         private int countdownStartedTick = -1;
         private int implosionStartedTick = -1;
+        private bool blastNow;
+        private int lastHitTick = -1;
+        private Stage lastHitStage;
         private Sustainer alarm;
         private readonly CountdownWarningBand band =
             new CountdownWarningBand();
@@ -153,6 +160,26 @@ namespace BatshitTechnology
         /// (diagnostics).
         /// </summary>
         public static float LastBlastRadius { get; private set; }
+
+        /// <summary>
+        /// The tick the last bomb to explode this session went off
+        /// (diagnostics).
+        /// </summary>
+        public static int LastExplosionTick { get; private set; } = -1;
+
+        /// <summary>
+        /// Hits planted bombs have taken this session, each one hurrying
+        /// its bomb along (diagnostics).
+        /// </summary>
+        public static int Hits { get; private set; }
+
+        /// <summary>The tick it was last hit, or -1 (diagnostics).</summary>
+        public int LastHitTick => lastHitTick;
+
+        /// <summary>
+        /// Where it was in its life when last hit (diagnostics).
+        /// </summary>
+        public Stage LastHitStage => lastHitStage;
 
         /// <summary>Its settings.</summary>
         public TractorBombExtension Settings =>
@@ -330,6 +357,9 @@ namespace BatshitTechnology
             Scribe_Values.Look(
                 ref implosionStartedTick, "implosionStartedTick", -1);
             Scribe_Deep.Look(ref implosion, "implosion");
+            Scribe_Values.Look(ref blastNow, "blastNow");
+            Scribe_Values.Look(ref lastHitTick, "lastHitTick", -1);
+            Scribe_Values.Look(ref lastHitStage, "lastHitStage");
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
                 dialledPull = TractorBombYield.ClampPull(dialledPull);
@@ -373,6 +403,12 @@ namespace BatshitTechnology
 
                     break;
                 case Stage.Imploding:
+                    if (blastNow)
+                    {
+                        Explode(); // hit while pulling
+                        break;
+                    }
+
                     implosion.Tick(Map);
                     if (TractorBombTiming.ShouldExplode(
                         implosion.AllGathered, implosion.Settled,
@@ -411,6 +447,70 @@ namespace BatshitTechnology
                         + $"pulling in everything within {PullRadius:0} "
                         + $"tiles.",
                     this, MessageTypeDefOf.ThreatSmall, false);
+            }
+        }
+
+        /// <summary>
+        /// A hit hurries it along and harms nothing: before its pull
+        /// starts (flipping its tyres or counting down), the pull starts on
+        /// the next tick; while it pulls, it explodes on the next tick. It
+        /// has no hit points to lose, so the damage itself is absorbed and
+        /// it can never be destroyed this way, only set off. Damage that
+        /// harms nothing (an EMP, a stun, firefoam) does nothing.
+        /// </summary>
+        /// <param name="dinfo">The damage.</param>
+        /// <param name="absorbed">Always true: it takes no harm.</param>
+        public override void PreApplyDamage(
+            ref DamageInfo dinfo, out bool absorbed)
+        {
+            base.PreApplyDamage(ref dinfo, out absorbed);
+            absorbed = true;
+            if (!Spawned || dinfo.Def == null || !dinfo.Def.harmsHealth
+                || !(dinfo.Amount > 0f))
+            {
+                return;
+            }
+
+            Hit();
+        }
+
+        /// <summary>
+        /// Hurries it along: the pull starts now if it has not, or the
+        /// blast goes off now if it has (DEV and smoke-test hook, too).
+        /// </summary>
+        public void Hit()
+        {
+            if (!Spawned || blastNow)
+            {
+                return;
+            }
+
+            Hits++;
+            lastHitTick = Find.TickManager.TicksGame;
+            lastHitStage = stage;
+            string what;
+            switch (stage)
+            {
+                case Stage.Deploying:
+                    StartCountdown();
+                    ImplodeNow();
+                    what = "before it armed: its pull starts now";
+                    break;
+                case Stage.CountingDown:
+                    ImplodeNow();
+                    what = "during its countdown: its pull starts now";
+                    break;
+                default:
+                    blastNow = true;
+                    what = "while pulling: it goes off now";
+                    break;
+            }
+
+            if (Faction == Faction.OfPlayer)
+            {
+                Messages.Message(
+                    $"{LabelCap} was hit {what}.", this,
+                    MessageTypeDefOf.ThreatSmall, false);
             }
         }
 
@@ -461,6 +561,7 @@ namespace BatshitTechnology
             TractorBombExtension s = Settings;
             Explosions++;
             LastBlastRadius = blast;
+            LastExplosionTick = Find.TickManager.TicksGame;
             Destroy(DestroyMode.Vanish);
             GenExplosion.DoExplosion(
                 center, map, blast, s.explosionDamageDef ?? DamageDefOf.Bomb,
@@ -617,6 +718,16 @@ namespace BatshitTechnology
                     defaultLabel = "DEV: Implode now",
                     icon = BT_TractorBombAssets.DevIcon,
                     action = ImplodeNow,
+                };
+            }
+
+            if (DebugSettings.godMode && Spawned)
+            {
+                yield return new Command_Action
+                {
+                    defaultLabel = "DEV: Hit it",
+                    icon = BT_TractorBombAssets.DevIcon,
+                    action = Hit,
                 };
             }
         }

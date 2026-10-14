@@ -575,3 +575,31 @@ build; docs/TRACTOR-BOMB.md, "As Built"). Decisions:
   failed on two random maps in nineteen runs (a few lamps on a net with
   nothing generating; it runs before any Tractor Bomb code); its
   failure detail now names the nets and the town reactor's state.
+2026-10-13 Claude: Tractor Bomb planted bombs are damageable (decided
+after the core build; docs/TRACTOR-BOMB.md, "As Built"). Decisions:
+- A hit hurries the bomb and harms nothing: PreApplyDamage absorbs every
+  hit, so it keeps no hit points (useHitPoints stays false) and damage
+  can never destroy it, which would have lost the bomb instead of
+  setting it off. Only damage that harms health counts (bullets,
+  blasts, fire, blades); EMP, stun and firefoam do nothing.
+- Before its pull starts, a hit starts it on the next tick. That covers
+  the half-second tyre flip as well as the countdown: the flip is part
+  of planting, and a bomb hit while planting should not wait. During
+  the pull, a hit sets off the blast on the next tick. Both act on the
+  bomb's own tick, not inside the damage call, so nothing is destroyed
+  in the middle of another explosion's damage pass.
+- IImplosionProof stays: another bomb's pull still cannot rip a planted
+  bomb loose, but its blast now sets it off (a chain reaction, as the
+  roadmap's multi-bomb notes ask).
+- The robot's death vortex comes from the robot's comp on its death, and
+  a planted bomb is a building without that comp, so a hit planted bomb
+  never makes one; the smoke check counts vortexes to keep it so.
+- Hits, LastExplosionTick and each bomb's last hit tick and stage are
+  diagnostics for the smoke test; DEV mode gets a "Hit it" button; the
+  player gets a message naming what the hit did.
+- The smoke checks fire real revolver bullets (ProjectileHitFlags
+  .IntendedTarget) from a drafted colonist outside the pull, rather than
+  calling TakeDamage, so a bomb that projectiles could not hit would
+  fail them. Sabotage runs (a countdown hit that starts nothing, a pull
+  hit that sets off nothing, a hit that leaves a vortex; then damage
+  ignored altogether) failed all three.

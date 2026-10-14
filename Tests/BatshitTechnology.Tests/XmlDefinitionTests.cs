@@ -468,8 +468,10 @@ public sealed partial class XmlDefinitionTests
     /// <summary>
     /// The emplaced bomb hosts an implosion that gathers to 1.5 tiles,
     /// counts down 3 to 5 seconds, flips its tyres in half a second, is
-    /// drawn every frame (the flip and the vortex), and cannot be damaged,
-    /// deconstructed or claimed. Its death vortex is a drawn ethereal.
+    /// drawn every frame (the flip and the vortex), has no hit points (a
+    /// hit only hurries it along; Source/TractorBombEmplaced.cs), and
+    /// cannot be deconstructed or claimed. Its death vortex is a drawn
+    /// ethereal.
     /// </summary>
     [Fact(DisplayName = "Emplaced Tractor Bomb is wired up as specified")]
     public void TractorBombEmplaced_should_match_spec()
