@@ -49,6 +49,15 @@ Matt "Breakpoint" Heck:
    c. Until the Tractor Barn exists, bombs are assembled on a bill at
       vanilla's machining table, because the Artificer takes no bills.
       Acceptable as a stopgap?
+   d. Everyone runs, hostiles included, as specified (step 6, built):
+      a raider who sees a planted bomb from within its pull radius plus
+      8 tiles sprints clear, and from 8 tiles out that takes about two
+      seconds, inside the 3 to 5 s countdown. With the robot stopping 15
+      tiles from its target, a target that sees it is usually gone
+      before the pull, unless it is in a mental state, out of sight or
+      inside the blast radius (frozen). The Moderate and Nosy
+      dispositions bring targets closer. Keep it as specified
+      (proposed), or let hostiles run only from bombs they saw arm?
 9. Mirror Mirror (docs/MIRROR-MIRROR.md, "Open Questions"): duplicates
    belong to an enemy faction, but which (its own, proposed, or an
    existing one); is the trait-inversion

@@ -130,15 +130,22 @@
   - [x] Step 7: Dial-A-Yield sliders on robots and planted bombs.
   - [x] Step 9: a robot's own death (Source/TractorBombDeath.cs).
   - [x] Step 10: art through Tools/make_textures.py; motif extended.
-  - [ ] Step 6: the flee job giver. Seams ready:
-    TractorBombUtility.ArmedBombs(map), Building_TractorBomb.IsArmed,
-    PullRadius, BlastRadius and TicksUntilImplosion.
+  - [x] Step 6: running away (Source/TractorBombFlee.cs,
+    Patches/BT_TractorBomb_Flee.xml, Core's TractorBombFlee).
+    JobGiver_FleeTractorBomb, first inside the mental-state gate of the
+    humanlike, animal and insect constant think trees: pawns in sight
+    within the pull radius plus 8 sprint clear; those inside the blast
+    radius freeze with one of the twenty "making peace" lines (on the
+    freeze JobDef, translatable); mental states, drafted, forced, stunned
+    and downed non-crawlers do neither; a started pull takes over. The
+    validator now checks Patches/. 42 new unit and XML tests, 6 new smoke
+    checks, each proved to fail by a sabotage run.
   - [ ] Step 8: the Tractor Barn. Then delete the temporary recipe
     BT_AssembleTractorBomb and RecipeWorker_AssembleTractorBomb (machining
     table); the barn should make robots with TractorBombUtility.MakeRobot
     or SpawnRobot and count them with CountOnMap.
-  - [ ] Step 11 (rest): smoke checks for the barn, the flee step and
-    repair docking; Core tests for the flee distance.
+  - [ ] Step 11 (rest): smoke checks for the barn and repair docking.
+    (The flee step's Core, XML and smoke tests are in.)
   - [ ] Step 12: showcase scene and docs.
   - [ ] Replace the protest's TrapArm click with a beep from the sound
     pipeline (feature/audio).
@@ -199,7 +206,12 @@ beeps; DeathVortexMath: the death's parts and sputter), and XML tests pin
 its defs, research and textures. The robot's AI, the emplaced bomb, the
 death vortex and the gizmos need a live map, so the smoke runner's
 TestTractorBomb scenarios cover them instead; drawing (the flip frames,
-the vortex, the lamp, the sliders' look) is checked by eye.
+the vortex, the lamp, the sliders' look) is checked by eye. The flee
+step's arithmetic (TractorBombFlee: the flee distance, the too-close
+test, clear destinations, the line pick) is unit tested; its job giver,
+drivers and destination search need a live map and real think trees, so
+the smoke runner's TestTractorBombFlee covers them, and XML tests pin
+the patch against RimWorld's own think trees and races.
 
 Comps, buildings and job drivers depend on RimWorld's runtime (map, ticks,
 power nets, Unity), so they are not unit-testable in this project. They are

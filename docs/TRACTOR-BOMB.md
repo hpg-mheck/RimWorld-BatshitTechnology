@@ -4,8 +4,8 @@ Status: specified, being built on branch `feature/tractor-bomb` (see
 `ROADMAP.md`). Specified by Matt "Breakpoint" Heck on 2026-10-13, who
 answered every open question the same day. A few smaller details are
 still marked *(proposal)*; they stand unless he says otherwise. Roadmap
-steps 2 to 5, 7, 9 and 10 are built (see "As Built" below); the flee
-step (6) and the Tractor Barn (8) are next.
+steps 2 to 7, 9 and 10 are built (see "As Built" below); the Tractor
+Barn (8) is next.
 
 ## The Tractor Bomb
 
@@ -80,9 +80,9 @@ enraged and the like (specified 2026-10-13).
   (`JobGiver_FleePotentialExplosion`, through
   `Pawn_MindState.knownExploder`), but only to 9 tiles, short of the
   10-tile pull. It also applies only to humanlike-intelligence pawns.
-- **A mod flee job giver** *(proposal)*: `JobGiver_FleeTractorBomb`,
+- **A mod flee job giver** (built): `JobGiver_FleeTractorBomb`,
   inserted into the Humanlike and Animal think trees by an XML patch, not
-  Harmony.
+  Harmony. As built, it goes into their constant trees (see "As Built").
   - When an emplaced bomb arms, every pawn that can see it and stands
     within its pull radius plus 8 tiles sprints to a cell outside that
     distance. The distance follows the bomb's dialled pull radius.
@@ -133,7 +133,7 @@ tiles. The defaults stay 10 and 5.
 
 ## As Built
 
-Built on 2026-10-13 (roadmap steps 3, 4, 5, 7, 9 and 10). Where the
+Built on 2026-10-13 (roadmap steps 3 to 7, 9 and 10). Where the
 build settled a detail, it is recorded here; the decisions log
 (`docs/AI-DECISIONS.txt`) has the reasons.
 
@@ -201,12 +201,51 @@ build settled a detail, it is recorded here; the decisions log
   hang, and spiral back into a sputtering vortex over about two seconds;
   then it pops. Nothing else is touched. There is no corpse and no
   "Death" letter, only a message.
-- **For the next steps.** The flee step finds armed bombs with
-  `TractorBombUtility.ArmedBombs(map)` (armed means counting down or
-  imploding: `Building_TractorBomb.IsArmed`) and reads each one's
-  `PullRadius`, `BlastRadius` and `TicksUntilImplosion`. The barn makes
-  robots with `TractorBombUtility.MakeRobot` or `SpawnRobot`, and counts
-  a faction's bombs, planted ones included, with `CountOnMap`.
+- **Running away** (`Source/TractorBombFlee.cs`,
+  `Patches/BT_TractorBomb_Flee.xml`; the arithmetic is Core's
+  `TractorBombFlee`). `JobGiver_FleeTractorBomb` is patched into
+  vanilla's *constant* think trees for humanlikes, animals (dryads
+  included) and insects, the ones asked every half second; the main
+  trees are asked only when a job ends, too late for a three-second
+  countdown. It sits first inside the gate that already turns away pawns
+  in a mental state (berserk, manhunting, every other), drafted pawns,
+  downed pawns that cannot crawl, and burning or sleeping ones. Pawns
+  under a forced order, stunned pawns and the robots themselves are
+  turned away too. Every pawn and critter race in the game and its DLCs
+  runs one of the three trees; mechanoids, drones, babies and Anomaly's
+  entities do not run.
+  - **Who reacts:** anyone in a clear line of sight of an armed bomb
+    (counting down or pulling) within its pull radius plus 8 tiles: 18 at
+    the default yield, 11 to 28 as dialled.
+  - **Running:** a sprint to the nearest cell, by steps, more than a tile
+    beyond that distance from every bomb in sight, that vanilla would
+    accept as a flee destination (reachable, standable, unclaimed, not a
+    doorway or dangerous ground). A pawn with nowhere to go carries on.
+    Its status reads "running from a tractor bomb.", and colonists show
+    vanilla's fleeing icon.
+  - **Too close:** a pawn inside the blast radius when it first reacts
+    freezes where it stands, facing the bomb, until the bomb goes off or
+    its pull moves the pawn. A pawn already running keeps running. Its
+    status is one of the twenty "Making Peace" lines, kept in the freeze
+    job's XML (translatable as
+    `BT_TractorBombFreeze.modExtensions.0.lines`), chosen per pawn from
+    its id and the bomb's, so it never changes while that bomb holds it.
+    Other factions' frozen pawns show their lines too. A player can still
+    draft a colonist out of it.
+  - **The pull:** once it starts, anyone inside it is the implosion's,
+    as with the grenade; it is given no job, and the pull's first tug
+    ends its flee or freeze.
+  - **Vanilla's own flee:** `JobGiver_FleePotentialExplosion` never fires
+    for the bomb, which does not announce itself the vanilla way. The
+    mod's giver runs ahead of it, and a humanlike that also knows of a
+    vanilla explosive about to go off within 9 tiles picks a cell clear
+    of both.
+- **For the next steps.** The barn makes robots with
+  `TractorBombUtility.MakeRobot` or `SpawnRobot`, and counts a faction's
+  bombs, planted ones included, with `CountOnMap`. Armed bombs are found
+  with `TractorBombUtility.ArmedBombs(map)` (`Building_TractorBomb.IsArmed`:
+  counting down or imploding), and `ImplodeNow` cuts a countdown short
+  (the DEV button and the smoke test).
 
 ## The Tractor Barn
 

@@ -197,6 +197,14 @@ far from home."). Labels are lowercase nouns, as in vanilla. Inner
 monologue and flavour lines (the Brain Squeezer) may be openly disturbing
 but stay funny, never cruel, and never break the fourth wall.
 
+Status lines, the job reports shown under a pawn's name, follow vanilla:
+lowercase, read after the name, ending with a full stop ("running from a
+tractor bomb."). Flavour status lines keep the monologue rule. The
+Tractor Bomb's twenty "making peace" lines, shown by a pawn frozen inside
+its blast radius, are the model: the pawn is doomed and knows it, and
+the line stays small and human ("saying goodbye to a favourite chair").
+They live in XML, without the full stop, which the code adds.
+
 ### Places and People
 
 AnyRim, the showcase's test town (`docs/SHOWCASE.md`), adds signs and

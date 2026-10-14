@@ -389,3 +389,91 @@ docs/TRACTOR-BOMB.md, "As Built", has the details. Decisions:
   while deploying and armed while counting down). The run that broke
   only the protest also caught the blast check judging the raider before
   the explosion's wave reached it; it now waits half a second.
+2026-10-13 Claude: Tractor Bomb step 6, running away (Source/
+TractorBombFlee.cs, Patches/BT_TractorBomb_Flee.xml, Core's
+TractorBombFlee; docs/TRACTOR-BOMB.md, "As Built"). Decisions:
+- The constant think trees, not the main ones. The main tree is asked
+  only when a job ends, so a colonist hauling for ten seconds would
+  never notice a three-second countdown; the constant tree is asked
+  every half second. JobGiver_FleeTractorBomb is prepended (an XML
+  PatchOperationAdd, no Harmony) inside
+  ThinkNode_ConditionalCanDoConstantThinkTreeJobNow in HumanlikeConstant,
+  AnimalConstant and InsectConstant. That gate is the constant tree's
+  mental-state branch: it refuses pawns in any mental state (berserk,
+  manhunter and the rest), drafted pawns, downed pawns that cannot
+  crawl, and burning or sleeping ones. The giver repeats those checks
+  and adds stunned pawns, pawns on a player-forced job and the robots
+  themselves, in case another mod moves it. A copy in the main trees was
+  rejected: there it would sit above "wait if drafted" and send drafted
+  colonists running whenever a job ended.
+- Coverage: an XML test reads every Core and DLC race and checks that
+  each one whose main tree is Humanlike, Animal, Insect or Dryad runs
+  one of the three patched constant trees (dryads inherit
+  AnimalConstant). Babies (carried, HumanlikeBabyConstant), mechanoids,
+  Odyssey's drones and Anomaly's entities, ghouls and shamblers keep
+  their own trees and do not run: none of them is a pawn or critter with
+  the sense to.
+- Vanilla's JobGiver_FleePotentialExplosion never fires for the bomb. It
+  needs Pawn_MindState.knownExploder, which only
+  GenExplosion.NotifyNearbyPawnsOfDangerousExplosive sets (lit
+  CompExplosives and explosive projectiles), and the bomb does not call
+  it: that would add vanilla's 9-tile, humanlike-only flee and its
+  "about to explode" reactions on top. Instead the mod's giver runs
+  ahead of vanilla's, and when a humanlike also knows of a vanilla
+  explosive within 9 tiles, its destination clears both. Once clear of
+  the bomb, vanilla's flee carries on as before.
+- "Can see" is a clear line of sight (GenSight.LineOfSightToThing), not
+  fog or the Sight capacity (a blind pawn hears the hiss). A pawn already
+  running from, or frozen by, a bomb keeps reacting to it out of sight.
+- The flee distance is the dialled pull radius plus 8, never less than
+  one tile past the blast radius (the shipped ranges never need that).
+  A destination must lie more than a tile beyond it, so an arrival is
+  clearly out. It is the nearest such cell by steps: a flood fill from
+  the pawn over ground it can cross (doors it can pass), keeping the
+  first of 16 clear cells that vanilla accepts as a flee destination
+  (CellFinderLoose.CanFleeToLocation: standable, unclaimed, not a
+  doorway or dangerous ground, within a rope's reach, reachable).
+  Vanilla's GetFleeDest and RCellFinder.TryFindDirectFleeDestination
+  were rejected: neither guarantees the distance, and the latter's
+  fallback paths up to 30 times a call, every half second per pawn. A
+  pawn with nowhere to go carries on with what it was doing.
+- Freezing is decided when a pawn first reacts: a pawn already running
+  keeps running, even through a blast radius. The freeze job faces the
+  bomb and waits until it goes off or a pull moves the pawn (moving a
+  pawn ends its job). The player can still draft a colonist out of it.
+  Its status is one of the twenty lines, on the freeze JobDef as
+  TractorBombFreezeLines ([MustTranslate], [TranslationCanChangeCount];
+  DefInjected path BT_TractorBombFreeze.modExtensions.0.lines), picked by
+  hashing the pawn's and the bomb's ids: random per pawn, yet the same
+  across saves and restarted jobs, with nothing to save. The report adds
+  vanilla's full stop. alwaysShowReport, so a raider making peace shows
+  it too. The motif now says how status lines read.
+- Once the pull starts, anyone inside it is the implosion's: the giver
+  gives it nothing, as the grenade's victims get nothing, and its stun
+  keeps it so between grabs.
+- While its flee or freeze still fits, the giver returns the pawn's own
+  current job, so nothing lower in the constant tree (vanilla's hostility
+  response) interrupts it.
+- Sprint urgency, as vanilla's explosive flee; colonists show vanilla's
+  fleeing icon.
+- Building_TractorBomb.ImplodeNow, a smoke-test seam that the DEV
+  "Implode now" button now calls too.
+- The Def validator now checks Patches/: operation classes and fields
+  (base classes' private fields included, such as success), each XPath
+  against vanilla's and the mod's defs merged as the game merges them,
+  and what an Add or Insert adds against the field it lands in.
+  Sabotaged patches (a wrong defName, a misspelt field, a missing class,
+  a list added to a non-list, a non-ThinkNode in subNodes) each failed
+  it. Each XPath is broken over lines between its steps, which XPath
+  allows, to keep lines short; Mono's XPath in the game accepted it.
+- The smoke test fixes the flee scenarios' countdown at 5 s (the def's
+  range is restored at once), so a slow-footed fresh colonist is not
+  failed by a 3 s roll. Balance note: from 8 tiles a pawn needs about two
+  seconds to get clear; a 3 s roll leaves little slack.
+- Proving the six new smoke checks: run S1 stopped the flee, replaced
+  the freeze report and logged an error; run S2 moved the giver outside
+  the gate (with its own mental-state test removed) and let it give jobs
+  to stunned, caught pawns. Every new check failed in one of them. S2
+  also caught a weak check: a wild runner seized by the pull was judged
+  "released" when the explosion sent it fleeing vanilla's way; the
+  takeover is now judged only while the pull runs.
