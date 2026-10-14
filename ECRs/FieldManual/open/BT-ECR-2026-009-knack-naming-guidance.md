@@ -114,6 +114,12 @@ None needed; the change travels with the knacks' pull request.
 
 ### Discussion And Amendments
 
+- 2026-10-14 — Clarification from the operator, folded into the guide in
+  the same pull request: a part that outgrows one file is promoted to a
+  subdirectory named for it, whose main document is its
+  `overview.knack.md` (`shells/PowerShell/overview.knack.md`). A part with
+  one file stays a file. This extends the rule without changing it, so it
+  is recorded here rather than as a new revision.
 - 2026-10-14 — Revision 2. The operator returned FieldManual#1: file names
   still repeated their path. The requested rule changed materially (no
   `.knack` directory suffix, no topic or `api.` prefix in file names), so
