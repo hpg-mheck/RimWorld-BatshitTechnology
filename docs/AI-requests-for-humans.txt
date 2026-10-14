@@ -46,3 +46,9 @@ Matt "Breakpoint" Heck:
 10. The Drag Show: all answered on 2026-10-13 (docs/DRAG-SHOW.md). The
     remaining proposals (costs, the Brain Squeezer as the research
     prerequisite, the show bonus) stand unless changed.
+11. The Stand-Up Comedy Showcase (docs/STAND-UP-COMEDY.md, "Open
+    Questions"): shared stage or anywhere; amateur comedy or a Batshit
+    twist; the audience's memory; research.
+12. The Interstellar Delivery Locker and Drone (docs/DELIVERY-LOCKER.md,
+    "Open Questions"): visit and delivery rhythm and cost; what each item
+    does; the drone's blast; research.

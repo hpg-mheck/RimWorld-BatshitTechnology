@@ -145,6 +145,13 @@ In recommended order, each on its own branch:
     ritual whose audience is dragged, literally, to center stage. It
     needs the sound pipeline (for disco), the shared implosion (with a
     room-limited, furniture-only setting), and new apparel art.
+3b. **The Interstellar Delivery Locker and Drone**
+    (`feature/delivery-locker`, `docs/DELIVERY-LOCKER.md`): mundane
+    deliveries and an impressively explosive drone. It comes before the
+    comedy showcase, which needs its water bottles.
+3c. **The Stand-Up Comedy Showcase** (`feature/stand-up-comedy`,
+    `docs/STAND-UP-COMEDY.md`): amateur comedy on the Drag Show's
+    performance framework.
 4. **Antiparticle Board** (`feature/antiparticle-board`): the material
    and its research chain, Substandard Advanced Materials and Awkward
    Secrets of the Universe.

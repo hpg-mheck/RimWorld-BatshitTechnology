@@ -149,6 +149,16 @@
     Center Stage marker is made of gaffer tape and batshittium.
   - [ ] Later, with the sound pipeline: an original disco track for the
     Drag Show, replacing the borrowed party music.
+- [ ] The Stand-Up Comedy Showcase (docs/STAND-UP-COMEDY.md), requested by
+  Matt "Breakpoint" Heck on 2026-10-13: another performance type. Four to
+  eight comics with Social below 5, a stool, a Microphone Stand and a
+  Water Bottle per comic.
+- [ ] The Interstellar Delivery Locker and Drone (docs/DELIVERY-LOCKER.md),
+  requested the same day: a semi-vanilla locker that pawns open with a
+  beeping code (click, hinge, SLAM) for mundane items (Water Bottle,
+  Lifestyle Magazine, Witty T-Shirt, Ill-Fitting Hat, Incorrectly Sized
+  Battery), delivered by a janky quadrotor that blows up impressively if
+  destroyed and is replaced the next day.
 
 ## Test justifications
 
