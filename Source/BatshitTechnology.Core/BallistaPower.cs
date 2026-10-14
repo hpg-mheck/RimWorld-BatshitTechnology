@@ -73,6 +73,33 @@ public static class BallistaPower
     public static double FiringWatts(int count, double range) =>
         Interpolate(BaseFiringWatts, MaxFiringWatts, Units(count, range));
 
+    /// <summary>
+    /// The longest whole range at which a volley of a given count draws no
+    /// more than a given number of watts while firing: the inverse of
+    /// <see cref="FiringWatts"/>, for a grid with no stored energy to
+    /// spare.
+    /// </summary>
+    /// <param name="count">Projectiles per volley.</param>
+    /// <param name="watts">The watts the grid can give the burst.</param>
+    /// <returns>
+    /// The range, at most <see cref="MaxRange"/>; zero when even
+    /// <see cref="MinRange"/> draws more.
+    /// </returns>
+    public static int LongestRangeWithin(int count, double watts)
+    {
+        int c = Math.Max(MinCount, Math.Min(MaxCount, count));
+        double units = BaseUnits
+            + ((watts - BaseFiringWatts) * (MaxUnits - BaseUnits)
+                / (MaxFiringWatts - BaseFiringWatts));
+        double range = Math.Floor((units * 10d / c) + 1e-9);
+        if (double.IsNaN(range) || range < MinRange)
+        {
+            return 0;
+        }
+
+        return (int)Math.Min(MaxRange, range);
+    }
+
     /// <summary>Straight line from the baseline to the maximum.</summary>
     /// <param name="atBase">Value at <see cref="BaseUnits"/>.</param>
     /// <param name="atMax">Value at <see cref="MaxUnits"/>.</param>

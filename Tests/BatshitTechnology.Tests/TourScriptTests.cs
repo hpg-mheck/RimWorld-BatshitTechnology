@@ -13,17 +13,17 @@ namespace BatshitTechnology.Tests;
 public sealed class TourScriptTests
 {
     /// <summary>
-    /// The tour has eight scenes with unique keys, in the order the plan
-    /// gives, ending on the twins.
+    /// The tour has nine scenes with unique keys, in the order the plan
+    /// gives (the stampede after the defence), ending on the twins.
     /// </summary>
-    [Fact(DisplayName = "The tour runs eight unique scenes, ending with the twins")]
-    public void Keys_should_be_eight_unique_in_order()
+    [Fact(DisplayName = "The tour runs nine unique scenes, ending with the twins")]
+    public void Keys_should_be_nine_unique_in_order()
     {
         Assert.Equal(
             new[]
             {
-                "home", "defence", "retire-replicator", "retire-reactor",
-                "anyrim", "grenade", "tractor", "twins",
+                "home", "defence", "stampede", "retire-replicator",
+                "retire-reactor", "anyrim", "grenade", "tractor", "twins",
             },
             TourScript.Keys);
         Assert.Equal(
@@ -91,8 +91,8 @@ public sealed class TourScriptTests
 
     /// <summary>
     /// A completed scene must play every beat but the ones the world
-    /// decides: the tractor's doom and the grenade's empty-pile throw,
-    /// which stands for the throw.
+    /// decides: the tractor's doom, the grenade's empty-pile throw, which
+    /// stands for the throw, and the stampede's stragglers.
     /// </summary>
     [Fact(DisplayName = "RequiredMoments leaves out only the world's beats")]
     public void RequiredMoments_should_leave_out_only_optional_beats()
@@ -105,6 +105,10 @@ public sealed class TourScriptTests
         Assert.Equal(
             new[] { "planted", "pull", "blast" },
             TourScript.RequiredMoments("twins"));
+        Assert.Equal(
+            new[] { "herd", "volley", "aftermath" },
+            TourScript.RequiredMoments("stampede"));
+        Assert.Equal("stragglers", TourScript.StandsFor("stragglers"));
         Assert.Equal(
             TourScript.For("home")!.Moments, TourScript.RequiredMoments("home"));
         Assert.Empty(TourScript.RequiredMoments("bogus"));

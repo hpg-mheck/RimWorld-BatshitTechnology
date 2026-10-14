@@ -48,23 +48,35 @@ public static class TourScript
     /// <summary>Scene 2: the Ballista's volley.</summary>
     public const string Defence = "defence";
 
-    /// <summary>Scene 3: the Random Replicator's self-destruct.</summary>
+    /// <summary>
+    /// Scene 3: a 256-bolt volley meets a stampede of manhunting
+    /// boomalopes from the east.
+    /// </summary>
+    public const string Stampede = "stampede";
+
+    /// <summary>Scene 4: the Random Replicator's self-destruct.</summary>
     public const string RetireReplicator = "retire-replicator";
 
-    /// <summary>Scene 4: the Batshittium Reactor's self-destruct.</summary>
+    /// <summary>Scene 5: the Batshittium Reactor's self-destruct.</summary>
     public const string RetireReactor = "retire-reactor";
 
-    /// <summary>Scene 5: AnyRim, the test town.</summary>
+    /// <summary>Scene 6: AnyRim, the test town.</summary>
     public const string AnyRim = "anyrim";
 
-    /// <summary>Scene 6: the Ergonomic Singularity Grenade.</summary>
+    /// <summary>Scene 7: the Ergonomic Singularity Grenade.</summary>
     public const string Grenade = "grenade";
 
-    /// <summary>Scene 7: one Tractor Bomb, from the barn to the blast.</summary>
+    /// <summary>Scene 8: one Tractor Bomb, from the barn to the blast.</summary>
     public const string Tractor = "tractor";
 
-    /// <summary>Scene 8: two Tractor Bombs in a junkyard; the finale.</summary>
+    /// <summary>Scene 9: two Tractor Bombs in a junkyard; the finale.</summary>
     public const string Twins = "twins";
+
+    /// <summary>
+    /// The stampede's beat when a cleanup volley follows the first; it
+    /// plays only when boomalopes outlive the first volley.
+    /// </summary>
+    public const string Stragglers = "stragglers";
 
     /// <summary>The grenade scene's outcome when the volunteer lives.</summary>
     public const string VolunteerSurvived = "volunteerSurvived";
@@ -87,6 +99,7 @@ public static class TourScript
         {
             Scene(Home, "reactor", "replicator", "transmogrifier", "squeezer"),
             Scene(Defence, "artificer", "volley"),
+            Scene(Stampede, "herd", "volley", Stragglers, "aftermath"),
             Scene(RetireReplicator, "blast"),
             Scene(RetireReactor, "blast"),
             Scene(AnyRim, "sign", "street", "homes"),
@@ -140,14 +153,16 @@ public static class TourScript
 
     /// <summary>
     /// The beats a scene may complete without, because the world decides
-    /// them: the tractor's "doom" needs a raider to freeze in place, and
-    /// the grenade plays one of its two throws.
+    /// them: the tractor's "doom" needs a raider to freeze in place, the
+    /// grenade plays one of its two throws, and the stampede's stragglers
+    /// need boomalopes to outlive the first volley.
     /// </summary>
     private static readonly IReadOnlyDictionary<string, string[]> Optional =
         new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
             [Tractor] = new[] { "doom" },
             [Grenade] = new[] { ThrownAlone },
+            [Stampede] = new[] { Stragglers },
         };
 
     /// <summary>

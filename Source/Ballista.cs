@@ -154,6 +154,63 @@ namespace BatshitTechnology
         /// <summary>The internal magazine's bolts.</summary>
         internal BoltStorage InternalMagazine => storage;
 
+        /// <summary>
+        /// Gets the ticks until the Ballista may fire again; zero once its
+        /// five-second cooldown is over (the tour's stampede times its
+        /// cleanup volleys by it).
+        /// </summary>
+        internal int CooldownTicksLeft => Math.Max(0, burstCooldownTicksLeft);
+
+        /// <summary>
+        /// Gets the speed of the selected bolt's projectile, in tiles a
+        /// tick, or zero if the bolt names no projectile.
+        /// </summary>
+        internal float BoltTilesPerTick =>
+            AmmoDef.GetModExtension<BoltExtension>()?.projectile?.projectile
+                ?.SpeedTilesPerTick ?? 0f;
+
+        /// <summary>
+        /// The watts the grid can give a firing burst with no stored energy:
+        /// the net's surplus now, plus this Ballista's own standby draw,
+        /// which the burst replaces. Zero off the grid or unpowered.
+        /// </summary>
+        /// <returns>The watts.</returns>
+        internal float GridWattsForBurst()
+        {
+            PowerNet net = powerComp?.PowerNet;
+            if (net == null || !powerComp.PowerOn)
+            {
+                return 0f;
+            }
+
+            return (net.CurrentEnergyGainRate() / CompPower.WattsToWattDaysPerTick)
+                + StandbyWatts;
+        }
+
+        /// <summary>
+        /// The watts the powered magazines connected to this Ballista draw
+        /// while they feed a volley.
+        /// </summary>
+        /// <returns>The watts.</returns>
+        internal float MagazineFeedingWatts() =>
+            ConnectedMagazines().Sum(m => m.FeedingWatts);
+
+        /// <summary>
+        /// The bolts of a type this Ballista can draw: its own and its
+        /// connected magazines', counting only powered magazines unless
+        /// asked for the whole stock (a fresh map's grid has not ticked,
+        /// so nothing on it is powered yet).
+        /// </summary>
+        /// <param name="bolt">The bolt type, or null for the selected one.</param>
+        /// <param name="unpoweredToo">Whether to count unpowered magazines.</param>
+        /// <returns>The bolts.</returns>
+        internal int BoltsAvailable(ThingDef bolt = null, bool unpoweredToo = false)
+        {
+            ThingDef def = bolt ?? AmmoDef;
+            return storage.CountOf(def)
+                + ConnectedMagazines(!unpoweredToo).Sum(m => m.Storage.CountOf(def));
+        }
+
         // ===== Storage (internal magazine) =====
 
         /// <summary>The internal magazine's bolts.</summary>
@@ -407,12 +464,22 @@ namespace BatshitTechnology
         /// it or with another connected magazine (Core.MagazineNetwork).
         /// </summary>
         /// <returns>The magazines, nearest links first.</returns>
-        internal List<Building_BallistaMagazine> ConnectedMagazines()
+        internal List<Building_BallistaMagazine> ConnectedMagazines() =>
+            ConnectedMagazines(poweredOnly: true);
+
+        /// <summary>
+        /// Magazines connected to this Ballista by shared edges, directly
+        /// or through other connected magazines (Core.MagazineNetwork).
+        /// </summary>
+        /// <param name="poweredOnly">Whether to leave out unpowered ones.</param>
+        /// <returns>The magazines, nearest links first.</returns>
+        internal List<Building_BallistaMagazine> ConnectedMagazines(bool poweredOnly)
         {
             var byCell = new Dictionary<(int x, int z), Building_BallistaMagazine>();
             foreach (Thing t in Map.listerThings.ThingsOfDef(BT_BallistaDefOf.BT_BallistaMagazine))
             {
-                if (t is Building_BallistaMagazine magazine && magazine.CanFeed
+                if (t is Building_BallistaMagazine magazine
+                    && (magazine.CanFeed || !poweredOnly)
                     && magazine.Faction == Faction)
                 {
                     byCell[(t.Position.x, t.Position.z)] = magazine;
@@ -574,6 +641,9 @@ namespace BatshitTechnology
 
         /// <summary>True while feeding a volley.</summary>
         public bool IsFeeding => feedingTicksLeft > 0;
+
+        /// <summary>Gets the watts this magazine draws while feeding.</summary>
+        internal float FeedingWatts => PowerSettings.feedingWatts;
 
         /// <summary>The XML power settings.</summary>
         private MagazinePowerExtension PowerSettings =>

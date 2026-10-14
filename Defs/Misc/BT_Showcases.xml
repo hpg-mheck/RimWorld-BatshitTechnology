@@ -7,7 +7,7 @@
   literally; \n makes one), so their lines run long.
 -->
 <Defs>
-  <!-- The directed tour (docs/SHOWCASE.md, "The Directed Tour"): eight
+  <!-- The directed tour (docs/SHOWCASE.md, "The Directed Tour"): nine
        scenes over the demo base Source/Showcase.cs builds, run by
        BatshitTourDirector. The keys and narration moments follow Core's
        TourScript; TourXmlTests hold the two together. Narration is The
@@ -17,9 +17,9 @@
     <defName>BT_Showcase</defName>
     <label>living better with batshittium</label>
     <summary>A public information film: every device at work, then several of them exploding on cue.</summary>
-    <description>A working Batshit Technology base, built on a fresh map with every project researched, toured scene by scene: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, and the Artificer making bolts for a Batshit Ballista, which fires one 16-bolt volley.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners; the camera walks AnyRim, a small test town built for exactly this; a colonist throws an Ergonomic Singularity Grenade at a junk pile with a volunteer in it; a Tractor Bomb from the Tractor Barn finds a party of raiders; and two Tractor Bombs settle a junkyard full of them.\n\nA scene this map cannot stage is left out. Colonists are moved clear of each blast. The volunteer was not consulted.</description>
+    <description>A working Batshit Technology base, built on a fresh map with every project researched, toured scene by scene: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, and the Artificer making bolts for a Batshit Ballista, which fires one 16-bolt volley, then meets a stampede of manhunting boomalopes from the east with one of 256.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners; the camera walks AnyRim, a small test town built for exactly this; a colonist throws an Ergonomic Singularity Grenade at a junk pile with a volunteer in it; a Tractor Bomb from the Tractor Barn finds a party of raiders; and two Tractor Bombs settle a junkyard full of them.\n\nA scene this map cannot stage is left out. Colonists are moved clear of each blast. The volunteer was not consulted.</description>
     <previewTexPath>UI/Showcases/BT_Showcase</previewTexPath>
-    <estimatedMinutes>5</estimatedMinutes>
+    <estimatedMinutes>6</estimatedMinutes>
     <order>0</order>
     <mapSize>250</mapSize>
     <workerClass>BatshitTechnology.BatshitTourDirector</workerClass>
@@ -38,6 +38,18 @@
         <timeoutTicks>1800</timeoutTicks>
         <settleTicks>120</settleTicks>
         <shots><li><zoom>14</zoom></li></shots>
+      </li>
+      <!-- The herd enters over the first ticks; the volley waits for it
+           to come within the range the grid can power (about 76 tiles). -->
+      <li Class="BatshitTechnology.StampedeScene">
+        <key>stampede</key>
+        <title>Uninvited Guests</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>3600</timeoutTicks>
+        <settleTicks>120</settleTicks>
+        <selectSubject>false</selectSubject>
+        <herdSize>200</herdSize>
+        <shots><li><zoom>40</zoom></li></shots>
       </li>
       <li Class="BatshitTechnology.SelfDestructScene">
         <key>retire-replicator</key>
@@ -115,6 +127,19 @@
         <text>Sixteen bolts, one volley, and a neighbourhood with very few complaints.</text></li>
       <li><scene>defence</scene><when>completed</when>
         <text>That patch of ground will not be troubling anyone again.</text></li>
+      <!-- stampede -->
+      <li><scene>stampede</scene><when>start</when><delayTicks>90</delayTicks>
+        <text>Not every visitor calls ahead.</text></li>
+      <li><scene>stampede</scene><when>herd</when>
+        <text>A herd of boomalopes has taken a keen interest in the family.</text></li>
+      <li><scene>stampede</scene><when>volley</when>
+        <text>Two hundred and fifty-six bolts. One volley. A firm but neighbourly no.</text></li>
+      <li><scene>stampede</scene><when>stragglers</when>
+        <text>A few guests have stayed on. The Ballista will see them out.</text></li>
+      <li><scene>stampede</scene><when>aftermath</when>
+        <text>The east has been cleared. The rain will see to the rest.</text></li>
+      <li><scene>stampede</scene><when>completed</when>
+        <text>Your home is safe. The east will grow back.</text></li>
       <!-- retire-replicator -->
       <li><scene>retire-replicator</scene><when>start</when><delayTicks>90</delayTicks>
         <text>Every Batshit device knows when to step aside.</text></li>

@@ -375,7 +375,7 @@ namespace BatshitTechnology
         /// the turret's immediate search on clearing finds nothing).
         /// </summary>
         /// <param name="ballista">The Ballista, or null.</param>
-        private static void HoldFire(Building_BatshittiumBallista ballista)
+        internal static void HoldFire(Building_BatshittiumBallista ballista)
         {
             if (Alive(ballista))
             {

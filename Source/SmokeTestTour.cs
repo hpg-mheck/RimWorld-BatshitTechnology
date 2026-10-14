@@ -154,6 +154,7 @@ namespace BatshitTechnology
                     || now > tourWatch.FinishedTick + FarewellWaitTicks);
             if (farewellDone || now > tourWatch.DeadlineTick)
             {
+                tourWatch.StopClock(now);
                 CheckTour(tourWatch);
                 Finish();
             }
@@ -348,6 +349,18 @@ namespace BatshitTechnology
                 case TourScript.Defence:
                     return Standing(stage.Ballista) && stage.BallistaTarget.IsValid
                         ? "the Ballista stands with a target" : null;
+                case TourScript.Stampede:
+                    // The open ground is the map's to judge: the same cell
+                    // query the scene uses, since the rule is the map's.
+                    return Standing(stage.Ballista)
+                        && stage.Ballista.BoltsAvailable(
+                            BT_BallistaDefOf.BT_BoltReallyPainful,
+                            unpoweredToo: true) >= Stampede.MoneyShotBolts
+                        && DefDatabase<PawnKindDef>.GetNamedSilentFail("Boomalope") != null
+                        && StampedeScene.EntryCells(
+                            map, stage.BaseCentre, Stampede.TargetHerd).Count > 0
+                        ? "the Ballista stands, loaded, with open ground east"
+                        : null;
                 case TourScript.RetireReplicator:
                 case TourScript.RetireReactor:
                     int pad = director.def?.scenes?.OfType<SelfDestructScene>()
@@ -571,6 +584,12 @@ namespace BatshitTechnology
             /// <summary>The grenade's volunteer once cast, or null.</summary>
             private Pawn volunteerSeen;
 
+            /// <summary>The stampede's watch, once it has begun.</summary>
+            private StampedeWatch stampedeWatch;
+
+            /// <summary>The clock on the scene showing, or null.</summary>
+            private SceneClock clock;
+
             /// <summary>Starts watching a tour that is READY.</summary>
             /// <param name="director">The tour's director.</param>
             /// <param name="now">The current tick.</param>
@@ -631,8 +650,16 @@ namespace BatshitTechnology
                 }
 
                 ShowcaseScene current = Director.CurrentScene;
+                clock?.Tick();
                 if (current != null && !ReferenceEquals(current, showing))
                 {
+                    StopClock(now);
+                    clock = new SceneClock(current.key, now);
+                    if (current is StampedeScene stampede)
+                    {
+                        stampedeWatch = new StampedeWatch(stampede, Director);
+                    }
+
                     showing = current;
                     Captions.Add(Director.Caption);
                     boltsAtStart = Building_BatshittiumBallista.BoltsFired;
@@ -652,6 +679,11 @@ namespace BatshitTechnology
                 if (showing is GrenadeScene cast && cast.Volunteer != null)
                 {
                     volunteerSeen = cast.Volunteer;
+                }
+
+                if (showing is StampedeScene && current == showing)
+                {
+                    stampedeWatch?.Sample();
                 }
 
                 foreach (Pawn p in colonists.Keys.ToList())
@@ -707,7 +739,7 @@ namespace BatshitTechnology
                 }
 
                 Map map = Director.Map;
-                if (!(scene is BallistaVolleyScene))
+                if (!(scene is BallistaVolleyScene) && !(scene is StampedeScene))
                 {
                     int stray = Building_BatshittiumBallista.BoltsFired - boltsAtStart;
                     Fact(scene, $"the Ballista held its fire ({stray} bolts)",
@@ -738,6 +770,15 @@ namespace BatshitTechnology
                         Fact(scene, $"one more implosion ({implosionsInScene})",
                             implosionsInScene >= 1);
                         break;
+                    case StampedeScene _:
+                        if (stampedeWatch == null)
+                        {
+                            Fact(scene, "the stampede was watched", false);
+                            break;
+                        }
+
+                        stampedeWatch.Check((what, ok) => Fact(scene, what, ok), map);
+                        break;
                     case TwinTractorsScene _:
                         int twin =
                             Building_TractorBomb.Explosions - explosionsAtStart;
@@ -752,6 +793,20 @@ namespace BatshitTechnology
                             Building_TractorBomb.Explosions - explosionsAtStart;
                         Fact(scene, $"explosions up by 1 ({one})", one >= 1);
                         break;
+                }
+            }
+
+            /// <summary>
+            /// Logs the clock on the scene that was showing, if any, as a
+            /// NOTE, and stops it.
+            /// </summary>
+            /// <param name="now">The current tick.</param>
+            public void StopClock(int now)
+            {
+                if (clock != null)
+                {
+                    Log.Message("[BT-SMOKE] NOTE " + clock.Note(now));
+                    clock = null;
                 }
             }
 
