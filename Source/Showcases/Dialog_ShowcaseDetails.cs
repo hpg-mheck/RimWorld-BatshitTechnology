@@ -1,6 +1,7 @@
 // Showcase API - menu level 3: one showcase's details, Start and Back.
 
 using System.Collections.Generic;
+using System.Linq;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -39,8 +40,44 @@ namespace BatshitTechnology.Showcases
             decision = ShowcaseLibrary.Evaluate(def, force: false);
         }
 
+        /// <summary>Gets the showcase.</summary>
+        public ShowcaseDef Def => def;
+
+        /// <summary>
+        /// Gets its unforced decision, as the page shows it.
+        /// </summary>
+        public LaunchDecision Decision => decision;
+
+        /// <summary>Gets a value indicating whether Start is enabled.</summary>
+        public bool StartEnabled => decision.CanStart;
+
+        /// <summary>
+        /// Gets a value indicating whether Force start is offered: only a
+        /// fatal flag stands in the way, and dev mode is on or the game was
+        /// started with <c>-showcaseforce</c>.
+        /// </summary>
+        public bool ForceOffered => ShowcaseStartRules.ShowForceButton(
+            decision, Prefs.DevMode, ShowcaseLauncher.ForceFlagPassed);
+
+        /// <summary>
+        /// Gets the lines under the preview: running time, requirements,
+        /// flagged mods and, if Start is refused, why.
+        /// </summary>
+        public IEnumerable<string> FactLines => Facts().Select(f => f.Text);
+
         /// <summary>Gets the title: the showcase's name.</summary>
         protected override string Title => def.LabelCap;
+
+        /// <summary>
+        /// Goes back one level, to the mod's showcases (or the list of mods
+        /// if the mod is not known), as Back does.
+        /// </summary>
+        public void Back()
+        {
+            GoTo(group != null
+                ? new Dialog_ModShowcases(group)
+                : (Window)new Dialog_ShowcaseMods());
+        }
 
         /// <summary>
         /// Draws the preview and facts on the left and the description on
@@ -89,9 +126,7 @@ namespace BatshitTechnology.Showcases
         {
             if (Widgets.ButtonText(LeftButton(rect), "BT_Showcases_Back".Translate()))
             {
-                GoTo(group != null
-                    ? new Dialog_ModShowcases(group)
-                    : (Window)new Dialog_ShowcaseMods());
+                Back();
                 return;
             }
 
@@ -100,16 +135,15 @@ namespace BatshitTechnology.Showcases
                 ? "BT_Showcases_StartTip".Translate()
                 : (TaggedString)ShowcaseTexts.WhyNot(decision));
             if (Widgets.ButtonText(start, "BT_Showcases_Start".Translate(),
-                active: decision.CanStart))
+                active: StartEnabled))
             {
-                if (decision.CanStart)
+                if (StartEnabled)
                 {
                     StartShowcase(forced: false);
                 }
             }
 
-            if (ShowcaseStartRules.ShowForceButton(
-                decision, Prefs.DevMode, ShowcaseLauncher.ForceFlagPassed))
+            if (ForceOffered)
             {
                 Rect force = RightButton(rect, 1);
                 TooltipHandler.TipRegion(force, "BT_Showcases_ForceTip".Translate());

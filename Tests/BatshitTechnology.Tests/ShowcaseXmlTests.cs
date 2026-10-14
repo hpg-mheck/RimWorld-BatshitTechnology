@@ -313,6 +313,30 @@ public sealed class ShowcaseXmlTests
         Assert.Empty(users);
     }
 
+    /// <summary>
+    /// The smoke runner's test showcases are made in code
+    /// (Source/SmokeTestShowcases.cs) and never shipped: no def file names
+    /// one, so players never see them in the Showcases menu.
+    /// </summary>
+    [Fact(DisplayName = "Test showcases are made in code, never shipped")]
+    public void Test_showcases_should_not_be_shipped()
+    {
+        const string TestPrefix = "BT_SmokeShowcase";
+        List<string> shipping = Directory
+            .EnumerateFiles(
+                Path.Combine(FixturesDirectory, "Defs"), "*.xml",
+                SearchOption.AllDirectories)
+            .Where(f => File.ReadAllText(f).Contains(TestPrefix, StringComparison.Ordinal))
+            .Select(Path.GetFileName)
+            .Select(n => n!)
+            .ToList();
+        string runner = File.ReadAllText(
+            Path.Combine(FixturesDirectory, "Source", "SmokeTestShowcases.cs"));
+
+        Assert.Empty(shipping);
+        Assert.Contains("\"" + TestPrefix + "_Director\"", runner, StringComparison.Ordinal);
+    }
+
     /// <summary>Every ShowcaseDef in the mod's Defs.</summary>
     /// <returns>The def elements.</returns>
     private static IEnumerable<XElement> ShowcaseDefs() =>

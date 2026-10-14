@@ -15,8 +15,10 @@
 //
 // Harmony itself comes from the Harmony mod (brrainz.harmony, a declared
 // dependency), never from this mod's Assemblies/. Harmony types appear
-// only inside InstallPatch, so a missing Harmony fails that one call,
-// which is caught and logged, and the class still loads.
+// only inside the bodies of InstallPatch and DescribeOwnPatches, so a
+// missing Harmony fails those calls, which are caught and logged, and the
+// class still loads. The postfix counts its calls and the buttons it
+// draws, for the smoke runner (Source/SmokeTestShowcases.cs).
 
 using System;
 using System.Collections.Generic;
@@ -79,6 +81,25 @@ namespace BatshitTechnology.Showcases
         public static bool Installed => installed;
 
         /// <summary>
+        /// Gets how many times the postfix has run, for any option list.
+        /// The smoke runner compares it before and after drawing a menu, to
+        /// prove the patch is live on the method vanilla's menus use.
+        /// </summary>
+        public static int PostfixCalls { get; private set; }
+
+        /// <summary>
+        /// Gets how many Showcases buttons the postfix has drawn, so the
+        /// smoke runner can count the buttons one menu draw added.
+        /// </summary>
+        public static int ButtonsDrawn { get; private set; }
+
+        /// <summary>
+        /// Gets the button, once the main menu has drawn it; null before.
+        /// Its action is the one a click runs.
+        /// </summary>
+        internal static ListableOption Button => option;
+
+        /// <summary>
         /// Draws the Showcases button below the main menu's last option and
         /// reports the extra height, as the original does for its own.
         /// </summary>
@@ -88,6 +109,7 @@ namespace BatshitTechnology.Showcases
         public static void Postfix(
             Rect rect, List<ListableOption> optList, ref float __result)
         {
+            PostfixCalls++;
             if (failed || !IsMainMenuColumn(optList))
             {
                 return;
@@ -108,6 +130,7 @@ namespace BatshitTechnology.Showcases
                 {
                     __result += option.DrawOption(new Vector2(0f, __result), rect.width)
                         + OptionSpacing;
+                    ButtonsDrawn++;
                 }
                 finally
                 {
@@ -150,10 +173,78 @@ namespace BatshitTechnology.Showcases
                 && last.Name == nameof(Root.Shutdown);
         }
 
+        /// <summary>
+        /// Describes every patch Harmony holds under this mod's id, one
+        /// line each ("Verse.OptionListingUtility.DrawOptionListing:
+        /// postfix BatshitTechnology.Showcases.ShowcaseMenuButton.Postfix"),
+        /// so the smoke runner can check that the menu button is the mod's
+        /// only patch. Empty if Harmony is missing.
+        /// </summary>
+        /// <returns>The lines, sorted.</returns>
+        public static List<string> OwnPatches()
+        {
+            try
+            {
+                return DescribeOwnPatches();
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not list the "
+                    + $"Harmony patches: {e.Message}");
+                return new List<string>();
+            }
+        }
+
         /// <summary>Opens the first level of the Showcases menu.</summary>
         private static void OpenMenu()
         {
             Find.WindowStack.Add(new Dialog_ShowcaseMods());
+        }
+
+        /// <summary>
+        /// Lists this mod's patches through Harmony. Kept apart and never
+        /// inlined, like <see cref="InstallPatch"/>, and with Harmony types
+        /// only in its body, so the class loads without Harmony.
+        /// </summary>
+        /// <returns>The lines, sorted.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static List<string> DescribeOwnPatches()
+        {
+            var lines = new List<string>();
+            foreach (MethodBase method in Harmony.GetAllPatchedMethods())
+            {
+                Patches info = Harmony.GetPatchInfo(method);
+                if (info == null)
+                {
+                    continue;
+                }
+
+                string target = $"{method.DeclaringType?.FullName}.{method.Name}";
+                var kinds = new (string Kind, IEnumerable<Patch> List)[]
+                {
+                    ("prefix", info.Prefixes),
+                    ("postfix", info.Postfixes),
+                    ("transpiler", info.Transpilers),
+                    ("finalizer", info.Finalizers),
+                };
+                foreach ((string kind, IEnumerable<Patch> list) in kinds)
+                {
+                    foreach (Patch patch in list ?? Array.Empty<Patch>())
+                    {
+                        if (patch?.owner != HarmonyId)
+                        {
+                            continue;
+                        }
+
+                        MethodInfo m = patch.PatchMethod;
+                        lines.Add($"{target}: {kind} "
+                            + $"{m?.DeclaringType?.FullName}.{m?.Name}");
+                    }
+                }
+            }
+
+            lines.Sort(StringComparer.Ordinal);
+            return lines;
         }
 
         /// <summary>

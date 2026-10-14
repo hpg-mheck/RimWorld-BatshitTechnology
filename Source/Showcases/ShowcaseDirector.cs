@@ -61,6 +61,13 @@ namespace BatshitTechnology.Showcases
             sequencer?.State ?? SequencerState.NotStarted;
 
         /// <summary>
+        /// Gets how each scene that has ended so far ended, in order, for
+        /// tests and capture tooling.
+        /// </summary>
+        public IReadOnlyList<SceneEnd> Endings =>
+            sequencer?.Endings ?? Array.Empty<SceneEnd>();
+
+        /// <summary>
         /// Gets a value indicating whether every scene has ended or the
         /// viewer stopped the tour.
         /// </summary>

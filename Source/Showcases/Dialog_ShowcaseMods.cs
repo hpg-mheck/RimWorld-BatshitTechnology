@@ -28,8 +28,28 @@ namespace BatshitTechnology.Showcases
             groups = ShowcaseLibrary.Groups();
         }
 
+        /// <summary>Gets the mods listed, in menu order.</summary>
+        public IReadOnlyList<ShowcaseModGroup> Groups => groups;
+
         /// <summary>Gets the title.</summary>
         protected override string Title => "BT_Showcases_ModsTitle".Translate();
+
+        /// <summary>
+        /// Opens one mod's showcases in place of this window, as clicking
+        /// its row does.
+        /// </summary>
+        /// <param name="index">The mod's row.</param>
+        /// <returns>False if there is no such row.</returns>
+        public bool OpenGroup(int index)
+        {
+            if (index < 0 || index >= groups.Count)
+            {
+                return false;
+            }
+
+            GoTo(new Dialog_ModShowcases(groups[index]));
+            return true;
+        }
 
         /// <summary>Draws the introduction and the list of mods.</summary>
         /// <param name="rect">The body's area.</param>
@@ -57,7 +77,7 @@ namespace BatshitTechnology.Showcases
                     var row = new Rect(0f, i * RowHeight, view.width, RowHeight - 4f);
                     if (DrawRow(row, groups[i]))
                     {
-                        GoTo(new Dialog_ModShowcases(groups[i]));
+                        OpenGroup(i);
                         break;
                     }
                 }

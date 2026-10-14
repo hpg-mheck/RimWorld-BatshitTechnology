@@ -7,7 +7,8 @@
 // waits on, and keeps the game from autosaving, so a showcase never
 // overwrites the player's autosave slots. Nothing about the session is
 // saved: a showcase game the player chooses to save loads as an ordinary
-// game.
+// game. Two internal seams, AdoptForTest and ReleaseForTest, let the smoke
+// runner (Source/SmokeTestShowcases.cs) run test showcases in its own game.
 
 using System;
 using System.Linq;
@@ -81,6 +82,12 @@ namespace BatshitTechnology.Showcases
         /// <summary>Whether the caption bar failed to draw; it then stops.</summary>
         private bool guiFailed;
 
+        /// <summary>How many frames the caption bar has painted.</summary>
+        private int captionFrames;
+
+        /// <summary>The tick the closing message was shown on, or -1.</summary>
+        private int farewellTick = -1;
+
         /// <summary>Created by RimWorld for every game.</summary>
         /// <param name="game">The game.</param>
         public GameComponent_ShowcaseSession(Game game)
@@ -110,6 +117,24 @@ namespace BatshitTechnology.Showcases
         /// out: set up, and neither finished nor stopped.
         /// </summary>
         public bool Running => worker != null && begun && !ended;
+
+        /// <summary>
+        /// Gets how many frames the caption bar has painted, for the smoke
+        /// runner.
+        /// </summary>
+        public int CaptionBarFrames => captionFrames;
+
+        /// <summary>
+        /// Gets a value indicating whether the caption bar failed and was
+        /// hidden.
+        /// </summary>
+        public bool CaptionBarFailed => guiFailed;
+
+        /// <summary>
+        /// Gets the tick the closing message was shown on, or -1 if it has
+        /// not been shown.
+        /// </summary>
+        public int FarewellTick => farewellTick;
 
         /// <summary>
         /// Takes the launcher's request for this game, if there is one.
@@ -300,6 +325,63 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
+        /// Smoke-test seam: makes the running game a showcase game for
+        /// <paramref name="showcase"/> and begins it at once on
+        /// <paramref name="map"/>, as if the launcher had generated this
+        /// game for it and the map had settled. An earlier run in this game
+        /// is dropped without a cue. Players never reach this; showcases
+        /// start in a fresh game from the menu or the command line.
+        /// </summary>
+        /// <param name="showcase">The showcase.</param>
+        /// <param name="map">The map to run it on.</param>
+        /// <exception cref="ArgumentNullException">
+        /// Thrown when either argument is null.
+        /// </exception>
+        internal void AdoptForTest(ShowcaseDef showcase, Map map)
+        {
+            if (showcase == null)
+            {
+                throw new ArgumentNullException(nameof(showcase));
+            }
+
+            if (map == null)
+            {
+                throw new ArgumentNullException(nameof(map));
+            }
+
+            ResetRun();
+            def = showcase;
+            ShowcaseLog.Cue("GAME", def.defName);
+            Begin(map);
+        }
+
+        /// <summary>
+        /// Smoke-test seam: makes the game an ordinary game again, as a
+        /// showcase game the player saved loads: no showcase, no caption
+        /// bar, and autosaving as usual. The worker is dropped without
+        /// being stopped.
+        /// </summary>
+        internal void ReleaseForTest()
+        {
+            ResetRun();
+        }
+
+        /// <summary>Forgets the showcase and everything about its run.</summary>
+        private void ResetRun()
+        {
+            def = null;
+            forced = false;
+            worker = null;
+            framesWithMap = 0;
+            begun = false;
+            ended = false;
+            farewellPending = false;
+            guiFailed = false;
+            captionFrames = 0;
+            farewellTick = -1;
+        }
+
+        /// <summary>
         /// Makes the worker and sets it up on the map, then logs READY,
         /// the cue capture tooling waits on before maximizing the window.
         /// A set-up that throws is logged and ends the showcase; the game
@@ -348,6 +430,7 @@ namespace BatshitTechnology.Showcases
             }
 
             farewellPending = false;
+            farewellTick = Find.TickManager.TicksGame;
             Message("BT_Showcases_Finished".Translate());
         }
 
@@ -427,6 +510,11 @@ namespace BatshitTechnology.Showcases
             if (Event.current.type == EventType.MouseDown && Mouse.IsOver(bar))
             {
                 Event.current.Use();
+            }
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                captionFrames++;
             }
         }
 

@@ -63,6 +63,13 @@ namespace BatshitTechnology.Showcases
         protected abstract string Title { get; }
 
         /// <summary>
+        /// Gets how many frames the window has painted in full, title, body
+        /// and footer, without failing. The smoke runner reads it to know
+        /// the window really drew.
+        /// </summary>
+        public int FramesDrawn { get; private set; }
+
+        /// <summary>
         /// Lays the window out: title, body, footer. A failure is logged
         /// once and the window closes, rather than throwing every frame.
         /// </summary>
@@ -71,6 +78,7 @@ namespace BatshitTechnology.Showcases
         {
             try
             {
+                bool painting = Event.current?.type == EventType.Repaint;
                 Text.Font = GameFont.Medium;
                 Text.Anchor = TextAnchor.MiddleLeft;
                 Widgets.LabelEllipses(
@@ -87,6 +95,10 @@ namespace BatshitTechnology.Showcases
                     inRect.x, inRect.yMax - FooterHeight, inRect.width, FooterHeight);
                 DoBody(body);
                 DoFooter(footer);
+                if (painting)
+                {
+                    FramesDrawn++;
+                }
             }
             catch (Exception e)
             {

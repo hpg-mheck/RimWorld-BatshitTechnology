@@ -78,6 +78,7 @@
     <Compile Include="Showcase.cs" />
     <Compile Include="SingularityGrenade.cs" />
     <Compile Include="SmokeTest.cs" />
+    <Compile Include="SmokeTestShowcases.cs" />
   </ItemGroup>
   <!-- The Showcase API (docs/SHOWCASE-API.md): its own namespace,
        BatshitTechnology.Showcases, free of Batshit-specific code so it

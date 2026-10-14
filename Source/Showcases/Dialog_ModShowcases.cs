@@ -37,9 +37,86 @@ namespace BatshitTechnology.Showcases
                 .ToList();
         }
 
+        /// <summary>Gets the mod whose showcases are listed.</summary>
+        public ShowcaseModGroup Group => group;
+
+        /// <summary>Gets how many showcases are listed.</summary>
+        public int RowCount => rows.Count;
+
         /// <summary>Gets the title: the mod's name.</summary>
         protected override string Title =>
             "BT_Showcases_ModTitle".Translate(ShowcaseLibrary.GroupName(group));
+
+        /// <summary>
+        /// Whether a showcase can be opened from the list. One whose
+        /// required mods are missing is greyed out instead; forcing cannot
+        /// help it, because its content is not there.
+        /// </summary>
+        /// <param name="decision">The showcase's decision.</param>
+        /// <returns>True if its row can be opened.</returns>
+        public static bool IsAvailable(LaunchDecision decision) =>
+            decision != null && decision.Verdict != LaunchVerdict.Unavailable;
+
+        /// <summary>The showcase on a row.</summary>
+        /// <param name="index">The row.</param>
+        /// <returns>The showcase, or null if there is no such row.</returns>
+        public ShowcaseDef DefAt(int index) =>
+            index >= 0 && index < rows.Count ? rows[index].Def : null;
+
+        /// <summary>The decision shown on a row.</summary>
+        /// <param name="index">The row.</param>
+        /// <returns>The decision, or null if there is no such row.</returns>
+        public LaunchDecision DecisionAt(int index) =>
+            index >= 0 && index < rows.Count ? rows[index].Decision : null;
+
+        /// <summary>
+        /// Opens a showcase's details in place of this window, as clicking
+        /// its row does. A greyed-out showcase does not open.
+        /// </summary>
+        /// <param name="index">The showcase's row.</param>
+        /// <returns>True if its details opened.</returns>
+        public bool OpenShowcase(int index)
+        {
+            if (index < 0 || index >= rows.Count
+                || !IsAvailable(rows[index].Decision))
+            {
+                return false;
+            }
+
+            GoTo(new Dialog_ShowcaseDetails(rows[index].Def, group));
+            return true;
+        }
+
+        /// <summary>
+        /// Goes back one level, to the list of mods, as Back does.
+        /// </summary>
+        public void Back()
+        {
+            GoTo(new Dialog_ShowcaseMods());
+        }
+
+        /// <summary>
+        /// The row's status line: why it is unavailable or refused, or the
+        /// first flagged mod, or nothing.
+        /// </summary>
+        /// <param name="decision">The decision.</param>
+        /// <returns>The line, or null.</returns>
+        public static string StatusLine(LaunchDecision decision)
+        {
+            switch (decision?.Verdict)
+            {
+                case LaunchVerdict.Unavailable:
+                case LaunchVerdict.Refused:
+                    return ShowcaseTexts.WhyNot(decision)?.Replace('\n', ' ');
+                case LaunchVerdict.Warned:
+                    return decision.Matches.Count == 1
+                        ? ShowcaseTexts.Flag(decision.Matches[0])
+                        : "BT_Showcases_FlaggedMany".Translate(decision.Matches.Count)
+                            .Resolve();
+                default:
+                    return null;
+            }
+        }
 
         /// <summary>Draws the list of showcases.</summary>
         /// <param name="rect">The body's area.</param>
@@ -61,7 +138,7 @@ namespace BatshitTechnology.Showcases
                     var row = new Rect(0f, i * RowHeight, view.width, RowHeight - 4f);
                     if (DrawRow(row, rows[i].Def, rows[i].Decision))
                     {
-                        GoTo(new Dialog_ShowcaseDetails(rows[i].Def, group));
+                        OpenShowcase(i);
                         break;
                     }
                 }
@@ -78,7 +155,7 @@ namespace BatshitTechnology.Showcases
         {
             if (Widgets.ButtonText(LeftButton(rect), "BT_Showcases_Back".Translate()))
             {
-                GoTo(new Dialog_ShowcaseMods());
+                Back();
             }
         }
 
@@ -91,7 +168,7 @@ namespace BatshitTechnology.Showcases
         /// <returns>True if an available row was clicked.</returns>
         private static bool DrawRow(Rect row, ShowcaseDef def, LaunchDecision decision)
         {
-            bool available = decision.Verdict != LaunchVerdict.Unavailable;
+            bool available = IsAvailable(decision);
             Widgets.DrawOptionBackground(row, false);
             float previewHeight = Mathf.Min(row.height - 12f, 72f);
             var preview = new Rect(
@@ -125,7 +202,7 @@ namespace BatshitTechnology.Showcases
             Widgets.LabelEllipses(new Rect(x, y, width, 22f), facts);
             y += 22f;
             GUI.color = Color.white;
-            string status = Status(decision);
+            string status = StatusLine(decision);
             if (status != null)
             {
                 GUI.color = decision.Verdict == LaunchVerdict.Warned
@@ -143,29 +220,6 @@ namespace BatshitTechnology.Showcases
 
             Widgets.DrawHighlightIfMouseover(row);
             return Widgets.ButtonInvisible(row);
-        }
-
-        /// <summary>
-        /// The row's status line: why it is unavailable or refused, or the
-        /// first flagged mod, or nothing.
-        /// </summary>
-        /// <param name="decision">The decision.</param>
-        /// <returns>The line, or null.</returns>
-        private static string Status(LaunchDecision decision)
-        {
-            switch (decision.Verdict)
-            {
-                case LaunchVerdict.Unavailable:
-                case LaunchVerdict.Refused:
-                    return ShowcaseTexts.WhyNot(decision)?.Replace('\n', ' ');
-                case LaunchVerdict.Warned:
-                    return decision.Matches.Count == 1
-                        ? ShowcaseTexts.Flag(decision.Matches[0])
-                        : "BT_Showcases_FlaggedMany".Translate(decision.Matches.Count)
-                            .Resolve();
-                default:
-                    return null;
-            }
         }
     }
 }
