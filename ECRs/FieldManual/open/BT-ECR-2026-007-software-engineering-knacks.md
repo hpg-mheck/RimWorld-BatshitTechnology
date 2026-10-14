@@ -47,8 +47,8 @@ or directed showcases.
 - Update `knacks/software-engineering/README.md`.
 
 The proposed files are on the branch `knacks/from-batshit-technology` of
-Hard-Problems-Group-LLC/FieldManual (added in `0486ac3`, renamed to their
-final paths in `65cd769`), offered as a pull request against `main` at
+Hard-Problems-Group-LLC/FieldManual (added in `a32a511`, renamed to their
+final paths in `d354450`), offered as a pull request against `main` at
 `04bcec5`.
 
 ### Acceptance Criteria

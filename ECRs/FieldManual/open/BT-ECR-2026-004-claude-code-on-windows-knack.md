@@ -46,8 +46,8 @@ later Codex) effectively for advanced Windows development.
 - Index it in `knacks/AI/README.md`.
 
 The proposed files are on the branch `knacks/from-batshit-technology` of
-Hard-Problems-Group-LLC/FieldManual (added in `208e0b8`, renamed to their
-final paths in `65cd769`), offered as a pull request against `main` at
+Hard-Problems-Group-LLC/FieldManual (added in `4f7936e`, renamed to their
+final paths in `d354450`), offered as a pull request against `main` at
 `04bcec5`.
 
 ### Acceptance Criteria

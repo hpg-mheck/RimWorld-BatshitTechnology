@@ -81,7 +81,7 @@ Layout" in `knacks/authoring-guide.md`, saying:
 
 ### Evidence At Submission
 
-- Commit `3619a7f` adds the subsection; commit `65cd769` applies it to the
+- Commit `9300fb0` adds the subsection; commit `d354450` applies it to the
   new knacks, rewriting and checking every relative link (551, none
   broken). Both are on the branch `knacks/from-batshit-technology`.
 

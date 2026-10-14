@@ -45,8 +45,8 @@ FieldManual has no games area.
 - Index the area in `knacks/README.md`.
 
 The proposed files are on the branch `knacks/from-batshit-technology` of
-Hard-Problems-Group-LLC/FieldManual (added in `dc664b8`, renamed to their
-final paths in `65cd769`), offered as a pull request against `main` at
+Hard-Problems-Group-LLC/FieldManual (added in `51d4e65`, renamed to their
+final paths in `d354450`), offered as a pull request against `main` at
 `04bcec5`.
 
 ### Acceptance Criteria

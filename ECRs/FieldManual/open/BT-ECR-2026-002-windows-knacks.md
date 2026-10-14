@@ -48,8 +48,8 @@ Each cost time to diagnose, and each applies to any Windows project.
   `authentication/GitHub-SSH-multi-org-sanity` knack rather than repeating it.
 
 The proposed files are on the branch `knacks/from-batshit-technology` of
-Hard-Problems-Group-LLC/FieldManual (added in `7f8de0e`, renamed to their
-final paths in `65cd769`), offered as a pull request against `main` at
+Hard-Problems-Group-LLC/FieldManual (added in `2c18bfa`, renamed to their
+final paths in `d354450`), offered as a pull request against `main` at
 `04bcec5`.
 
 ### Acceptance Criteria

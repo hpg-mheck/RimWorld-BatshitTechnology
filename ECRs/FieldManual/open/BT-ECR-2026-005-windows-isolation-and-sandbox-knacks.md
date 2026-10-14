@@ -47,8 +47,8 @@ root certificates that Python needs until Windows fetches them.
 - Index the subarea in `knacks/sandboxing/README.md`.
 
 The proposed files are on the branch `knacks/from-batshit-technology` of
-Hard-Problems-Group-LLC/FieldManual (added in `9e6d5fa`, renamed to their
-final paths in `65cd769`), offered as a pull request against `main` at
+Hard-Problems-Group-LLC/FieldManual (added in `d4c7ca4`, renamed to their
+final paths in `d354450`), offered as a pull request against `main` at
 `04bcec5`.
 
 ### Acceptance Criteria
