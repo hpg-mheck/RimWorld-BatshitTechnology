@@ -111,9 +111,15 @@ None needed; the change travels with the knacks' pull request.
   `knacks/from-batshit-technology` at `d354450`.
 - 2026-10-14 — Revision 2 sent: pull request FieldManual#1 updated to
   `d5af082`.
+- 2026-10-14 — Pull request history rebuilt so every commit adds files at
+  their final paths; head `19fcd4f`. Content unchanged.
 
 ### Discussion And Amendments
 
+- 2026-10-14 — At the operator's direction (`.knack` belongs only in file
+  names), the older filesets listed under Non-Goals were renamed in the same
+  pull request after all (`19fcd4f`), and the guide's clause deferring them
+  was removed. No `.knack` directory or `api.` name remains in FieldManual.
 - 2026-10-14 — Clarification from the operator, folded into the guide in
   the same pull request: a part that outgrows one file is promoted to a
   subdirectory named for it, whose main document is its

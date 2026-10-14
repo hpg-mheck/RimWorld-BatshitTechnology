@@ -109,6 +109,8 @@ until the knacks are available from the FieldManual submodule.
   `knacks/from-batshit-technology` at `d354450`.
 - 2026-10-14 — Pull request FieldManual#1 updated to `d5af082` after the
   operator's review.
+- 2026-10-14 — Pull request history rebuilt so every commit adds files at
+  their final paths; head `19fcd4f`. Content unchanged.
 
 ### Discussion And Amendments
 
