@@ -55,6 +55,11 @@
   - "the colonist sat in the squeezer": the colonist's job ended before
     it reached the chair, twelve tiles off, before any Tractor Bomb code
     ran.
+- "AnyRim builds at a scored site" failed once (2026-10-13) on a map
+  with an insect hive and eight hostile insects: the site rules keep the
+  town away from hostiles, and with the map's edges, geysers and a void
+  monolith no site anywhere qualified. That is the site search working
+  as designed on an unlucky map, not a fault; rerun.
 - The Tractor Bomb (docs/TRACTOR-BOMB.md, "As Built"):
   - It stops 15 tiles from its target but pulls only 10, as specified,
     so a target that stands still escapes the pull (a question for Matt
