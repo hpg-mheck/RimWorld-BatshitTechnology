@@ -65,6 +65,7 @@
     <Compile Include="AnyRimResidents.cs" />
     <Compile Include="Artificer.cs" />
     <Compile Include="Ballista.cs" />
+    <Compile Include="BatshitShowcaseWorker.cs" />
     <Compile Include="BatshittiumReactor.cs" />
     <Compile Include="BoltStorage.cs" />
     <Compile Include="BrainSqueezer.cs" />
@@ -84,6 +85,7 @@
     <Compile Include="SmokeTest.TractorBombHits.cs" />
     <Compile Include="SmokeTest.TractorBombHostiles.cs" />
     <Compile Include="SmokeTest.TractorBombTwins.cs" />
+    <Compile Include="SmokeTestShowcases.cs" />
     <Compile Include="TractorBarn.cs" />
     <Compile Include="TractorBomb.cs" />
     <Compile Include="TractorBombAI.cs" />
@@ -92,9 +94,39 @@
     <Compile Include="TractorBombFlee.cs" />
     <Compile Include="TractorBombGizmos.cs" />
   </ItemGroup>
+  <!-- The Showcase API (docs/SHOWCASE-API.md): its own namespace,
+       BatshitTechnology.Showcases, free of Batshit-specific code so it
+       can be split out into a framework mod later. -->
+  <ItemGroup>
+    <Compile Include="Showcases\Dialog_ModShowcases.cs" />
+    <Compile Include="Showcases\Dialog_ShowcaseDetails.cs" />
+    <Compile Include="Showcases\Dialog_ShowcaseMods.cs" />
+    <Compile Include="Showcases\GameComponent_ShowcaseSession.cs" />
+    <Compile Include="Showcases\ShowcaseDef.cs" />
+    <Compile Include="Showcases\ShowcaseDirector.cs" />
+    <Compile Include="Showcases\ShowcaseGodMode.cs" />
+    <Compile Include="Showcases\ShowcaseLauncher.cs" />
+    <Compile Include="Showcases\ShowcaseLibrary.cs" />
+    <Compile Include="Showcases\ShowcaseMenuButton.cs" />
+    <Compile Include="Showcases\ShowcaseScene.cs" />
+    <Compile Include="Showcases\ShowcaseTexts.cs" />
+    <Compile Include="Showcases\ShowcaseWindow.cs" />
+    <Compile Include="Showcases\ShowcaseWorker.cs" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference
         Include="BatshitTechnology.Core\BatshitTechnology.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Harmony, for the Showcases main-menu button only (the mod's one
+         patch; docs/SHOWCASE-API.md). Compile-time only: runtime assets
+         are excluded, so 0Harmony.dll is never copied to Assemblies/. The
+         Harmony mod (brrainz.harmony, a declared dependency) supplies it
+         at run time. 2.4.3 matches that mod's 1.6 build. -->
+    <PackageReference Include="Lib.Harmony" Version="2.4.3">
+      <ExcludeAssets>runtime</ExcludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
   <!-- Mod assets linked in so Visual Studio shows the whole mod tree. -->
   <ItemGroup>
@@ -104,6 +136,10 @@
     </None>
     <None Include="..\Defs\**\*.*">
       <Link>Defs\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Languages\**\*.*">
+      <Link>Languages\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
     <None Include="..\Patches\**\*.*">
@@ -141,5 +177,19 @@
           Condition="!Exists('$(RimWorldManaged)\Assembly-CSharp.dll')">
     <Error Text="RimWorld not found at '$(RIMWORLD_DIR)'. Set the
 RIMWORLD_DIR environment variable to your RimWorld install folder." />
+  </Target>
+  <!-- Validates every Def against the game and the assembly just built
+       (Tools\validate-defs.ps1, Windows PowerShell 5.1, a few seconds).
+       In RimWorld 1.6 an unresolvable Class= drops the whole Def at load,
+       so a problem fails the build. Skip with -p:SkipDefValidation=true. -->
+  <Target Name="ValidateDefs"
+          AfterTargets="Build"
+          Condition="'$(SkipDefValidation)' != 'true' And '$(OS)' == 'Windows_NT'">
+    <Exec Command="powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\Tools\validate-defs.ps1&quot; -RimWorld &quot;$(RIMWORLD_DIR)&quot; -Assembly &quot;$(TargetPath)&quot; -MSBuild"
+          IgnoreExitCode="true">
+      <Output TaskParameter="ExitCode" PropertyName="ValidateDefsExitCode" />
+    </Exec>
+    <Error Condition="'$(ValidateDefsExitCode)' != '0'"
+           Text="Def validation failed (Tools\validate-defs.ps1); see the errors above. Skip once with -p:SkipDefValidation=true." />
   </Target>
 </Project>

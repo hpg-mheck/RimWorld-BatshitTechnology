@@ -20,9 +20,25 @@ Batshit Ballista: volleys of up to 256 insanely inaccurate, terrifyingly destruc
 
 Ergonomic Singularity Grenade: thrown, it drags everything within 10 tiles into a pile for five seconds, ripping furniture and walls loose, then explodes. Survivors find it remarkably comfortable.
 
-Everything blows up: damage can set off a self-destruct, and every other device pulverizes itself in its own way when destroyed.</description>
+Everything blows up: damage can set off a self-destruct, and every other device pulverizes itself in its own way when destroyed.
+
+Showcases: a Showcases button at the bottom of the main menu stages all of the above in a fresh, throwaway colony that never autosaves. Requires Harmony, for that button.</description>
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
+  <!-- Harmony, for the main menu's Showcases button only (the mod's one
+       patch; docs/SHOWCASE-API.md). The Harmony mod supplies 0Harmony.dll;
+       this mod never ships it. -->
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+      <downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
+    </li>
+  </modDependencies>
+  <loadAfter>
+    <li>brrainz.harmony</li>
+  </loadAfter>
   <modVersion IgnoreIfNoMatchingField="True">0.8.0</modVersion>
 </ModMetaData>

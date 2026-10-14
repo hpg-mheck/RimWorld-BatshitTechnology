@@ -29,6 +29,10 @@
       <Link>Fixtures\Defs\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\Languages\**\*.xml">
+      <Link>Fixtures\Languages\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\..\Patches\**\*.xml">
       <Link>Fixtures\Patches\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -37,6 +41,13 @@
          job's lines must match. -->
     <None Include="..\..\docs\TRACTOR-BOMB.md">
       <Link>Fixtures\docs\TRACTOR-BOMB.md</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- The game code, read as text: the keyed-string tests check that
+         every key it asks for has English text. Never compiled here. -->
+    <None Include="..\..\Source\**\*.cs"
+          Exclude="..\..\Source\**\obj\**;..\..\Source\**\bin\**">
+      <Link>Fixtures\Source\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\Textures\**\*.png">

@@ -12,12 +12,29 @@ wrong in the same change.
 .\Tools\smoke-test.ps1 -Showcase
 ```
 
-The script builds nothing itself. It starts RimWorld on a quick-test map
-with the `-btshowcase` flag; `Source/Showcase.cs` does the rest and leaves
-the game running. Windows shown to the operator open maximized at 2x UI
-scale. The game log carries cues for screen-capture tooling, so it never
-has to guess at timings: `[BT-SHOWCASE] READY`, `ANYRIM`, `THROW` and
-`TOUR`.
+The showcase is `BT_Showcase`, the first client of the Showcase API
+(`docs/SHOWCASE-API.md`). Players start it from the main menu: Showcases
+(at the bottom of the menu, below Quit to OS; the Harmony mod must be
+active), then Batshit Technology, then "Demo base", then Start. The
+script builds nothing itself: it starts RimWorld with
+`-showcase=BT_Showcase`, the main menu acts on that by generating a fresh
+game for the showcase, and `Source/Showcase.cs` (through
+`BatshitShowcaseWorker`) does the rest and leaves the game running. The
+script exits at once with an error if the showcase is refused or fails
+to set up, or if the mod logs an error before `READY`. Windows shown to
+the operator open maximized at 2x UI scale. The game log carries cues
+for screen-capture tooling, so it never has to guess at timings:
+`[BT-SHOWCASE] READY` (from the API, once the base is built), `ANYRIM`,
+`THROW` and `TOUR`, then `FINISHED BT_Showcase` ten seconds after the
+last of them (the API's full cue list is in its specification).
+
+A showcase game never autosaves, so the player's autosave slots are
+safe. The devices' DEV buttons show only in dev mode: the showcase
+borrows god mode for them through the API, which gives it back when the
+showcase stops or finishes, or the viewer leaves the game, so it never
+follows anyone into their own colonies. `-quicktest -showcase=BT_Showcase`
+also works, for developer runs: the quick-test game adopts the showcase
+on its own 250-cell map.
 
 ## The Map
 
@@ -63,9 +80,15 @@ at a time, explaining as it goes.
   settling) rather than a fixed delay. Then the next begins.
 - **Commentary.** Pop-up comments as game events: vanilla messages, with
   look targets so a click jumps to the subject. They are written in the
-  motif's deadpan voice (`docs/ARTISTIC-MOTIF.md`). *(Proposal:)* each
-  chapter also gets a short caption bar at the bottom of the screen
-  ("2 of 8: The Batshittium Reactor").
+  motif's deadpan voice (`docs/ARTISTIC-MOTIF.md`). Each chapter also
+  gets a short caption bar, drawn by the Showcase API as a title card at
+  the top centre, just below the colonist bar ("2 of 8: The Batshittium
+  Reactor"). It was first proposed for the bottom of the screen, but the
+  bottom holds the selected subject's gizmos, the inspect pane and the
+  main buttons, and the bar draws before them (`GameComponentOnGUI` runs
+  ahead of the map interface and the window stack), so there it would
+  cover them and take their clicks (`docs/AI-DECISIONS.txt`,
+  2026-10-14).
 - **The camera.** The tour moves and zooms it for every beat, framing the
   subject, and pulls back for anything with a big radius.
 - **Scenes** *(proposal, in order)*:
@@ -85,9 +108,12 @@ at a time, explaining as it goes.
   7. "The showcase is yours": the director lets go of the camera.
 - **Log cues.** Each scene logs `[BT-SHOWCASE] SCENE <name>` for capture
   tooling, replacing the ad hoc cues above (which stay until then).
-- **Letting go.** The player can end the tour early *(proposal: a
-  "Skip tour" button on the caption bar)*; the director then stops
-  moving the camera and leaves everything running.
+- **Letting go.** The caption bar's buttons, provided by the API: Skip
+  ends the current scene, and the next begins at once; Stop ends the
+  tour, after which the director stops moving the camera and narrating,
+  the game keeps running (still never autosaving), and a device already
+  counting down still goes off. At the end of the last scene the
+  director lets go of the camera on its own.
 
 ### The Story *(draft)*
 

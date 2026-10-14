@@ -834,7 +834,7 @@ namespace BatshitTechnology
                     this, TractorBombYieldKind.Blast);
             }
 
-            if (DebugSettings.godMode && stage == Stage.CountingDown)
+            if (DebugSettings.ShowDevGizmos && stage == Stage.CountingDown)
             {
                 yield return new Command_Action
                 {
@@ -844,7 +844,7 @@ namespace BatshitTechnology
                 };
             }
 
-            if (DebugSettings.godMode && Spawned)
+            if (DebugSettings.ShowDevGizmos && Spawned)
             {
                 yield return new Command_Action
                 {

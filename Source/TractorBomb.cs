@@ -598,7 +598,7 @@ namespace BatshitTechnology
                     this, TractorBombYieldKind.Blast);
             }
 
-            if (DebugSettings.godMode && robot.Spawned && readyTick < 0)
+            if (DebugSettings.ShowDevGizmos && robot.Spawned && readyTick < 0)
             {
                 yield return new Command_Action
                 {

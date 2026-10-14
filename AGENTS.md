@@ -81,6 +81,38 @@ subdirectory.
   and the smoke test passing, docs updated). `ROADMAP.md` lists the
   features in order with their branches.
 
+## Git Identity and Keys
+The operator works for several organisations, each with its own commit
+identity (email address) and SSH key. Every agent, workflow and script that
+commits or pushes, in this repository or any other, must use the right
+one:
+- **The path names the owner.** Repositories live under
+  `codebase/<Org>/`. `codebase/<Org>/actual/` holds the organisation's own
+  projects; any other component there holds one of that organisation's
+  clients, whose work may carry different rules. Ask before committing to
+  a client repository for the first time.
+- **The repository says the rest.** Its `.git/config` (`user.name`,
+  `user.email`) is authoritative for the identity, and the SSH host alias
+  in its remote URL (`git@github-<org>:...`), resolved by `~/.ssh/config`,
+  selects the key. Remotes always use the organisation's alias, never
+  `github.com` directly.
+- **Never fall back to the global identity.** Before the first commit in a
+  repository, check `git config --show-origin user.email`. If the
+  repository sets none, set it from the convention of the same owner's
+  other repositories (for example a sibling's `.git/config`) or ask; do
+  not commit with whatever the global or a redirected home supplies.
+- **Today on this workstation:** organisation HPG, alias `github-hpg`.
+  Hard-Problems-Group-LLC repositories (FieldManual, Ubersight,
+  claude-wrangler) use the HPG company address; the `hpg-mheck`
+  repositories (this one, FieldManual-RimWorld) use the `hpg-mheck`
+  GitHub noreply address. Each repository's `.git/config` records its own.
+- **GitHub CLI.** `gh` authenticates per account; use the account that
+  belongs to the repository's owner (`gh auth switch` or a per-account
+  `GH_CONFIG_DIR`).
+- Pass these rules on in every subagent and workflow brief that commits.
+  See FieldManual's
+  `knacks/authentication/GitHub-SSH-multi-org-sanity.knack.md`.
+
 ## Communication
 - Address the operator as Matt “Breakpoint” Heck whenever notes require human
   attention.

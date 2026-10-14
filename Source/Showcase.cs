@@ -1,6 +1,8 @@
 // Batshit Technology - in-game showcase.
-// Runs only when RimWorld starts with -btshowcase (Tools/smoke-test.ps1
-// -Showcase). On the quick-test map it finishes the mod's research and builds
+// The demo base behind BT_Showcase, run through the Showcase API by
+// BatshitShowcaseWorker: from the main menu's Showcases button, or with
+// -showcase=BT_Showcase (Tools/smoke-test.ps1 -Showcase). On the fresh
+// 250-cell map the API generates, it finishes the mod's research and builds
 // a working demo base: a fuelled reactor powering a stocked replicator, the
 // Transmogrifier with a bill and rock chunks, a colonist in the Brain
 // Squeezer, the Artificer making bolts, and a Ballista with chained,
@@ -14,7 +16,8 @@
 // Ergonomic Singularity Grenade at a junk pile (and a volunteer) west of
 // the base, and ten seconds after the throw the camera tours AnyRim from
 // its welcome sign. Then it leaves the game running. Log cues for capture
-// tooling: [BT-SHOWCASE] READY, ANYRIM (or AnyRim skipped), THROW, TOUR.
+// tooling: [BT-SHOWCASE] ANYRIM (or AnyRim skipped), THROW, TOUR; the API
+// logs READY once the base is built.
 
 using System;
 using System.Collections.Generic;
@@ -29,15 +32,28 @@ namespace BatshitTechnology
     /// <summary>Builds the showcase base.</summary>
     internal static class Showcase
     {
-        /// <summary>The command-line flag that requests the showcase.</summary>
-        internal const string Flag = "btshowcase";
+        /// <summary>
+        /// Game ticks the timeline holds after its last step before it
+        /// counts as finished, so the last scene stays on screen before the
+        /// API's closing message.
+        /// </summary>
+        internal const int FinishHoldTicks = 600;
+
+        /// <summary>
+        /// The tick the timeline was first seen idle, or -1 while it still
+        /// has steps to run.
+        /// </summary>
+        private static int idleSinceTick = -1;
 
         /// <summary>Builds the demo base around the map's center.</summary>
-        /// <param name="map">The quick-test map.</param>
+        /// <param name="map">The showcase's fresh map.</param>
         internal static void Build(Map map)
         {
+            // God mode, for the devices' DEV buttons, is lent by the
+            // Showcase API in BatshitShowcaseWorker.Setup, in dev mode only,
+            // and given back when the showcase ends: it is a static flag
+            // that would otherwise follow the player into their own games.
             FinishResearch();
-            DebugSettings.godMode = true; // show the DEV buttons
             IntVec3 center = map.Center;
             Clear(map, CellRect.CenteredOn(center, 16));
 
@@ -98,8 +114,52 @@ namespace BatshitTechnology
             Messages.Message(
                 OpeningMessage(demos, throwAtTick >= 0, town),
                 MessageTypeDefOf.PositiveEvent, false);
-            // Tools/smoke-test.ps1 waits for this line before maximizing.
-            Log.Message("[BT-SHOWCASE] READY");
+            idleSinceTick = -1;
+            // The Showcase API logs "[BT-SHOWCASE] READY" when this returns;
+            // Tools/smoke-test.ps1 waits for it before maximizing.
+        }
+
+        /// <summary>
+        /// Whether the timeline has played out: nothing left to arm, throw
+        /// or tour, no demo device still counting down under the camera,
+        /// and <see cref="FinishHoldTicks"/> since that was first true.
+        /// </summary>
+        /// <param name="now">The current game tick.</param>
+        /// <returns>True once the showcase is over.</returns>
+        internal static bool TimelineFinished(int now)
+        {
+            bool countingDown = watching != null && !watching.Destroyed
+                && watching.TryGetComp<CompSelfDestruct>()?.IsCountingDown == true;
+            bool idle = pendingDemos.Count == 0 && throwAtTick < 0
+                && tourAtTick < 0 && !countingDown;
+            if (!idle)
+            {
+                idleSinceTick = -1;
+                return false;
+            }
+
+            if (idleSinceTick < 0)
+            {
+                idleSinceTick = now;
+            }
+
+            return now - idleSinceTick >= FinishHoldTicks;
+        }
+
+        /// <summary>
+        /// Stops the timeline: nothing more is armed, thrown or toured, and
+        /// the camera is left alone. Devices already counting down still go
+        /// off.
+        /// </summary>
+        internal static void StopTimeline()
+        {
+            pendingDemos.Clear();
+            throwAtTick = -1;
+            tourAtTick = -1;
+            watching = null;
+            grenadier = null;
+            volunteer = null;
+            idleSinceTick = -1;
         }
 
         /// <summary>
@@ -350,14 +410,28 @@ namespace BatshitTechnology
         /// </summary>
         private const int GrenadeDemoDelayTicks = 1200;
 
+        /// <summary>
+        /// The colonist who throws the grenade, until the throw. Statics
+        /// outlive the game (vanilla empties only the map and world when a
+        /// game ends), and a pawn reaches much of its game's object graph,
+        /// so this is cleared as soon as it is no longer needed: at the
+        /// throw, on Stop, and before each new demo.
+        /// </summary>
         private static Pawn grenadier;
+
+        /// <summary>
+        /// The colonist volunteering inside the junk pile, until the throw;
+        /// cleared as <see cref="grenadier"/> is.
+        /// </summary>
         private static Pawn volunteer;
+
+        /// <summary>The junk pile's centre, where the grenade is thrown.</summary>
         private static IntVec3 grenadeTarget;
         private static int throwAtTick = -1;
 
         /// <summary>
-        /// Called every game tick by the runner; arms each self-destruct demo
-        /// when its moment comes, with the camera on it.
+        /// Called every game tick by BatshitShowcaseWorker; arms each
+        /// self-destruct demo when its moment comes, with the camera on it.
         /// </summary>
         internal static void Tick()
         {
@@ -528,6 +602,8 @@ namespace BatshitTechnology
         private static void BuildGrenadeDemo(Map map, IntVec3 baseCenter, int throwAt)
         {
             throwAtTick = -1; // set below once a grenadier is ready
+            grenadier = null; // never an earlier game's pawns
+            volunteer = null;
             grenadeTarget = baseCenter + new IntVec3(-25, 0, 0);
             Clear(map, CellRect.CenteredOn(grenadeTarget, 13));
             ThingDef stool = DefDatabase<ThingDef>.GetNamedSilentFail("Stool");
@@ -599,6 +675,8 @@ namespace BatshitTechnology
             Job job = JobMaker.MakeJob(JobDefOf.AttackStatic, grenadeTarget);
             job.maxNumStaticAttacks = 1;
             grenadier.jobs.TryTakeOrderedJob(job, JobTag.Misc);
+            grenadier = null; // nothing reads them after the throw
+            volunteer = null;
             Log.Message("[BT-SHOWCASE] THROW"); // a cue for screen-capture tooling
         }
 

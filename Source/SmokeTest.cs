@@ -5,13 +5,17 @@
 // AnyRim, the test town, before the destructive tests), logs
 // "[BT-SMOKE] PASS/FAIL" lines and
 // a "[BT-SMOKE] DONE" summary, then quits (unless -btsmoketestkeep is also
-// passed). Without the flag it does nothing.
+// passed). Without the flag it does nothing. The Showcase API's checks
+// (Source/SmokeTestShowcases.cs) come last: some tick the game inside the
+// frame, as the device tests do, and some need a few real frames, so DONE
+// waits for them.
 
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using BatshitTechnology.Core;
+using BatshitTechnology.Showcases;
 using Verse;
 using RimWorld;
 using Verse.AI;
@@ -37,9 +41,20 @@ namespace BatshitTechnology
         private const float AnyRimHomeReach = 20f;
 
         private bool done;
+
+        /// <summary>Whether DONE has been logged.</summary>
+        private bool finished;
+
         private int framesWithMap;
         private int passed;
         private int failed;
+
+        /// <summary>
+        /// Errors and warnings a check provoked on purpose (a scene made to
+        /// throw, a stale launch request), which the final log check
+        /// leaves out. Each check that adds one also asserts it appeared.
+        /// </summary>
+        private readonly HashSet<LogMessage> expectedLogs = new HashSet<LogMessage>();
 
         /// <summary>Created by RimWorld for every game.</summary>
         /// <param name="game">The game this component belongs to.</param>
@@ -47,19 +62,27 @@ namespace BatshitTechnology
         {
         }
 
-        /// <summary>Lets the showcase run its timed steps.</summary>
-        public override void GameComponentTick() => Showcase.Tick();
-
         /// <summary>
         /// Once per game, after the map has settled for a couple of
-        /// seconds, runs the test and quits.
+        /// seconds, runs the test; then advances the frame-driven showcase
+        /// checks on later frames, and quits when they are done.
         /// </summary>
         public override void GameComponentUpdate()
         {
-            bool showcase = GenCommandLine.CommandLineArgPassed(Showcase.Flag);
-            if (done || Current.ProgramState != ProgramState.Playing
+            if (finished)
+            {
+                return;
+            }
+
+            if (done)
+            {
+                AdvanceShowcaseFrames(inGui: false);
+                return;
+            }
+
+            if (Current.ProgramState != ProgramState.Playing
                 || Find.CurrentMap == null
-                || !(showcase || GenCommandLine.CommandLineArgPassed(Flag)))
+                || !GenCommandLine.CommandLineArgPassed(Flag))
             {
                 return;
             }
@@ -70,21 +93,59 @@ namespace BatshitTechnology
             }
 
             done = true;
-            if (showcase)
-            {
-                Showcase.Build(Find.CurrentMap); // and leave the game running
-                return;
-            }
-
+            Map map = Find.CurrentMap;
             try
             {
-                Run(Find.CurrentMap);
+                Run(map);
             }
             catch (Exception e)
             {
                 Check("runner completed without an exception", false, e.ToString());
             }
 
+            try
+            {
+                StartShowcaseChecks(map);
+            }
+            catch (Exception e)
+            {
+                Check("showcase checks ran without an exception", false, e.ToString());
+                EndShowcaseChecks();
+            }
+
+            if (!ShowcaseFramesPending)
+            {
+                Finish();
+            }
+        }
+
+        /// <summary>
+        /// Advances the showcase checks that must run inside a repaint
+        /// event: drawing a menu, pressing Escape. Idle otherwise.
+        /// </summary>
+        public override void GameComponentOnGUI()
+        {
+            if (finished || !done || Event.current?.type != EventType.Repaint)
+            {
+                return;
+            }
+
+            AdvanceShowcaseFrames(inGui: true);
+        }
+
+        /// <summary>
+        /// Ends the run: the final log check, the DONE line, and quitting
+        /// unless the run is to be kept open. Runs once.
+        /// </summary>
+        private void Finish()
+        {
+            if (finished)
+            {
+                return;
+            }
+
+            finished = true;
+            TestNoErrorsLogged();
             Log.Message($"[BT-SMOKE] DONE passed={passed} failed={failed}");
             if (!GenCommandLine.CommandLineArgPassed(KeepOpenFlag))
             {
@@ -138,7 +199,6 @@ namespace BatshitTechnology
             TestImplosionGathers(map, center);
             TestTractorBomb(map, center);
             TestDeathBlasts(map, center);
-            TestNoErrorsLogged();
         }
 
         /// <summary>
@@ -198,15 +258,25 @@ namespace BatshitTechnology
         /// mod or about statically held assets. Read from RimWorld's own log
         /// queue, because Player.log writes errors as plain lines with no
         /// level and no stack trace (a "Tried to destroy non-destroyable
-        /// thing" error from clearing ground went unnoticed that way).
+        /// thing" error from clearing ground went unnoticed that way). The
+        /// runner's own FAIL warnings are already counted, so they are not
+        /// counted again here, even when they name a BT_ def. The Showcase
+        /// API's own warnings count too: they carry its [BT-SHOWCASE]
+        /// prefix (which no "BT_" test catches) and report swallowed
+        /// failures, such as a camera move or a message that threw. Only
+        /// the messages a check provoked on purpose, and recorded as
+        /// expected, are left out.
         /// </summary>
         private void TestNoErrorsLogged()
         {
             var bad = Log.Messages
+                .Where(m => !expectedLogs.Contains(m))
                 .Where(m => m.type == LogMessageType.Error
                     || (m.type == LogMessageType.Warning
+                        && !m.text.StartsWith("[BT-SMOKE] ", StringComparison.Ordinal)
                         && (m.text.Contains("StaticConstructorOnStartup")
-                            || m.text.Contains("BatshitTechnology") || m.text.Contains("BT_"))))
+                            || m.text.Contains("BatshitTechnology") || m.text.Contains("BT_")
+                            || m.text.StartsWith(ShowcaseLog.Prefix, StringComparison.Ordinal))))
                 .ToList();
             foreach (LogMessage m in bad)
             {

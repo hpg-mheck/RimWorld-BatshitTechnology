@@ -1,0 +1,5 @@
+# Python packages for Tools/ (make_textures.py and its tests).
+# Pinned to the version that drew the committed textures: the preview
+# test compares the generator's output with Textures/ byte for byte, and
+# another Pillow release may resample differently.
+pillow==12.3.0

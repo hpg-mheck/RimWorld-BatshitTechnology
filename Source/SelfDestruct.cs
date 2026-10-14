@@ -552,7 +552,7 @@ namespace BatshitTechnology
                 };
             }
 
-            if (DebugSettings.godMode && !IsCountingDown)
+            if (DebugSettings.ShowDevGizmos && !IsCountingDown)
             {
                 yield return new Command_Action
                 {

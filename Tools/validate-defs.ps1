@@ -12,10 +12,16 @@
 # Run with Windows PowerShell 5.1 (it reflects over .NET Framework DLLs),
 # after building the mod:
 #   powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools\validate-defs.ps1
-# Defaults: the repository this script sits in, and $env:RIMWORLD_DIR.
+# Defaults: the repository this script sits in, its Release assembly, and
+# $env:RIMWORLD_DIR. The build runs it after every build (the ValidateDefs
+# target in Source\BatshitTechnology.csproj) with -Assembly set to the DLL
+# just built and -MSBuild, which prints each problem as an MSBuild error
+# ("<file>: error BTDEF: ...") and omits the list of files checked.
 param(
   [string]$ModRoot = (Split-Path $PSScriptRoot -Parent),
-  [string]$RimWorld = $env:RIMWORLD_DIR
+  [string]$RimWorld = $env:RIMWORLD_DIR,
+  [string]$Assembly = (Join-Path $ModRoot 'Assemblies\BatshitTechnology.dll'),
+  [switch]$MSBuild
 )
 $ErrorActionPreference = 'Stop'
 if (-not $RimWorld -or -not (Test-Path (Join-Path $RimWorld 'RimWorldWin64_Data'))) {
@@ -24,8 +30,7 @@ if (-not $RimWorld -or -not (Test-Path (Join-Path $RimWorld 'RimWorldWin64_Data'
 
 $managed = Join-Path $RimWorld 'RimWorldWin64_Data\Managed'
 $game = [Reflection.Assembly]::LoadFrom("$managed\Assembly-CSharp.dll")
-$mod = [Reflection.Assembly]::LoadFrom(
-  (Join-Path $ModRoot 'Assemblies\BatshitTechnology.dll'))
+$mod = [Reflection.Assembly]::LoadFrom($Assembly)
 $gameTypes = try { $game.GetTypes() }
   catch [Reflection.ReflectionTypeLoadException] { $_.Exception.Types | ? { $_ } }
 $modTypes = $mod.GetTypes()
@@ -102,6 +107,7 @@ $defFiles | % {
 }
 
 $script:problems = 0
+$script:currentFile = 'Defs'
 
 <#
 .SYNOPSIS
@@ -109,7 +115,8 @@ Records one problem and prints it.
 #>
 function Fail([string]$msg) {
   $script:problems++
-  "  ERROR $msg"
+  if ($MSBuild) { "$($script:currentFile): error BTDEF: $msg" }
+  else { "  ERROR $msg" }
 }
 
 <#
@@ -244,8 +251,10 @@ function Texture-Exists([string]$p) {
     ($vanillaTextures.Keys | ? { $_.StartsWith("$v/") } | Select-Object -First 1)
 }
 
-$textureXPath = '//texPath | //texturePath | //fuelIconPath | //uiIconPath | //iconPath'
+$textureXPath = '//texPath | //texturePath | //fuelIconPath | //uiIconPath | //iconPath |
+  //previewTexPath'
 Get-ChildItem (Join-Path $ModRoot 'Defs') -Recurse -Filter *.xml | % {
+  $script:currentFile = $_.FullName
   foreach ($n in (Load-Xml $_.FullName).SelectNodes($textureXPath)) {
     $p = $n.InnerText.Trim()
     if (-not (Texture-Exists $p)) {
@@ -255,7 +264,8 @@ Get-ChildItem (Join-Path $ModRoot 'Defs') -Recurse -Filter *.xml | % {
 }
 
 Get-ChildItem (Join-Path $ModRoot 'Defs') -Recurse -Filter *.xml | % {
-  "$($_.FullName.Substring($ModRoot.Length + 1))"
+  $script:currentFile = $_.FullName
+  if (-not $MSBuild) { "$($_.FullName.Substring($ModRoot.Length + 1))" }
   $x = Load-Xml $_.FullName
   foreach ($d in $x.DocumentElement.ChildNodes) {
     if ($d.NodeType -ne 'Element') { continue }
@@ -389,7 +399,10 @@ function Check-Operation([Xml.XmlElement]$op, [string]$path) {
 }
 
 foreach ($pf in $patchFiles) {
-  "$($pf.FullName.Substring($ModRoot.Length + 1))"
+  # -MSBuild names the file in each problem, so blame this patch file,
+  # not the last Defs file the loops above checked.
+  $script:currentFile = $pf.FullName
+  if (-not $MSBuild) { "$($pf.FullName.Substring($ModRoot.Length + 1))" }
   try { $px = Load-Xml $pf.FullName }
   catch { Fail "$($pf.Name) does not parse: $($_.Exception.Message)"; continue }
   if ($px.DocumentElement.LocalName -ne 'Patch') {

@@ -6,15 +6,19 @@
 - Target project: FieldManual
 - Target canonical locator:
   https://github.com/Hard-Problems-Group-LLC/FieldManual
-- Target component, version, or revision: `knacks/sandboxing/` (two new
-  hierarchies), drafted on `04bcec5`
+- Target component, version, or revision: `knacks/sandboxing/windows/` (new
+  subarea), drafted on `04bcec5`
 - Request owner: Matt "Breakpoint" Heck
 - Drafted: 2026-10-14
-- Submitted: Not yet submitted
-- Submitted-content digest: Not yet recorded
-- Source lifecycle: Open
-- Target handling status as reported: Not submitted
-- Target intake ID or authoritative reference: None
+- Submitted: 2026-10-14, as pull request
+  Hard-Problems-Group-LLC/FieldManual#1
+- Submitted-content digest: branch `knacks/from-batshit-technology`
+  at commit `d354450`
+- Source lifecycle: Closed
+- Target handling status as reported: Accepted and merged,
+  2026-10-14
+- Target intake ID or authoritative reference:
+  https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1
 - Sensitivity and reuse classification: Public; stock reusable guidance
   with no project-specific content
 - Related, duplicate, or superseded ECR IDs: siblings, one per knack area:
@@ -41,15 +45,15 @@ root certificates that Python needs until Windows fetches them.
 
 ### Requested Outcome
 
-- Add `knacks/sandboxing/windows-agent-isolation.knack/` (3 files, about 4,200
-  words, agent-neutral) and `knacks/sandboxing/windows-sandbox.knack/` (4
-  files, about 6,800 words).
-- Index both in `knacks/sandboxing/README.md`.
+- Add `knacks/sandboxing/windows/` with `agent-isolation.knack/` (3 files,
+  about 4,200 words, agent-neutral) and `sandbox.knack/` (Windows Sandbox; 4
+  files, about 6,800 words), and an index.
+- Index the subarea in `knacks/sandboxing/README.md`.
 
-The proposed files are commit `9e6d5fa` on the local branch
-`knacks/from-batshit-technology` of a FieldManual checkout, based on
-`04bcec5`. The branch is not pushed; it will be offered as a pull request when
-the operator approves.
+The proposed files are on the branch `knacks/from-batshit-technology` of
+Hard-Problems-Group-LLC/FieldManual (added in `d4c7ca4`, renamed to their
+final paths in `d354450`), offered as a pull request against `main` at
+`04bcec5`.
 
 ### Acceptance Criteria
 
@@ -103,9 +107,35 @@ until the knacks are available from the FieldManual submodule.
 ### Transport And Receipt Log
 
 - 2026-10-14 — Drafted locally; not yet submitted.
+- 2026-10-14 — Submitted, revision 1, as pull request
+  Hard-Problems-Group-LLC/FieldManual#1 from branch
+  `knacks/from-batshit-technology` at `d354450`.
+- 2026-10-14 — Pull request FieldManual#1 updated to `d5af082` after the
+  operator's review.
+- 2026-10-14 — Pull request history rebuilt so every commit adds files at
+  their final paths; head `19fcd4f`. Content unchanged.
+- 2026-10-14 — Pull request FieldManual#1 merged into `main` as `b981327` by
+  the FieldManual owner; branch deleted.
 
 ### Discussion And Amendments
 
+- 2026-10-14 — The operator returned FieldManual#1 because file names repeated
+  their path. Under BT-ECR-2026-009 revision 2 the files were renamed in
+  `d5af082`: no `.knack` directory suffix, and no topic or `api.` prefix in
+  file names. The knacks are now at `knacks/sandboxing/windows-agents/`;
+  Windows Sandbox moved to `knacks/virtualization/windows-sandbox/`, since it
+  is a disposable virtual machine. Their content is unchanged; the request
+  stands as submitted.
+
 ### Target Disposition
 
+- Accepted and implemented, 2026-10-14. FieldManual merged pull request #1
+  (https://github.com/Hard-Problems-Group-LLC/FieldManual/pull/1) into `main`
+  as `b981327`, after review and two rounds of requested naming changes, which
+  are recorded above.
+
 ### Source Closure
+
+- 2026-10-14 — Closed on merge by Claude Code for Matt "Breakpoint" Heck,
+  who merged the pull request; disposition accepted and implemented. Batshit Technology picks the
+  change up by advancing its `FieldManual/` submodule.
