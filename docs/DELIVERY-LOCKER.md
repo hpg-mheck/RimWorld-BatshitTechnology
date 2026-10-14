@@ -23,6 +23,11 @@ under "Open Questions" and in `docs/AI-requests-for-humans.txt`.
 
 - **Comedy:** the comedy showcase needs one Water Bottle per comic
   (`docs/STAND-UP-COMEDY.md`).
+- **Build:** the locker itself is just sheet metal, reasonably tough, and
+  nothing special happens if it is destroyed (specified 2026-10-13). It
+  has no death blast: this is the one device that is allowed to die
+  quietly. *(Proposal:)* steel, with hit points well above a vanilla
+  shelf's, and whatever was inside spills out.
 
 ## The Drone
 
