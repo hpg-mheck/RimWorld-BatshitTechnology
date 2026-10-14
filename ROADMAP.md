@@ -33,8 +33,8 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 |---|---|---|---|
 | 1000 | Foundations (v0.8) | `trunk` | Done |
 | 2000 | AnyRim | `trunk` | Done |
-| 3000 | Tractor Bomb | `feature/tractor-bomb` | Waiting on 4000 for slice 12000 |
-| 4000 | Showcase API | `feature/showcase-api` | **Now** |
+| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 12000) |
+| 4000 | Showcase API | `trunk` | Done |
 | 5000 | Sound pipeline | `feature/audio` | Next |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
 | 7000 | Mirror Mirror | `feature/mirror-mirror` | Planned |
@@ -52,52 +52,18 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
   Artificer, the Ergonomic Singularity Grenade, self-destructs and death
   blasts.
 - **Phase 2000, AnyRim:** the showcase's test town (`docs/SHOWCASE.md`).
+- **Phase 4000, Showcase API** (merged 2026-10-14; `docs/SHOWCASE-API.md`,
+  "As Built"): a **Showcases** button at the bottom of the main menu's
+  column (the mod's only Harmony patch), the mods, showcases and details
+  windows, a data-driven director with captions and narration, throwaway
+  showcase games with no autosave, `-showcase=<defName>`, and
+  `BT_Showcase` wrapping today's demos. Built and adversarially reviewed by
+  a workflow: 29 review findings, 34 of 35 skeptic checks upheld, all
+  fixed (among them god mode leaking into the player's next colony).
+  317 unit and XML tests; smoke 131/131 twice. Questions 14 to 16 in
+  `docs/AI-requests-for-humans.txt` came out of it.
 
-## Now: Phase 4000, Showcase API
-
-Branch: `feature/showcase-api`, cut from `trunk` on 2026-10-14.
-Specification: `docs/SHOWCASE-API.md`.
-
-A game API for showcases, so players can use them normally, and a
-**Showcases** button on the main menu (mods, then their showcases, then
-Start). It comes before the Tractor Bomb's last slice, so that the
-directed tour is built on it. It lives inside Batshit Technology for now,
-under its own namespace, to be split into a framework mod later; the menu
-button is the mod's first, approved Harmony patch.
-
-### Slices
-
-| Slice | Work | State |
-|---|---|---|
-| 1000 | Branch, specification, engine APIs | Done |
-| 2000 | Core logic and unit tests (`464d12c`) | Done |
-| 3000 | Defs, worker, director, windows, launcher | Now (drafted, `00b19b3`) |
-| 4000 | Main-menu button (Harmony) | Pending |
-| 5000 | First showcase: today's demos | Pending |
-| 6000 | Smoke checks and sabotage | Pending |
-| 7000 | Verification runs | Pending |
-| 8000 | Docs and merge into `trunk` | Pending |
-
-### Awaiting Confirmation
-
-Proposals made while building, which stand unless Matt "Breakpoint" Heck
-says otherwise:
-
-- **The menu button** goes at the bottom of the main menu's column. The
-  options list is local to `MainMenuDrawer.DoMainMenuControls`, so the
-  postfix sits on `OptionListingUtility.DrawOptionListing`, acting only on
-  the main menu's column. A prefix could place it above Options instead.
-- **No autosave** in showcase games, so a showcase never overwrites the
-  player's autosave slots.
-- **One command-line flag:** `-btshowcase` retires in favour of
-  `-showcase=BT_Showcase`.
-
-### Done When
-
-Every slice is done, every test passes, and `feature/showcase-api` is
-merged into `trunk`. Then phase 3000 resumes at slice 12000.
-
-## Waiting: Phase 3000, Tractor Bomb
+## Now: Phase 3000, Tractor Bomb
 
 Branch: `feature/tractor-bomb`. Specification: `docs/TRACTOR-BOMB.md`
 (its "As Built" section describes what slices 1000 to 11000 delivered).
@@ -123,7 +89,7 @@ sense runs.
 | 9000 | Deaths | Done |
 | 10000 | Art | Done |
 | 11000 | Tests and multi-bomb physics | Done |
-| 12000 | Directed tour, docs, merge into `trunk` | Waiting on phase 4000 |
+| 12000 | Directed tour, docs, merge into `trunk` | Now |
 
 Slice 11000 delivered the twin-bomb junkyard test and the multi-bomb
 physics: superposed pulls with random bias jitter, absolute durations (the
