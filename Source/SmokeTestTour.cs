@@ -248,6 +248,7 @@ namespace BatshitTechnology
             string narrationProblem = NarrationProblem(director, cues);
             Check("tour: narration follows the cues", narrationProblem == null,
                 narrationProblem);
+            Log.Message("[BT-SMOKE] NOTE " + OverlayPacing(director));
 
             // 5. No colonist dies but the volunteer, during the grenade.
             List<string> lost = watch.Deaths
@@ -256,6 +257,68 @@ namespace BatshitTechnology
             Check("tour: no colonist dies but the volunteer", lost.Count == 0,
                 $"{watch.Colonists} colonists; lost [{string.Join(", ", lost)}]"
                     + $"; volunteer deaths {watch.Deaths.Count(d => d.Volunteer)}");
+        }
+
+        /// <summary>
+        /// How the tour's narration would pace on the overlay watched at
+        /// normal speed (60 ticks a real second; the verifier itself runs
+        /// at Superfast, where the overlay's real-time rules do not show):
+        /// the lines said, at their ticks, replayed through Core's rules in
+        /// 1/60 s steps, then the closing message. Reports the longest any
+        /// line would wait and how many would be replaced before their full
+        /// reading time.
+        /// </summary>
+        /// <param name="director">The tour's director.</param>
+        /// <returns>The note's text.</returns>
+        private static string OverlayPacing(BatshitTourDirector director)
+        {
+            List<NarrationRecord> said = director.NarrationLog.ToList();
+            if (said.Count == 0)
+            {
+                return "overlay pacing: no lines said";
+            }
+
+            const double Step = 1.0 / NarrationTiming.TicksPerSecond;
+            int first = said[0].Tick;
+            var overlay = new NarrationOverlay();
+            int next = 0;
+            int shortened = 0;
+            string showing = null;
+            double shownAt = 0.0;
+            double end = (said[said.Count - 1].Tick - first) * Step + 60.0;
+            for (double t = 0.0; t <= end; t += Step)
+            {
+                while (next < said.Count
+                    && (said[next].Tick - first) * Step <= t)
+                {
+                    overlay.Say(said[next++].Text, t);
+                    if (next == said.Count)
+                    {
+                        overlay.Say(
+                            "BT_Showcases_Finished".Translate(), t, patient: true);
+                    }
+                }
+
+                overlay.Advance(t);
+                if (overlay.CurrentLine != showing)
+                {
+                    double reading = NarrationTiming.ReadingSeconds(showing);
+                    if (showing != null && overlay.CurrentLine != null
+                        && t - shownAt < reading - 0.001)
+                    {
+                        shortened++;
+                    }
+
+                    showing = overlay.CurrentLine;
+                    shownAt = t;
+                }
+            }
+
+            return $"overlay pacing at normal speed: {overlay.LinesShown} of "
+                + $"{overlay.LinesSaid} lines shown, the longest wait "
+                + $"{overlay.LongestWaitSeconds:0.0} s, {shortened} replaced "
+                + "before their full reading time (each still shows "
+                + $"{NarrationTiming.BaseReadingSeconds:0.0} s or more)";
         }
 
         /// <summary>

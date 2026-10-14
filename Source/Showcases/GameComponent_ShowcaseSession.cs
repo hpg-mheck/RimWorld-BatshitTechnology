@@ -3,13 +3,14 @@
 // the game was generated for a showcase (ShowcaseLauncher), or started
 // with -quicktest and -showcase=. Then, once the new map has settled, it
 // makes the showcase's worker, sets it up, ticks it, draws the caption bar
-// with Skip and Stop, writes the [BT-SHOWCASE] log cues capture tooling
-// waits on, and keeps the game from autosaving, so a showcase never
-// overwrites the player's autosave slots. Nothing about the session is
-// saved: a showcase game the player chooses to save loads as an ordinary
-// game. God mode a showcase borrowed for its developer buttons
-// (ShowcaseGodMode) is given back when the showcase stops or finishes,
-// and again whenever a game that is not a showcase starts or loads. Two
+// with Skip and Stop and the narration overlay (one line at a time, in the
+// lower third, silent; NarrationOverlayDrawer), writes the [BT-SHOWCASE]
+// log cues capture tooling waits on, and keeps the game from autosaving,
+// so a showcase never overwrites the player's autosave slots. Nothing
+// about the session is saved: a showcase game the player chooses to save
+// loads as an ordinary game. God mode a showcase borrowed for its
+// developer buttons (ShowcaseGodMode) is given back when the showcase
+// stops or finishes, and again whenever a game that is not a showcase starts or loads. Two
 // internal seams, AdoptForTest and ReleaseForTest, let the smoke runner
 // (Source/SmokeTestShowcases.cs) run test showcases in its own game.
 
@@ -91,6 +92,18 @@ namespace BatshitTechnology.Showcases
         /// <summary>The tick the closing message was shown on, or -1.</summary>
         private int farewellTick = -1;
 
+        /// <summary>
+        /// What the narration overlay shows. It belongs to this game, so
+        /// leaving the game takes it along.
+        /// </summary>
+        private readonly NarrationOverlay narration = new NarrationOverlay();
+
+        /// <summary>Whether the overlay failed; it then stops.</summary>
+        private bool narrationFailed;
+
+        /// <summary>How many frames the overlay has drawn text in.</summary>
+        private int narrationFrames;
+
         /// <summary>Created by RimWorld for every game.</summary>
         /// <param name="game">The game.</param>
         public GameComponent_ShowcaseSession(Game game)
@@ -134,10 +147,29 @@ namespace BatshitTechnology.Showcases
         public bool CaptionBarFailed => guiFailed;
 
         /// <summary>
-        /// Gets the tick the closing message was shown on, or -1 if it has
-        /// not been shown (or showing it failed).
+        /// Gets the tick the closing message was handed to the narration
+        /// overlay on (it appears once the last line has been read), or -1
+        /// if it has not been.
         /// </summary>
         public int FarewellTick => farewellTick;
+
+        /// <summary>
+        /// Gets how many frames the narration overlay has drawn text in,
+        /// for the smoke runner.
+        /// </summary>
+        public int NarrationFrames => narrationFrames;
+
+        /// <summary>
+        /// Gets a value indicating whether the narration overlay failed
+        /// and was hidden.
+        /// </summary>
+        public bool NarrationFailed => narrationFailed;
+
+        /// <summary>
+        /// Gets the narration overlay's state, for the smoke runner and
+        /// capture tooling.
+        /// </summary>
+        internal NarrationOverlay Narration => narration;
 
         /// <summary>
         /// Takes the launcher's request for this game, if there is one. A
@@ -174,12 +206,18 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Sets the showcase up once the map has settled for a couple of
-        /// seconds.
+        /// Moves the narration overlay on, every frame, and sets the
+        /// showcase up once the map has settled for a couple of seconds.
         /// </summary>
         public override void GameComponentUpdate()
         {
-            if (def == null || begun
+            if (def == null)
+            {
+                return;
+            }
+
+            UpdateNarration();
+            if (begun
                 || Verse.Current.ProgramState != ProgramState.Playing
                 || Find.CurrentMap == null)
             {
@@ -253,7 +291,9 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Draws the caption bar while the showcase plays out: its caption
+        /// Draws the narration overlay whenever it has a line (after the
+        /// showcase ends too, for its last lines and the closing message),
+        /// and the caption bar while the showcase plays out: its caption
         /// and the Skip and Stop buttons, centred below the colonist bar.
         /// IMGUI calls this on every event, not once a frame: the buttons
         /// take part in every event, as vanilla's do, so their control ids
@@ -268,9 +308,15 @@ namespace BatshitTechnology.Showcases
         /// </summary>
         public override void GameComponentOnGUI()
         {
-            if (guiFailed || !Running || Event.current == null
+            if (def == null || Event.current == null
                 || Find.CurrentMap == null || !WorldRendererUtility.DrawingMap
                 || Find.UIRoot?.screenshotMode?.FiltersCurrentEvent == true)
+            {
+                return;
+            }
+
+            DrawNarration();
+            if (guiFailed || !Running)
             {
                 return;
             }
@@ -322,7 +368,11 @@ namespace BatshitTechnology.Showcases
         /// <summary>
         /// Stops the showcase for good. The game keeps running; the camera
         /// and the colony are the viewer's, and any god mode the showcase
-        /// borrowed is given back.
+        /// borrowed is given back. The narration overlay is cleared at
+        /// once; a scene's own "stopped" line, said as the worker stops,
+        /// then shows on it. The viewer's Stop is confirmed with a silent
+        /// vanilla message: it answers a click, as a refusal does, and is
+        /// not the narrator speaking.
         /// </summary>
         /// <param name="byViewer">Whether the viewer asked for it.</param>
         public void StopShowcase(bool byViewer)
@@ -334,6 +384,7 @@ namespace BatshitTechnology.Showcases
 
             ended = true;
             farewellPending = false;
+            narration.Clear();
             try
             {
                 worker.Stop();
@@ -411,6 +462,9 @@ namespace BatshitTechnology.Showcases
             guiFailed = false;
             captionFrames = 0;
             farewellTick = -1;
+            narration.Clear();
+            narrationFailed = false;
+            narrationFrames = 0;
         }
 
         /// <summary>
@@ -427,6 +481,7 @@ namespace BatshitTechnology.Showcases
             try
             {
                 worker = def.MakeWorker();
+                worker.Overlay = narration;
                 worker.Begin(map);
             }
             catch (Exception e)
@@ -444,7 +499,10 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// After the showcase finishes: says any narration still queued
-        /// as it comes due, then the closing message, once.
+        /// as it comes due, then hands the closing message to the
+        /// narration overlay, once. It is patient: it appears only when the
+        /// last line has had its whole reading time, and fades like any
+        /// other line, leaving the overlay empty.
         /// </summary>
         private void SayFarewellWhenQuiet()
         {
@@ -463,9 +521,87 @@ namespace BatshitTechnology.Showcases
             }
 
             farewellPending = false;
-            if (Message("BT_Showcases_Finished".Translate()))
+            try
             {
+                narration.Say(
+                    "BT_Showcases_Finished".Translate(),
+                    NarrationOverlayDrawer.Now,
+                    patient: true);
                 farewellTick = Find.TickManager.TicksGame;
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not show the closing "
+                    + $"message: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Moves the narration overlay on to now, telling it when the next
+        /// queued line is due (converted to real seconds at the game's
+        /// speed). A failure is logged once and hides the overlay.
+        /// </summary>
+        private void UpdateNarration()
+        {
+            if (narrationFailed || (narration.IsEmpty && worker == null))
+            {
+                return;
+            }
+
+            try
+            {
+                double now = NarrationOverlayDrawer.Now;
+                int? next = worker?.NextQueuedTick;
+                TickManager ticks = Find.TickManager;
+                double? seconds = next.HasValue && ticks != null
+                    ? NarrationTiming.SecondsUntil(
+                        next.Value - ticks.TicksGame, ticks.TickRateMultiplier)
+                    : (double?)null;
+                narration.SetNextLineIn(seconds, now);
+                narration.Advance(now);
+            }
+            catch (Exception e)
+            {
+                narrationFailed = true;
+                Log.Error($"{ShowcaseLog.Prefix} the narration overlay failed "
+                    + $"and is hidden for this game: {e}");
+            }
+        }
+
+        /// <summary>
+        /// Draws the narration overlay, if it has a line: below the caption
+        /// bar while that shows, and never taking a click. Guarded like
+        /// the caption bar: one failure is logged and the overlay hidden,
+        /// and the colour state is always restored.
+        /// </summary>
+        private void DrawNarration()
+        {
+            if (narrationFailed || narration.IsEmpty)
+            {
+                return;
+            }
+
+            Color color = GUI.color;
+            try
+            {
+                float top = CaptionTop() + CaptionBarLayout.Margin
+                    + (Running && !guiFailed ? CaptionBarLayout.Height : 0f);
+                double now = NarrationOverlayDrawer.Now;
+                narration.Advance(now);
+                if (NarrationOverlayDrawer.Draw(narration, now, top))
+                {
+                    narrationFrames++;
+                }
+            }
+            catch (Exception e)
+            {
+                narrationFailed = true;
+                Log.Error($"{ShowcaseLog.Prefix} the narration overlay failed "
+                    + $"and is hidden for this game: {e}");
+            }
+            finally
+            {
+                GUI.color = color;
             }
         }
 
@@ -579,7 +715,8 @@ namespace BatshitTechnology.Showcases
             new Rect(box.X, box.Y, box.Width, box.Height);
 
         /// <summary>
-        /// Shows a session message, never throwing.
+        /// Shows a session message, silently (the viewer's click has
+        /// already sounded), never throwing.
         /// </summary>
         /// <param name="text">The text.</param>
         /// <returns>
@@ -590,7 +727,7 @@ namespace BatshitTechnology.Showcases
         {
             try
             {
-                Messages.Message(text, MessageTypeDefOf.NeutralEvent, false);
+                Messages.Message(text, MessageTypeDefOf.SilentInput, false);
                 return true;
             }
             catch (Exception e)

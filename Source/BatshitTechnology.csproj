@@ -107,6 +107,7 @@
     <Compile Include="Showcases\Dialog_ShowcaseDetails.cs" />
     <Compile Include="Showcases\Dialog_ShowcaseMods.cs" />
     <Compile Include="Showcases\GameComponent_ShowcaseSession.cs" />
+    <Compile Include="Showcases\NarrationOverlayDrawer.cs" />
     <Compile Include="Showcases\ShowcaseDef.cs" />
     <Compile Include="Showcases\ShowcaseDirector.cs" />
     <Compile Include="Showcases\ShowcaseGodMode.cs" />

@@ -4,11 +4,13 @@
 // in two parts. First, checks that tick the game inside one frame, as the
 // device tests do: the Harmony patch and the menu column's gates, the
 // launcher's guards, launch verdicts against Core's, a directed test
-// showcase run through Skip, a timeout and its closing message, scenes
-// that throw, the god mode a showcase borrows, and the autosave and
-// save-file rules. Then a few real frames, for what only drawing can
-// show: the caption bar, a cut that follows a glide, the main menu's
-// button, the three menu windows with Back and Escape, Stop, and the save
+// showcase run through Skip, a timeout and its closing message (narration
+// on the overlay, never in vanilla's messages), scenes that throw, the god
+// mode a showcase borrows, and the autosave and save-file rules. Then a
+// few real frames, for what only drawing can show: the caption bar, the
+// narration overlay replacing one line with the next in real time, a cut
+// that follows a glide, the main menu's button, the three menu windows
+// with Back and Escape, Stop (which clears the overlay), and the save
 // folder afterwards. The test showcases are made here in code, never
 // shipped in XML, and removed again before the runner's final log check.
 
@@ -253,6 +255,33 @@ namespace BatshitTechnology
         /// <summary>The zoom of the director test's cut shot.</summary>
         private const float CutShotZoom = 30f;
 
+        /// <summary>
+        /// The overlay test's first line: long, so its full reading time
+        /// (7 s and more) is far longer than the base time after which the
+        /// next line replaces it.
+        /// </summary>
+        private const string OverlayLongLine = "Smoke narration: a long line "
+            + "for the overlay, replaced by the next one after its base time.";
+
+        /// <summary>The overlay test's second line, which must replace it.</summary>
+        private const string OverlayNextLine = "Smoke narration: the line after.";
+
+        /// <summary>
+        /// How long the overlay test's second line may take to appear, in
+        /// real seconds: two base times (the stop run's opening line, then
+        /// the long line) and some slack, well short of the long line's
+        /// full reading time.
+        /// </summary>
+        private const float OverlayReplaceSeconds = 7f;
+
+        /// <summary>
+        /// Vanilla's live messages (Verse.Messages.liveMessages, private in
+        /// RimWorld 1.6.4871), read to check narration never reaches them.
+        /// </summary>
+        private static readonly FieldInfo LiveMessagesField =
+            typeof(Messages).GetField(
+                "liveMessages", BindingFlags.Static | BindingFlags.NonPublic);
+
         /// <summary>The test showcases, while registered.</summary>
         private List<ShowcaseDef> testShowcases;
 
@@ -288,6 +317,12 @@ namespace BatshitTechnology
 
         /// <summary>Frames drawn since the camera test framed its shots.</summary>
         private int cutFrames;
+
+        /// <summary>When the overlay test said its lines, in real seconds.</summary>
+        private float overlaySaidAt;
+
+        /// <summary>The overlay's painted frames before the overlay test.</summary>
+        private int overlayFramesBefore;
 
         /// <summary>The frame-driven steps, in order; null when none remain.</summary>
         private List<FrameStep> frameSteps;
@@ -970,6 +1005,8 @@ namespace BatshitTechnology
         {
             ShowcaseDef def = ShowcaseLibrary.Named(DirectorShowcase);
             LogMessage mark = Log.Messages.LastOrDefault();
+            List<Message> liveBefore = LiveMessages();
+            int handedBefore = showcaseSession.Narration.LinesSaid;
             CameraDriver camera = Find.CameraDriver;
             camera.SetRootSize(45f);
             Find.Selector.ClearSelection();
@@ -1052,13 +1089,64 @@ namespace BatshitTechnology
                     && showcaseSession.FarewellTick > lastLine,
                 $"said: {string.Join(" | ", said.Select(r => $"{r.Tick}: {r.Text}"))}; "
                     + $"closing message at {showcaseSession.FarewellTick}");
+            CheckNarrationNotInMessages(
+                liveBefore, handedBefore, said.Select(r => r.Text).ToList());
 
             List<string> warnings = ShowcaseWarningsSince(mark);
             Check("the directed run logs no Showcase API warning (camera moves, "
-                    + "selection, look targets and messages all worked)",
+                    + "selection and the narration overlay all worked)",
                 warnings.Count == 0, string.Join(" | ", warnings));
             showcaseSession.ReleaseForTest();
         }
+
+        /// <summary>
+        /// Narration and the closing message go to the overlay, never to
+        /// vanilla's messages: the run added no live message and archived
+        /// none with a narration line's words, and the overlay was handed
+        /// every line said and then the closing message.
+        /// </summary>
+        /// <param name="liveBefore">The live messages before the run.</param>
+        /// <param name="handedBefore">Lines handed to the overlay before it.</param>
+        /// <param name="said">The lines the run said.</param>
+        private void CheckNarrationNotInMessages(
+            List<Message> liveBefore, int handedBefore, List<string> said)
+        {
+            string farewell = "BT_Showcases_Finished".Translate();
+            var words = new HashSet<string>(
+                said.Append(farewell), StringComparer.OrdinalIgnoreCase);
+            List<string> added = LiveMessages()
+                .Where(m => !liveBefore.Contains(m))
+                .Select(m => m.text)
+                .ToList();
+            List<string> archived = (Find.Archive?.ArchivablesListForReading
+                    ?? new List<IArchivable>())
+                .OfType<Message>()
+                .Where(m => m.text != null && words.Contains(m.text))
+                .Select(m => m.text)
+                .ToList();
+            NarrationOverlay overlay = showcaseSession.Narration;
+            int handed = overlay.LinesSaid - handedBefore;
+            Check("narration and the closing message go to the overlay, never "
+                    + "to vanilla's messages or the archive",
+                LiveMessagesField != null && added.Count == 0
+                    && archived.Count == 0 && handed == said.Count + 1
+                    && overlay.LastLine == farewell,
+                (LiveMessagesField == null
+                    ? "Messages.liveMessages not found; "
+                    : $"live messages added: {string.Join(" | ", added)}; ")
+                    + $"archived: {string.Join(" | ", archived)}; overlay "
+                    + $"handed {handed} of {said.Count + 1} lines, the last "
+                    + $"'{overlay.LastLine}'");
+        }
+
+        /// <summary>
+        /// Vanilla's live messages now (a copy), or an empty list if they
+        /// cannot be read.
+        /// </summary>
+        /// <returns>The messages.</returns>
+        private static List<Message> LiveMessages() =>
+            (LiveMessagesField?.GetValue(null) as List<Message>)?.ToList()
+                ?? new List<Message>();
 
         /// <summary>
         /// A directed showcase whose scenes throw keeps going: a scene whose
@@ -1389,6 +1477,8 @@ namespace BatshitTechnology
         {
             WaitFrames("caption bar paints", 5),
             new FrameStep("caption bar check", false, CheckCaptionBar),
+            new FrameStep("narration lines", false, SayOverlayLines),
+            new FrameStep("narration replaced", false, CheckOverlayReplaced),
             new FrameStep("glide then cut", false, StartGlideThenCut),
             new FrameStep("cut holds", false, CheckCutHolds),
             new FrameStep("main menu draw", true, CheckMenuButtonDraws),
@@ -1488,6 +1578,56 @@ namespace BatshitTechnology
                 $"running {showcaseSession.Running}; painted "
                     + $"{showcaseSession.CaptionBarFrames} frames; failed "
                     + showcaseSession.CaptionBarFailed);
+            return true;
+        }
+
+        /// <summary>
+        /// Starts the overlay test: the second run, still playing (paused),
+        /// says a long line and then a short one through the worker.
+        /// </summary>
+        /// <returns>True: the step is complete.</returns>
+        private bool SayOverlayLines()
+        {
+            overlaySaidAt = Time.realtimeSinceStartup;
+            overlayFramesBefore = showcaseSession.NarrationFrames;
+            stopRun?.Say("smoke", OverlayLongLine, null);
+            stopRun?.Say("smoke", OverlayNextLine, null);
+            return true;
+        }
+
+        /// <summary>
+        /// Waits, in real frames, for the overlay to show the last line
+        /// said: each line replaces the one before after its base time
+        /// (2.5 s), not its full reading time, and is painted. Gives up
+        /// after <see cref="OverlayReplaceSeconds"/>.
+        /// </summary>
+        /// <returns>True once the line shows or the time is up.</returns>
+        private bool CheckOverlayReplaced()
+        {
+            NarrationOverlay overlay = showcaseSession.Narration;
+            string last = stopRun?.NarrationLog.LastOrDefault()?.Text;
+            float waited = Time.realtimeSinceStartup - overlaySaidAt;
+            bool shows = last != null && overlay.CurrentLine == last
+                && overlay.Alpha(NarrationOverlayDrawer.Now) > 0.5;
+            if (!shows && waited < OverlayReplaceSeconds)
+            {
+                return false;
+            }
+
+            int painted = showcaseSession.NarrationFrames - overlayFramesBefore;
+            Log.Message($"[BT-SMOKE] NOTE narration overlay: font size "
+                + $"{NarrationOverlayDrawer.LastFontSize} (Medium "
+                + $"{NarrationOverlayDrawer.MediumSize}); the last line showed "
+                + $"{waited:0.0} s after it was said; {painted} frames painted");
+            Check("the narration overlay's current line is the last line said, "
+                    + "replacing the one before after its base time, painted in "
+                    + "real frames",
+                shows && last == OverlayNextLine && painted > 0
+                    && !showcaseSession.NarrationFailed,
+                $"current '{overlay.CurrentLine}', last said '{last}', after "
+                    + $"{waited:0.0} s; waiting "
+                    + $"{string.Join(" | ", overlay.WaitingLines)}; painted "
+                    + $"{painted} frames; failed {showcaseSession.NarrationFailed}");
             return true;
         }
 
@@ -1869,7 +2009,9 @@ namespace BatshitTechnology
         /// <summary>
         /// Stops the second run, as the Stop button does: its scene ends as
         /// stopped, no later scene runs, and only the stop's own line is
-        /// said. A stopped showcase game still never autosaves; released
+        /// said. The overlay is cleared at once, so that line shows alone,
+        /// with nothing fading out under it. A stopped showcase game still
+        /// never autosaves; released
         /// to an ordinary game, it autosaves as usual, and the player's
         /// autosave setting is unchanged. Then removes the test showcases.
         /// </summary>
@@ -1896,6 +2038,16 @@ namespace BatshitTechnology
                 $"running {showcaseSession.Running}; state {stopRun?.State}; endings "
                     + $"{(stopRun == null ? "none" : Endings(stopRun))}; cues "
                     + $"{string.Join(" | ", cues)}; lines {string.Join(" | ", lines)}");
+
+            NarrationOverlay overlay = showcaseSession.Narration;
+            Check("Stop clears the narration overlay at once: the stopped "
+                    + "scene's own line shows alone",
+                overlay.CurrentLine == "Smoke narration: opening stopped."
+                    && overlay.OutgoingLine == null
+                    && overlay.WaitingLines.Count == 0,
+                $"current '{overlay.CurrentLine}', outgoing "
+                    + $"'{overlay.OutgoingLine}', waiting "
+                    + string.Join(" | ", overlay.WaitingLines));
 
             CheckAutosaveSuppressed("a stopped showcase game still never reaches "
                 + "its autosave");
