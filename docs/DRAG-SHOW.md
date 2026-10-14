@@ -61,11 +61,25 @@ physics. Text follows the motif's rule: funny, never cruel.
 
 *(Proposals:)*
 
-- **Rituals without a DLC.** Vanilla's ritual system belongs to Ideology,
-  and the mod depends only on Core. The show is built on Core's gathering
-  system, the one parties use (`GatheringDef`, a lord job for the
-  audience), with the markers' buttons standing in for a ritual's. It
-  can hook into Ideology's rituals later, when that DLC is active.
+- **Base game first, Ideology on top** (decided 2026-10-13). Vanilla's
+  ritual system belongs to Ideology, and the mod depends only on Core.
+  - **The show** is built on Core's gathering system, the one parties
+    use (`GatheringDef`, a lord job for the audience), with the markers'
+    buttons standing in for a ritual's. Everyone gets it.
+  - **With Ideology active,** a thin extra layer also offers it as a
+    ritual: the begin-ritual window, an emcee role whose requirement is
+    the wardrobe rule (dropped by Relax Historical Accuracy), a quality
+    score, and an outcome table with room for jokes. The drag, stage and
+    seating are shared.
+- **Open to every pawn, whatever their ideoligion** (decided 2026-10-13).
+  No colony has to adopt anything to hold a show, and any pawn may attend
+  or emcee.
+  - *(Proposal:)* if Ideology's ritual window needs a ritual precept,
+    the mod adds the show to every ideoligion, including newly made
+    ones, with no obligations, no mood penalty for skipping it, and no
+    conflict with any meme.
+  - Otherwise, the ritual layer starts the show without a precept.
+  - Which of the two works is checked in the decompile first.
 - **The singularity** reuses the shared implosion from the Tractor Bomb
   (`Source/Implosion.cs`). It needs two settings the implosion does not
   have yet:
@@ -101,15 +115,13 @@ physics. Text follows the motif's rule: funny, never cruel.
 
 ## Open Questions
 
-1. Built on Core's gathering system (proposed, no DLC needed), or as an
-   Ideology ritual?
-2. Must the chairs face the stage? (Sizes are minimums: answered.)
-3. Where does "Relax Historical Accuracy" live: on the Center Stage
+1. Must the chairs face the stage? (Sizes are minimums: answered.)
+2. Where does "Relax Historical Accuracy" live: on the Center Stage
    marker (proposed), or as a mod setting?
-4. An outdoor stage: limit the drag to a radius (15 tiles proposed)?
-5. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
+3. An outdoor stage: limit the drag to a radius (15 tiles proposed)?
+4. Injuries are mild to moderate (answered); is roughly 3 to 12 blunt
    damage right, with a recreation boost and a short good-mood memory?
-6. Research and costs: which project unlocks it, and what do the stage
+5. Research and costs: which project unlocks it, and what do the stage
    tiles, markers and the two outfits cost? The chairs are 5 steel.
-7. Disco music before the sound pipeline exists: silence, a vanilla
+6. Disco music before the sound pipeline exists: silence, a vanilla
    stand-in, or wait for the pipeline?
