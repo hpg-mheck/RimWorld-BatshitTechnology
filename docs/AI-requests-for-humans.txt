@@ -57,13 +57,9 @@ Matt "Breakpoint" Heck:
 10. The Drag Show: all answered on 2026-10-13 (docs/DRAG-SHOW.md). The
     remaining proposals (costs, the Brain Squeezer as the research
     prerequisite, the show bonus) stand unless changed.
-11. The Stand-Up Comedy Showcase (docs/STAND-UP-COMEDY.md, "Open
-    Questions"): shared stage or anywhere; whether Spritzers fire on any
-    fight in range, and the sleep's length; the audience's memory;
-    research. (Answered: about one riot in ten sets, as social fights;
-    1% of riots are murderous-rage gunfights; Spritzers have a 5-tile
-    radius and are single use until reset with batshittium, a Water
-    Bottle and an Incorrectly Sized Battery.)
+11. The Stand-Up Comedy Showcase: answered on 2026-10-13
+    (docs/STAND-UP-COMEDY.md), except whether it shares the Drag Show's
+    stage and seating, which is proposed and stands unless changed.
 12. The Interstellar Delivery Locker and Drone (docs/DELIVERY-LOCKER.md,
     "Open Questions"): visit and delivery rhythm and cost; what each item
     does; the drone's blast; research.

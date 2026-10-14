@@ -35,12 +35,20 @@ The specification names the requirements; the running order is proposed.
      anyone on the map.
   3. The audience reacts in text: a polite laugh, a cough, one person
      clapping.
-- **The outcome:** the audience gets a recreation boost and a mixed
-  memory ("Sat through amateur comedy"); each comic gets a good memory
-  for having done it. The worse the comics' Social skill, the funnier
-  the player should find it and the more mixed the audience memory.
+- **The outcome:** the audience gets a recreation boost, and a mixture
+  of memories, "very funny and also true to life" (decided 2026-10-13).
+  Each spectator remembers the same show differently. *(Proposal:)*
+  each draws one memory from a range, weighted by the show's quality:
+  - loved it;
+  - hated it;
+  - can't stop thinking about one joke;
+  - laughed at the wrong moment;
+  - still doesn't get the joke about the hat.
+  
+  Each comic gets a good memory for having done it, unless the set ended
+  in a riot.
 - **Research:** Batshit Entertainment, the same project as the Drag
-  Show.
+  Show (approved 2026-10-13).
 
 ## Quality, and the Mob
 
@@ -99,14 +107,16 @@ really anywhere.
 
 *(Proposals:)*
 
-- **When it fires:** a Spritzer goes off about 3 seconds after any fight
-  starts within its radius. That covers comedy riots and gunfights, and
-  also ordinary social fights, berserk pawns and murderous rages.
+- **When it fires:** a Spritzer goes off a few seconds (about 3) after
+  any fight starts within its radius (decided 2026-10-13). That covers
+  comedy riots and gunfights, and also ordinary social fights, berserk
+  pawns and murderous rages.
 - **What it does:** a foam burst with a 5-tile radius (decided
   2026-10-13; a popper's 7 was too large).
   - It ends every hostile and fighting mental state it touches.
-  - It puts everyone it reaches to sleep for an hour or two, as
-    anaesthetic does, guilty and innocent alike, the comic included.
+  - It puts everyone it reaches to sleep for an hour or two (approved
+    2026-10-13), as anaesthetic does, guilty and innocent alike, the
+    comic included.
   - It leaves a slick of pale foam on the floor.
 - **Single use until reset** (decided 2026-10-13). Once it has fired, a
   pawn resets it with batshittium, a Water Bottle and an Incorrectly
@@ -121,9 +131,5 @@ really anywhere.
 ## Open Questions
 
 1. Does it share the Drag Show's stage and seating (proposed), or run
-   anywhere with a stool, a microphone stand and some seats?
-2. The Spritzers (5-tile radius and single use until reset: answered):
-   firing on any fight in range (proposed) or only on show riots; and an
-   hour or two of sleep?
-3. The audience's memory: mixed (proposed), good, or bad?
-4. Research: Batshit Entertainment (proposed)?
+   anywhere with a stool, a microphone stand and some seats? The
+   proposal stands unless changed.
