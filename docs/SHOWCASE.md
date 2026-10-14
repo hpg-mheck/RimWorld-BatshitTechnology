@@ -12,12 +12,17 @@ wrong in the same change.
 .\Tools\smoke-test.ps1 -Showcase
 ```
 
-The script builds nothing itself. It starts RimWorld on a quick-test map
-with the `-btshowcase` flag; `Source/Showcase.cs` does the rest and leaves
-the game running. Windows shown to the operator open maximized at 2x UI
-scale. The game log carries cues for screen-capture tooling, so it never
-has to guess at timings: `[BT-SHOWCASE] READY`, `ANYRIM`, `THROW` and
-`TOUR`.
+The showcase is `BT_Showcase`, the first client of the Showcase API
+(`docs/SHOWCASE-API.md`). Players start it from the main menu: Showcases,
+then Batshit Technology, then "Demo base", then Start. The script builds
+nothing itself: it starts RimWorld with `-showcase=BT_Showcase`, the main
+menu acts on that by generating a fresh game for the showcase, and
+`Source/Showcase.cs` (through `BatshitShowcaseWorker`) does the rest and
+leaves the game running. Windows shown to the operator open maximized at
+2x UI scale. The game log carries cues for screen-capture tooling, so it
+never has to guess at timings: `[BT-SHOWCASE] READY` (from the API, once
+the base is built), `ANYRIM`, `THROW` and `TOUR`, then `FINISHED
+BT_Showcase` ten seconds after the last of them.
 
 ## The Map
 

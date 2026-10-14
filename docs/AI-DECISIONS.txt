@@ -307,3 +307,32 @@ About.xml depends on brrainz.harmony (Workshop item 2009463077) and loads
 after it; Tools/smoke-test.ps1 finds Harmony by packageId among the local
 mods and Workshop items and lists it first, before Core, as Harmony's own
 About.xml asks.
+2026-10-14 Claude: Showcase API, slice 5000 (the first showcase).
+BT_Showcase (Defs/Misc/BT_Showcases.xml, label "demo base") runs today's
+demo base through the API: BatshitShowcaseWorker calls Showcase.Build as
+its set-up and Showcase.Tick as its tick, so the demos and their cues
+(ANYRIM or "AnyRim skipped", THROW, TOUR) are unchanged. READY moved to
+the API, which logs it once the set-up returns, in the same place in the
+log as before. The worker counts as finished ten seconds after the
+timeline's last step (nothing left to arm, throw or tour, and no demo
+device still counting down), so the last scene stays on screen before the
+closing message; Stop clears the timeline, and a device already counting
+down still goes off. -btshowcase is retired: GameComponent_SmokeTest no
+longer builds or ticks the showcase, and Tools/smoke-test.ps1 -Showcase
+starts RimWorld with -showcase=BT_Showcase and without -quicktest, so the
+run goes through the main menu and the launcher as a player's would.
+The preview (Textures/UI/Showcases/BT_Showcase.png, 512 by 288) is made
+by Tools/make_textures.py showcase_preview from the mod's own sprites on
+a drawn stage; docs/ARTISTIC-MOTIF.md gains "Showcase Previews" and the
+SOIL and SELF_DESTRUCT_* constants. make_textures.py now takes generator
+names, so one texture can be remade without rewriting the others.
+Seen in game on 2026-10-14: -showcase=BT_Showcase went from the main
+menu through LAUNCH, GAME, START, ANYRIM and READY to THROW, TOUR and
+FINISHED, with the closing message and no errors logged; the caption bar
+sat below the colonist bar, clear of the replicator's gizmos along the
+bottom. That run found the caption cut to "Demo ...": LabelEllipses
+clips text wider than its box less 13 units, so the bar now adds 16 to
+the caption's measured width. An earlier run logged STOPPED about twenty
+seconds after READY and then closed; nothing in the code stops a
+showcase except the Stop button, so it was most likely pressed by the
+person watching (unconfirmed).

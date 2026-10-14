@@ -603,7 +603,8 @@ public sealed class XmlDefinitionTests
     {
         var texturePaths = AllDefDocuments()
             .SelectMany(d => d.Descendants())
-            .Where(e => e.Name.LocalName is "texPath" or "fuelIconPath" or "texturePath")
+            .Where(e => e.Name.LocalName is "texPath" or "fuelIconPath" or "texturePath"
+                or "previewTexPath")
             .Select(e => e.Value.Trim())
             .Where(path => Path.GetFileName(path).StartsWith("BT_", StringComparison.Ordinal))
             .Distinct()

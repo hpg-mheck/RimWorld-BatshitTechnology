@@ -32,6 +32,14 @@ namespace BatshitTechnology.Showcases
         private const int SettleFrames = 120;
 
         /// <summary>
+        /// Room added to the caption's measured width. Widgets.LabelEllipses
+        /// clips any text wider than its box less 13 units
+        /// (Text.ClampTextWithEllipsis, RimWorld 1.6.4871), so a caption
+        /// laid out at exactly its measured width was cut to "Demo ...".
+        /// </summary>
+        private const float CaptionSlack = 16f;
+
+        /// <summary>
         /// The autosaver's private tick counter (RimWorld 1.6.4871). The
         /// session resets it every tick, before the autosaver's own tick
         /// in TickManager.DoSingleTick, so it never reaches the shortest
@@ -201,15 +209,15 @@ namespace BatshitTechnology.Showcases
         /// <summary>
         /// Draws the caption bar while the showcase plays out: its caption
         /// and the Skip and Stop buttons, centred below the colonist bar.
-        /// IMGUI calls this on every event, not once a frame, so it skips
-        /// layout events, guards everything, logs one failure and then
-        /// stops drawing, and restores the text and colour state it
-        /// changes.
+        /// IMGUI calls this on every event, not once a frame: the buttons
+        /// take part in every event, as vanilla's do, so their control ids
+        /// stay in step, while the background is painted on repaint only.
+        /// Everything is guarded; one failure is logged and the bar is
+        /// hidden, and the text and colour state is always restored.
         /// </summary>
         public override void GameComponentOnGUI()
         {
             if (guiFailed || !Running || Event.current == null
-                || Event.current.type == EventType.Layout
                 || Find.CurrentMap == null || WorldRendererUtility.WorldRendered
                 || Find.UIRoot?.screenshotMode?.FiltersCurrentEvent == true)
             {
@@ -387,7 +395,7 @@ namespace BatshitTechnology.Showcases
 
             bool canSkip = worker.CanSkip;
             Text.Font = GameFont.Small;
-            float textWidth = Text.CalcSize(caption).x;
+            float textWidth = Text.CalcSize(caption).x + CaptionSlack;
             CaptionBarRects rects = CaptionBarLayout.Compute(
                 UI.screenWidth, CaptionTop(), textWidth, canSkip);
             Rect bar = ToRect(rects.Bar);

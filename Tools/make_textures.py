@@ -722,7 +722,119 @@ def singularity_vortex_outer():
     save(img, size, 'Things/Mote/BT_SingularityVortexOuter.png')
 
 
+# Showcase previews (docs/ARTISTIC-MOTIF.md, "Showcase Previews"): a 16:9
+# picture for the Showcases menu, 512 by 288, composed from the mod's own
+# sprites so it always matches them.
+PREVIEW_W, PREVIEW_H = 512, 288
+SOIL = (78, 72, 64, 255)             # open ground around a preview's pad
+SOIL_DARK = (58, 53, 48, 255)
+SELF_DESTRUCT_AMBER = (255, 158, 26, 255)  # CompSelfDestruct's warning band
+SELF_DESTRUCT_RED = (255, 26, 15, 255)
+
+
+def new_wide_canvas(w, h):
+    """A transparent supersampled canvas for a w by h final image."""
+    return Image.new('RGBA', (w * SS, h * SS), (0, 0, 0, 0))
+
+
+def sprite(rel_path, size):
+    """One of the mod's generated sprites, scaled to size px square."""
+    path = os.path.join(TEXTURES, rel_path)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f'{rel_path} is missing; generate the sprites first')
+    return Image.open(path).convert('RGBA').resize((size, size), Image.LANCZOS)
+
+
+def place(img, rel_path, cx, cy, size):
+    """Lays a sprite, centred on (cx, cy), over a final-size image."""
+    img.alpha_composite(sprite(rel_path, size), (int(cx - size / 2), int(cy - size / 2)))
+
+
+def showcase_preview():
+    """BT_Showcase's preview: the demo base on its concrete pad, seen from
+    above. A lone replicator counts down in the north-west corner inside
+    the self-destruct warning band, a singularity swallows a junk pile to
+    the south-east, the Ballista's volley lands to the north-east, and AnyRim's roofs sit
+    in the south-west. Read at 64 px: devices in the middle, an amber ring
+    on the left, a magenta swirl on the right."""
+    w, h = PREVIEW_W, PREVIEW_H
+    img = new_wide_canvas(w, h)
+    d = draw(img)
+    d.rectangle(s(0, 0, w, h), fill=SOIL)
+    for i in range(70):  # scuffed ground, from a fixed pattern
+        x, y = (i * 97) % w, (i * 61 + (i * i) % 37) % h
+        r = 3 + i % 5
+        d.ellipse(s(x - r, y - r * 0.6, x + r, y + r * 0.6), fill=SOIL_DARK)
+    # the demo base's concrete pad, with its joints
+    pad = (128, 50, 388, 252)
+    d.rectangle(s(*pad), fill=STEEL_DARK)
+    for x in range(pad[0] + 26, pad[2], 26):
+        d.line(s(x, pad[1], x, pad[3]), fill=STEEL_DEEP, width=1 * SS)
+    for y in range(pad[1] + 26, pad[3], 26):
+        d.line(s(pad[0], y, pad[2], y), fill=STEEL_DEEP, width=1 * SS)
+    d.rectangle(s(*pad), outline=OUTLINE, width=3 * SS)
+    # north-west: the countdown band around a lone replicator
+    glow(img, lambda g, c: g.ellipse(s(14, 34, 126, 146), fill=c),
+         (SELF_DESTRUCT_AMBER[0], SELF_DESTRUCT_AMBER[1], SELF_DESTRUCT_AMBER[2]),
+         blur=10, alpha=120)
+    d = draw(img)
+    circle(d, 70, 90, 50, outline=SELF_DESTRUCT_RED, width=3)
+    circle(d, 70, 90, 38, outline=SELF_DESTRUCT_AMBER, width=6)
+    # north-east: a volley landing on open ground
+    for bx, by, br in ((446, 58, 16), (474, 92, 12), (422, 96, 10), (482, 44, 8)):
+        glow(img, lambda g, c, bx=bx, by=by, br=br: g.ellipse(
+            s(bx - br, by - br, bx + br, by + br), fill=c),
+            (HAZARD[0], HAZARD[1], HAZARD[2]), blur=4, alpha=200)
+        d = draw(img)
+        circle(d, bx, by, br * 0.45, fill=(255, 236, 200, 255))
+    # south-west: AnyRim's roofs
+    for hx, hy, hw, hh in ((26, 206, 40, 30), (76, 214, 34, 26), (30, 248, 30, 24),
+                           (72, 250, 44, 28)):
+        d.rectangle(s(hx, hy, hx + hw, hy + hh), fill=ROCK, outline=OUTLINE, width=2 * SS)
+        d.line(s(hx, hy + hh / 2, hx + hw, hy + hh / 2), fill=ROCK_LIGHT, width=2 * SS)
+    # south-east: the junk pile's last moments
+    for jx, jy, ja in ((430, 214, 20), (468, 236, -35), (452, 190, 70), (486, 206, 5)):
+        a = math.radians(ja)
+        dx, dy = 9 * math.cos(a), 9 * math.sin(a)
+        d.line(s(jx - dx, jy - dy, jx + dx, jy + dy), fill=OUTLINE, width=6 * SS)
+        d.line(s(jx - dx, jy - dy, jx + dx, jy + dy), fill=STEEL, width=3 * SS)
+    # a vignette, so the eye stays on the base
+    shade = Image.new('L', img.size, 0)
+    ImageDraw.Draw(shade).rectangle(s(18, 14, w - 18, h - 14), fill=255)
+    shade = shade.filter(ImageFilter.GaussianBlur(26 * SS))
+    dark = Image.new('RGBA', img.size, (14, 10, 18, 150))
+    dark.putalpha(ImageChops.invert(shade).point(lambda v: v * 150 // 255))
+    img.alpha_composite(dark)
+
+    out = img.resize((w, h), Image.LANCZOS)
+    place(out, 'Things/Mote/BT_SingularityVortexOuter.png', 458, 214, 150)
+    place(out, 'Things/Mote/BT_SingularityVortex.png', 458, 214, 112)
+    place(out, 'Things/Building/Production/BT_RandomReplicator.png', 70, 90, 46)
+    place(out, 'Things/Building/Production/BT_RandomReplicator.png', 184, 134, 64)
+    place(out, 'Things/Building/Power/BT_BatshittiumReactor.png', 258, 128, 86)
+    place(out, 'Things/Building/Production/BT_BatshittiumTransmogrifier.png', 334, 134, 64)
+    place(out, 'Things/Building/Production/BT_BatshittiumArtificer.png', 316, 78, 50)
+    place(out, 'Things/Building/Joy/BT_BrainSqueezer.png', 222, 208, 40)
+    place(out, 'Things/Building/Security/BT_BatshittiumBallista_Base.png', 290, 212, 58)
+    place(out, 'Things/Building/Security/BT_BatshittiumBallista_Top.png', 290, 212, 58)
+    for mx in (334, 360):
+        place(out, 'Things/Building/Security/BT_BallistaMagazine.png', mx, 216, 28)
+    frame = ImageDraw.Draw(out)
+    frame.rectangle((0, 0, w - 1, h - 1), outline=OUTLINE, width=3)
+    path = os.path.join(TEXTURES, 'UI/Showcases/BT_Showcase.png')
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    out.save(path)
+    print('wrote', os.path.relpath(path, os.path.dirname(TEXTURES)))
+
+
 if __name__ == '__main__':
+    # With names (python Tools/make_textures.py showcase_preview), make only
+    # those, leaving every other texture as it is.
+    import sys
+    if len(sys.argv) > 1:
+        for name in sys.argv[1:]:
+            globals()[name]()
+        sys.exit(0)
     batshittium_item()
     transmogrifier()
     reactor()
@@ -739,3 +851,4 @@ if __name__ == '__main__':
     singularity_grenade_projectile()
     singularity_vortex()
     singularity_vortex_outer()
+    showcase_preview()

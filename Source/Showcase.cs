@@ -1,6 +1,8 @@
 // Batshit Technology - in-game showcase.
-// Runs only when RimWorld starts with -btshowcase (Tools/smoke-test.ps1
-// -Showcase). On the quick-test map it finishes the mod's research and builds
+// The demo base behind BT_Showcase, run through the Showcase API by
+// BatshitShowcaseWorker: from the main menu's Showcases button, or with
+// -showcase=BT_Showcase (Tools/smoke-test.ps1 -Showcase). On the fresh
+// 250-cell map the API generates, it finishes the mod's research and builds
 // a working demo base: a fuelled reactor powering a stocked replicator, the
 // Transmogrifier with a bill and rock chunks, a colonist in the Brain
 // Squeezer, the Artificer making bolts, and a Ballista with chained,
@@ -14,7 +16,8 @@
 // Ergonomic Singularity Grenade at a junk pile (and a volunteer) west of
 // the base, and ten seconds after the throw the camera tours AnyRim from
 // its welcome sign. Then it leaves the game running. Log cues for capture
-// tooling: [BT-SHOWCASE] READY, ANYRIM (or AnyRim skipped), THROW, TOUR.
+// tooling: [BT-SHOWCASE] ANYRIM (or AnyRim skipped), THROW, TOUR; the API
+// logs READY once the base is built.
 
 using System;
 using System.Collections.Generic;
@@ -29,11 +32,21 @@ namespace BatshitTechnology
     /// <summary>Builds the showcase base.</summary>
     internal static class Showcase
     {
-        /// <summary>The command-line flag that requests the showcase.</summary>
-        internal const string Flag = "btshowcase";
+        /// <summary>
+        /// Game ticks the timeline holds after its last step before it
+        /// counts as finished, so the last scene stays on screen before the
+        /// API's closing message.
+        /// </summary>
+        internal const int FinishHoldTicks = 600;
+
+        /// <summary>
+        /// The tick the timeline was first seen idle, or -1 while it still
+        /// has steps to run.
+        /// </summary>
+        private static int idleSinceTick = -1;
 
         /// <summary>Builds the demo base around the map's center.</summary>
-        /// <param name="map">The quick-test map.</param>
+        /// <param name="map">The showcase's fresh map.</param>
         internal static void Build(Map map)
         {
             FinishResearch();
@@ -98,8 +111,50 @@ namespace BatshitTechnology
             Messages.Message(
                 OpeningMessage(demos, throwAtTick >= 0, town),
                 MessageTypeDefOf.PositiveEvent, false);
-            // Tools/smoke-test.ps1 waits for this line before maximizing.
-            Log.Message("[BT-SHOWCASE] READY");
+            idleSinceTick = -1;
+            // The Showcase API logs "[BT-SHOWCASE] READY" when this returns;
+            // Tools/smoke-test.ps1 waits for it before maximizing.
+        }
+
+        /// <summary>
+        /// Whether the timeline has played out: nothing left to arm, throw
+        /// or tour, no demo device still counting down under the camera,
+        /// and <see cref="FinishHoldTicks"/> since that was first true.
+        /// </summary>
+        /// <param name="now">The current game tick.</param>
+        /// <returns>True once the showcase is over.</returns>
+        internal static bool TimelineFinished(int now)
+        {
+            bool countingDown = watching != null && !watching.Destroyed
+                && watching.TryGetComp<CompSelfDestruct>()?.IsCountingDown == true;
+            bool idle = pendingDemos.Count == 0 && throwAtTick < 0
+                && tourAtTick < 0 && !countingDown;
+            if (!idle)
+            {
+                idleSinceTick = -1;
+                return false;
+            }
+
+            if (idleSinceTick < 0)
+            {
+                idleSinceTick = now;
+            }
+
+            return now - idleSinceTick >= FinishHoldTicks;
+        }
+
+        /// <summary>
+        /// Stops the timeline: nothing more is armed, thrown or toured, and
+        /// the camera is left alone. Devices already counting down still go
+        /// off.
+        /// </summary>
+        internal static void StopTimeline()
+        {
+            pendingDemos.Clear();
+            throwAtTick = -1;
+            tourAtTick = -1;
+            watching = null;
+            idleSinceTick = -1;
         }
 
         /// <summary>
@@ -356,8 +411,8 @@ namespace BatshitTechnology
         private static int throwAtTick = -1;
 
         /// <summary>
-        /// Called every game tick by the runner; arms each self-destruct demo
-        /// when its moment comes, with the camera on it.
+        /// Called every game tick by BatshitShowcaseWorker; arms each
+        /// self-destruct demo when its moment comes, with the camera on it.
         /// </summary>
         internal static void Tick()
         {

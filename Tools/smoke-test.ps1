@@ -7,7 +7,10 @@
 # Build the mod first. Usage (PowerShell):
 #   .\Tools\smoke-test.ps1                # run, wait, quit, report
 #   .\Tools\smoke-test.ps1 -KeepOpen      # leave the game running after
-#   .\Tools\smoke-test.ps1 -Showcase      # build a demo base instead, with
+#   .\Tools\smoke-test.ps1 -Showcase      # start the BT_Showcase showcase
+#                                         # through the Showcase API (the
+#                                         # main menu acts on
+#                                         # -showcase=BT_Showcase), with
 #                                         # sound, and leave it running
 # Runs left open for a person to watch (-Showcase, -KeepOpen) get a
 # maximized window and 2x UI scale; plain test runs stay small and muted.
@@ -114,8 +117,11 @@ $uiScale = if ($forViewing) { '2' } else { '1' }
 # 3. Launch and wait for the runner's DONE line.
 $log = Join-Path $DataFolder 'Player.log'
 Remove-Item $log -ErrorAction SilentlyContinue
-$runnerFlag = if ($Showcase) { '-btshowcase' } else { '-btsmoketest' }
-$gameArgs = @("-savedatafolder=`"$DataFolder`"", '-quicktest', $runnerFlag,
+# A showcase starts through the Showcase API, as a player's would: the
+# main menu acts on -showcase=<defName> and generates a fresh game for it.
+# A smoke run skips the menu with -quicktest.
+$runnerFlags = if ($Showcase) { @('-showcase=BT_Showcase') } else { @('-quicktest', '-btsmoketest') }
+$gameArgs = @("-savedatafolder=`"$DataFolder`"") + $runnerFlags + @(
   '-logFile', "`"$log`"", '-screen-fullscreen', '0',
   '-screen-width', "$width", '-screen-height', "$height")
 if ($KeepOpen) { $gameArgs += '-btsmoketestkeep' }

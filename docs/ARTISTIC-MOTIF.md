@@ -74,10 +74,11 @@ reuse them by name rather than inventing near-duplicates.
 | Danger red | `DANGER_RED` | 214, 52, 52 |
 | Refrigeration | `FROST_LIGHT`, `FROST`, `FROST_DEEP` | 214, 242, 255 to 70, 130, 170 |
 | Status screen | (panel green) | 70, 205, 145 |
-| Self-destruct warning | (`CompSelfDestruct`) | 255, 158, 26, then 255, 26, 15 |
+| Self-destruct warning | `SELF_DESTRUCT_AMBER`, then `SELF_DESTRUCT_RED` | 255, 158, 26, then 255, 26, 15 |
 | Rock | `ROCK_LIGHT`, `ROCK` | 150, 142, 140; 116, 110, 110 |
 | Cushioning | `CUSHION`, `CUSHION_DARK` | 118, 96, 138; 88, 68, 106 |
 | A singularity's core | `VOID` | 14, 6, 22 |
+| Open ground (previews only) | `SOIL`, `SOIL_DARK` | 78, 72, 64; 58, 53, 48 |
 
 Colour rules:
 
@@ -179,6 +180,40 @@ notice: earnest, reassuring, and quietly aware of what the town is for.
 - **Colours.** Town labels use vanilla's label style, light text on its
   grey background. Magenta stays reserved for batshittium, and town
   furnishings avoid magenta and purple paint and carpet.
+
+## Showcase Previews
+
+Each showcase (`docs/SHOWCASE-API.md`) has a preview picture for the
+Showcases menu. Previews follow the sprites' rules, with these additions:
+
+- **Size and view.** 512 by 288 (16:9), drawn by `Tools/make_textures.py`
+  and saved under `Textures/UI/Showcases/BT_<Showcase>.png`. The view is
+  the game's own: straight down, north up.
+- **Built from the sprites.** A preview places the mod's generated
+  sprites (scaled, never redrawn) on a stage drawn in the generator, so
+  it always matches the devices it shows. Generate the sprites first.
+- **The stage.** Open ground in `SOIL` with `SOIL_DARK` scuffs, the demo
+  base on a concrete pad (`STEEL_DARK` with `STEEL_DEEP` joints and an
+  `OUTLINE` border), and a dark vignette that keeps the eye on the
+  middle. A 3 px `OUTLINE` frame finishes it.
+- **Show what happens.** A preview shows the showcase's events, not just
+  its props: a countdown is the self-destruct warning band
+  (`SELF_DESTRUCT_AMBER` inside `SELF_DESTRUCT_RED`), a volley lands as
+  hazard-yellow bursts, a singularity is the vortex sprite. Magenta still
+  means batshittium only.
+- **No words.** Text in a picture cannot be translated; the menu gives
+  the title.
+- **Read at a glance.** Check it at full size and downsampled to 64 px
+  wide, where it should still show the base in the middle and its one or
+  two big events at the sides.
+
+Showcase text follows "Words" above. Menu labels and buttons are plain,
+as vanilla's are. A showcase's description is the technical manual:
+what is built, what happens and in what order, with one dry line at the
+end. Lines the player reads as the showcase ends speak in the film
+narrator's voice (`docs/SHOWCASE.md`, "The Story"): calm, reassuring and
+brief ("This concludes the showcase. The colony is yours. Please remain
+calm.").
 
 ## Adding New Material
 

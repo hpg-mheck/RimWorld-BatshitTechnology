@@ -209,7 +209,8 @@ function Texture-Exists([string]$p) {
     ($vanillaTextures.Keys | ? { $_.StartsWith("$v/") } | Select-Object -First 1)
 }
 
-$textureXPath = '//texPath | //texturePath | //fuelIconPath | //uiIconPath | //iconPath'
+$textureXPath = '//texPath | //texturePath | //fuelIconPath | //uiIconPath | //iconPath |
+  //previewTexPath'
 Get-ChildItem (Join-Path $ModRoot 'Defs') -Recurse -Filter *.xml | % {
   foreach ($n in (Load-Xml $_.FullName).SelectNodes($textureXPath)) {
     $p = $n.InnerText.Trim()

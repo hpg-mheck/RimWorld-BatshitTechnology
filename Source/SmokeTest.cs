@@ -47,19 +47,15 @@ namespace BatshitTechnology
         {
         }
 
-        /// <summary>Lets the showcase run its timed steps.</summary>
-        public override void GameComponentTick() => Showcase.Tick();
-
         /// <summary>
         /// Once per game, after the map has settled for a couple of
         /// seconds, runs the test and quits.
         /// </summary>
         public override void GameComponentUpdate()
         {
-            bool showcase = GenCommandLine.CommandLineArgPassed(Showcase.Flag);
             if (done || Current.ProgramState != ProgramState.Playing
                 || Find.CurrentMap == null
-                || !(showcase || GenCommandLine.CommandLineArgPassed(Flag)))
+                || !GenCommandLine.CommandLineArgPassed(Flag))
             {
                 return;
             }
@@ -70,12 +66,6 @@ namespace BatshitTechnology
             }
 
             done = true;
-            if (showcase)
-            {
-                Showcase.Build(Find.CurrentMap); // and leave the game running
-                return;
-            }
-
             try
             {
                 Run(Find.CurrentMap);

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Batshit Technology's showcases, listed under the main menu's Showcases
+  button (docs/SHOWCASE-API.md). The element name is the def type's full
+  name, because the API's types live in the mod's own namespace.
+  Descriptions stay on one line each (the game shows a line break
+  literally; \n makes one), so their lines run long.
+-->
+<Defs>
+  <!-- Today's demo base (Source/Showcase.cs), run by BatshitShowcaseWorker
+       until the directed tour replaces it. -->
+  <BatshitTechnology.Showcases.ShowcaseDef>
+    <defName>BT_Showcase</defName>
+    <label>demo base</label>
+    <summary>Every device at work, then several of them exploding on schedule.</summary>
+    <description>A working Batshit Technology base, built on a fresh map with every project researched: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, the Artificer making bolts, and a Batshit Ballista firing 16-bolt volleys at open ground.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners, a colonist throws an Ergonomic Singularity Grenade at a junk pile with a volunteer in it, and the camera visits AnyRim, a small test town built for exactly this.\n\nColonists are moved clear of each self-destruct. The volunteer was not consulted.</description>
+    <previewTexPath>UI/Showcases/BT_Showcase</previewTexPath>
+    <estimatedMinutes>3</estimatedMinutes>
+    <order>0</order>
+    <mapSize>250</mapSize>
+    <workerClass>BatshitTechnology.BatshitShowcaseWorker</workerClass>
+  </BatshitTechnology.Showcases.ShowcaseDef>
+</Defs>

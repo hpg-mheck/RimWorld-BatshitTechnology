@@ -65,6 +65,7 @@
     <Compile Include="AnyRimResidents.cs" />
     <Compile Include="Artificer.cs" />
     <Compile Include="Ballista.cs" />
+    <Compile Include="BatshitShowcaseWorker.cs" />
     <Compile Include="BatshittiumReactor.cs" />
     <Compile Include="BoltStorage.cs" />
     <Compile Include="BrainSqueezer.cs" />

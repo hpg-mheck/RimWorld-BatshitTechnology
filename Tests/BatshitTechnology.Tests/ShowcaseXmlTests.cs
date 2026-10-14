@@ -198,6 +198,172 @@ public sealed class ShowcaseXmlTests
         Assert.Single(Regex.Matches(button, @"\.Patch\s*\("));
     }
 
+    /// <summary>The XML element naming a ShowcaseDef.</summary>
+    private const string ShowcaseDefTag = "BatshitTechnology.Showcases.ShowcaseDef";
+
+    /// <summary>
+    /// Every field a ShowcaseDef declares in XML may use
+    /// (Source/Showcases/ShowcaseDef.cs and its Def base).
+    /// </summary>
+    private static readonly HashSet<string> ShowcaseDefFields = new(StringComparer.Ordinal)
+    {
+        "defName", "label", "description", "summary", "previewTexPath",
+        "estimatedMinutes", "order", "requiredMods", "compatibility",
+        "mapSize", "biome", "workerClass", "scenes", "narration",
+    };
+
+    /// <summary>
+    /// Batshit Technology's first showcase runs today's demo base through
+    /// the API, with the agreed preview, size and running time.
+    /// </summary>
+    [Fact(DisplayName = "BT_Showcase runs the demo base through the API")]
+    public void BT_Showcase_should_wrap_the_demo_base()
+    {
+        XElement def = Assert.Single(
+            ShowcaseDefs(), d => d.Element("defName")?.Value == "BT_Showcase");
+
+        Assert.Equal("demo base", def.Element("label")?.Value);
+        Assert.Equal(
+            "BatshitTechnology.BatshitShowcaseWorker",
+            def.Element("workerClass")?.Value);
+        Assert.Equal("UI/Showcases/BT_Showcase", def.Element("previewTexPath")?.Value);
+        Assert.Equal("250", def.Element("mapSize")?.Value);
+        Assert.Equal("3", def.Element("estimatedMinutes")?.Value);
+        Assert.Null(def.Element("scenes"));
+        Assert.Null(def.Element("requiredMods"));
+    }
+
+    /// <summary>
+    /// Every ShowcaseDef uses only real fields, carries the mod prefix, a
+    /// lowercase label, one-line text, a running time and map size inside
+    /// the API's limits, and a worker class that exists in the source.
+    /// </summary>
+    [Fact(DisplayName = "Every ShowcaseDef's fields are well formed")]
+    public void ShowcaseDefs_should_have_well_formed_fields()
+    {
+        List<XElement> defs = ShowcaseDefs().ToList();
+        Assert.NotEmpty(defs);
+        foreach (XElement def in defs)
+        {
+            string name = def.Element("defName")?.Value ?? "(no defName)";
+            Assert.StartsWith("BT_", name, StringComparison.Ordinal);
+            Assert.Empty(def.Elements()
+                .Select(e => e.Name.LocalName)
+                .Where(f => !ShowcaseDefFields.Contains(f)));
+
+            string label = def.Element("label")?.Value ?? string.Empty;
+            Assert.False(string.IsNullOrWhiteSpace(label), $"{name} has no label");
+            Assert.Equal(label.ToLowerInvariant(), label);
+            foreach (string field in new[] { "label", "summary", "description" })
+            {
+                string text = def.Element(field)?.Value ?? string.Empty;
+                Assert.False(string.IsNullOrWhiteSpace(text), $"{name} has no {field}");
+                Assert.DoesNotContain("\n", text, StringComparison.Ordinal);
+            }
+
+            float minutes = float.Parse(
+                def.Element("estimatedMinutes")?.Value ?? "5",
+                System.Globalization.CultureInfo.InvariantCulture);
+            Assert.InRange(minutes, 1f, CaptionText.MaxMinutes);
+            int mapSize = int.Parse(def.Element("mapSize")?.Value ?? "250");
+            Assert.InRange(mapSize, 75, 400);
+
+            string worker = def.Element("workerClass")?.Value ?? string.Empty;
+            Assert.Contains(".", worker, StringComparison.Ordinal);
+            Assert.True(ClassDeclared(worker), $"{name}: {worker} is not in Source/");
+        }
+    }
+
+    /// <summary>
+    /// Every ShowcaseDef's preview exists, carries the mod prefix, and is a
+    /// 512 by 288 (16:9) PNG, the size the menus are laid out for
+    /// (docs/ARTISTIC-MOTIF.md, "Showcase Previews").
+    /// </summary>
+    [Fact(DisplayName = "Every ShowcaseDef has a 512x288 preview")]
+    public void ShowcaseDefs_should_have_16_by_9_previews()
+    {
+        foreach (XElement def in ShowcaseDefs())
+        {
+            string path = def.Element("previewTexPath")?.Value
+                ?? throw new InvalidOperationException("no previewTexPath");
+            string file = Path.Combine(FixturesDirectory, "Textures", path + ".png");
+
+            Assert.StartsWith("UI/Showcases/BT_", path, StringComparison.Ordinal);
+            Assert.True(File.Exists(file), $"{path}.png is missing");
+            Assert.Equal((512, 288), PngSize(file));
+        }
+    }
+
+    /// <summary>
+    /// The old -btshowcase flag is gone: the showcase starts only through
+    /// the API (-showcase=BT_Showcase), so there is one way in.
+    /// </summary>
+    [Fact(DisplayName = "The -btshowcase flag is retired")]
+    public void Btshowcase_flag_should_be_retired()
+    {
+        string source = Path.Combine(FixturesDirectory, "Source");
+        List<string> users = Directory
+            .EnumerateFiles(source, "*.cs", SearchOption.AllDirectories)
+            .Where(f => File.ReadAllText(f).Contains(
+                "\"btshowcase\"", StringComparison.OrdinalIgnoreCase))
+            .Select(Path.GetFileName)
+            .Select(n => n!)
+            .ToList();
+
+        Assert.Empty(users);
+    }
+
+    /// <summary>Every ShowcaseDef in the mod's Defs.</summary>
+    /// <returns>The def elements.</returns>
+    private static IEnumerable<XElement> ShowcaseDefs() =>
+        Directory.EnumerateFiles(
+                Path.Combine(FixturesDirectory, "Defs"), "*.xml",
+                SearchOption.AllDirectories)
+            .Select(XDocument.Load)
+            .SelectMany(d => d.Root?.Elements(ShowcaseDefTag)
+                ?? Enumerable.Empty<XElement>());
+
+    /// <summary>
+    /// Whether the game code declares a class by its full name: a file in
+    /// the class's namespace declares a class of that short name.
+    /// </summary>
+    /// <param name="fullName">The namespace-qualified class name.</param>
+    /// <returns>True if it is declared.</returns>
+    private static bool ClassDeclared(string fullName)
+    {
+        int dot = fullName.LastIndexOf('.');
+        string ns = fullName.Substring(0, dot);
+        string shortName = fullName.Substring(dot + 1);
+        return Directory
+            .EnumerateFiles(Path.Combine(FixturesDirectory, "Source"), "*.cs",
+                SearchOption.AllDirectories)
+            .Select(File.ReadAllText)
+            .Any(text => Regex.IsMatch(text, @"namespace\s+" + Regex.Escape(ns) + @"\b")
+                && Regex.IsMatch(text, @"\bclass\s+" + Regex.Escape(shortName) + @"\b"));
+    }
+
+    /// <summary>A PNG's width and height, from its IHDR chunk.</summary>
+    /// <param name="file">The PNG.</param>
+    /// <returns>The size.</returns>
+    private static (int Width, int Height) PngSize(string file)
+    {
+        byte[] head = new byte[24];
+        using (FileStream stream = File.OpenRead(file))
+        {
+            Assert.Equal(head.Length, stream.Read(head, 0, head.Length));
+        }
+
+        Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, head.Take(4).ToArray());
+        return (BigEndian(head, 16), BigEndian(head, 20));
+    }
+
+    /// <summary>Reads a big-endian 32-bit integer, as PNG stores sizes.</summary>
+    /// <param name="bytes">The bytes.</param>
+    /// <param name="at">Where the integer starts.</param>
+    /// <returns>The integer.</returns>
+    private static int BigEndian(byte[] bytes, int at) =>
+        (bytes[at] << 24) | (bytes[at + 1] << 16) | (bytes[at + 2] << 8) | bytes[at + 3];
+
     /// <summary>The keyed file's entries.</summary>
     /// <returns>The key elements.</returns>
     private static IEnumerable<XElement> KeyedEntries()
