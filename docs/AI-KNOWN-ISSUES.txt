@@ -25,3 +25,16 @@
   automatic targeting of real raiders is vanilla code but untested here.
 - The Ballista holds fire under a roof (its bolts arc overhead), as vanilla
   mortars do.
+- Showcases: with -quicktest -showcase=<def>, the showcase runs on
+  vanilla's 250-cell quick-test map, ignoring the def's mapSize and biome
+  (a MAPSIZE or BIOME cue says so). Applying them would need a second
+  Harmony patch; the main menu's Start and plain -showcase= apply both.
+- Showcases: Stop ends narration at once, so a "stopped" narration line
+  with a delay is never said (it is a configuration error, so a def
+  author sees it in dev mode).
+- Showcases: the caption bar, the windows and Force start's confirmation
+  have been checked by the smoke runner's direct calls, not yet with a
+  mouse at 2x UI scale on a small screen.
+- Showcases: a showcase's DEV buttons disappear from the throwaway colony
+  when it stops or finishes, because god mode is given back then; turn
+  god mode on from the dev toolbar to keep using them.

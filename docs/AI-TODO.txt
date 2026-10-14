@@ -142,16 +142,28 @@ TestAnyRim checks and by the showcase's TOUR capture instead.
 
 The Showcase API follows the same split. Its rules are Core code with unit
 tests: grouping by mod, requirements, compatibility and the launch
-decision, the scene sequencer and beat schedule, narration, the caption
-text and caption-bar layout, and the Force-start and command-line rules
-(ShowcaseCatalogueTests, ShowcaseLaunchPolicyTests, SceneSequencerTests,
-ShowcaseTextTests, CaptionBarLayoutTests, ShowcaseStartRulesTests). Its
-keyed text is pinned by ShowcaseXmlTests. The game side (Source/Showcases:
-the director, the session component, the library, the launcher and the
-three menu windows) drives the camera, the window stack and game
-generation, which exist only in a running game; it is covered by the
--Showcase run reaching READY and by the smoke runner's Showcase API
-checks (Source/SmokeTestShowcases.cs; docs/AI-TESTING-STRATEGY.txt).
+decision, the scene sequencer (including a failed scene) and beat
+schedule, narration (including delayed "stopped" lines), the caption
+text and caption-bar layout, the god-mode loan, and the Force-start and
+command-line rules (ShowcaseCatalogueTests, ShowcaseLaunchPolicyTests,
+SceneSequencerTests, ShowcaseTextTests, CaptionBarLayoutTests,
+ShowcaseStartRulesTests, DebugFlagLoanTests). Its keyed text, Harmony use
+and god-mode setters are pinned by ShowcaseXmlTests. The game side
+(Source/Showcases: the director, the session component, the library, the
+launcher and the three menu windows) drives the camera, the window stack
+and game generation, which exist only in a running game; it is covered
+by the -Showcase run reaching READY and by the smoke runner's Showcase
+API checks (Source/SmokeTestShowcases.cs; docs/AI-TESTING-STRATEGY.txt).
+Three review fixes have no automated check, for these reasons:
+- the caption bar's world-map test (DrawingMap, not WorldRendered) only
+  differs on a map drawn over the world, such as an Odyssey space map,
+  which the smoke run never has;
+- the grenade demo forgetting its pawns needs BT_Showcase itself to run
+  to its throw, which the smoke run does not do (BT_Showcase is checked
+  by hand in each verification run);
+- the MAPSIZE and BIOME cues of -quicktest -showcase= need a def with a
+  map size other than 250 or a biome, and no shipped def has either; the
+  path itself was run by hand in slice 8000 and reached READY.
 - [x] Showcase API slice 6000: 35 in-game checks in the smoke runner. The
   menu button is the only Harmony patch and adds exactly one option, to
   the main menu only; the three windows open, list Batshit Technology
@@ -163,12 +175,19 @@ checks (Source/SmokeTestShowcases.cs; docs/AI-TESTING-STRATEGY.txt).
   showcase game, also after Stop, and works again in an ordinary game;
   the save folder gains no files. Each check was seen to fail against a
   sabotaged build first (docs/AI-DECISIONS.txt).
+- [x] Showcase API review fixes (2026-10-14): 17 more in-game checks
+  (131 in all) for god mode, Force start outside dev mode, scenes that
+  throw, a cut after a glide, the menu column's gates, the launcher's
+  guards and request binding, the -quicktest menu guard, the delayed
+  "stopped" configuration error, API warnings and the keyed text; each
+  was seen to fail against a sabotaged build (docs/AI-DECISIONS.txt).
 - [ ] Showcase API, still unseen in game: a real mouse click on the main
   menu's Showcases button and in the windows (the smoke run calls the
   same methods the clicks do), the windows at 2x UI scale on a small
-  screen, Force start's confirmation dialog, a def's biome preference
-  and a map size other than 250, and the -quicktest plus -showcase=
-  fallback. Worth a look by Matt "Breakpoint" Heck, or a capture run.
+  screen, Force start's confirmation dialog, and a def's biome preference
+  and a map size other than 250. (The -quicktest plus -showcase=
+  fallback was run by hand in slice 8000 and reached READY.) Worth a
+  look by Matt "Breakpoint" Heck, or a capture run.
 - [ ] Offer the FieldManual-RimWorld knack pack three lessons from phase
   4000, slices 6000 and 7000 (docs/AI-DECISIONS.txt): RimWorld 1.6 puts a
   "[Ref XXXXXXXX]" line between a logged error and its stack trace, which
@@ -176,4 +195,17 @@ checks (Source/SmokeTestShowcases.cs; docs/AI-TESTING-STRATEGY.txt).
   error; an unresolvable Class= dropping the whole def is now observed in
   game, not only [decomp]; and in-game checks of menus and windows can run
   as frame steps (a menu drawn off screen with the program state set for
-  one call; Escape as a real key-down event made current).
+  one call; Escape as a real key-down event made current). Add the
+  lessons of the review fixes, all on 1.6.4871: the showcases staging
+  knack's "Dev buttons" advice (set DebugSettings.godMode = true) leaks
+  god mode into the player's later games, since it is a static flag
+  vanilla never resets; borrow it in dev mode only and give it back, and
+  gate DEV buttons on DebugSettings.ShowDevGizmos [decomp]. A cut
+  (JumpToCurrentMapLoc, SetRootSize) is undone by a glide still in
+  CameraDriver's private panner; start a zero-distance pan to cancel it
+  [observed]. Under -quicktest the main menu is drawn for one frame, and
+  starting a generation there collides with the quick test's own
+  [observed]. A runner that provokes errors on purpose can announce them
+  ("EXPECTED <first line>") so the harness scan leaves exactly those out.
+  Revise the showcases fileset's "planned API" status now that the API
+  exists.

@@ -6,8 +6,9 @@
   plain, accurate UI labels, with the deadpan reserved for the moments
   the player is told what the showcase did to their afternoon. Each value
   stays on one line, as the game shows line breaks literally; \n makes
-  one. XmlDefinitionTests checks that every key the code uses is here,
-  and that every key here is used.
+  one. ShowcaseXmlTests checks that every key the code uses is here, and
+  that every key here is used, along with key prefixes, uniqueness,
+  single-line values and placeholder arguments.
 -->
 <LanguageData>
   <!-- The main menu. -->

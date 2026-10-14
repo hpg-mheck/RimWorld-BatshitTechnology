@@ -52,18 +52,25 @@ mentions the mod or carries the Showcase API's [BT-SHOWCASE] prefix;
 RimWorld 1.6 puts a "[Ref 9E9A3C82]"-style line between an error and its
 trace, which the script reads as part of the trace. As its last check the
 runner reads RimWorld's own log queue and fails on any error (or any
-warning about the mod or about statically held assets) logged during the
-run, since Player.log does not mark errors as errors. Before the
+warning about the mod, about statically held assets, or carrying the
+Showcase API's [BT-SHOWCASE] prefix, which reports swallowed failures)
+logged during the run, since Player.log does not mark errors as errors.
+The only exceptions are messages a check provokes on purpose (scenes made
+to throw, a stale launch request): the runner records them, announces
+each as "[BT-SMOKE] EXPECTED <first line>", and the script leaves exactly
+those lines out of its own Player.log scan. Before the
 destructive tests the runner removes the other devices with
 DestroyMode.Vanish, so a random 5% damage trigger cannot set one off
 mid-test. The script reports those lines plus every error in the game log
 and exits 1 on any failure or mod error. Use -KeepOpen to look around
 afterwards, or -Showcase to skip the tests and start the BT_Showcase
 showcase through the Showcase API instead (-showcase=BT_Showcase: the demo
-base of Source/Showcase.cs), with sound on. Both are for a person to
-watch, so the game window is maximized (once the runner reports DONE or
-the showcase logs [BT-SHOWCASE] READY) and the UI is scaled 2x; plain test
-runs stay small and muted.
+base of Source/Showcase.cs), with sound on. -Showcase waits for
+[BT-SHOWCASE] READY and leaves the game running; it exits 1 at once on a
+REFUSED or FAILED cue, and also if the mod logged an error before READY.
+Both are for a person to watch, so the game window is maximized (once the
+runner reports DONE or the showcase logs READY) and the UI is scaled 2x;
+plain test runs stay small and muted.
 
 The runner also builds AnyRim, the showcase's test town, after the
 non-destructive tests: it checks the build report, every placement,
@@ -78,30 +85,46 @@ Last of all, the runner checks the Showcase API
 (Source/SmokeTestShowcases.cs). Its test showcases are made in code,
 added to the def database under this mod beside BT_Showcase, and removed
 again afterwards; an XML test pins that none is ever shipped. Ticking
-inside the frame, it checks that the menu button is the mod's only
-Harmony patch (from Harmony's own patch listing); that in-game launch
-verdicts match Core's (a fatal flag refuses, Force start overrides it, a
-missing required mod makes a showcase unavailable even when forced, a
-concern warns); that a four-scene director showcase, run through the
-game's own session, frames a cut shot, selects its subject, captions
-"2 of 4", obeys Skip, times out a scene that never ends, logs its cues in
-order to FINISHED, and says each outcome's narration before the closing
-message; that the session writes nothing into a save; and that a
-showcase game never reaches its autosave. Then it runs a few real
-frames, for what only drawing and input show: the caption bar paints;
-vanilla's main menu, drawn off screen with the program state set to
-Entry for that one call, gets exactly one Showcases button, and the
-in-game menu none; the button's own action opens the three windows,
+inside the frame, it checks that under -quicktest the main menu left
+-showcase= to the quick-test game; that the menu button is the mod's
+only Harmony patch (from Harmony's own patch listing, counting any patch
+under the mod's id or from its assemblies); that the main menu's column
+is recognised by each of its gates on its own (lists made in code, with
+a positive control); that the launcher refuses a missing showcase, any
+showcase from inside a game, and a fatal one from the menu's state,
+queueing nothing, and hands a launch request only to its own game, once;
+that in-game launch verdicts match Core's (a fatal flag refuses, Force
+start overrides it, a missing required mod makes a showcase unavailable
+even when forced, a concern warns); that a delayed "stopped" narration
+line is a configuration error; that the details page offers Force start
+outside dev mode (switched off quietly in Prefs' data for the check);
+that a four-scene director showcase, run through the game's own session,
+frames a cut shot, selects its subject, captions "2 of 4", obeys Skip,
+times out a scene that never ends, logs its cues in order to FINISHED,
+says each outcome's narration before the closing message, and logs no
+[BT-SHOWCASE] warning; that scenes throwing in Setup, Tick, IsDone and
+End log one error each while the tour goes on (a set-up fault never
+begins, Tick and IsDone faults end Failed, with the right cues, endings
+and narration); that god mode is lent only in dev mode, a developer's
+own is kept, and it is given back by Stop, at FINISHED, at the main
+menu, and by a loaded or new game; that the session writes nothing into
+a save (its scribed output is an empty element); and that a showcase
+game never reaches its autosave. Then it runs a few real frames, for
+what only drawing and input show: the caption bar paints; a cut right
+after a glide still holds after half a second of frames; vanilla's main
+menu, drawn off screen with the program state set to Entry for that one
+call, gets exactly one Showcases button with its keyed text loaded, and
+the in-game menu none; the button's own action opens the three windows,
 which list the mod and its showcases, grey out the missing-mod showcase
-with its reason, refuse the fatal one while offering Force start (dev
-mode is on), and honour Back and Escape (a real key-down event is made
-current while the window stack handles the cancel key); Stop ends a run
-with no later scene; a stopped showcase game still never autosaves, an
-ordinary one does, and the autosave setting is unchanged; and, 30 frames
-later, when a queued autosave would have been written, the save folder
-has gained and changed no files. DONE waits for these frame steps, for
-120 seconds at most. Every one of these checks was seen to fail against
-a sabotaged build (docs/AI-DECISIONS.txt, 2026-10-14, slice 6000).
+with its reason, refuse the fatal one while offering Force start, and
+honour Back and Escape (a real key-down event is made current while the
+window stack handles the cancel key); Stop ends a run with no later
+scene; a stopped showcase game still never autosaves, an ordinary one
+does, and the autosave setting is unchanged; and, 30 frames later, when
+a queued autosave would have been written, the save folder has gained
+and changed no files. DONE waits for these frame steps, for 120 seconds
+at most. Every one of these checks was seen to fail against a sabotaged
+build (docs/AI-DECISIONS.txt, 2026-10-14, slices 6000 and 8000).
 
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
@@ -122,3 +145,6 @@ From the main menu, with the mouse: the Showcases button and the three
 windows at the scale a player uses (the smoke run runs the button's
 action and the windows' navigation directly, at 1x), Force start's
 confirmation, and a showcase started with Start and left to finish.
+Without dev mode, after a showcase: quit to the main menu, load a real
+colony, and confirm building is not instant (god mode was given back)
+and no DEV buttons show.

@@ -45,3 +45,29 @@ Matt "Breakpoint" Heck:
    existing one); is the trait-inversion
    table right in spirit; Agonizer numbers; research and cost; and
    should the duplicate's name be marked?
+
+(Items 10 to 13 are on feature/tractor-bomb; these are numbered after
+them so the two lists merge cleanly.)
+
+14. Showcase API, the first showcase runs (2026-10-14, slice 5000): one
+    -showcase=BT_Showcase run logged "[BT-SHOWCASE] STOPPED BT_Showcase"
+    about twenty seconds after READY, and then the game closed. Did you
+    press the caption bar's Stop button, or close the game, in that run?
+    Only Stop ends a showcase that way without an error first. If not,
+    there is a defect to chase (docs/AI-DECISIONS.txt, slice 5000).
+15. Showcase API, confirm or change (docs/SHOWCASE-API.md, "As Built"):
+    a. the caption bar sits at the top centre, below the colonist bar,
+       not at the bottom as first proposed (the bottom holds the gizmos
+       and inspect pane, which it would cover);
+    b. Force start is offered to every player for a fatal flag, as
+       Decision 3 reads (it had been limited to dev mode or
+       -showcaseforce; that gate was withdrawn);
+    c. a showcase's DEV buttons (god mode) are given back when it stops
+       or finishes, so they vanish from the throwaway colony afterwards;
+    d. -quicktest -showcase=<def> runs on vanilla's 250-cell quick-test
+       map and ignores the def's mapSize and biome (developer use only).
+16. Showcase API tests: -Showcase checks the run up to READY (and fails on
+    REFUSED, FAILED or a mod error), and the run on to FINISHED is checked
+    by hand. Do you want an automated end-to-end run to FINISHED now (an
+    opt-in switch such as -Showcase -UntilFinished), or with the directed
+    tour (Tractor Bomb slice 12000)?

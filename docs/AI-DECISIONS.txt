@@ -333,9 +333,13 @@ sat below the colonist bar, clear of the replicator's gizmos along the
 bottom. That run found the caption cut to "Demo ...": LabelEllipses
 clips text wider than its box less 13 units, so the bar now adds 16 to
 the caption's measured width. An earlier run logged STOPPED about twenty
-seconds after READY and then closed; nothing in the code stops a
-showcase except the Stop button, so it was most likely pressed by the
-person watching (unconfirmed).
+seconds after READY and then closed. Only the Stop button stops a
+showcase without first logging a [BT-SHOWCASE] error (a worker that
+throws while ticking, reporting Finished or skipping is stopped after a
+Log.Error), so it was most likely pressed by the person watching; that
+run's log was overwritten by a later run in the same data folder and
+cannot be rechecked, and the next runs reached FINISHED cleanly. Asked in
+docs/AI-requests-for-humans.txt, item 14.
 2026-10-14 Claude: Showcase API, slice 6000 (smoke checks). The smoke
 runner checks the API last, in a new file, Source/SmokeTestShowcases.cs
 (GameComponent_SmokeTest is now partial). Choices:
@@ -438,3 +442,107 @@ pack's [decomp] claim (rimworld-modding, Defs and XML, "Class Attributes")
 by observation. The probe was a scratch mod, linked into Mods for one
 isolated launch with Core only, then unlinked; nothing of it was
 committed.
+2026-10-14 Claude: Showcase API, review fixes and slice 8000 (docs). An
+adversarial review of slices 3000 to 7000 confirmed 26 findings; all are
+fixed or documented (commits 521d639, 7daafa1, f236f3e and the docs
+commit after them). Decisions:
+- God mode no longer leaks. Showcase.Build set DebugSettings.godMode for
+  good, and since slice 5000 any player could reach it from the menu; in
+  their next colony every building appeared at once and for free, with
+  no way to see or undo it outside dev mode. A showcase now borrows god
+  mode through ShowcaseWorker.EnableDevButtons (ShowcaseGodMode, rules in
+  Core's DebugFlagLoan): only in dev mode, remembering the old value, and
+  never handing it back raised once dev mode is off. The session gives it
+  back on Stop, at FINISHED, on a failed set-up, in ResetRun, at the main
+  menu (ShowcaseLauncher.OnMainMenuShown, before its one-time command
+  line handling), and in StartedNewGame and a new LoadedGame override for
+  any game that is not a showcase. The DEV buttons therefore vanish in
+  the throwaway colony once its showcase ends; a developer who wants them
+  back toggles god mode on the dev toolbar. The mod's four DEV buttons
+  now check DebugSettings.ShowDevGizmos (dev mode and god mode), as
+  vanilla's do, so even a leaked flag could not show them to a player.
+- Force start follows the settled spec (Decision 3): offered for a fatal
+  flag to every player. The slice 3000 gate (dev mode or -showcaseforce)
+  is withdrawn; -showcaseforce now affects only -showcase=.
+- A scene whose code throws ends Failed, a new SceneEnd with its own
+  outcome key ("failed"), through SceneSequencer.Fail, on the tick it
+  threw: before, a Tick or IsDone fault counted as Completed and said the
+  scene's success lines. A set-up fault never begins: SKIPPED stands alone
+  (no END, no narration), so END always follows a SCENE. One error is
+  logged per fault; End throwing keeps the ending it had.
+- A cut cancels a running glide. CameraDriver keeps a glide in a private
+  panner that re-applies itself every frame, and JumpToCurrentMapLoc and
+  SetRootSize never touch it (1.6.4871), so a cut within a glide's time
+  (Skip, or a glide then a cut) was undone. The cut now also starts a pan
+  from its own framing to itself (0.01 s), which replaces the glide and
+  holds still. Public API rather than resetting the private field.
+- The caption bar hides with !WorldRendererUtility.DrawingMap, as
+  vanilla's MapInterface does; WorldRendered is also true on maps drawn
+  over the world (Odyssey's space maps). Not testable in the smoke run
+  (it needs such a map); recorded in docs/AI-TODO.txt.
+- Narration: Stop ends all narration, so a "stopped" line is said only
+  when its delay is 0. That behaviour is kept and documented, and a
+  delayed one is now a configuration error (NarrationScript.DroppedAtStop).
+- Command line: under -quicktest the main menu leaves -showcase= alone.
+  The review traced, and a sabotaged run then showed, that vanilla draws
+  the main menu for one frame under -quicktest (QuickStarter loads the
+  Play scene outside a long event), so the menu started a second
+  generation that collided with vanilla's: "Could not generate starting
+  map because there is no any player faction base", then a
+  NullReferenceException in Game.InitNewGame, and no showcase. The slice
+  4000 note "with -quicktest, which skips the menu" was wrong in that
+  detail. The quick-test game adopts the showcase as before, now with
+  MAPSIZE and BIOME cues for def fields that path cannot apply (Log.Message
+  cues, not warnings, so no gate trips on them).
+- The final log check counts the API's own [BT-SHOWCASE] warnings: the
+  director and session swallow failures (a camera move, a selection, a
+  message) into exactly those, and no "BT_" test caught them. Messages a
+  check provokes on purpose are recorded as expected and left out; the
+  runner announces each as "[BT-SMOKE] EXPECTED <first line>", and
+  Tools/smoke-test.ps1 leaves exactly those Player.log lines out. The
+  closing message's tick is now recorded only once the message showed.
+- Tests narrowed by the build are recorded rather than restored: the
+  specification's proposed smoke item "-showcase=<defName> runs the tour
+  to its end with no logged errors" is met by (a) the smoke runner's
+  director test showcase running to FINISHED with its log scanned, and
+  (b) BT_Showcase's run to FINISHED checked by hand in each verification,
+  because -Showcase leaves the game open for the viewer, as it did on
+  trunk; (c) the directed tour does not exist until Tractor Bomb slice
+  12000. -Showcase now at least fails on REFUSED or FAILED and on mod
+  errors before READY. Narration scene keys are checked by the def's
+  configuration check (dev mode turns a bad one into a failing "Config
+  error" line), NarrationScript.UnknownScenes is unit tested, and no
+  shipped def has narration yet, so an XML test would check nothing
+  today; add one with the tour. Asked in docs/AI-requests-for-humans.txt,
+  item 16.
+- Smaller fixes: LoadedGame drops a stale launch request; the grenade
+  demo forgets its pawns at the throw, on Stop and before each demo
+  (statics outlive the game); make_textures.py refuses unknown generator
+  names with a usage line and status 2 before drawing anything, Pillow is
+  pinned (Tools/requirements.txt, 12.3.0) and BT_REQUIRE_PILLOW=1 turns a
+  missing Pillow into an error; the preview's blast centre is the palette
+  constant BLAST_CORE, and the motif allows a soft glow on the events a
+  preview shows; the own-patch listing counts any patch owned under the
+  mod's package id or made by its assemblies; the worker-class XML test
+  matches namespaces exactly; the keyed file's header names
+  ShowcaseXmlTests.
+- Sabotage: five sabotaged builds, each confirmed newer, made every new
+  in-game check fail. A: god mode lent outside dev mode; no give-back at
+  FINISHED; a faulted scene counted as done (the old behaviour: tickFault
+  and doneFault ended Completed and said their success lines); the menu
+  acting under -quicktest; the column's gates removed (each negative case
+  flipped); the session scribing a field. B: no give-back on Stop, at the
+  main menu, or in a loaded or new game; Force start only in dev mode; a
+  set-up fault skipped and narrated as before; a cut without the
+  cancelling pan (the camera sat at size 45.2, drifting toward the
+  glide's 50, not the cut's 30); a request handed to any game; the
+  delayed-"stopped" configuration error removed. C: the closing message
+  failing (closing tick -1, warning counted); a glide throwing (warnings
+  counted by the new director check and the final check); the keyed file
+  moved away (label pseudo-translated, CanTranslate false); a second
+  Harmony patch under another id (now listed). D: Launch without its
+  in-game guard (it queued a real generation, which then wrecked the
+  rest of the run, as expected). E: the -quicktest -showcase= run above.
+  Static tests were proved the same way: HarmonyLib used in another file,
+  god mode set outside the loan, the old namespace regex, and Core and
+  Python sabotage each failed their tests.
