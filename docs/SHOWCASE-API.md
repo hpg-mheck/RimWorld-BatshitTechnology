@@ -313,10 +313,18 @@ nothing a worker says goes to `Messages`.
   - a line said while another shows waits until that one has been up
     for 2.5 s, then replaces it with a 0.3 s cross-fade; lines said
     together show in turn, each for at least 2.5 s.
-- **The closing message** ("This concludes the showcase. ...") speaks in
-  the narrator's voice, so it is narration and goes to the overlay too.
-  It is patient: it waits for the last line's full reading time, then
-  fades like any other line, leaving the overlay empty. The Stop
+- **Pacing is the showcase's.** The overlay never delays a line beyond
+  the 2.5 s rule; a showcase that wants each line read in full spaces
+  its own cues. Batshit Technology's tour does (Core's `TourPacing`:
+  each line's reading time, the 1 s fade and the 2 s lead), and its
+  scenes hold their action until their start lines have cleared
+  (`docs/SHOWCASE.md`, "The Scenes").
+- **The closing message** ("This concludes our presentation. ...")
+  speaks in the narrator's voice, so it is narration and goes to the
+  overlay too; it keeps the narration rules (no fourth-wall words, at
+  most 120 characters), which a unit test holds it to. It is patient:
+  it waits for the last line's full reading time, then fades like any
+  other line, leaving the overlay empty. The Stop
   confirmation stays a vanilla message, now silent (`SilentInput`): it
   answers the viewer's click, as the details page's refusals do.
 - **Clearing.** Stop clears the overlay at once, before the worker

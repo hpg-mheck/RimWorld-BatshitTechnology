@@ -1796,3 +1796,130 @@ and 6 of 14 at the old 10-tile pull). The flee check's colonist reached
 pacing: 54 of 54 lines shown, longest wait 5.7 s. No RimWorld of this
 session is left running; the operator's data folder was never used, and
 no -KeepOpen or plain -Showcase run was made.
+
+2026-10-14 - Tour feedback, review step (Phase 3000, after slices 13000
+to 16000; the final step before the operator's viewing in slice 17000).
+Seventeen confirmed review findings were fixed in severity order, and the
+colonist half of the plan's "Colonist Safety and Tourists" was built.
+- Pacing on the overlay (finding: lines chained at scene starts; the
+  title card showed 2.5 s of its 6.4). Core's new TourPacing says when a
+  line has cleared: its reading time, the overlay's 1 s fade and 2 s lead
+  (ClearTicks). The def was retimed by it: each scene's start line waits
+  for the previous scene's outcome lines (460 to 520 ticks; 940 after the
+  raccoon's verdict), the home scene's tagline for the title card (660),
+  the raccoon's thanks for its fate (460, was 60) and the byline for the
+  twins' line (430, was 240). Each scene works out an intro from its own
+  start lines (TourPacing.IntroTicks, 710 to 1,294 ticks) and its own
+  clock (TourScene.Elapsed) starts after it, so every timing tuned inside
+  a scene shifts as one and none had to be retuned; the stampede's herd
+  and the twins' robots now arrive after the intro, so nothing happens
+  under a title line. Timeouts grew by each intro; estimatedMinutes went
+  from 7 to 8 (the scenes ran 23,675 ticks in the final all-scene
+  verify, 6.6 minutes at normal speed, against about 4.2 before).
+  Rejected: making every waiting line patient (it would lengthen the lag
+  between the camera and its line, which the 2.5 s rule caps), and
+  hand-shifting every scene's beat ticks (eleven numbers to
+  keep in step). TourXmlTests hold the def to the rules, so a new line
+  cannot crowd its neighbour. The cost is about 12 to 16 s at the start
+  of each scene (21 s before the Tractor Barn); asked in
+  docs/AI-requests-for-humans.txt, item 20.
+- Colonists are held clear (plan, "Colonist Safety and Tourists"; the
+  operator: "Exactly."). TourScene.HoldColonistsClear moves colonists in
+  reach back to the base and drafts every other free colonist with Fire
+  At Will off; KeepColonistsClear moves back, every 30 ticks, any who
+  come in; ReleaseHeldColonists lets them go in End. Used by both
+  self-destructs (87.6 tiles round the pad, the planner's reach), the
+  grenade (16 tiles round the pile; grenadier and volunteer spared) and
+  both tractor scenes (the yard grown by 31; the stray spared). The
+  stampede keeps its own gathering. Drafting was chosen over a forbidden
+  area: it also stops a hauler, and the base is out of every reach by
+  the planner's rules.
+- Tourists were not built (time). Recorded in docs/AI-TODO.txt with a
+  sketch, and the faction question is item 21 of
+  docs/AI-requests-for-humans.txt.
+- Stampede: GatherColonists drafts with Fire At Will off (the Drafted
+  setter turns it on, so it is turned off after; the grenadier, holding
+  the singularity grenade, would otherwise throw at the first boomalope
+  in range, JobDriver_Wait.CheckForAutoAttack). Every volley passes
+  Core's Stampede.SafeAim: refused when its footprint (scatter, the
+  bolt's own explosion radius read from its projectile def, 3.9, and a
+  boomalope's 4.9-tile burst) reaches the base's square or a colonist; a
+  refused first volley sends the herd home, a refused cleanup ends the
+  volleys (after the line hold). The stragglers' beat is held until 510
+  ticks after the first volley, so the operator's line is read in full;
+  the cleanup itself still fires at once, to keep the herd off the base.
+- Verifier: every scene's "no colonist harmed during the scene" (fresh
+  injuries, downing or death against a snapshot at its start), excusing
+  the grenade's volunteer during the grenade and, with a NOTE, harm with
+  one of the map's starting hostiles within 12 tiles (a raid cannot come:
+  the storyteller is silenced). The grenade and raccoon scenes must end
+  with no singularity field and no implosion still ticking. The
+  stampede's fire is measured near the base while it runs (the old
+  post-End count, which End made trivially true, is now labelled a
+  clean-up check), with facts for no singularity and no Fire At Will.
+  Declines are judged without the scenes' helpers (the stampede's ground
+  by the verifier's own walk over Core's bands, reaching each cell from
+  the base; Ned by the plan's names and weapon). The census-stack fact
+  fails when Messages.liveMessages cannot be read.
+- Smoke: "Apply to every tractor" now checks its own counts against an
+  independent count; with two barns selected the button is disabled
+  ("Select one barn: each barn has its own settings.") and no longer runs
+  once per barn (alsoClickIfOtherInGroupClicked false; vanilla's grid
+  would run every grouped barn's action, the last winning); the old-save
+  check loads the planted bomb through its own ExposeData; and AnyRim's
+  census message must post when no showcase narrates.
+- Text: the robot's description and the Tractor Bomb research give 15
+  and 7.5 tiles and the robot names Timid, Prudent and Nosy (it still
+  said Disposition, Cautious and Moderate, 10 and 5); the barn's
+  tooltips say "each tractor bomb this barn builds"; the closing line is
+  "This concludes our presentation. The colony is yours. Please remain
+  calm.", as docs/SHOWCASE.md's "The End" has it: once it moved onto the
+  overlay (slice 13000) it fell under the Narration rule, which forbids
+  "showcase"; the director's header no longer counts scenes.
+- The grenade scene timed out unthrown on a dark-entity map a third time
+  (all-scene verify, DLL 14:19:35; the known issue); it now logs the
+  grenadier's state every 600 ticks while the throw is overdue.
+Sabotage (.local/scratch/review17000/sabotage.py, DLL 14:33:30, nine
+sabotages, each aimed at one new check; restored byte for byte, touched
+and rebuilt, git showing no change): all-scene verify 9 passed, 2 failed,
+with exactly the targeted facts: defence "no colonist harmed" (S-C, a
+cut on order), stampede "the drafted colonists held their fire" (S-B),
+grenade "the singularity is over" (S-A, fields 1, implosions 1), and
+the grenade's late explosion downing the volunteer during the tractor
+scene, failed there and in the twins' (the bug the finding described;
+the raccoon had declined), and "every unforced decline is justified"
+for the raccoon (S-E: "AnyRim stands with Ned on duty, holding
+BT_ErgonomicSingularityGrenade"). S-D (a fire lit 14 tiles from the
+base square) was inconclusive: nothing caught in the rain. Full smoke,
+first run 182 passed, 4 failed: AnyRim found no site (map), so its
+checks did not run; Apply's counts (S-F: 2 bombs counted against 1),
+two barns selected (S-I: group click True) and older saves (S-H: the
+bomb loaded at the defaults) failed. Rerun 193 passed, 9 failed: the
+same three, AnyRim's census outside a showcase (S-G: posted nothing),
+and five Brain Squeezer checks (the known seat flake; the colonist was
+fleeing a hostile).
+Runs (each build confirmed by the DLL's timestamp; 0 warnings, 0 errors,
+0 Def problems): 738 unit and XML tests (was 726; TourPacingTests new),
+18 Python tests. DLL 14:15:25 (retiming and findings): full smoke 202
+passed, 0 failed; all-scene verify 11 passed, 0 failed. DLL 14:19:35
+(the colonist hold): full smoke 202, 0; default verify 11, 0; all-scene
+verify 10 passed, 1 failed (the grenade timed out unthrown on a
+dark-entity map, the known issue; every world fact held). DLL 14:27:13
+(the grenade's waiting notes): all-scene verify 11, 0. Final DLL
+14:37:05 (sources as committed): full smoke 202 passed, 0 failed;
+all-scene verify (-TourSkip '') 11 passed, 0 failed, on a map with two
+dark entities whose fingerspikes hurt two colonists (excused and noted);
+default verify 11 passed, 0 failed, anyrim and raccoon SKIPPED. Then only
+the def's estimatedMinutes changed (10 to 8; a menu label), rebuilt with
+Def validation and the tests. Measured in the final all-scene verify:
+the scenes ran 2,820 (home), 1,535, 2,691 (stampede), 1,912, 1,644,
+2,314, 1,599, 3,212 (raccoon), 3,311 (tractor) and 2,637 (twins) ticks,
+23,675 in all; the stampede's 256-bolt volley left at scene tick 808 (76
+tiles) and killed all 200 in each of the three runs whose log was
+read, with no cleanup needed; 42 to 106 fires burned on the map at once,
+none near the base, and no volley was refused for safety. Overlay pacing
+at normal speed: every line shown (41 to 54), the longest wait still 5.7
+s (a mid-scene beat), and 8 to 11 lines replaced before their full
+reading time, against 28 to 30 before.
+No RimWorld of this session is left running; the operator's data folder
+was never used, and no -KeepOpen or plain -Showcase run was made.

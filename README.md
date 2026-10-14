@@ -123,6 +123,12 @@ with the camera moving for every beat:
 10. **Two Tractors:** two robots in a junkyard, their pulls overlapping,
     and the byline.
 
+The narrator speaks one line at a time, large and silent, in the lower
+third of the screen; each line is read in full and gone a couple of
+seconds before the next, so each scene opens on its title line before the
+action starts, and the whole tour runs about eight minutes. Colonists are
+held clear of every blast, barrage, pull and herd until it is over; only
+the grenade's volunteer is in harm's way, by arrangement.
 A scene this map cannot stage (no clear corner, no room for the tractor yard)
 is skipped, and the captions count only the scenes that run. The bar's
 **Skip** ends the current scene. **AnyRim** is a small test town in the

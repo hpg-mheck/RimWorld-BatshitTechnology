@@ -205,7 +205,12 @@ helper in the generator.
   names that understate it (Intimate, Neighborly, Popular; Birthday
   Cake, Firework, Block Party), smallest first, the default in the
   middle. Menus give each name with its size ("Popular, 22.5 tiles"),
-  and sizes show a decimal only when they have one.
+  and sizes show a decimal only when they have one. A tooltip names
+  what a setting is for in the singular, so the sentence agrees: "How
+  close each tractor bomb this barn builds drives to a hostile".
+  Descriptions give the factory settings' sizes (Neighborly, 15 tiles;
+  Firework, 7.5) and the stops by name (Timid, Prudent, Nosy), never
+  the retired Disposition's (`XmlDefinitionTests`).
 - **Overlays and pieces.** Glows drawn in game (a lamp) are soft white
   discs tinted by their material; pieces a death flings about are 64 px
   sprites in `Things/Mote`, drawn at about half a tile.
@@ -300,14 +305,19 @@ public information film's cheerful voice, warm, confident and on message.
   centred in the lower third, in white at about twice the Medium font
   over a soft dark drop shadow, fading in and out, without a sound. No
   colour, icon or frame: the words carry it, as a film's subtitles do.
-- **Timing.** A scene's start lines wait 90 ticks or more, and its first
-  beat plays at tick 150, so lines read in cue order: start, beats,
-  outcome. An outcome's second line waits less than the next scene's
-  start line (the raccoon's thanks to Ned waits 60), or it would be said
-  after it. On the overlay a line said while another shows waits until
-  that one has been up 2.5 s, so lines closer together than that queue
-  and show in turn; space a scene's lines by their reading time (2.5 s
-  plus 50 ms a character) where the action allows.
+- **Timing.** Every line is read in full and gone two seconds before
+  the next is due, as the operator asked ("fading in at the start of a
+  segment, out a few seconds before the next one starts"): a line
+  clears after its reading time (2.5 s plus 50 ms a character), its
+  1-second fade and a 2-second lead (Core's `TourPacing.ClearTicks`).
+  A scene's start line waits until the previous scene's outcome lines
+  have cleared; a cue's second line waits for its first (the raccoon's
+  thanks to Ned, 460 ticks); and the scene's action waits for its start
+  lines, so each segment opens on its own line, like a title card.
+  Lines still read in cue order: start, beats, outcome. Mid-scene beats
+  follow the action; where two come closer than a reading time, the
+  later waits until the first has been up 2.5 s, then replaces it.
+  `TourXmlTests` check the def's delays against these rules.
 - **Review.** `TourXmlTests` check the length, the punctuation, the
   forbidden words, the byline and that every beat has a line. Anything
   beyond that, the wording itself, needs a human's review.
@@ -346,8 +356,9 @@ as vanilla's are. A showcase's description is the technical manual:
 what is built, what happens and in what order, with one dry line at the
 end. Lines the player reads as the showcase ends speak in the film
 narrator's voice (`docs/SHOWCASE.md`, "The Story"): calm, reassuring and
-brief ("This concludes the showcase. The colony is yours. Please remain
-calm.").
+brief, and, because they reach the narration overlay, never break the
+fourth wall ("This concludes our presentation. The colony is yours.
+Please remain calm.").
 
 ## Adding New Material
 

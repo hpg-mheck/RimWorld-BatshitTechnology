@@ -379,7 +379,15 @@ build settled a detail, it is recorded here; the decisions log
     with, saved with the barn and shown on its pane ("New tractors:
     Prudent, Neighborly, Firework"). "Apply to every tractor" copies them
     to its owner's robots on the map and to planted bombs not yet
-    pulling, and says how many it set.
+    pulling, and says how many it set. With several barns selected it is
+    disabled ("Select one barn: each barn has its own settings."), and a
+    click never runs once per barn: vanilla would otherwise run every
+    grouped barn's action, the last one winning, with a message each
+    (review of slice 16000). Its tooltips speak of "each tractor bomb
+    this barn builds".
+  - **Descriptions:** the robot's and the Tractor Bomb research's give
+    the factory settings' sizes (15 tiles, 7.5 tiles) and the robot's
+    Proximity stops by name; `XmlDefinitionTests` keep them so.
   - **Repair hopper:** the steel for repairs, a vanilla refuelable store
     of 20 that haulers top up below 75%. A work table with one takes no
     bills while it is empty, so the player can neither switch refuelling

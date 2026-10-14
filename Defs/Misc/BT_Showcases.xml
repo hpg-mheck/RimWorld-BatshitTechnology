@@ -24,7 +24,7 @@
     <summary>A public information film: every device at work, then several of them exploding on cue.</summary>
     <description>A working Batshit Technology base, built on a fresh map with every project researched, toured scene by scene: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, and the Artificer making bolts for a Batshit Ballista, which fires one 16-bolt volley, then meets a stampede of manhunting boomalopes from the east with one of 256.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners; the camera walks AnyRim, a small test town built for exactly this; a colonist throws an Ergonomic Singularity Grenade at a junk pile with a volunteer in it; AnyRim's bank guard deals with a rabid raccoon on Main Street, with the same grenade; a Tractor Bomb from the Tractor Barn finds a party of raiders; and two Tractor Bombs settle a junkyard full of them.\n\nA scene this map cannot stage is left out. Colonists are moved clear of each blast. The volunteer was not consulted.</description>
     <previewTexPath>UI/Showcases/BT_Showcase</previewTexPath>
-    <estimatedMinutes>10</estimatedMinutes>
+    <estimatedMinutes>8</estimatedMinutes>
     <order>0</order>
     <mapSize>250</mapSize>
     <workerClass>BatshitTechnology.BatshitTourDirector</workerClass>

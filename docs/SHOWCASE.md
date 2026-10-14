@@ -93,10 +93,48 @@ in its chain, without the boomalope in the game, or when no open ground on
 the east edge reaches the base.
 
 `TourScript` (Core) holds the order and the beats; the def's XML, the
-scene classes and the tests all read it. Before a self-destruct arms,
-and before the grenade and the tractors, colonists in reach are moved
-clear. The Ballista picks no target of its own during the tour
-(`AutoTargetHeld`): it fires only the volleys it is ordered to.
+scene classes and the tests all read it. The Ballista picks no target
+of its own during the tour (`AutoTargetHeld`): it fires only the
+volleys it is ordered to.
+
+**Colonists are never the casualties** (the operator, 2026-10-14;
+review step of slices 13000 to 16000). From a scene's set-up until it
+ends, the self-destructs, the grenade and both tractor scenes hold
+the colonists clear of everything the scene can reach
+(`TourScene.HoldColonistsClear`): any colonist in reach is moved back
+to the base, every other is drafted with Fire At Will off, and every
+30 ticks any who came back in (one that could not be drafted, say)
+is moved out again and logged. The reach is 87.6 tiles round a pad
+(the self-destruct's blast, fires, secondaries and barrage, with the
+planner's margin), 16 tiles round the grenade's pile, and the yard
+grown by 31 tiles for the tractors. The grenade's grenadier and
+volunteer and the tractor's stray are placed by their scenes and
+spared. They are let go when the scene ends, however it ends. A
+hauler had walked back into the reactor's barrage in one verify run
+of slice 14000; the self-destructs had cleared colonists only at
+set-up and arming. The verifier now fails any colonist hurt, downed
+or killed in any scene, but the volunteer during the grenade; harm
+done beside one of the map's starting hostiles (a mechhive's, dark
+entities) is noted instead, since the tour did not cause it. The
+plan's tourists, a party of visitors who would be the casualties a
+scene needs, were not built in this step (`docs/AI-TODO.txt`).
+
+**Pacing on the overlay.** Each line is read in full and gone two
+seconds before the next is due (Core's `TourPacing`: its reading
+time, the 1-second fade and the 2-second lead, at 60 ticks a
+second). A scene's start line waits until the previous scene's
+outcome lines have cleared (460 to 520 ticks; 940 after the raccoon's
+two-line verdict); a cue's second line waits for its first (the
+home scene's tagline at 660 ticks, the raccoon's thanks at 460, the
+byline at 430); and each scene holds its action for an intro until
+its start lines have cleared (`TourScene.IntroTicks`, 710 to 1,294
+ticks), so its first beat comes on a clear screen. Everything a
+scene does is timed on its own clock, which starts after the intro,
+so the tuned timings inside each scene are unchanged; the stampede's
+herd and the twins' robots arrive after it. Each scene's timeout
+grew by its intro. The scenes now run about 23,700 ticks in all (6.6
+minutes at normal speed, against about 4.2 before), and the menu says
+8 minutes (it said 7); `TourXmlTests` hold the def to these rules.
 
 The tour's tractors run one setting up from the defaults: Popular (a
 22.5-tile pull) and Block Party (a 12-tile blast), as the operator asked on
@@ -155,9 +193,19 @@ slice 14000. Core's `Stampede` holds the rules; the scene is
   out as it ends; at the end it puts out the rest and gives back the weather
   from before, at once. In the verify runs 0 to 13 fires were burning at the
   aftermath, all out by the end. No batteries were added: a vanilla battery
-  under open sky can short-circuit in rain.
-- **Safety.** The colonists are moved inside the base's square and drafted, so
-  none wanders east; they are undrafted at the end. A boomalope counts as
+  under open sky can short-circuit in rain. The verifier counts fires near
+  the base while the scene runs (none may start within the 25-tile
+  keep-away); its count after the scene shows only that the clean-up ran,
+  since the scene's end puts every fire out.
+- **Safety.** The colonists are moved inside the base's square and drafted
+  with Fire At Will off, so none wanders east and none fires at a
+  boomalope near the base (the grenadier, holding the singularity
+  grenade, would otherwise throw it at the first one in range); they
+  are undrafted at the end. No volley is ordered whose footprint (its
+  scatter, a bolt's 3.9-tile blast and a boomalope's 4.9-tile burst)
+  reaches the base's square or a colonist (Core's `Stampede.SafeAim`):
+  a refused first volley sends the herd home at once, and a refused
+  cleanup ends the volleys. A boomalope counts as
   having reached the base inside 25 tiles of its square, five times its own
   blast. Any boomalope still on its feet at the aftermath stops manhunting and
   walks off the east edge (a downed one stays down); any still alive at the
@@ -168,9 +216,11 @@ slice 14000. Core's `Stampede` holds the rules; the scene is
   at tick 150 frames the herd, a little west of its centre; `volley` frames
   the Ballista and the impact together (zoom 56) and selects the Ballista,
   whose inspect pane reads "Volley: 256 x really painful bolt"; `stragglers`
-  plays with a cleanup volley; `aftermath` frames the impact (zoom 36) and
-  holds 420 ticks. The aftermath beat waits at least 510 ticks after the last
-  volley, so the volley's line gets its full reading time on the overlay.
+  plays with a cleanup volley, but no sooner than 510 ticks after the
+  first, so the operator's volley line gets its full reading time (the
+  cleanup itself fires at once); `aftermath` frames the impact (zoom 36)
+  and holds 420 ticks. The aftermath beat waits at least 510 ticks after
+  the last volley, for the same reason.
 - **Narration.** The volley line is the operator's own (2026-10-14), word for
   word, with his spelling and em dashes: "Two hundred fifty-six largely
   inaccurate—but highly explosive—Ballista bolts make for a firm, but
@@ -193,7 +243,10 @@ was built.
   the action to finish (an aftermath ending, a pull completing, the smoke
   settling) rather than a fixed delay. Then the next begins.
 - **Commentary.** Pop-up comments as game events: vanilla messages, with
-  look targets so a click jumps to the subject. They are written in the
+  look targets so a click jumps to the subject. [Replaced in slice
+  13000, at the operator's request, by the Showcase API's narration
+  overlay: one large, silent line at a time in the lower third,
+  `docs/SHOWCASE-API.md`, "The Narration Overlay".] They are written in the
   motif's deadpan voice (`docs/ARTISTIC-MOTIF.md`). Each chapter also
   gets a short caption bar, drawn by the Showcase API as a title card at
   the top centre, just below the colonist bar ("2 of 8: The Batshittium
@@ -352,10 +405,10 @@ As built (`Source/Tour/RaccoonScene.cs`; the places are Core's
   world's.
 - **The verdict.** The outcome is `raccoonLost` if the raccoon is dead,
   `raccoonSurvived` otherwise, and either way "AnyRim thanks Ned for his
-  service. Unfortunately." follows 60 ticks later, before the next
-  scene's start line. The census reads "AnyRim census revised to N..."
-  when the count fell, or "AnyRim census holds at 9. Please remain calm."
-  when no one was lost (`AnyRimText.CensusReport`). While a showcase
+  service. Unfortunately." follows 460 ticks later, once the fate has
+  been read, before the next scene's start line. The census reads
+  "AnyRim census revised to N..." when the count fell, or "AnyRim
+  census holds at 9. Please remain calm." when no one was lost (`AnyRimText.CensusReport`). While a showcase
   narrates on the map, AnyRim's own census message stays out of the
   message stack, so the line is not said twice.
 - **Afterwards.** However the scene ends, a living raccoon is calmed,
@@ -376,8 +429,11 @@ As built (`Source/Tour/RaccoonScene.cs`; the places are Core's
   the counts before the scene and at the tick it was said; no census
   message entered vanilla's stack; no colonist was hurt within the
   incident's reach (Main Street from the entry to the bank, grown by the
-  throw and the pull, or within 5 tiles of the raccoon). A colonist hurt
-  elsewhere during the scene is logged as a note with where and how.
+  throw and the pull, or within 5 tiles of the raccoon). The tour-wide
+  fact that no colonist is harmed in any scene covers the rest of the
+  map, and both the grenade and the raccoon scenes must end with no
+  singularity field on the map and no implosion still ticking, so the
+  grenade's explosion can never land in the next scene again.
 
 *(Proposals:)* the reels map onto the scenes above (Reels 1 to 5 are the
 demo base and the Ballista); the narrator's lines live in XML so they
@@ -401,17 +457,22 @@ right?".
   tiles from the base's cleared square and 15 from the grenade clearing.
 - **The stampede stays east of the base.** The herd must be 90 per cent
   dead before any boomalope comes within 25 tiles of the base's square,
-  the colonists wait drafted inside it, rain keeps the fires from
-  spreading, and no live boomalope outlasts the scene (see "Scene 3"
-  above).
+  the colonists wait drafted inside it with Fire At Will off, no volley
+  may land within its footprint of the square, rain keeps the fires
+  from spreading, and no live boomalope outlasts the scene (see "Scene
+  3" above).
+- **Colonists are held clear until it is over.** Every dangerous scene
+  keeps colonists out of its reach from set-up to its end, not only as
+  it arms ("The Scenes" above).
 - **The tractor yard and the pads are planned together** (Core's
   `TourStagePlanner`, slice 12000). The yard, 65 by 29 tiles, keeps 31
   tiles from the base square, the grenade clearing and every part of
   AnyRim: as far as anyone runs from one of the tour's Popular tractors
   (its 22.5-tile pull plus 8), rounded up (18 before slice 16000). Its
   candidates lie south-west, south and south-east of the base, 62 tiles
-  south of it, so the yard's top edge is 32 tiles below the square's. Each pad keeps 87.6 tiles from AnyRim and
-  from the yard, measured from the device's own cell. The first yard that
+  south of it, so the yard's top edge is 32 tiles below the square's.
+  Each pad keeps 87.6 tiles from AnyRim and from the yard, measured
+  from the device's own cell. The first yard that
   leaves two pads wins; failing that, the one that leaves the most. Every
   keep-away goes through one rule, `Clears(Box, KeepAway)`, and AnyRim
   through `TownSite.Clears`.

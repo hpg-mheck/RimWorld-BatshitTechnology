@@ -293,7 +293,7 @@ public sealed class ShowcaseXmlTests
             def.Element("workerClass")?.Value);
         Assert.Equal("UI/Showcases/BT_Showcase", def.Element("previewTexPath")?.Value);
         Assert.Equal("250", def.Element("mapSize")?.Value);
-        Assert.Equal("10", def.Element("estimatedMinutes")?.Value);
+        Assert.Equal("8", def.Element("estimatedMinutes")?.Value);
         Assert.NotNull(def.Element("scenes"));
         Assert.Null(def.Element("requiredMods"));
     }

@@ -214,3 +214,15 @@
   the grenade scene timed out with no throw and no warning (the order
   was taken; the grenadier never threw). One run missed the tractor's
   "protest" beat. None of these involved AnyRim or the raccoon scene.
+- Tour (BT_Showcase), review step after slice 16000 (2026-10-14): the
+  hauler who walked back into the reactor's barrage (above) should not
+  recur: every dangerous scene now holds the colonists clear, drafted,
+  until it ends, and moves back any who come in. The verifier now fails
+  any colonist hurt, downed or killed in any scene but the volunteer's,
+  so a map's starting hostiles (dark entities, a mechhive) can fail a
+  verify run that the tour did not; harm beside one of them is excused
+  and noted, but harm they cause from farther off is not. The grenade
+  scene timed out unthrown on a dark-entity map a third time (all-scene
+  verify, DLL 14:19:35); the scene now logs the grenadier's state every
+  600 ticks while the throw is overdue. The tractor scene runs at about
+  48 game ticks a second in verify runs (see docs/AI-TODO.txt).

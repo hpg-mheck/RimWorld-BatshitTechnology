@@ -107,8 +107,13 @@ Cake (6 and 3 tiles) change what is caught, and the planted bomb names
 its settings and keeps its buttons only until it pulls; the barn's
 settings go with its new robots, its own buttons set them, and "Apply
 to every tractor" reaches robots and bombs not yet pulling but not one
-already pulling; older saves (a Disposition, dialled radii) load as
-named stops through RimWorld's own loader; and a killed
+already pulling, and its own count of each matches the robots and
+not-yet-pulling bombs counted independently; with two barns selected
+"Apply to every tractor" is disabled with its reason and never runs
+once per barn; older saves (a Disposition, dialled radii) load as
+named stops through RimWorld's own loader, the planted bomb through
+its own ExposeData (so Thing's "def" and "id" and the bomb's legacy
+loader all run); and a killed
 robot's vortex pops without touching anything, as does one that loses
 its wheels. Everyone else runs (TestTractorBombFlee, on freshly made,
 undrafted, healthy pawns, with the countdown held at 5 s): a colonist
@@ -367,6 +372,33 @@ overlay if watched at normal speed: the lines said, at their ticks,
 replayed through Core's rules (the verifier itself runs at Superfast,
 where the overlay's real-time rules do not show), with the longest wait
 and how many lines would be replaced before their full reading time.
+
+The review of slices 13000 to 16000 (2026-10-14) added these to the
+verifier. Every completed scene: no colonist hurt, downed or killed
+during it (fresh injuries against a snapshot at its start), but the
+grenade's volunteer during the grenade; harm with one of the map's
+starting hostiles within 12 tiles is logged as excused instead. The
+grenade and raccoon scenes: no singularity field and no implosion
+still ticking at the scene's end. The stampede: no new fire inside
+the base's 25-tile keep-away at any tick of the scene (the count
+after it, renamed "no fire left after the scene's clean-up", shows
+only that End put the rest out); no singularity grenade thrown or
+field opened; the drafted colonists never on Fire At Will; and a NOTE
+of the most fires on the map and of volleys refused for safety.
+Unforced declines are judged without the scenes' own helpers: the
+stampede's open ground by the verifier's own walk over Core's bands,
+reaching each cell from the base rather than the other way round,
+and the raccoon's guard found among the map's pawns by the plan's
+names, with his weapon compared to the plan's. The raccoon's census
+fact fails, with a reason, when vanilla's message list cannot be read.
+The smoke run's AnyRim check now also expects the census message to
+post when no showcase narrates (the counterpart of the raccoon fact).
+Unit tests: Core's TourPacing (clear ticks, intros, spacing) and the
+stampede's SafeAim and Footprint; TourXmlTests hold the def's delays
+to the pacing rules (start lines after the previous outcome clears, a
+cue's lines spaced, timeouts covering the intro) and the closing
+message to the narration rules; XmlDefinitionTests hold the robot's
+and the research's descriptions to the named settings' sizes.
 
 It then logs "[BT-SMOKE] DONE" and quits, and the script reports as a
 smoke run does. A tour that never finishes fails at a deadline: the sum
