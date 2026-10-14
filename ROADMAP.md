@@ -193,6 +193,9 @@ step 8:
   short, and the bomb goes off where it stands.
 - **The machining-table stopgap** for assembling robots stays until the
   barn replaces it.
+- **Hostiles react individually:** each hostile rolls once per bomb, a
+  third each: flee at once, hesitate about 2 s, or ignore it entirely.
+  Everyone else bails (`docs/TRACTOR-BOMB.md`, "Decisions" 9).
 
 ## Next
 

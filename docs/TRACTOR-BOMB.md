@@ -283,3 +283,15 @@ Answered by Matt "Breakpoint" Heck on 2026-10-13:
    status lines; anyone who can run, does.
 8. **Looks:** a little farm tractor whose tires flip out flat when it
    emplaces.
+9. **Hostiles react individually** (answered after step 6, which made
+   every hostile flee and so let most targets escape). Each hostile
+   pawn, on first seeing an armed bomb, rolls once, with a 33% chance
+   of each reaction:
+   - **flees at once,** as built;
+   - **hesitates,** noticing about 2 s late, so a 3 to 5 s countdown
+     leaves little time and many are caught *(the 2 s is a proposal)*;
+   - **ignores it entirely,** carrying on with its assault.
+   
+   Everyone else (colonists, guests, neutrals and animals) bails at
+   once. The roll is kept per pawn per bomb, so a hostile does not
+   re-roll every half second. To be built with step 8.
