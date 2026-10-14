@@ -14,6 +14,11 @@ run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
   every BT_ cross-reference, every mod texture path, and two RimWorld
   config rules found by the smoke test (impassable buildable buildings need
   fillPercent 1; minifiable buildings need a thing category).
+- XML tests for the Tractor Barn: its cost, research, size, Bills tab
+  and one autonomous recipe (60 steel, 3 components, 5 batshittium, a
+  forming time, the bomb counter, no products), the Hauling bill giver,
+  the steel repair hopper with no toggle, the dock job, its tyre
+  stampede, and that the machining-table stopgap is gone.
 - XML tests over Patches/ and the specs where text must match: the
   Tractor Bomb's twenty "making peace" lines are unique, lowercase and
   the same as docs/TRACTOR-BOMB.md's list; the flee patch prepends its
@@ -86,9 +91,20 @@ twenty "making peace" lines, unchanged, until the pull seizes it and
 its freeze ends; a berserk colonist and a manhunting muffalo in plain
 sight neither run nor freeze; a muffalo seized mid-run by a pull started
 early (ImplodeNow) is released from its flee and given nothing while
-the pull runs; and none of it logs an error. Unit tests cover its pure
-logic (TractorBombYield, TractorBombTiming, DeathVortexMath,
-TractorBombFlee). Each new check was proved by a run that broke its
+the pull runs; and none of it logs an error. The Tractor Barn
+(SmokeTest.TractorBarn.cs): "Build one now" adds a "Do 1 times" bill; a
+colonist who may only haul loads that bill's parts into the barn and is
+then removed, and the barn builds the robot alone in about an hour,
+drives it out of its door, uses up the parts and closes the bill; with a
+patrolling robot and a bomb planted far off, a "Do until you have X"
+bill set one above that count builds exactly one robot and then stays
+idle with a second set of parts lying ready; and a robot with a wheel
+off and under half health drives home, docks at the door and is mended
+and refitted for exactly the steel and time Core's TractorBarnRepair
+predicts, then drives off on patrol. A destroyed barn flings its spare
+tyres (TestDeathBlasts). Unit tests cover its pure logic
+(TractorBombYield, TractorBombTiming, DeathVortexMath, TractorBombFlee,
+TractorBarnRepair). Each new check was proved by a run that broke its
 behaviour first.
 
 The runner silences the storyteller at the start, so no raid lands in

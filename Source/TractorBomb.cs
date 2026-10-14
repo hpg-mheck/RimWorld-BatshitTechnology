@@ -569,7 +569,7 @@ namespace BatshitTechnology
     /// <summary>
     /// Shared Tractor Bomb helpers: making robots, finding their quarry,
     /// and the queries other steps need (the flee job giver finds armed
-    /// bombs; the Tractor Barn will count them).
+    /// bombs; the Tractor Barn counts them).
     /// </summary>
     public static class TractorBombUtility
     {
@@ -600,7 +600,7 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Makes a robot and drives it out onto the map near a cell: what
-        /// the temporary recipe does, and what the Tractor Barn will do.
+        /// the Tractor Barn does when it finishes one.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="near">Where it should appear.</param>
@@ -624,8 +624,8 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Every tractor bomb a faction has on a map, robots and emplaced
-        /// bombs alike: what the Tractor Barn's "Do until you have X" will
-        /// count.
+        /// bombs alike: what the Tractor Barn's "Do until you have X"
+        /// counts (<see cref="RecipeWorkerCounter_TractorBombs"/>).
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="faction">The owner.</param>

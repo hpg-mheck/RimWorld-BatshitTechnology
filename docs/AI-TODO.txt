@@ -140,12 +140,17 @@
     and downed non-crawlers do neither; a started pull takes over. The
     validator now checks Patches/. 42 new unit and XML tests, 6 new smoke
     checks, each proved to fail by a sabotage run.
-  - [ ] Step 8: the Tractor Barn. Then delete the temporary recipe
-    BT_AssembleTractorBomb and RecipeWorker_AssembleTractorBomb (machining
-    table); the barn should make robots with TractorBombUtility.MakeRobot
-    or SpawnRobot and count them with CountOnMap.
-  - [ ] Step 11 (rest): smoke checks for the barn and repair docking.
-    (The flee step's Core, XML and smoke tests are in.)
+  - [x] Step 8: the Tractor Barn (Source/TractorBarn.cs,
+    Defs/ThingDefs/Buildings_TractorBarn.xml): vanilla's autonomous work
+    table on ordinary bills ("Do until you have X" counts robots and
+    planted bombs), loaded by haulers with no crafter, a "Build one now"
+    button, repair docking with a steel hopper, a tyre-stampede death and
+    its art. The machining-table stopgap (BT_AssembleTractorBomb,
+    RecipeWorker_AssembleTractorBomb) is deleted.
+  - [x] Step 11 (barn): smoke checks for the barn, "Do until you have X",
+    "Build one now", repair docking and the barn's death, each proved to
+    fail by a sabotage run; Core tests for the repair arithmetic; XML
+    tests for the barn's defs and the stopgap's removal.
   - [ ] Step 12: showcase scene and docs.
   - [ ] Replace the protest's TrapArm click with a beep from the sound
     pipeline (feature/audio).

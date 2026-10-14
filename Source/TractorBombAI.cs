@@ -5,9 +5,9 @@
 // (JobGiver_TractorBombPatrol). The constant tree runs the hunt every
 // half second, so a patrolling robot breaks off the moment it spots one.
 // JobDriver_TractorBombApproach closes in and retargets as hostiles move;
-// JobDriver_TractorBombEmplace protests if need be, then emplaces.
-// RecipeWorker_AssembleTractorBomb is the temporary way to build one
-// (docs/TRACTOR-BOMB.md, AI-DECISIONS): the Tractor Barn replaces it.
+// JobDriver_TractorBombEmplace protests if need be, then emplaces. Below
+// half health with nobody to hunt, it goes home to its Tractor Barn for
+// repairs (TractorBarn.cs). The barn builds new ones.
 
 using System.Collections.Generic;
 using RimWorld;
@@ -234,44 +234,6 @@ namespace BatshitTechnology
             emplace.initAction = () => comp.Emplace();
             emplace.defaultCompleteMode = ToilCompleteMode.Instant;
             yield return emplace;
-        }
-    }
-
-    /// <summary>
-    /// TEMPORARY, until the Tractor Barn (roadmap step 8): the "assemble
-    /// tractor bomb" bill at the machining table makes no item; when an
-    /// iteration completes, a robot drives out beside the crafter.
-    /// </summary>
-    public class RecipeWorker_AssembleTractorBomb : RecipeWorker
-    {
-        /// <summary>Robots assembled this session (diagnostics).</summary>
-        public static int Assembled { get; private set; }
-
-        /// <summary>A robot rolls out beside the crafter.</summary>
-        /// <param name="billDoer">The crafter.</param>
-        /// <param name="ingredients">What was used up.</param>
-        public override void Notify_IterationCompleted(
-            Pawn billDoer, List<Thing> ingredients)
-        {
-            base.Notify_IterationCompleted(billDoer, ingredients);
-            if (billDoer?.Map == null)
-            {
-                return;
-            }
-
-            Faction owner = billDoer.Faction ?? Faction.OfPlayer;
-            Pawn robot = TractorBombUtility.SpawnRobot(
-                billDoer.Map, billDoer.Position, owner);
-            if (robot == null)
-            {
-                return;
-            }
-
-            Assembled++;
-            Messages.Message(
-                $"{billDoer.LabelShortCap} has assembled a tractor bomb. It "
-                    + "is already looking for someone to drive at.",
-                robot, MessageTypeDefOf.PositiveEvent);
         }
     }
 }

@@ -23,7 +23,7 @@ namespace BatshitTechnology
     /// <summary>
     /// Drives the in-game smoke test once the quick-test map is up.
     /// </summary>
-    public class GameComponent_SmokeTest : GameComponent
+    public partial class GameComponent_SmokeTest : GameComponent
     {
         private const string Flag = "btsmoketest";
         private const string KeepOpenFlag = "btsmoketestkeep";
@@ -1642,9 +1642,10 @@ namespace BatshitTechnology
 
         /// <summary>
         /// The Tractor Bomb, on a cleared stage at the middle of the map:
-        /// the robot itself, its patrol, the temporary recipe, a hunt from
-        /// patrol to explosion, a protest, everyone else running from an
-        /// armed bomb, Dial-A-Yield and a robot's death.
+        /// the robot itself, its patrol, the Tractor Barn that builds and
+        /// repairs it (SmokeTest.TractorBarn.cs), a hunt from patrol to
+        /// explosion, a protest, everyone else running from an armed bomb,
+        /// Dial-A-Yield and a robot's death.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -1660,7 +1661,7 @@ namespace BatshitTechnology
 
             TestTractorBombRobot(map, center);
             TestTractorBombPatrol(map, center);
-            TestTractorBombRecipe(map, center);
+            TestTractorBarn(map, center);
             TestTractorBombHunt(map, center);
             TestTractorBombProtest(map, center);
             TestTractorBombFlee(map, center);
@@ -1929,33 +1930,6 @@ namespace BatshitTechnology
                     + $"{outside} samples outside the area");
             robot.Destroy(DestroyMode.Vanish);
             area.Delete();
-        }
-
-        /// <summary>
-        /// The temporary recipe at the machining table: when it completes, a
-        /// robot drives out beside the crafter.
-        /// </summary>
-        /// <param name="map">The map.</param>
-        /// <param name="center">The middle of the test area.</param>
-        private void TestTractorBombRecipe(Map map, IntVec3 center)
-        {
-            ClearTractorStage(map, center);
-            RecipeDef recipe =
-                DefDatabase<RecipeDef>.GetNamed("BT_AssembleTractorBomb");
-            Pawn crafter = TestColonist(map, center + new IntVec3(8, 0, 8));
-            int before = TractorBombUtility.CountOnMap(map, Faction.OfPlayer);
-            recipe.Worker.Notify_IterationCompleted(crafter, new List<Thing>());
-            Pawn robot = map.mapPawns.AllPawnsSpawned.FirstOrDefault(
-                p => p.TryGetComp<CompTractorBomb>() != null);
-            Check("the temporary recipe drives a robot out beside the crafter",
-                robot != null
-                    && robot.Position.InHorDistOf(crafter.Position, 5f)
-                    && TractorBombUtility.CountOnMap(map, Faction.OfPlayer)
-                        == before + 1
-                    && DefDatabase<ThingDef>.GetNamed("TableMachining")
-                        .AllRecipes.Contains(recipe),
-                $"robot {robot?.Position}, crafter {crafter.Position}");
-            robot?.Destroy(DestroyMode.Vanish);
         }
 
         /// <summary>
@@ -2690,8 +2664,9 @@ namespace BatshitTechnology
         /// Devices without a self-destruct each set off their own blast when
         /// destroyed: the Transmogrifier spews rock, the Brain Squeezer
         /// stuns and squeezes a nearby colonist, a Ballista and a Magazine
-        /// cook off their bolts (none spilled), and the Artificer sprays
-        /// half-made bolts. Spaced well apart so nothing hits the next one.
+        /// cook off their bolts (none spilled), the Artificer sprays
+        /// half-made bolts, and the Tractor Barn flings its spare tyres.
+        /// Spaced well apart so nothing hits the next one.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -2774,6 +2749,15 @@ namespace BatshitTechnology
                 "a destroyed artificer sprays half-made bolts",
                 () => aftermath.BoltsLaunched - launched >= 3,
                 () => $"launched {aftermath.BoltsLaunched - launched}");
+
+            // Tractor Barn: its spare tyres stampede out.
+            at = Clamp(map, center + new IntVec3(-45, 0, -45));
+            PrepareGround(map, CellRect.CenteredOn(at, 10));
+            int tyres = aftermath.TyresLaunched;
+            KillAndCheck(map, aftermath, "BT_TractorBarn", at,
+                "a destroyed tractor barn flings its spare tyres",
+                () => aftermath.TyresLaunched - tyres >= 6,
+                () => $"tyres +{aftermath.TyresLaunched - tyres}");
             Tick(240); // let everything land
         }
 

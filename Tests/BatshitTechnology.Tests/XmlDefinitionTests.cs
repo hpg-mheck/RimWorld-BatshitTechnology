@@ -415,11 +415,12 @@ public sealed partial class XmlDefinitionTests
     }
 
     /// <summary>
-    /// The robot's think trees hunt before they patrol, and the constant
-    /// tree only interrupts; its jobs exist with the drivers the code
-    /// expects, and emplacing cannot be interrupted.
+    /// The robot's think trees hunt first, then go home for repairs, then
+    /// patrol; the constant tree hunts and sends a damaged robot home, but
+    /// only interrupts. Its jobs exist with the drivers the code expects,
+    /// and emplacing cannot be interrupted.
     /// </summary>
-    [Fact(DisplayName = "Tractor Bomb think trees hunt, then patrol")]
+    [Fact(DisplayName = "Tractor Bomb think trees hunt, repair, then patrol")]
     public void TractorBombMind_should_hunt_then_patrol()
     {
         var main = SingleDef("ThinkTreeDef", "BT_TractorBomb");
@@ -428,13 +429,27 @@ public sealed partial class XmlDefinitionTests
             .ToList();
         int hunt = givers.IndexOf(
             "BatshitTechnology.JobGiver_TractorBombHunt");
+        int repair = givers.IndexOf(
+            "BatshitTechnology.JobGiver_TractorBombRepair");
         int patrol = givers.IndexOf(
             "BatshitTechnology.JobGiver_TractorBombPatrol");
-        Assert.True(hunt >= 0 && patrol > hunt, string.Join(", ", givers));
+        Assert.True(hunt >= 0 && repair > hunt && patrol > repair,
+            string.Join(", ", givers));
 
         var constant = SingleDef("ThinkTreeDef", "BT_TractorBombConstant");
-        Assert.Equal("true",
-            constant.Descendants("interruptOnly").Single().Value);
+        var constantGivers = constant.Descendants("li")
+            .Where(e => e.Attribute("Class")?.Value?.StartsWith(
+                "BatshitTechnology.", StringComparison.Ordinal) == true)
+            .ToList();
+        Assert.Equal(
+            new[]
+            {
+                "BatshitTechnology.JobGiver_TractorBombHunt",
+                "BatshitTechnology.JobGiver_TractorBombRepair",
+            },
+            constantGivers.Select(e => e.Attribute("Class")?.Value));
+        Assert.All(constantGivers, e =>
+            Assert.Equal("true", e.Element("interruptOnly")?.Value));
 
         Assert.Equal("JobDriver_Goto",
             SingleDef("JobDef", "BT_TractorBombPatrol")
@@ -483,38 +498,6 @@ public sealed partial class XmlDefinitionTests
             vortex.Element("thingClass")?.Value);
         Assert.Equal("Ethereal", vortex.Element("category")?.Value);
         Assert.Equal("RealtimeOnly", vortex.Element("drawerType")?.Value);
-    }
-
-    /// <summary>
-    /// The temporary recipe (until the Tractor Barn): 60 steel, 3
-    /// components and 5 batshittium at the machining table, behind the
-    /// Tractor Bomb project, making no item but a robot through its worker.
-    /// </summary>
-    [Fact(DisplayName = "Tractor Bomb costs 60 steel, 3 components, 5 batshittium")]
-    public void TractorBombRecipe_should_cost_the_spec()
-    {
-        var recipe = SingleDef("RecipeDef", "BT_AssembleTractorBomb");
-        var costs = (recipe.Element("ingredients")?.Elements("li")
-                ?? Enumerable.Empty<XElement>())
-            .ToDictionary(
-                li => li.Descendants("thingDefs").Single().Elements("li")
-                    .Single().Value,
-                li => li.Element("count")?.Value);
-        Assert.Equal(
-            new Dictionary<string, string?>
-            {
-                ["Steel"] = "60",
-                ["ComponentIndustrial"] = "3",
-                ["BT_Batshittium"] = "5",
-            },
-            costs);
-        Assert.Equal(new[] { "TableMachining" },
-            ListValues(recipe.Element("recipeUsers")));
-        Assert.Equal("BT_Research_TractorBomb",
-            recipe.Element("researchPrerequisite")?.Value);
-        Assert.Equal("BatshitTechnology.RecipeWorker_AssembleTractorBomb",
-            recipe.Element("workerClass")?.Value);
-        Assert.Null(recipe.Element("products"));
     }
 
     /// <summary>
@@ -583,7 +566,7 @@ public sealed partial class XmlDefinitionTests
         var devices = AllThingDefs()
             .Where(d => d.Element("designationCategory") != null)
             .ToList();
-        Assert.Equal(7, devices.Count);
+        Assert.Equal(8, devices.Count);
 
         var blasts = new List<string>();
         foreach (var device in devices)
@@ -603,8 +586,8 @@ public sealed partial class XmlDefinitionTests
             }
         }
 
-        Assert.Equal(5, blasts.Count);
-        Assert.Equal(4, blasts.Distinct().Count()); // Ballista and Magazine share the cook-off
+        Assert.Equal(6, blasts.Count);
+        Assert.Equal(5, blasts.Distinct().Count()); // Ballista and Magazine share the cook-off
     }
 
     /// <summary>

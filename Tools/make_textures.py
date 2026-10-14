@@ -452,11 +452,13 @@ DANGER_RED = (214, 52, 52, 255)
 
 
 def hazard_patch(img, box, radius):
-    """Yellow-and-black hazard stripes clipped to a rounded rectangle."""
+    """Yellow-and-black hazard stripes clipped to a rounded rectangle, on a
+    canvas of any size."""
     stripes = Image.new('RGBA', img.size, HAZARD)
     sd = draw(stripes)
-    for x in range(-256, 512, 10):
-        sd.line(s(x, 0, x - 256, 256), fill=(34, 32, 30, 255), width=4 * SS)
+    n = max(256, img.size[1] // SS)  # 256 keeps the older sprites' stripes
+    for x in range(-256, 2 * n, 10):
+        sd.line(s(x, 0, x - n, n), fill=(34, 32, 30, 255), width=4 * SS)
     mask = Image.new('L', img.size, 0)
     ImageDraw.Draw(mask).rounded_rectangle(s(*box), radius=radius * SS, fill=255)
     img.paste(stripes, (0, 0), mask)
@@ -935,6 +937,173 @@ def tractor_bomb_lamp():
     save(img, size, 'Things/Mote/BT_TractorBombLamp.png')
 
 
+def corrugated_plane(img, box, top, bottom, groove, step=10):
+    """One plane of a corrugated steel roof: a gradient, ridged by grooves
+    running across it, from eave to ridge."""
+    x0, y0, x1, y1 = box
+    gradient_fill(img, lambda m: m.rectangle(s(x0, y0, x1, y1), fill=255), top, bottom)
+    d = draw(img)
+    for y in range(int(y0) + step // 2, int(y1) - 2, step):
+        d.line(s(x0 + 2, y, x1 - 2, y), fill=(*groove[:3], 150), width=2 * SS)
+        d.line(s(x0 + 2, y + 2, x1 - 2, y + 2), fill=(255, 255, 255, 40), width=1 * SS)
+
+
+def barn_door(d, x0, y0, x1, y1):
+    """A barn door leaf, framed and cross-braced."""
+    d.rectangle(s(x0, y0, x1, y1), fill=STEEL, outline=OUTLINE, width=3 * SS)
+    d.rectangle(s(x0 + 5, y0 + 5, x1 - 5, y1 - 5), outline=STEEL_DEEP, width=3 * SS)
+    d.line(s(x0 + 6, y0 + 6, x1 - 6, y1 - 6), fill=STEEL_DEEP, width=5 * SS)
+    d.line(s(x0 + 6, y1 - 6, x1 - 6, y0 + 6), fill=STEEL_DEEP, width=5 * SS)
+    d.line(s(x0 + 6, y0 + 6, x1 - 6, y0 + 6), fill=STEEL_LIGHT, width=1 * SS)
+
+
+def roof_vent(img, cx, cy, r):
+    """A round turbine vent on a roof: a riveted steel drum with swept
+    blades, seen from above."""
+    d = draw(img)
+    circle(d, cx, cy, r, fill=STEEL, outline=OUTLINE, width=3)
+    for k in range(8):
+        a = math.radians(k * 45)
+        b = a + math.radians(30)
+        d.line(s(cx + r * 0.2 * math.cos(a), cy + r * 0.2 * math.sin(a),
+                 cx + r * 0.85 * math.cos(b), cy + r * 0.85 * math.sin(b)),
+               fill=STEEL_DEEP, width=2 * SS)
+    circle(d, cx, cy, r * 0.25, fill=STEEL_LIGHT, outline=OUTLINE, width=1)
+    d.arc(s(cx - r + 3, cy - r + 3, cx + r - 3, cy + r - 3), start=190, end=260,
+          fill=(255, 255, 255, 120), width=2 * SS)  # lit rim, top left
+
+
+def tractor_barn():
+    """The Tractor Barn, 3 by 3 tiles (384 px): a corrugated steel barn seen
+    from above, its gabled roof lit on the left, with two turbine vents and
+    a cupola on the ridge whose louvres glow magenta from the assembly
+    inside (the barn's one batshittium accent), a small bat weathervane on
+    top. Its front wall, facing the door cell, has the big cross-braced
+    double doors under a hazard lintel, a stack of spare tyres and the
+    control panel a hauler uses."""
+    size = 384
+    img = new_canvas(size)
+    left, top, right, bottom = 14, 16, 370, 372
+    ridge, eave = 192, 296
+    # the roof's two planes, lit from the top left, with sheet seams
+    corrugated_plane(img, (left, top, ridge, eave), STEEL_LIGHT, STEEL, STEEL_DARK)
+    corrugated_plane(img, (ridge, top, right, eave), STEEL, STEEL_DARK, STEEL_DEEP)
+    d = draw(img)
+    for x in (74, 134, 250, 310):
+        d.line(s(x, top, x, eave), fill=(*OUTLINE[:3], 110), width=2 * SS)
+    d.rectangle(s(ridge - 7, top, ridge + 7, eave), fill=STEEL_LIGHT, outline=OUTLINE,
+                width=2 * SS)  # ridge cap
+    for y in range(top + 18, eave - 6, 34):  # rivets along the eaves
+        for x in (left + 9, right - 9):
+            circle(d, x, y, 3, fill=STEEL_LIGHT, outline=OUTLINE, width=1)
+    roof_vent(img, 284, 214, 17)
+    roof_vent(img, 100, 214, 17)
+    # the front wall, facing the door cell
+    gradient_fill(img, lambda m: m.rectangle(s(left, eave, right, bottom), fill=255),
+                  STEEL_DARK, STEEL_DEEP)
+    d = draw(img)
+    d.line(s(left, eave, right, eave), fill=OUTLINE, width=4 * SS)  # the eave's edge
+    # the doors, under one hazard lintel
+    hazard_patch(img, (128, eave + 4, 256, eave + 16), 2)
+    d = draw(img)
+    d.rectangle(s(128, eave + 4, 256, eave + 16), outline=OUTLINE, width=2 * SS)
+    barn_door(d, 132, eave + 18, 192, bottom - 4)
+    barn_door(d, 192, eave + 18, 252, bottom - 4)
+    circle(d, 186, eave + 46, 3.5, fill=STEEL_LIGHT, outline=OUTLINE, width=1)  # handles
+    circle(d, 198, eave + 46, 3.5, fill=STEEL_LIGHT, outline=OUTLINE, width=1)
+    # spare tyres stacked by the doors: what flies out if it is destroyed
+    tyre(img, Frame(58, 336), 0, 0, 50, 50, 1.0)
+    tyre(img, Frame(100, 340), 0, 0, 40, 40, 1.0)
+    # the control panel a hauler throws the switch on
+    d = draw(img)
+    d.rounded_rectangle(s(276, eave + 16, 352, bottom - 14), radius=4 * SS,
+                        fill=(36, 40, 46, 255), outline=OUTLINE, width=2 * SS)
+    d.rectangle(s(283, eave + 23, 321, bottom - 21), fill=(70, 205, 145, 255),
+                outline=OUTLINE, width=1 * SS)  # status screen
+    d.line(s(336, eave + 46, 342, eave + 26), fill=OUTLINE, width=6 * SS)  # the switch
+    d.line(s(336, eave + 46, 342, eave + 26), fill=HAZARD, width=3 * SS)
+    circle(d, 336, eave + 48, 4, fill=DANGER_RED, outline=OUTLINE, width=1)
+    # the cupola on the ridge: magenta light leaking from its louvres
+    cx, cy, half = ridge, 112, 32
+    glow(img, lambda g, c: g.rectangle(s(cx - half - 10, cy - half - 10, cx + half + 10,
+                                         cy + half + 10), fill=c), BS_GLOW, blur=8, alpha=210)
+    d = draw(img)
+    d.rectangle(s(cx - half, cy - half, cx + half, cy + half), fill=BS_DEEP, outline=OUTLINE,
+                width=3 * SS)
+    for k in range(-half + 8, half - 4, 8):  # glowing louvre slits on each side
+        d.line(s(cx - half + 3, cy + k, cx - half + 9, cy + k), fill=BS_LIGHT, width=3 * SS)
+        d.line(s(cx + half - 9, cy + k, cx + half - 3, cy + k), fill=BS_MID, width=3 * SS)
+        d.line(s(cx + k, cy - half + 3, cx + k, cy - half + 9), fill=BS_LIGHT, width=3 * SS)
+        d.line(s(cx + k, cy + half - 9, cx + k, cy + half - 3), fill=BS_MID, width=3 * SS)
+    r = half - 10  # its pyramid roof: lit faces up and left
+    apex = (cx, cy)
+    corners = [(cx - r, cy - r), (cx + r, cy - r), (cx + r, cy + r), (cx - r, cy + r)]
+    faces = (STEEL_LIGHT, STEEL_DARK, STEEL_DEEP, STEEL)  # top, right, bottom, left
+    for (a, b), face in zip(zip(corners, corners[1:] + corners[:1]), faces):
+        d.polygon(pts([a, b, apex]), fill=face, outline=OUTLINE, width=2 * SS)
+    # the weathervane at the apex: a small bat, the house mark
+    circle(d, cx, cy, 2.5, fill=STEEL_LIGHT, outline=OUTLINE, width=1)
+    bat(d, cx, cy - 2, 0.3, (24, 22, 28, 255))
+    # the outline last, and nothing outside its rounded corners
+    d.rounded_rectangle(s(left, top, right, bottom), radius=12 * SS, outline=OUTLINE,
+                        width=4 * SS)
+    mask = Image.new('L', img.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle(s(left, top, right, bottom), radius=12 * SS,
+                                           fill=255)
+    img.putalpha(ImageChops.multiply(img.getchannel('A'), mask))
+    save(img, size, 'Things/Building/Production/BT_TractorBarn.png')
+
+
+def tractor_barn_tyre():
+    """A spare tyre flung from a destroyed Tractor Barn, tumbling flat."""
+    img = new_canvas(64)
+    tyre(img, Frame(32, 32), 0, 0, 50, 50, 1.0)
+    save(img, 64, 'Things/Projectile/BT_TractorBarnTyre.png')
+
+
+def disposition_icon(name, gap):
+    """A Disposition button (128 px): the tractor bomb seen from above,
+    driving up a dashed track toward a red target reticle and stopping
+    `gap` pixels short of it: far for Cautious, near for Moderate, nose to
+    the ring for Nosy."""
+    size = 128
+    tx, ty, tr = 64, 21, 17
+    tractor_h = 52
+    stop = ty + tr + gap  # where the tractor's nose stops
+    img = new_canvas(size)
+    d = draw(img)
+    for y in range(int(ty + tr + 4), int(stop) - 2, 8):  # the track still to go
+        d.line(s(tx, y, tx, min(y + 4, stop - 2)), fill=(*STEEL_LIGHT[:3], 230),
+               width=3 * SS)
+    circle(d, tx, ty, tr, outline=OUTLINE, width=8)
+    circle(d, tx, ty, tr, outline=DANGER_RED, width=5)
+    for a, b in (((tx - tr - 7, ty), (tx - tr + 7, ty)), ((tx + tr - 7, ty), (tx + tr + 7, ty)),
+                 ((tx, ty - tr - 7), (tx, ty - tr + 7))):
+        d.line(s(*a, *b), fill=OUTLINE, width=6 * SS)
+        d.line(s(*a, *b), fill=DANGER_RED, width=3 * SS)
+    circle(d, tx, ty, 3.5, fill=DANGER_RED, outline=OUTLINE, width=1)
+    final = img.resize((size, size), Image.LANCZOS)
+    robot = new_canvas(256)
+    tractor_bomb(robot, 'north', 0.0)
+    robot = robot.resize((256, 256), Image.LANCZOS)
+    robot = robot.crop(robot.getbbox())
+    width = round(robot.size[0] * tractor_h / robot.size[1])
+    robot = robot.resize((width, tractor_h), Image.LANCZOS)
+    final.alpha_composite(robot, (int(tx - width / 2), int(stop)))
+    path = os.path.join(TEXTURES, f'UI/Commands/BT_Disposition{name}.png')
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    final.save(path)
+    print('wrote', os.path.relpath(path, os.path.dirname(TEXTURES)))
+
+
+def disposition_icons():
+    """The three Disposition buttons; the tractor's nose stops 34, 15 and
+    1 px short of the target, the tractor itself filling the rest."""
+    disposition_icon('Cautious', 34)
+    disposition_icon('Moderate', 15)
+    disposition_icon('Nosy', 1)
+
+
 if __name__ == '__main__':
     batshittium_item()
     transmogrifier()
@@ -956,3 +1125,6 @@ if __name__ == '__main__':
     tractor_bomb_emplaced()
     tractor_bomb_parts()
     tractor_bomb_lamp()
+    tractor_barn()
+    tractor_barn_tyre()
+    disposition_icons()

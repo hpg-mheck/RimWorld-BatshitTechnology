@@ -4,8 +4,9 @@ Status: specified, being built on branch `feature/tractor-bomb` (see
 `ROADMAP.md`). Specified by Matt "Breakpoint" Heck on 2026-10-13, who
 answered every open question the same day. A few smaller details are
 still marked *(proposal)*; they stand unless he says otherwise. Roadmap
-steps 2 to 7, 9 and 10 are built (see "As Built" below); the Tractor
-Barn (8) is next.
+steps 2 to 10 are built, the Tractor Barn (8) last (see "As Built"
+below), with the decisions taken after the core build applied alongside
+it.
 
 ## The Tractor Bomb
 
@@ -172,11 +173,8 @@ build settled a detail, it is recorded here; the decisions log
   - **Inspect pane:** its yield, its patrol area, its job ("patrolling",
     "closing in on ...", "protesting ...") and any protest timer; Health
     and Log tabs.
-  - **Building one** is temporary: a bill, "assemble tractor bomb", at
-    vanilla's machining table (60 steel, 3 components, 5 batshittium,
-    3,000 work) whose robot drives out beside the crafter. The Artificer
-    takes no bills (it is fed batshittium only), so the machining table
-    stands in until the barn.
+  - **Building one:** the Tractor Barn builds them (below). The
+    machining-table stopgap that stood in until the barn is gone.
 - **The emplaced bomb** (`Source/TractorBombEmplaced.cs`). Its tyres flip
   flat in half a second (three drawn frames), then it rolls a countdown
   of 3 to 5 seconds, every tick equally likely, under the shared warning
@@ -240,17 +238,67 @@ build settled a detail, it is recorded here; the decisions log
     mod's giver runs ahead of it, and a humanlike that also knows of a
     vanilla explosive about to go off within 9 tiles picks a cell clear
     of both.
-- **For the next steps.** The barn makes robots with
-  `TractorBombUtility.MakeRobot` or `SpawnRobot`, and counts a faction's
-  bombs, planted ones included, with `CountOnMap`. Armed bombs are found
-  with `TractorBombUtility.ArmedBombs(map)` (`Building_TractorBomb.IsArmed`:
-  counting down or imploding), and `ImplodeNow` cuts a countdown short
-  (the DEV button and the smoke test).
+- **The Tractor Barn** (roadmap step 8; `Source/TractorBarn.cs`,
+  `Defs/ThingDefs/Buildings_TractorBarn.xml`). A 3 by 3 steel barn on the
+  Production tab, behind the Tractor Bomb project: 250 steel, 8
+  components and 20 batshittium. Its door, the interaction cell, is the
+  cell south of its middle. It needs no power.
+  - **Production:** vanilla's autonomous work table
+    (`Building_WorkTableAutonomous`, Biotech's mech-gestator pattern).
+    The decompile shows that it, `Bill_Autonomous` and the bill job's
+    hauling into its container are base-game code with no DLC check (the
+    only Biotech check on that path is the gestator's own job report), so
+    the barn uses them with Core alone. Its one recipe,
+    `BT_BuildTractorBomb` (60 steel, 3 components, 5 batshittium), has a
+    forming time of one in-game hour (2,500 ticks), which makes its bills
+    autonomous.
+  - **No worker:** a hauler takes the bill (`BT_DoBillsTractorBarn`,
+    Hauling, as vanilla's crematorium and campfire bills are), carries
+    the parts into the barn and throws the switch (a second's work). The
+    barn then builds the robot alone, drives it out of the door, uses up
+    the parts and closes the bill's iteration itself, so no crafter ever
+    comes to finish it (vanilla's gestator needs one).
+  - **Bills:** ordinary ones. "Do until you have X" counts the barn
+    owner's robots and planted bombs on the map
+    (`RecipeWorkerCounter_TractorBombs`, through
+    `TractorBombUtility.CountOnMap`), and the bill dialog says so. "Build
+    one now" adds a "Do 1 times" bill. The bill shows the robot as its
+    icon.
+  - **Repair:** a robot below half health (Core's `TractorBarnRepair`)
+    with nobody to hunt drives home (`JobGiver_TractorBombRepair`, after
+    the hunt in its main think tree, and in its constant tree, where it
+    breaks off a patrol leg at once) to the nearest of its barns whose
+    door is free, leaving its patrol area if it must. One robot docks at
+    a time; another keeps patrolling until the door is free. It parks at
+    the door (`BT_TractorBombDock`) and the barn mends one hit point of
+    its lightest injury every half second, then refits any missing part
+    (a wheel, the emitter) one per step, as vanilla's mech repair does: a
+    fifth of a unit of steel per hit point, two units per part. A robot
+    at half health takes about 8 steel and 20 seconds. A hostile in sight
+    breaks it off. Its status reads "returning to the tractor barn for
+    repairs.", "being repaired at the tractor barn." or "waiting at the
+    tractor barn for repair steel."
+  - **Repair hopper:** the steel for repairs, a vanilla refuelable store
+    of 20 that haulers top up below 75%. A work table with one takes no
+    bills while it is empty, so the player can neither switch refuelling
+    off nor dial its target down; while it is empty the barn starts no
+    new bomb (one already building finishes) and mends nothing.
+  - **Its death:** destroyed, it blows its doors off (a 3.9-tile Bomb
+    blast, 25) and 6 to 10 spare tyres stampede out up to 14 tiles,
+    bowling over what they land on (Blunt, 12).
+- **For the next steps.** Robots are made with
+  `TractorBombUtility.MakeRobot` or `SpawnRobot`, and a faction's bombs,
+  planted ones included, are counted with `CountOnMap`. Armed bombs are
+  found with `TractorBombUtility.ArmedBombs(map)`
+  (`Building_TractorBomb.IsArmed`: counting down or imploding), and
+  `ImplodeNow` cuts a countdown short (the DEV button and the smoke
+  test).
 
 ## The Tractor Barn
 
 Tractor Bombs are produced in the Tractor Barn, which builds and repairs
 them autonomously. It costs 250 steel, 8 components and 20 batshittium.
+Built as specified (see "As Built").
 
 - **Bills:** the barn takes ordinary bills, such as "Do X times" or "Do
   until you have X". "Do until you have X" counts the player's Tractor
@@ -263,9 +311,9 @@ them autonomously. It costs 250 steel, 8 components and 20 batshittium.
   the Artificer's own autonomous pattern.
 - **On demand:** a "Build one now" button simply adds a "Do once" bill,
   so there is only one mechanism to learn.
-- **Repair** *(proposal)*: a damaged Tractor Bomb (below about 50% health)
-  returns to the barn when it has no target, docks, and is repaired over
-  time without a worker. It uses a little steel.
+- **Repair:** a damaged Tractor Bomb (below about 50% health) returns
+  to the barn when it has no target, docks, and is repaired over time
+  without a worker. It uses a little steel.
 
 ## Decisions
 

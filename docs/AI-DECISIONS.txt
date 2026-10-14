@@ -477,3 +477,74 @@ TractorBombFlee; docs/TRACTOR-BOMB.md, "As Built"). Decisions:
   also caught a weak check: a wild runner seized by the pull was judged
   "released" when the explosion sent it fleeing vanilla's way; the
   takeover is now judged only while the pull runs.
+2026-10-13 Claude: Tractor Bomb step 8, the Tractor Barn (Source/
+TractorBarn.cs, Defs/ThingDefs/Buildings_TractorBarn.xml; docs/
+TRACTOR-BOMB.md, "As Built"). Decisions:
+- Vanilla's autonomous work table, checked first in the decompile:
+  Building_WorkTableAutonomous, Bill_Autonomous, WorkGiver_DoBill's
+  container search and JobDriver_DoBill's "place in bill giver" hauling
+  are all in Assembly-CSharp with no DLC gate (the one Biotech check on
+  that path is Bill_Mech's job report), and RecipeDef.formingTicks alone
+  makes a recipe's bills autonomous (BillUtility.MakeNewBill). So the
+  barn uses the gestator pattern with Core alone; the Artificer's
+  CompRefuelable pattern was not needed for production (it holds one
+  fuel, not three ingredients in ratio).
+- No worker: vanilla's autonomous bill needs a pawn twice, to load and
+  start it and to "finish" it once formed. The barn's bill giver is a
+  WorkGiver_DoBill under Hauling (as vanilla's crematorium and campfire
+  bills are), with a recipe whose work is one second (the hauler throws
+  the switch); the barn overrides Notify_FormingCompleted to spawn the
+  robot at its door, destroy the parts and close the iteration itself
+  (Bill.Notify_IterationCompleted with no bill doer, which vanilla's
+  bill code allows), so no crafter is ever needed. A bill somehow left
+  Formed (a save edited by hand) is closed on the barn's next tick.
+- "Do until you have X": a RecipeWorkerCounter (workerCounterClass) that
+  counts CountOnMap for the barn's faction. The recipe has no products
+  (a robot is not an item: vanilla would make a broken pawn from a race
+  ThingDef), so its icon comes from uiIconThing.
+- "Build one now" adds the recipe's new bill as "Do 1 times".
+- The repair hopper is a vanilla CompRefuelable holding 20 steel, nothing
+  burnt while idle. Building_WorkTable.CurrentlyUsableForBills is not
+  virtual and refuses bills while any refuelable comp is empty, so the
+  hopper's refuel toggle and target slider are hidden (haulers keep it
+  topped up from 75%), and the description says the barn starts no new
+  bomb while it is empty. A separate hopper with its own hauling job
+  was rejected as more code for the same behaviour.
+- Repair rate: one hit point of the lightest injury every half second,
+  then missing parts one per step, as vanilla's MechRepairUtility does;
+  a fifth of a unit of steel per hit point, two per part. A robot at
+  half health costs about 8 steel and 20 seconds. The robot is not
+  organic, so it never heals by itself.
+- A robot goes home below half summary health, with no target: the
+  repair giver sits after the hunt in its main tree, and in its constant
+  tree (interrupting only a patrol leg or an idle wait), so a robot shot
+  mid-leg turns for home at once and a hostile in sight still comes
+  first. It may leave its patrol area to get home (the area fences
+  patrols and chases, not repairs). One robot per barn door; others
+  keep patrolling and ask again after each leg. Health above half after
+  an interrupted repair does not send it back.
+- The barn is 3 by 3 (a 2-tile robot fits inside), its door south of its
+  middle, and unpowered: the spec gives its cost and nothing else.
+- Its death (every device has its own): its doors blow off and its spare
+  tyres stampede out as Blunt projectiles that arc over walls
+  (Detonation_TyreStampede, BT_Projectile_TractorBarnTyre), counted in
+  MapComponent_SelfDestructAftermath.TyresLaunched.
+- Art: BT_TractorBarn (384 px for 3 by 3), a corrugated gable roof lit on
+  the left, two turbine vents, a cupola whose louvres leak magenta (its
+  one batshittium accent), a small bat weathervane, cross-braced double
+  doors under a hazard lintel, spare tyres and a switch panel on the
+  front wall. hazard_patch() now fills any canvas size; 256 px and
+  smaller sprites are unchanged.
+- The machining-table stopgap (BT_AssembleTractorBomb and its worker) is
+  deleted, and an XML test keeps it so.
+- Smoke checks: the build check removes its hauler once the build has
+  started, so nobody could be finishing it; the "Do until you have X"
+  check counts robots and planted bombs itself rather than trusting the
+  barn, plants its bomb far off on a ten-minute countdown, and hurries
+  the build once started (its hour is checked by the build check). The
+  first run caught the repair check's arithmetic: each injury is mended
+  in its own steps, so fractional injuries round up one by one (42 steps
+  for 40.3 hit points, not 41); Core's TractorBarnRepair now sums
+  StepsToMend per injury. Sabotage runs (a "Build one now" bill of 2,
+  no healing, no tyres, planted bombs uncounted; then no robot built)
+  failed every new check.

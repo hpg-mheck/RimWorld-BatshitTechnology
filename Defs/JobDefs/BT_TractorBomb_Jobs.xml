@@ -32,6 +32,17 @@
     <alwaysShowReport>true</alwaysShowReport>
   </JobDef>
 
+  <!-- Below half health with nothing to hunt, a robot drives home to its
+       Tractor Barn, parks at the door and is repaired
+       (Source/TractorBarn.cs). Spotting a hostile breaks it off. -->
+  <JobDef>
+    <defName>BT_TractorBombDock</defName>
+    <driverClass>BatshitTechnology.JobDriver_TractorBombDock</driverClass>
+    <reportString>returning to TargetA for repairs.</reportString>
+    <casualInterruptible>true</casualInterruptible>
+    <checkOverrideOnDamage>Never</checkOverrideOnDamage>
+  </JobDef>
+
   <!-- Everyone else (Source/TractorBombFlee.cs): pawns and animals that
        can see an armed bomb sprint clear of its pull radius plus 8 tiles;
        those inside its blast radius freeze. Given from the constant think

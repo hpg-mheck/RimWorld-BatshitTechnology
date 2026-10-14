@@ -105,8 +105,8 @@ Colour rules:
   its job: the Transmogrifier spews rock, the Brain Squeezer squeezes
   brains, Ballista hardware cooks off its bolts, and a wrecked Tractor
   Bomb's tractor beam sucks its own parts into a sputtering little vortex
-  that pops. A new device needs its own pulverization, not a generic
-  explosion.
+  that pops, and the Tractor Barn's spare tyres stampede out. A new
+  device needs its own pulverization, not a generic explosion.
 - **Steel stays neutral grey.** Do not tint housings; the glow does the
   talking.
 - **Rare mundane exceptions.** Once a motif is established, a few
@@ -156,6 +156,13 @@ helper in the generator.
   stabiliser pad. Tyres lying flat mean a machine has planted itself and
   will not move again (the emplaced Tractor Bomb); the frames between
   show the flip.
+- **Roofs.** A building big enough to drive into (the Tractor Barn)
+  shows its roof rather than a chassis: two corrugated steel planes
+  (`corrugated_plane()`) either side of a ridge cap, the left lit and
+  the right shaded, with seams, rivets along the eaves and turbine vents
+  (`roof_vent()`). Its front wall is the front band, with its doors.
+  Its batshittium glow leaks out of a cupola's louvres on the ridge,
+  and a cupola is where its bat goes, as a small weathervane.
 - **Emitters.** `tractor_beam_emitter()`: a riveted steel collar round a
   glowing batshittium orb, with a tight halo so the steel around it stays
   grey. It stands where something ordinary should be (on the Tractor
@@ -163,8 +170,8 @@ helper in the generator.
 
 ## Composition
 
-- **Sizes.** 256 px for a 2 by 2 building, 128 px for a 1 by 1 building
-  and for items, 64 px for projectiles. Leave a margin of about 10 px (at
+- **Sizes.** 384 px for a 3 by 3 building, 256 px for a 2 by 2, 128 px
+  for a 1 by 1 building and for items, 64 px for projectiles. Leave a margin of about 10 px (at
   256) inside the tile so outlines are not clipped.
 - **Orientation.** Rotatable buildings use one `Graphic_Single` sprite
   that RimWorld rotates, so draw them facing north with the front band at

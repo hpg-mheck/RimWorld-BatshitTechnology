@@ -7,6 +7,7 @@
 // - Detonation_PsychicSqueeze: the Brain Squeezer squeezes everyone nearby.
 // - Detonation_BoltCookOff: a Ballista's or Magazine's bolts cook off.
 // - Detonation_MoltenSpray: the Artificer sprays fire and half-made bolts.
+// - Detonation_TyreStampede: the Tractor Barn flings its spare tyres.
 
 using System;
 using System.Collections.Generic;
@@ -673,6 +674,92 @@ namespace BatshitTechnology
         /// <returns>The phrase.</returns>
         public override string Describe(float radius) =>
             "a spray of molten batshittium and half-made bolts";
+    }
+
+    /// <summary>
+    /// The Tractor Barn: its doors blow off and its stock of spare tyres
+    /// stampedes out in every direction, bowling over whatever is in the
+    /// way.
+    /// </summary>
+    public class Detonation_TyreStampede : BatshitDetonation
+    {
+        /// <summary>The blast's damage type; Bomb if unset.</summary>
+        public DamageDef damageDef;
+
+        /// <summary>The blast's damage; -1 uses the type's default.</summary>
+        public int damage = -1;
+
+        /// <summary>The flying tyre.</summary>
+        public ThingDef tyreProjectile;
+
+        /// <summary>How many spare tyres fly.</summary>
+        public IntRange tyres = new IntRange(6, 10);
+
+        /// <summary>How far they fly, in tiles.</summary>
+        public float throwRadius = 14f;
+
+        /// <summary>Reports a missing tyre or a nonsense spread.</summary>
+        /// <returns>One message per problem.</returns>
+        public override IEnumerable<string> ConfigErrors()
+        {
+            foreach (string error in base.ConfigErrors())
+            {
+                yield return error;
+            }
+
+            if (tyreProjectile?.projectile == null)
+            {
+                yield return "a tyre stampede needs a tyreProjectile";
+            }
+
+            if (tyres.min < 1 || tyres.max < tyres.min)
+            {
+                yield return "tyres must be at least 1, min first";
+            }
+
+            if (!(throwRadius > 2f)
+                || throwRadius > GenRadial.MaxRadialPatternRadius)
+            {
+                yield return "throwRadius must lie in (2, the engine maximum]";
+            }
+        }
+
+        /// <summary>The blast, then the tyres.</summary>
+        /// <param name="device">The destroyed barn.</param>
+        /// <param name="map">The map.</param>
+        /// <param name="center">Where it stood.</param>
+        /// <param name="radius">The blast radius.</param>
+        public override void Detonate(
+            Thing device, Map map, IntVec3 center, float radius)
+        {
+            GenExplosion.DoExplosion(
+                center, map, radius, damageDef ?? DamageDefOf.Bomb, device,
+                damage);
+            if (tyreProjectile == null)
+            {
+                return;
+            }
+
+            MapComponent_SelfDestructAftermath aftermaths = Aftermaths(map);
+            int count = tyres.RandomInRange;
+            BoltOrigin origin = BoltOrigin.Place(map, center, device.def);
+            float inner = Mathf.Clamp01(radius / throwRadius);
+            for (int i = 0; i < count; i++)
+            {
+                if (BoltLauncher.TryLaunchInAnnulus(
+                    origin, tyreProjectile, map, center, device.TrueCenter(),
+                    throwRadius, inner, out _) && aftermaths != null)
+                {
+                    aftermaths.TyresLaunched++;
+                }
+            }
+        }
+
+        /// <summary>Describes the stampede.</summary>
+        /// <param name="radius">The blast radius.</param>
+        /// <returns>The phrase.</returns>
+        public override string Describe(float radius) =>
+            "a blast, and a stampede of spare tyres";
     }
 
     /// <summary>Defs the detonation code refers to directly.</summary>
