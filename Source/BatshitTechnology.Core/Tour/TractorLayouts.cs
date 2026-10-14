@@ -156,12 +156,14 @@ public static class TwinJunkyardLayout
 /// The single-tractor scene's yard, as offsets from its centre: the
 /// Tractor Barn to the west, a party of four raiders to the east, and a
 /// stray colonist close enough to where the robot plants to make it
-/// protest. The robot starts at the barn's door.
+/// protest. The robot starts at the barn's door, Prudent, with the tour's
+/// Popular pull, so it stops 15 tiles short of the party; the barn stands
+/// far enough west that the 22.5-tile pull never rips it loose.
 /// </summary>
 public static class SingleTractorLayout
 {
     /// <summary>The barn's centre.</summary>
-    public static readonly Cell Barn = new(-24, 0);
+    public static readonly Cell Barn = new(-30, 0);
 
     /// <summary>
     /// The barn's door, the robot's start: the barn's interaction cell,
@@ -170,29 +172,29 @@ public static class SingleTractorLayout
     public static readonly Cell BarnDoor = Barn + new Cell(0, -2);
 
     /// <summary>The party's centre.</summary>
-    public static readonly Cell PartyCentre = new(8, 0);
+    public static readonly Cell PartyCentre = new(12, 0);
 
     /// <summary>Where the four raiders stand.</summary>
     public static readonly IReadOnlyList<Cell> Party =
-        TwinJunkyardLayout.Cells((8, 0), (9, 1), (9, -1), (10, 0));
+        TwinJunkyardLayout.Cells((12, 0), (13, 1), (13, -1), (14, 0));
 
     /// <summary>
-    /// Where the stray colonist stands: about seven tiles from where the
-    /// robot is predicted to plant, (-1,-1), so inside its pull and the
+    /// Where the stray colonist stands: about eight tiles from where the
+    /// robot is predicted to plant, (-3,-1), so inside its pull and the
     /// robot protests.
     /// </summary>
     public static readonly Cell Stray = new(0, 6);
 
     /// <summary>
-    /// How far a robot of the default disposition stops from its quarry:
-    /// one tile inside the default pull, within its 15-tile emplacing
-    /// range.
+    /// How far the scene's robot stops from its quarry: Prudent with the
+    /// tour's Popular pull, so its 15-tile emplacing range (one tile
+    /// inside the pull would be 21.5).
     /// </summary>
-    public static double DefaultStop =>
+    public static double TourStop =>
         TractorBombApproach.StopDistance(
             TractorBombApproach.Default,
-            TractorBombApproach.DefaultCautiousStop,
-            TractorBombYield.DefaultPull);
+            TractorBombApproach.DefaultTimidStop,
+            TractorBombYield.Radius(TourStagePlanner.TourPull));
 
     /// <summary>Every offset the layout uses, for bounds checks.</summary>
     /// <returns>The offsets.</returns>
@@ -205,5 +207,5 @@ public static class SingleTractorLayout
     /// </summary>
     /// <returns>The prediction.</returns>
     public static Cell? PredictedPlant() =>
-        TractorPlanting.PlantFrom(BarnDoor, Party, DefaultStop);
+        TractorPlanting.PlantFrom(BarnDoor, Party, TourStop);
 }

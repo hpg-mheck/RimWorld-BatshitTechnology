@@ -19,7 +19,9 @@ namespace BatshitTechnology
     /// <summary>
     /// A tour scene set in the tractor yard: it declines without a yard
     /// or a hostile faction, clears the yard, moves colonists out of
-    /// reach, and counts the Tractor Bombs that go off.
+    /// reach, and counts the Tractor Bombs that go off. Its robots run the
+    /// tour's settings, one up from the defaults: Popular and Block Party
+    /// (Core's <see cref="TourStagePlanner.TourPull"/>).
     /// </summary>
     public abstract class TractorYardScene : TourScene
     {
@@ -96,6 +98,27 @@ namespace BatshitTechnology
 
             return found;
         }
+
+        /// <summary>
+        /// The tour's settings for a robot: the given proximity with the
+        /// tour's pull and blast.
+        /// </summary>
+        /// <param name="proximity">How close it drives.</param>
+        /// <returns>The settings.</returns>
+        protected static TractorBombSettings TourSettings(
+            TractorBombProximity proximity) =>
+            new TractorBombSettings(
+                proximity, TourStagePlanner.TourPull,
+                TourStagePlanner.TourBlast);
+
+        /// <summary>
+        /// Fits a robot with the tour's settings, whatever the research.
+        /// </summary>
+        /// <param name="robot">The robot.</param>
+        /// <param name="proximity">How close it drives.</param>
+        protected static void Fit(Pawn robot, TractorBombProximity proximity) =>
+            robot?.TryGetComp<CompTractorBomb>()?.SetSettings(
+                TourSettings(proximity));
 
         /// <summary>Lets stunned raiders go, to react as they rolled.</summary>
         /// <param name="raiders">The raiders.</param>
@@ -196,6 +219,8 @@ namespace BatshitTechnology
             bombs = new List<Building_TractorBomb>();
             barn = TractorStaging.SpawnBarn(
                 Map, TractorStaging.At(Centre, SingleTractorLayout.Barn));
+            (barn as Building_TractorBarn)?.SetSettings(
+                TourSettings(TractorBombApproach.Default));
             party = TractorStaging.SpawnArmy(
                 Map, Centre, SingleTractorLayout.Party, armed: false,
                 stunned: true);
@@ -214,6 +239,7 @@ namespace BatshitTechnology
             {
                 robot = TractorStaging.SpawnRobot(
                     Map, TractorStaging.At(Centre, SingleTractorLayout.BarnDoor));
+                Fit(robot, TractorBombApproach.Default);
                 BeatOnce("delivered", Shot(30f));
             }
 
@@ -302,22 +328,37 @@ namespace BatshitTechnology
         /// <summary>
         /// Puts a free colonist, drafted so it stays put and holding its
         /// fire, where the robot will find it in its pull (Core's layout
-        /// says where). The grenadier is never chosen.
+        /// says where). A colonist with nothing to do is chosen first;
+        /// failing that, the one in the Brain Squeezer, then the grenadier
+        /// (holding fire, it throws nothing): when the grenade's volunteer
+        /// is lost, no one else may be left, and the robot then had no one
+        /// to protest about. The choice is logged.
         /// </summary>
         /// <returns>The colonist, or null if none is free.</returns>
         private Pawn PlaceStray()
         {
             Pawn pawn = Map.mapPawns.FreeColonistsSpawned
                 .Where(p => !p.Dead && !p.Downed && !p.InMentalState
-                    && p.drafter != null
-                    && p.equipment?.Primary?.def.defName != Showcase.GrenadeDef
-                    && p.CurJobDef != BT_BrainSqueezerDefOf.BT_UseBrainSqueezer)
+                    && p.drafter != null)
+                .OrderBy(StrayRank)
                 .FirstOrDefault();
             IntVec3 cell = TractorStaging.At(Centre, SingleTractorLayout.Stray);
             if (pawn == null || !cell.InBounds(Map) || !cell.Standable(Map))
             {
+                Log.Message($"{ShowcaseLog.Prefix} tractor: no stray ("
+                    + (pawn == null ? "no free colonist" : $"{cell} is no "
+                        + "place to stand") + "), so no protest");
                 return null;
             }
+
+            string why = StrayRank(pawn) switch
+            {
+                0 => "free",
+                1 => "from the Brain Squeezer",
+                _ => "the grenadier",
+            };
+            Log.Message($"{ShowcaseLog.Prefix} tractor: stray "
+                + $"{pawn.LabelShort} ({why}) at {cell}");
 
             pawn.jobs?.StopAll();
             pawn.Position = cell;
@@ -329,6 +370,18 @@ namespace BatshitTechnology
             pawn.drafter.FireAtWill = false;
             return pawn;
         }
+
+        /// <summary>
+        /// How fit a colonist is to be the stray, best first: 0 for one
+        /// with nothing to do, 1 for the one in the Brain Squeezer, 2 for
+        /// the grenadier.
+        /// </summary>
+        /// <param name="p">The colonist.</param>
+        /// <returns>The rank.</returns>
+        private static int StrayRank(Pawn p) =>
+            p.equipment?.Primary?.def.defName == Showcase.GrenadeDef ? 2
+            : p.CurJobDef == BT_BrainSqueezerDefOf.BT_UseBrainSqueezer ? 1
+            : 0;
 
         /// <summary>
         /// Walks the stray out of the robot's reach: north, out of the
@@ -419,11 +472,7 @@ namespace BatshitTechnology
                 }
 
                 Pawn robot = TractorStaging.SpawnRobot(Map, cell);
-                CompTractorBomb comp = robot.TryGetComp<CompTractorBomb>();
-                if (comp != null)
-                {
-                    comp.Disposition = TractorBombDisposition.Nosy;
-                }
+                Fit(robot, TractorBombProximity.Nosy);
 
                 robots.Add(robot);
             }

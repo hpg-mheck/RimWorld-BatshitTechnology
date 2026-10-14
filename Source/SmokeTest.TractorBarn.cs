@@ -3,9 +3,12 @@
 // -btsmoketest runner (SmokeTest.cs), run with the other Tractor Bomb
 // scenarios on the cleared stage at the middle of the map: "Build one now"
 // adds a bill; a hauler loads the barn and leaves, and the barn builds the
-// robot alone; "Do until you have X" stops at X, counting a planted bomb;
-// and a damaged robot drives home, docks and is repaired with a little
-// steel.
+// robot alone, with the barn's settings; "Do until you have X" stops at X,
+// counting a planted bomb; a damaged robot drives home, docks and is
+// repaired with a little steel; and, once Dial-A-Yield is researched, the
+// barn's settings are dialled from its own buttons and "Apply to every
+// tractor" copies them to the robots and the planted bombs not yet
+// pulling.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -43,7 +46,10 @@ namespace BatshitTechnology
         /// switch; then the colonist leaves the map, and with nobody left
         /// to work, the barn builds the robot itself in about an hour and
         /// drives it out of the door. The parts are used up, the bill is
-        /// done and the count of bombs on the map goes up by one.
+        /// done and the count of bombs on the map goes up by one. The barn
+        /// is set to Nosy, Popular and Block Party first, and the robot
+        /// leaves with them (before Dial-A-Yield it still pulls and blasts
+        /// at the defaults).
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -51,6 +57,10 @@ namespace BatshitTechnology
         {
             ClearTractorStage(map, center);
             Building_TractorBarn barn = TractorStaging.SpawnBarn(map, center);
+            var production = new TractorBombSettings(
+                TractorBombProximity.Nosy, TractorBombPull.Popular,
+                TractorBombBlast.BlockParty);
+            barn.SetSettings(production);
             IntVec3 door = barn.InteractionCell;
             List<Thing> parts =
                 SpawnRobotParts(map, door + new IntVec3(8, 0, -2));
@@ -127,6 +137,101 @@ namespace BatshitTechnology
                     + $"left inside {barn.innerContainer.Count}, bill "
                     + $"{bill.repeatCount}x, parts used "
                     + $"{parts.Count(t => t.Destroyed)}/{parts.Count}");
+            CompTractorBomb comp = robot?.TryGetComp<CompTractorBomb>();
+            string pane = barn.GetInspectString();
+            Check("a new robot leaves the barn with the barn's settings",
+                comp != null && comp.Settings == production
+                    && comp.Proximity == TractorBombProximity.Nosy
+                    && comp.PullRadius == 15f && comp.BlastRadius == 7.5f
+                    && pane.Contains("New tractors: Nosy, Neighborly, Firework"),
+                $"robot {comp?.Settings}, in effect {comp?.PullRadius}/"
+                    + $"{comp?.BlastRadius}; barn pane "
+                    + $"\"{pane.Replace('\n', '|')}\"");
+        }
+
+        /// <summary>
+        /// Once Dial-A-Yield is researched, the barn's three buttons set
+        /// what its new robots get, and "Apply to every tractor" gives
+        /// those settings to every robot of the player's on the map and to
+        /// every planted bomb whose pull has not started (its pull and
+        /// blast), but not to a bomb already pulling. The pulling bomb
+        /// stands 40 tiles off with a 6-tile pull, out of everyone's way.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBarnApplyToEveryTractor(Map map, IntVec3 center)
+        {
+            var mark = ErrorMark();
+            ClearTractorStage(map, center);
+            Building_TractorBarn barn = TractorStaging.SpawnBarn(map, center);
+            Pawn first = TractorStaging.SpawnRobot(
+                map, center + new IntVec3(-10, 0, 8));
+            Pawn second = TractorStaging.SpawnRobot(
+                map, center + new IntVec3(10, 0, 8));
+            Building_TractorBomb waiting = PlantTestBomb(
+                map, center + new IntVec3(0, 0, -12), 60f);
+            Building_TractorBomb pulling = PlantTestBomb(
+                map, center + new IntVec3(40, 0, 0), 60f);
+            pulling.Settings = new TractorBombSettings(
+                TractorBombProximity.Prudent, TractorBombPull.Intimate,
+                TractorBombBlast.BirthdayCake);
+            waiting.StartCountdown();
+            pulling.StartCountdown();
+            pulling.ImplodeNow();
+            Tick(2);
+
+            List<Command_TractorBombDial> dials = barn.GetGizmos()
+                .OfType<Command_TractorBombDial>().ToList();
+            dials.FirstOrDefault(d => d.Dial == TractorBombDial.Proximity)
+                ?.Apply((int)TractorBombProximity.Timid);
+            dials.FirstOrDefault(d => d.Dial == TractorBombDial.Pull)
+                ?.Apply((int)TractorBombPull.Popular);
+            dials.FirstOrDefault(d => d.Dial == TractorBombDial.Blast)
+                ?.Apply((int)TractorBombBlast.BlockParty);
+            var wanted = new TractorBombSettings(
+                TractorBombProximity.Timid, TractorBombPull.Popular,
+                TractorBombBlast.BlockParty);
+            Command_Action apply = barn.GetGizmos().OfType<Command_Action>()
+                .FirstOrDefault(c => c.defaultLabel == "Apply to every tractor");
+            apply?.action?.Invoke();
+
+            CompTractorBomb a = first.TryGetComp<CompTractorBomb>();
+            CompTractorBomb b = second.TryGetComp<CompTractorBomb>();
+            bool robotsSet = a.Settings == wanted && b.Settings == wanted;
+            bool waitingSet = waiting.Settings.Pull == TractorBombPull.Popular
+                && waiting.Settings.Blast == TractorBombBlast.BlockParty
+                && waiting.PullRadius == 22.5f && waiting.BlastRadius == 12f;
+            bool pullingKept = pulling.Settings.Pull == TractorBombPull.Intimate
+                && pulling.Settings.Blast == TractorBombBlast.BirthdayCake
+                && pulling.CurrentStage == Building_TractorBomb.Stage.Imploding;
+            Check("the barn's buttons set its settings, and \"Apply to every "
+                    + "tractor\" copies them to robots and bombs not yet pulling",
+                dials.Count == 3 && barn.Settings == wanted && apply != null
+                    && robotsSet && waitingSet && pullingKept,
+                $"{dials.Count} barn buttons, barn {barn.Settings}, apply "
+                    + $"{apply != null}; robots {a.Settings} and {b.Settings}; "
+                    + $"waiting bomb {waiting.Settings.Pull}/"
+                    + $"{waiting.Settings.Blast}; pulling bomb "
+                    + $"{pulling.Settings.Pull}/{pulling.Settings.Blast} "
+                    + $"({pulling.CurrentStage})");
+
+            foreach (Building_TractorBomb bomb in new[] { waiting, pulling })
+            {
+                if (bomb.Spawned)
+                {
+                    bomb.Destroy(DestroyMode.Vanish);
+                }
+            }
+
+            RemoveTestPawns(first, second);
+            if (barn.Spawned)
+            {
+                barn.Destroy(DestroyMode.Vanish);
+            }
+
+            Tick(10);
+            Check("the barn's settings log no errors", !NewErrorSince(mark),
+                "an error was logged (see the log)");
         }
 
         /// <summary>

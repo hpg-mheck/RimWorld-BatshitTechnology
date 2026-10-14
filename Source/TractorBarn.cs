@@ -70,11 +70,16 @@ namespace BatshitTechnology
     /// <summary>
     /// The Tractor Barn: an autonomous work table that builds tractor bombs
     /// from hauled-in ingredients with no crafter, and a repair dock for
-    /// the damaged ones.
+    /// the damaged ones. It keeps the named settings its new robots leave
+    /// with, and can copy them to every tractor on its map.
     /// </summary>
-    public class Building_TractorBarn : Building_WorkTableAutonomous
+    public class Building_TractorBarn : Building_WorkTableAutonomous,
+        ITractorBombDials
     {
         private CompRefuelable hopper;
+        private TractorBombProximity proximity = TractorBombApproach.Default;
+        private TractorBombPull pull = TractorBombYield.DefaultPull;
+        private TractorBombBlast blast = TractorBombYield.DefaultBlast;
 
         /// <summary>Robots the barns have built this session (diagnostics).</summary>
         public static int Built { get; private set; }
@@ -98,6 +103,144 @@ namespace BatshitTechnology
         public Pawn DockedRobot =>
             Spawned ? DockClaimants().FirstOrDefault(
                 p => p.Position == InteractionCell) : null;
+
+        /// <summary>
+        /// The settings its new robots leave with: Proximity, Pull and
+        /// Blast (Pull and Blast take effect once Dial-A-Yield is
+        /// researched). Setting them sets every one the player may change
+        /// now (<see cref="CanDial"/>).
+        /// </summary>
+        public TractorBombSettings Settings
+        {
+            get => new TractorBombSettings(proximity, pull, blast).Sanitized();
+            set
+            {
+                TractorBombSettings v = value.Sanitized();
+                if (CanDial(TractorBombDial.Proximity))
+                {
+                    proximity = v.Proximity;
+                }
+
+                if (CanDial(TractorBombDial.Pull))
+                {
+                    pull = v.Pull;
+                }
+
+                if (CanDial(TractorBombDial.Blast))
+                {
+                    blast = v.Blast;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The tractor beam its new robots will have in effect, in tiles.
+        /// </summary>
+        public float PullRadius => (float)TractorBombYield.Radius(
+            TractorBombYield.Effective(
+                pull, blast, CompTractorBomb.DialAYieldResearched).Pull);
+
+        /// <summary>The robots' emplacing range, in tiles.</summary>
+        public float TimidStop =>
+            BT_TractorBombDefOf.BT_TractorBomb?
+                .GetCompProperties<CompProperties_TractorBomb>()
+                ?.emplaceRange ?? TractorBombApproach.DefaultTimidStop;
+
+        /// <summary>
+        /// Whether the player may change a setting now: Proximity on a
+        /// player's barn; Pull and Blast too once Dial-A-Yield is
+        /// researched.
+        /// </summary>
+        /// <param name="dial">The setting.</param>
+        /// <returns>True if it may.</returns>
+        public bool CanDial(TractorBombDial dial) =>
+            Faction == Faction.OfPlayer
+            && (dial == TractorBombDial.Proximity
+                || CompTractorBomb.DialAYieldResearched);
+
+        /// <summary>
+        /// Sets all three production settings outright, whatever the
+        /// research (staging and tests).
+        /// </summary>
+        /// <param name="settings">The settings.</param>
+        public void SetSettings(TractorBombSettings settings)
+        {
+            TractorBombSettings v = settings.Sanitized();
+            proximity = v.Proximity;
+            pull = v.Pull;
+            blast = v.Blast;
+        }
+
+        /// <summary>
+        /// Copies its settings to every tractor of its owner on its map:
+        /// each robot, and each planted bomb whose pull has not started,
+        /// as far as each may be dialled now (before Dial-A-Yield, only a
+        /// robot's Proximity).
+        /// </summary>
+        /// <param name="robots">How many robots were set.</param>
+        /// <param name="bombs">How many planted bombs were set.</param>
+        public void ApplyToEveryTractor(out int robots, out int bombs)
+        {
+            robots = 0;
+            bombs = 0;
+            if (!Spawned)
+            {
+                return;
+            }
+
+            TractorBombSettings mine = Settings;
+            foreach (Pawn p in Map.mapPawns.AllPawnsSpawned.ToList())
+            {
+                CompTractorBomb comp = p.TryGetComp<CompTractorBomb>();
+                if (comp != null && p.Faction == Faction
+                    && TractorBombDials.All.Any(comp.CanDial))
+                {
+                    comp.Settings = mine;
+                    robots++;
+                }
+            }
+
+            foreach (Building_TractorBomb bomb in Map.listerThings
+                .ThingsOfDef(BT_TractorBombDefOf.BT_TractorBombEmplaced)
+                .OfType<Building_TractorBomb>())
+            {
+                if (bomb.Spawned && bomb.Faction == Faction
+                    && TractorBombDials.All.Any(bomb.CanDial))
+                {
+                    bomb.Settings = mine;
+                    bombs++;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Its settings by name as they take effect: Pull and Blast at
+        /// their defaults until Dial-A-Yield is researched.
+        /// </summary>
+        /// <returns>"Prudent, Neighborly, Firework" and the like.</returns>
+        public string EffectiveSummary()
+        {
+            var (inPull, inBlast) = TractorBombYield.Effective(
+                pull, blast, CompTractorBomb.DialAYieldResearched);
+            return TractorBombDials.Summary(
+                new TractorBombSettings(Settings.Proximity, inPull, inBlast),
+                withProximity: true);
+        }
+
+        /// <summary>Saves and loads its production settings.</summary>
+        public override void ExposeData()
+        {
+            base.ExposeData();
+            Scribe_Values.Look(
+                ref proximity, "proximity", TractorBombApproach.Default);
+            Scribe_Values.Look(ref pull, "pull", TractorBombYield.DefaultPull);
+            Scribe_Values.Look(
+                ref blast, "blast", TractorBombYield.DefaultBlast);
+            if (Scribe.mode == LoadSaveMode.PostLoadInit)
+            {
+                SetSettings(new TractorBombSettings(proximity, pull, blast));
+            }
+        }
 
         /// <summary>Caches the repair hopper.</summary>
         /// <param name="map">The map.</param>
@@ -133,8 +276,8 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// The build is done: the robot drives out of the door, the
-        /// ingredients are used up, and the bill's iteration closes here,
+        /// The build is done: the robot drives out of the door with the
+        /// barn's settings, the ingredients are used up, and the bill's iteration closes here,
         /// so no crafter ever has to come and finish it.
         /// </summary>
         public override void Notify_FormingCompleted()
@@ -150,6 +293,7 @@ namespace BatshitTechnology
             {
                 Built++;
                 robot.Rotation = Rot4.South;
+                robot.TryGetComp<CompTractorBomb>()?.SetSettings(Settings);
                 if (owner == Faction.OfPlayer)
                 {
                     Messages.Message(
@@ -244,12 +388,14 @@ namespace BatshitTechnology
             Spawned && !DockClaimants().Any(p => p != robot);
 
         /// <summary>
-        /// What the barn is doing: loading, building or repairing.
+        /// What its new robots leave with, and what the barn is doing:
+        /// loading, building or repairing.
         /// </summary>
         /// <returns>The extra inspect lines, or null.</returns>
         protected override string GetInspectStringExtra()
         {
             var text = new StringBuilder();
+            text.AppendLine("New tractors: " + EffectiveSummary());
             if (activeBill != null
                 && activeBill.State == FormingState.Gathering)
             {
@@ -280,7 +426,9 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Its controls: "Build one now", which adds a "Do 1 times" bill.
+        /// Its controls: "Build one now", which adds a "Do 1 times" bill;
+        /// the settings its new robots leave with; and "Apply to every
+        /// tractor", which copies them to the tractors already out.
         /// </summary>
         /// <returns>The gizmos.</returns>
         public override IEnumerable<Gizmo> GetGizmos()
@@ -304,6 +452,36 @@ namespace BatshitTechnology
                 icon = BT_TractorBombDefOf.BT_TractorBomb?.uiIcon
                     ?? BaseContent.BadTex,
                 action = () => AddBuildBill(),
+            };
+
+            foreach (TractorBombDial dial in TractorBombDials.All)
+            {
+                if (CanDial(dial))
+                {
+                    yield return new Command_TractorBombDial(
+                        this, dial, "the tractor bombs this barn builds");
+                }
+            }
+
+            yield return new Command_Action
+            {
+                defaultLabel = "Apply to every tractor",
+                defaultDesc = "Give every tractor bomb on this map this "
+                    + "barn's settings: every robot, and every planted bomb "
+                    + "that has not yet started to pull (a planted bomb has "
+                    + "no Proximity to change). Pull and Blast need Tractor "
+                    + "Bomb Dial-A-Yield.",
+                icon = BT_TractorBombAssets.ApplyToEveryTractorIcon,
+                action = () =>
+                {
+                    ApplyToEveryTractor(out int robots, out int bombs);
+                    Messages.Message(
+                        $"{robots} {(robots == 1 ? "robot" : "robots")} and "
+                            + $"{bombs} planted "
+                            + $"{(bombs == 1 ? "bomb" : "bombs")} now run "
+                            + EffectiveSummary() + ".",
+                        this, MessageTypeDefOf.SilentInput, false);
+                },
             };
         }
 

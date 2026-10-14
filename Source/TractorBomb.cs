@@ -145,50 +145,58 @@ namespace BatshitTechnology
             ContentFinder<Texture2D>.Get("UI/Commands/Detonate");
 
         /// <summary>
-        /// The Disposition button's icons, in
-        /// <see cref="TractorBombDisposition"/> order.
+        /// The named settings' button icons, by setting
+        /// (<see cref="TractorBombDial"/> order) and stop (smallest first).
         /// </summary>
-        public static readonly string[] DispositionIconPaths =
+        public static readonly string[][] DialIconPaths =
         {
-            "UI/Commands/BT_DispositionCautious",
-            "UI/Commands/BT_DispositionModerate",
-            "UI/Commands/BT_DispositionNosy",
+            new[]
+            {
+                "UI/Commands/BT_ProximityTimid",
+                "UI/Commands/BT_ProximityPrudent",
+                "UI/Commands/BT_ProximityNosy",
+            },
+            new[]
+            {
+                "UI/Commands/BT_PullIntimate",
+                "UI/Commands/BT_PullNeighborly",
+                "UI/Commands/BT_PullPopular",
+            },
+            new[]
+            {
+                "UI/Commands/BT_BlastBirthdayCake",
+                "UI/Commands/BT_BlastFirework",
+                "UI/Commands/BT_BlastBlockParty",
+            },
         };
 
-        /// <summary>The Disposition icons, loaded.</summary>
-        private static readonly Texture2D[] DispositionIcons =
-            DispositionIconPaths
-                .Select(p => ContentFinder<Texture2D>.Get(p))
-                .ToArray();
+        /// <summary>The Tractor Barn's "Apply to every tractor" icon.</summary>
+        public const string ApplyToEveryTractorPath =
+            "UI/Commands/BT_ApplyToEveryTractor";
 
-        /// <summary>The Disposition button's icon for a setting.</summary>
-        /// <param name="disposition">The setting.</param>
-        /// <returns>The icon.</returns>
-        public static Texture2D DispositionIcon(
-            TractorBombDisposition disposition)
+        /// <summary>The settings' icons, loaded.</summary>
+        private static readonly Texture2D[][] DialIcons = DialIconPaths
+            .Select(row => row
+                .Select(p => ContentFinder<Texture2D>.Get(p))
+                .ToArray())
+            .ToArray();
+
+        /// <summary>The "Apply to every tractor" icon, loaded.</summary>
+        public static readonly Texture2D ApplyToEveryTractorIcon =
+            ContentFinder<Texture2D>.Get(ApplyToEveryTractorPath);
+
+        /// <summary>A setting's button icon for a stop.</summary>
+        /// <param name="dial">The setting.</param>
+        /// <param name="stop">The stop, 0 to 2.</param>
+        /// <returns>The icon; vanilla's bad texture if there is none.</returns>
+        public static Texture2D DialIcon(TractorBombDial dial, int stop)
         {
-            int i = (int)TractorBombApproach.Sanitize(disposition);
-            return i < DispositionIcons.Length
-                ? DispositionIcons[i]
+            int d = (int)dial;
+            int s = TractorBombDials.Sanitize(stop);
+            return d >= 0 && d < DialIcons.Length && s < DialIcons[d].Length
+                ? DialIcons[d][s] ?? BaseContent.BadTex
                 : BaseContent.BadTex;
         }
-    }
-
-    /// <summary>
-    /// Something with a dialable yield: a robot, or the bomb it became.
-    /// The radii are the ones in effect (the defaults until Dial-A-Yield is
-    /// researched); setting one dials it, clamped to its range.
-    /// </summary>
-    public interface ITractorBombYield
-    {
-        /// <summary>The tractor beam's reach, in tiles.</summary>
-        float PullRadius { get; set; }
-
-        /// <summary>The blast's reach, in tiles.</summary>
-        float BlastRadius { get; set; }
-
-        /// <summary>Whether the player may dial it now.</summary>
-        bool YieldAdjustable { get; }
     }
 
     /// <summary>
@@ -201,8 +209,8 @@ namespace BatshitTechnology
         public float sightRadius = 45f;
 
         /// <summary>
-        /// How close a cautious robot gets to a hostile before it emplaces,
-        /// in tiles; its disposition may take it closer
+        /// How close a timid robot gets to a hostile before it emplaces,
+        /// in tiles; its proximity may take it closer
         /// (<see cref="TractorBombApproach.StopDistance"/>).
         /// </summary>
         public float emplaceRange = 15f;
@@ -284,19 +292,18 @@ namespace BatshitTechnology
     }
 
     /// <summary>
-    /// The robot's brain: its dialled yield, its protest, the act of
+    /// The robot's brain: its named settings, its protest, the act of
     /// emplacing, its controls and its death. Its decisions are made by its
     /// think tree (TractorBombAI.cs), which calls in here.
     /// </summary>
-    public class CompTractorBomb : ThingComp, ITractorBombYield
+    public class CompTractorBomb : ThingComp, ITractorBombDials
     {
-        private float dialledPull = TractorBombYield.DefaultPull;
-        private float dialledBlast = TractorBombYield.DefaultBlast;
+        private TractorBombProximity proximity = TractorBombApproach.Default;
+        private TractorBombPull pull = TractorBombYield.DefaultPull;
+        private TractorBombBlast blast = TractorBombYield.DefaultBlast;
         private int readyTick = -1;
         private int protestTicksLeft;
         private int protestTicksRun;
-        private TractorBombDisposition disposition =
-            TractorBombApproach.Default;
 
         /// <summary>Typed access to this comp's XML properties.</summary>
         public CompProperties_TractorBomb Props =>
@@ -327,59 +334,105 @@ namespace BatshitTechnology
                 ?.IsFinished ?? false;
 
         /// <summary>
-        /// The tractor beam in effect: the dialled reach once Dial-A-Yield
-        /// is researched, the default before. Setting it dials it.
+        /// Its settings as set: Proximity, Pull and Blast. Pull and Blast
+        /// take effect once Dial-A-Yield is researched (the defaults apply
+        /// before). Setting them sets every one the player may change now
+        /// (<see cref="CanDial"/>); code that stages a robot (the barn, the
+        /// tour, the smoke test) sets them outright with
+        /// <see cref="SetSettings"/>.
         /// </summary>
-        public float PullRadius
+        public TractorBombSettings Settings
         {
-            get => TractorBombYield.Effective(
-                dialledPull, dialledBlast, DialAYieldResearched).Pull;
-            set => dialledPull = TractorBombYield.ClampPull(value);
+            get => new TractorBombSettings(proximity, pull, blast).Sanitized();
+            set
+            {
+                TractorBombSettings v = value.Sanitized();
+                if (CanDial(TractorBombDial.Proximity))
+                {
+                    proximity = v.Proximity;
+                }
+
+                if (CanDial(TractorBombDial.Pull))
+                {
+                    pull = v.Pull;
+                }
+
+                if (CanDial(TractorBombDial.Blast))
+                {
+                    blast = v.Blast;
+                }
+            }
         }
 
         /// <summary>
-        /// The blast in effect: the dialled reach once Dial-A-Yield is
-        /// researched, the default before. Setting it dials it.
+        /// How close it drives to its quarry: Timid, Prudent (the default)
+        /// or Nosy. Saved with the robot.
         /// </summary>
-        public float BlastRadius
-        {
-            get => TractorBombYield.Effective(
-                dialledPull, dialledBlast, DialAYieldResearched).Blast;
-            set => dialledBlast = TractorBombYield.ClampBlast(value);
-        }
+        public TractorBombProximity Proximity =>
+            TractorBombApproach.Sanitize(proximity);
 
         /// <summary>
-        /// Whether the player may dial it: a player robot, once
-        /// Dial-A-Yield is researched, until it emplaces.
+        /// The pull and blast in effect: as set once Dial-A-Yield is
+        /// researched, the defaults before.
+        /// </summary>
+        public (TractorBombPull Pull, TractorBombBlast Blast) Yield =>
+            TractorBombYield.Effective(pull, blast, DialAYieldResearched);
+
+        /// <summary>The tractor beam in effect, in tiles.</summary>
+        public float PullRadius =>
+            (float)TractorBombYield.Radius(Yield.Pull);
+
+        /// <summary>The blast in effect, in tiles.</summary>
+        public float BlastRadius =>
+            (float)TractorBombYield.Radius(Yield.Blast);
+
+        /// <summary>The timid stop, in tiles: its emplacing range.</summary>
+        public float TimidStop => Props.emplaceRange;
+
+        /// <summary>
+        /// Whether the player may change its pull and blast: a player
+        /// robot, once Dial-A-Yield is researched, until it emplaces.
         /// </summary>
         public bool YieldAdjustable =>
             DialAYieldResearched && parent.Faction == Faction.OfPlayer
             && readyTick < 0;
 
         /// <summary>
-        /// How close it drives to its quarry: Cautious, Moderate (the
-        /// default) or Nosy. Saved with the robot.
-        /// </summary>
-        public TractorBombDisposition Disposition
-        {
-            get => TractorBombApproach.Sanitize(disposition);
-            set => disposition = TractorBombApproach.Sanitize(value);
-        }
-
-        /// <summary>
         /// How far from its quarry it stops to plant itself, in tiles: its
-        /// disposition's stop, with the tractor beam in effect.
+        /// proximity's stop, with the tractor beam in effect.
         /// </summary>
         public float StopDistance => (float)TractorBombApproach.StopDistance(
-            Disposition, Props.emplaceRange, PullRadius);
+            Proximity, Props.emplaceRange, PullRadius);
 
         /// <summary>
-        /// Whether the player may change its disposition: a player robot
+        /// Whether the player may change its proximity: a player robot
         /// that is not yet emplacing. (Once planted it no longer matters,
-        /// so a planted bomb has no such setting.)
+        /// so a planted bomb has no such setting.) No research needed.
         /// </summary>
-        public bool DispositionAdjustable =>
+        public bool ProximityAdjustable =>
             parent.Faction == Faction.OfPlayer && readyTick < 0;
+
+        /// <summary>Whether the player may change a setting now.</summary>
+        /// <param name="dial">The setting.</param>
+        /// <returns>True if it may.</returns>
+        public bool CanDial(TractorBombDial dial) =>
+            dial == TractorBombDial.Proximity
+                ? ProximityAdjustable
+                : YieldAdjustable;
+
+        /// <summary>
+        /// Sets all three settings outright, whatever the research or
+        /// stage: for code that stages a robot, such as the Tractor Barn
+        /// fitting a new one with its production defaults.
+        /// </summary>
+        /// <param name="settings">The settings.</param>
+        public void SetSettings(TractorBombSettings settings)
+        {
+            TractorBombSettings v = settings.Sanitized();
+            proximity = v.Proximity;
+            pull = v.Pull;
+            blast = v.Blast;
+        }
 
         /// <summary>
         /// Whether a colonist stands inside its pull radius: what it
@@ -408,9 +461,10 @@ namespace BatshitTechnology
             if (protestTicksLeft > 0 && parent.Faction == Faction.OfPlayer)
             {
                 Messages.Message(
-                    $"{parent.LabelCap} objects: a colonist is inside its "
-                        + $"{PullRadius:0}-tile tractor beam. It will emplace "
-                        + "in three seconds regardless.",
+                    $"{parent.LabelCap} objects: a colonist is within "
+                        + "reach of its tractor beam ("
+                        + TractorBombDials.TilesText(PullRadius)
+                        + "). It will emplace in three seconds regardless.",
                     parent, MessageTypeDefOf.CautionInput, false);
             }
         }
@@ -444,7 +498,7 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Emplaces: the robot leaves the map for good and an emplaced bomb
-        /// takes its place, facing the same way, with the yield in effect.
+        /// takes its place, facing the same way, with its pull and blast.
         /// </summary>
         /// <returns>
         /// The bomb, or null if the robot was not on a map.
@@ -464,8 +518,7 @@ namespace BatshitTechnology
                 Props.emplacedDef);
             bomb.SetFaction(robot.Faction);
             bomb.Configure(
-                PullRadius, BlastRadius, readyTick,
-                Find.TickManager.TicksGame - readyTick);
+                Settings, readyTick, Find.TickManager.TicksGame - readyTick);
             // As a dryad returning to its tree does: off the map, then
             // discarded. Not killed, so it has no death of its own.
             robot.DeSpawn();
@@ -538,16 +591,20 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Its yield, its disposition, its allowed area and any protest.
+        /// Its settings by name, their sizes, its allowed area and any
+        /// protest.
         /// </summary>
         /// <returns>The inspect pane lines.</returns>
         public override string CompInspectStringExtra()
         {
-            string text = $"Tractor beam {PullRadius:0} tiles, "
-                + $"blast {BlastRadius:0} tiles"
-                + "\nDisposition: "
-                + TractorBombDispositionText.Label(Disposition)
-                + $" (stops {StopDistance:0} tiles out)";
+            var (inPull, inBlast) = Yield;
+            string text = TractorBombDials.Summary(
+                    new TractorBombSettings(Proximity, inPull, inBlast),
+                    withProximity: true)
+                + "\nTractor beam "
+                + TractorBombDials.TilesText(PullRadius) + ", blast "
+                + TractorBombDials.TilesText(BlastRadius) + "; stops "
+                + TractorBombDials.TilesText(StopDistance) + " out";
             if (Robot?.playerSettings != null)
             {
                 text += "\nPatrols: " + AreaUtility.AreaAllowedLabel(Robot);
@@ -563,8 +620,8 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Its controls: the allowed area, its disposition, the yield
-        /// sliders once Dial-A-Yield is researched, and DEV commands.
+        /// Its controls: the allowed area, its Proximity, its Pull and
+        /// Blast once Dial-A-Yield is researched, and DEV commands.
         /// </summary>
         /// <returns>The gizmos.</returns>
         public override IEnumerable<Gizmo> CompGetGizmosExtra()
@@ -585,17 +642,13 @@ namespace BatshitTechnology
                 yield return new Command_TractorBombArea(robot);
             }
 
-            if (DispositionAdjustable)
+            foreach (TractorBombDial dial in TractorBombDials.All)
             {
-                yield return new Command_TractorBombDisposition(this);
-            }
-
-            if (YieldAdjustable)
-            {
-                yield return new Gizmo_TractorBombYield(
-                    this, TractorBombYieldKind.Pull);
-                yield return new Gizmo_TractorBombYield(
-                    this, TractorBombYieldKind.Blast);
+                if (CanDial(dial))
+                {
+                    yield return new Command_TractorBombDial(
+                        this, dial, "this tractor bomb");
+                }
             }
 
             if (DebugSettings.ShowDevGizmos && robot.Spawned && readyTick < 0)
@@ -613,28 +666,84 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Saves and loads the yield, the disposition and any emplacing.
+        /// Saves and loads the settings and any emplacing. An older save's
+        /// Disposition and dialled radii load as the nearest named stops
+        /// (<see cref="TractorBombSaves"/>).
         /// </summary>
         public override void PostExposeData()
         {
             base.PostExposeData();
             Scribe_Values.Look(
-                ref dialledPull, "dialledPull", TractorBombYield.DefaultPull);
+                ref proximity, "proximity", TractorBombApproach.Default);
+            Scribe_Values.Look(ref pull, "pull", TractorBombYield.DefaultPull);
             Scribe_Values.Look(
-                ref dialledBlast, "dialledBlast",
-                TractorBombYield.DefaultBlast);
+                ref blast, "blast", TractorBombYield.DefaultBlast);
             Scribe_Values.Look(ref readyTick, "readyTick", -1);
             Scribe_Values.Look(ref protestTicksLeft, "protestTicksLeft");
             Scribe_Values.Look(ref protestTicksRun, "protestTicksRun");
-            Scribe_Values.Look(
-                ref disposition, "disposition", TractorBombApproach.Default);
+            TractorBombSaves.LoadLegacy(
+                ref proximity, ref pull, ref blast, withProximity: true);
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
-                disposition = TractorBombApproach.Sanitize(disposition);
-                dialledPull = TractorBombYield.ClampPull(dialledPull);
-                dialledBlast = TractorBombYield.ClampBlast(dialledBlast);
+                SetSettings(new TractorBombSettings(proximity, pull, blast));
                 protestTicksLeft = Mathf.Clamp(
                     protestTicksLeft, 0, TractorBombTiming.ProtestTicks);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads what older versions saved: a robot's Disposition and either
+    /// thing's dialled radii, from before the named settings.
+    /// </summary>
+    public static class TractorBombSaves
+    {
+        /// <summary>
+        /// While loading, replaces the settings with what an older save
+        /// wrote instead, if it wrote anything: its Disposition (Cautious,
+        /// Moderate, Nosy load as Timid, Prudent, Nosy) and its dialled
+        /// pull and blast, snapped to the nearest stop. A radius the old
+        /// version left out was its default, never dialled, so that
+        /// setting keeps the new default. Saves made since have none of
+        /// these, and keep what they read. Does nothing outside loading.
+        /// </summary>
+        /// <param name="proximity">The proximity read.</param>
+        /// <param name="pull">The pull read.</param>
+        /// <param name="blast">The blast read.</param>
+        /// <param name="withProximity">Whether a Disposition may be there.</param>
+        public static void LoadLegacy(
+            ref TractorBombProximity proximity, ref TractorBombPull pull,
+            ref TractorBombBlast blast, bool withProximity)
+        {
+            if (Scribe.mode != LoadSaveMode.LoadingVars)
+            {
+                return;
+            }
+
+            if (withProximity)
+            {
+                string disposition = null;
+                Scribe_Values.Look(ref disposition, "disposition");
+                TractorBombProximity? old =
+                    TractorBombApproach.FromDisposition(disposition);
+                if (old.HasValue)
+                {
+                    proximity = old.Value;
+                }
+            }
+
+            float dialledPull = float.NaN;
+            float dialledBlast = float.NaN;
+            Scribe_Values.Look(ref dialledPull, "dialledPull", float.NaN);
+            Scribe_Values.Look(ref dialledBlast, "dialledBlast", float.NaN);
+            if (!float.IsNaN(dialledPull))
+            {
+                pull = TractorBombYield.NearestPull(dialledPull);
+            }
+
+            if (!float.IsNaN(dialledBlast))
+            {
+                blast = TractorBombYield.NearestBlast(dialledBlast);
             }
         }
     }
@@ -776,11 +885,11 @@ namespace BatshitTechnology
         /// The robot's quarry: the nearest hostile pawn it can see, within
         /// its sight, that is no threat-in-name-only (downed, dormant,
         /// invisible), with a cell within its stopping distance (its
-        /// disposition's) that it can reach without leaving its allowed
+        /// proximity's) that it can reach without leaving its allowed
         /// area.
         /// </summary>
         /// <param name="robot">The robot.</param>
-        /// <param name="comp">Its brain: settings and disposition.</param>
+        /// <param name="comp">Its brain: its settings and proximity.</param>
         /// <param name="target">The hostile.</param>
         /// <param name="cell">
         /// Where to go: its own cell when already in range.

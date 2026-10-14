@@ -1068,10 +1068,30 @@ def tractor_barn_tyre():
     save(img, 64, 'Things/Projectile/BT_TractorBarnTyre.png')
 
 
-def disposition_icon(name, gap):
-    """A Disposition button (128 px): the tractor bomb seen from above,
+def tractor_sprite(height, flip=0.0):
+    """The tractor bomb from above, facing north, cropped to its outline
+    and scaled to `height` pixels (128 px icon space): the subject of the
+    named settings' buttons. flip 1 shows it planted, tyres flat."""
+    robot = new_canvas(256)
+    tractor_bomb(robot, 'north', flip)
+    robot = robot.resize((256, 256), Image.LANCZOS)
+    robot = robot.crop(robot.getbbox())
+    width = round(robot.size[0] * height / robot.size[1])
+    return robot.resize((width, height), Image.LANCZOS)
+
+
+def save_icon(img, name):
+    """Saves a finished 128 px button icon as UI/Commands/BT_<name>.png."""
+    path = os.path.join(TEXTURES, f'UI/Commands/BT_{name}.png')
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    img.save(path)
+    print('wrote', os.path.relpath(path, os.path.dirname(TEXTURES)))
+
+
+def proximity_icon(name, gap):
+    """A Proximity button (128 px): the tractor bomb seen from above,
     driving up a dashed track toward a red target reticle and stopping
-    `gap` pixels short of it: far for Cautious, near for Moderate, nose to
+    `gap` pixels short of it: far for Timid, near for Prudent, nose to
     the ring for Nosy."""
     size = 128
     tx, ty, tr = 64, 21, 17
@@ -1090,25 +1110,127 @@ def disposition_icon(name, gap):
         d.line(s(*a, *b), fill=DANGER_RED, width=3 * SS)
     circle(d, tx, ty, 3.5, fill=DANGER_RED, outline=OUTLINE, width=1)
     final = img.resize((size, size), Image.LANCZOS)
-    robot = new_canvas(256)
-    tractor_bomb(robot, 'north', 0.0)
-    robot = robot.resize((256, 256), Image.LANCZOS)
-    robot = robot.crop(robot.getbbox())
-    width = round(robot.size[0] * tractor_h / robot.size[1])
-    robot = robot.resize((width, tractor_h), Image.LANCZOS)
-    final.alpha_composite(robot, (int(tx - width / 2), int(stop)))
-    path = os.path.join(TEXTURES, f'UI/Commands/BT_Disposition{name}.png')
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    final.save(path)
-    print('wrote', os.path.relpath(path, os.path.dirname(TEXTURES)))
+    robot = tractor_sprite(tractor_h)
+    final.alpha_composite(robot, (int(tx - robot.size[0] / 2), int(stop)))
+    save_icon(final, f'Proximity{name}')
 
 
-def disposition_icons():
-    """The three Disposition buttons; the tractor's nose stops 34, 15 and
+def proximity_icons():
+    """The three Proximity buttons; the tractor's nose stops 34, 15 and
     1 px short of the target, the tractor itself filling the rest."""
-    disposition_icon('Cautious', 34)
-    disposition_icon('Moderate', 15)
-    disposition_icon('Nosy', 1)
+    proximity_icon('Timid', 34)
+    proximity_icon('Prudent', 15)
+    proximity_icon('Nosy', 1)
+
+
+def pull_icon(name, ring):
+    """A Pull button (128 px): a planted tractor bomb in the middle, and
+    its tractor beam as a glowing magenta ring of radius `ring` pixels
+    with chevrons on it pointing in: small for Intimate, wide for
+    Popular. The ring is the setting; the tractor stays one size."""
+    size, c = 128, 64
+    img = new_canvas(size)
+    glow(img, lambda g, col: g.ellipse(s(c - ring, c - ring, c + ring, c + ring),
+                                        outline=col, width=7 * SS),
+         BS_GLOW, blur=3, alpha=200)
+    d = draw(img)
+    circle(d, c, c, ring, outline=OUTLINE, width=6)
+    circle(d, c, c, ring, outline=BS_MID, width=3)
+    for k in range(8):  # chevrons on the ring, pointing at the bomb
+        a = math.radians(k * 45 + 22.5)
+        ux, uy = math.cos(a), math.sin(a)
+        px, py = -uy, ux
+        tip = (c + ux * (ring - 7), c + uy * (ring - 7))
+        arms = [(c + ux * (ring + 1) + px * 5.5, c + uy * (ring + 1) + py * 5.5),
+                tip,
+                (c + ux * (ring + 1) - px * 5.5, c + uy * (ring + 1) - py * 5.5)]
+        d.line(pts(arms), fill=OUTLINE, width=6 * SS, joint='curve')
+        d.line(pts(arms), fill=BS_LIGHT, width=3 * SS, joint='curve')
+    final = img.resize((size, size), Image.LANCZOS)
+    robot = tractor_sprite(30, flip=1.0)
+    final.alpha_composite(robot, (int(c - robot.size[0] / 2), int(c - robot.size[1] / 2)))
+    save_icon(final, f'Pull{name}')
+
+
+def pull_icons():
+    """The three Pull buttons: Intimate, Neighborly, Popular."""
+    pull_icon('Intimate', 25)
+    pull_icon('Neighborly', 41)
+    pull_icon('Popular', 58)
+
+
+def burst(d, cx, cy, r, points, fill, outline):
+    """A jagged blast star of `points` points, outer radius `r` pixels,
+    inner radius 0.62 r, its first point straight up."""
+    shape = []
+    for k in range(points * 2):
+        a = math.radians(-90 + k * 180 / points)
+        rr = r if k % 2 == 0 else r * 0.62
+        shape.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+    d.polygon(pts(shape), fill=fill, outline=outline, width=3 * SS)
+
+
+def blast_icon(name, r):
+    """A Blast button (128 px): a planted tractor bomb in the middle of a
+    blast star of radius `r` pixels, red at its jagged edge and hazard
+    yellow at its heart: small for Birthday Cake, the whole button for
+    Block Party."""
+    size, c = 128, 64
+    img = new_canvas(size)
+    glow(img, lambda g, col: g.ellipse(s(c - r, c - r, c + r, c + r), fill=col),
+         (255, 120, 40), blur=4, alpha=150)
+    d = draw(img)
+    burst(d, c, c, r, 12, DANGER_RED, OUTLINE)
+    burst(d, c, c, r * 0.72, 12, (255, 150, 40, 255), None)
+    burst(d, c, c, r * 0.46, 12, HAZARD, None)
+    final = img.resize((size, size), Image.LANCZOS)
+    robot = tractor_sprite(min(30, int(r * 0.9)), flip=1.0)
+    final.alpha_composite(robot, (int(c - robot.size[0] / 2), int(c - robot.size[1] / 2)))
+    save_icon(final, f'Blast{name}')
+
+
+def blast_icons():
+    """The three Blast buttons: Birthday Cake, Firework, Block Party."""
+    blast_icon('BirthdayCake', 26)
+    blast_icon('Firework', 42)
+    blast_icon('BlockParty', 60)
+
+
+def apply_to_every_tractor_icon():
+    """The Tractor Barn's "Apply to every tractor" button (128 px): the
+    barn's gable at the top, its door glowing magenta, with dashed
+    magenta lines running down to three tractors parked in a row."""
+    size = 128
+    img = new_canvas(size)
+    d = draw(img)
+    targets = [(24, 92), (64, 98), (104, 92)]
+    for tx, ty in targets:  # the settings going out, dashed
+        n = 7
+        for k in range(n):
+            if k % 2:
+                continue
+            x0 = 64 + (tx - 64) * k / n
+            y0 = 44 + (ty - 22 - 44) * k / n
+            x1 = 64 + (tx - 64) * (k + 1) / n
+            y1 = 44 + (ty - 22 - 44) * (k + 1) / n
+            d.line(s(x0, y0, x1, y1), fill=OUTLINE, width=6 * SS)
+            d.line(s(x0, y0, x1, y1), fill=BS_LIGHT, width=3 * SS)
+    gable = [(34, 46), (34, 22), (64, 6), (94, 22), (94, 46)]
+    d.polygon(pts(gable), fill=STEEL, outline=OUTLINE, width=3 * SS)
+    d.polygon(pts([(34, 22), (64, 6), (94, 22), (64, 14)]), fill=STEEL_LIGHT)
+    for x in range(40, 92, 8):  # corrugation
+        d.line(s(x, 25, x, 44), fill=(*STEEL_DARK[:3], 200), width=1 * SS)
+    glow(img, lambda g, col: g.rectangle(s(54, 28, 74, 46), fill=col),
+         BS_GLOW, blur=3, alpha=220)
+    d = draw(img)
+    d.rectangle(s(54, 28, 74, 46), fill=BS_DEEP, outline=OUTLINE, width=2 * SS)
+    d.line(s(64, 28, 64, 46), fill=BS_MID, width=2 * SS)
+    d.polygon(pts(gable), outline=OUTLINE, width=3 * SS)
+    final = img.resize((size, size), Image.LANCZOS)
+    robot = tractor_sprite(36)
+    for tx, ty in targets:
+        final.alpha_composite(robot, (int(tx - robot.size[0] / 2), int(ty - robot.size[1] / 2)))
+    save_icon(final, 'ApplyToEveryTractor')
 
 
 # Showcase previews (docs/ARTISTIC-MOTIF.md, "Showcase Previews"): a 16:9
@@ -1248,7 +1370,10 @@ GENERATORS = {
     'tractor_bomb_lamp': tractor_bomb_lamp,
     'tractor_barn': tractor_barn,
     'tractor_barn_tyre': tractor_barn_tyre,
-    'disposition_icons': disposition_icons,
+    'proximity_icons': proximity_icons,
+    'pull_icons': pull_icons,
+    'blast_icons': blast_icons,
+    'apply_to_every_tractor_icon': apply_to_every_tractor_icon,
     'showcase_preview': showcase_preview,
 }
 

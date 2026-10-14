@@ -204,9 +204,9 @@ A colonist inside the tractor beam earns a three-second protest, after which the
   <ResearchProjectDef>
     <defName>BT_Research_TractorBombDialAYield</defName>
     <label>Tractor Bomb Dial-A-Yield</label>
-    <description>Fit every Tractor Bomb with two dials: its tractor beam, from 3 to 20 tiles, and its blast, from 2 to 10 tiles, set independently on the robot or on the planted bomb until it starts to pull. They leave the factory at 10 and 5.
+    <description>Fit every Tractor Bomb with two more dials, each with three settings: its tractor beam, Intimate (6 tiles), Neighborly (15) or Popular (22.5), and its blast, Birthday Cake (3 tiles), Firework (7.5) or Block Party (12). Set them on a robot, on a planted bomb until it starts to pull, or on the Tractor Barn for every robot it builds. They leave the factory at Neighborly and Firework.
 
-The dials have no safe setting.</description>
+None of the settings is safe.</description>
     <baseCost>1000</baseCost>
     <techLevel>Neolithic</techLevel>
     <prerequisites>

@@ -61,13 +61,13 @@ public static class TractorBombFlee
     /// <summary>
     /// How far from a bomb a pawn runs: its pull radius plus
     /// <see cref="FleeMargin"/>. Never less than one tile past its blast
-    /// radius, which the shipped ranges (pull at least 3, blast at most
-    /// 10) never need, but a widened range might.
+    /// radius, which the named stops (pull at least 6, blast at most 12)
+    /// never need, but a widened range might.
     /// </summary>
     /// <param name="pull">The bomb's pull radius, in tiles.</param>
     /// <param name="blast">The bomb's blast radius, in tiles.</param>
-    /// <returns>The flee distance, in whole tiles.</returns>
-    public static int FleeDistance(double pull, double blast) =>
+    /// <returns>The flee distance, in tiles (30.5 for a Popular pull).</returns>
+    public static double FleeDistance(double pull, double blast) =>
         Math.Max(
             TractorBombYield.ClampPull(pull) + FleeMargin,
             TractorBombYield.ClampBlast(blast) + 1);
@@ -89,20 +89,20 @@ public static class TractorBombFlee
     public static TractorBombReaction React(
         int dx, int dz, double pull, double blast, bool pulling)
     {
-        long distanceSquared = ((long)dx * dx) + ((long)dz * dz);
-        long flee = FleeDistance(pull, blast);
+        double distanceSquared = ((double)dx * dx) + ((double)dz * dz);
+        double flee = FleeDistance(pull, blast);
         if (distanceSquared > flee * flee)
         {
             return TractorBombReaction.None;
         }
 
-        long pullRadius = TractorBombYield.ClampPull(pull);
+        double pullRadius = TractorBombYield.ClampPull(pull);
         if (pulling && distanceSquared <= pullRadius * pullRadius)
         {
             return TractorBombReaction.Caught;
         }
 
-        long blastRadius = TractorBombYield.ClampBlast(blast);
+        double blastRadius = TractorBombYield.ClampBlast(blast);
         return distanceSquared <= blastRadius * blastRadius
             ? TractorBombReaction.Freeze
             : TractorBombReaction.Flee;

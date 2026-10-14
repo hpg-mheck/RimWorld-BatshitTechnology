@@ -1,12 +1,13 @@
 // Batshit Technology - the Tractor Bomb's controls.
-// Gizmo_TractorBombYield: the Dial-A-Yield sliders, one for the tractor
-// beam and one for the blast, on a robot or an emplaced bomb once Tractor
-// Bomb Dial-A-Yield is researched; with several bombs selected, one slider
-// sets them all. Command_TractorBombArea: picks a robot's allowed area,
-// the vanilla per-pawn area that bounds its patrol, from vanilla's own
-// area menu, since only colonists, animals and mechs get vanilla's area UI.
-// Command_TractorBombDisposition: steps a robot's disposition (how close it
-// drives before planting) through Cautious, Moderate and Nosy.
+// Command_TractorBombDial: one of the three named settings (Proximity,
+// Pull, Blast; docs/TRACTOR-BOMB.md, "Named Settings") on a robot, a
+// planted bomb or the Tractor Barn. A click opens a menu of the setting's
+// three stops with their sizes; with several things selected, the choice
+// applies to all of them. Pull and Blast are offered once Tractor Bomb
+// Dial-A-Yield is researched. Command_TractorBombArea: picks a robot's
+// allowed area, the vanilla per-pawn area that bounds its patrol, from
+// vanilla's own area menu, since only colonists, animals and mechs get
+// vanilla's area UI.
 
 using System.Collections.Generic;
 using System.Linq;
@@ -17,157 +18,201 @@ using Verse;
 
 namespace BatshitTechnology
 {
-    /// <summary>Which radius a yield slider dials.</summary>
-    public enum TractorBombYieldKind
+    /// <summary>
+    /// Something with Tractor Bomb settings the player may dial: a robot,
+    /// the bomb it became, or the Tractor Barn's settings for the robots
+    /// it builds.
+    /// </summary>
+    public interface ITractorBombDials
     {
-        /// <summary>The tractor beam: the implosion's pull radius.</summary>
-        Pull,
+        /// <summary>
+        /// The settings as set (a planted bomb's proximity is the default
+        /// and ignored). Setting them sets only the ones
+        /// <see cref="CanDial"/> allows.
+        /// </summary>
+        TractorBombSettings Settings { get; set; }
 
-        /// <summary>The blast radius.</summary>
-        Blast,
+        /// <summary>
+        /// The tractor beam in effect, in tiles: what a proximity's stop
+        /// depends on.
+        /// </summary>
+        float PullRadius { get; }
+
+        /// <summary>The timid stop, in tiles: the robot's emplacing range.</summary>
+        float TimidStop { get; }
+
+        /// <summary>Whether the player may change a setting now.</summary>
+        /// <param name="dial">The setting.</param>
+        /// <returns>True if it may.</returns>
+        bool CanDial(TractorBombDial dial);
     }
 
     /// <summary>
-    /// A Dial-A-Yield slider: drag it to set a radius, in whole tiles,
-    /// within its range. Groups with the same slider on other selected
-    /// bombs and sets them all.
+    /// A named setting's button: shows the setting's current stop, and a
+    /// click opens a menu of its three stops with their sizes ("Popular,
+    /// 22.5 tiles"). Groups with the same setting's button on everything
+    /// else selected, and the choice sets them all.
     /// </summary>
-    public class Gizmo_TractorBombYield : Gizmo_Slider
+    public class Command_TractorBombDial : Command
     {
-        // Whether a slider of each kind is being dragged. Static, as in
-        // vanilla's fuel slider: gizmos are rebuilt every frame.
-        private static readonly bool[] Dragging = new bool[2];
+        private readonly List<ITractorBombDials> targets =
+            new List<ITractorBombDials>();
 
-        private readonly List<ITractorBombYield> bombs =
-            new List<ITractorBombYield>();
+        private readonly TractorBombDial dial;
 
-        private readonly TractorBombYieldKind kind;
+        private readonly string forWhat;
 
-        /// <summary>Makes a slider for one bomb.</summary>
-        /// <param name="bomb">The robot or emplaced bomb.</param>
-        /// <param name="kind">Which radius it dials.</param>
-        public Gizmo_TractorBombYield(
-            ITractorBombYield bomb, TractorBombYieldKind kind)
+        /// <summary>Makes the button for one thing.</summary>
+        /// <param name="target">The robot, planted bomb or barn.</param>
+        /// <param name="dial">Which setting it sets.</param>
+        /// <param name="forWhat">
+        /// What the setting is for, in the tooltip: "this tractor bomb",
+        /// "the tractor bombs this barn builds".
+        /// </param>
+        public Command_TractorBombDial(
+            ITractorBombDials target, TractorBombDial dial, string forWhat)
         {
-            if (bomb != null)
+            this.dial = dial;
+            this.forWhat = forWhat ?? "this tractor bomb";
+            if (target != null)
             {
-                bombs.Add(bomb);
+                targets.Add(target);
             }
 
-            this.kind = kind;
+            Stop = target?.Settings.Stop(dial) ?? TractorBombDials.DefaultStop;
+            icon = BT_TractorBombAssets.DialIcon(dial, Stop);
+            Describe();
         }
 
-        /// <summary>Which radius it dials.</summary>
-        public TractorBombYieldKind Kind => kind;
+        /// <summary>Which setting it sets.</summary>
+        public TractorBombDial Dial => dial;
 
-        /// <summary>The bombs it sets (several once merged).</summary>
-        public IReadOnlyList<ITractorBombYield> Bombs => bombs;
+        /// <summary>The stop its first thing has, 0 to 2.</summary>
+        public int Stop { get; }
 
-        /// <summary>The first bomb's radius, in tiles.</summary>
-        private float Radius => bombs.Count == 0 ? 0f
-            : kind == TractorBombYieldKind.Pull ? bombs[0].PullRadius
-            : bombs[0].BlastRadius;
+        /// <summary>Whether the things it sets differ.</summary>
+        public bool Mixed { get; private set; }
 
-        /// <summary>The slider's position, from the first bomb.</summary>
-        protected override float Target
-        {
-            get => (float)(kind == TractorBombYieldKind.Pull
-                ? TractorBombYield.PullFraction(Radius)
-                : TractorBombYield.BlastFraction(Radius));
-            set => Set(kind == TractorBombYieldKind.Pull
-                ? TractorBombYield.PullAt(value)
-                : TractorBombYield.BlastAt(value));
-        }
+        /// <summary>The things it sets (several once merged).</summary>
+        public IReadOnlyList<ITractorBombDials> Targets => targets;
 
-        /// <summary>The bar's fill: the same as its position.</summary>
-        protected override float ValuePercent => Target;
-
-        /// <summary>What it sets, and to what.</summary>
-        protected override string Title => kind == TractorBombYieldKind.Pull
-            ? $"Tractor beam: {Radius:0} tiles"
-            : $"Blast: {Radius:0} tiles";
-
-        /// <summary>The radius, on the bar.</summary>
-        protected override string BarLabel => $"{Radius:0}";
+        /// <summary>Groups with the same setting's button.</summary>
+        /// <param name="other">Another gizmo.</param>
+        /// <returns>True if it sets the same setting.</returns>
+        public override bool GroupsWith(Gizmo other) =>
+            other is Command_TractorBombDial command && command.dial == dial;
 
         /// <summary>
-        /// Always draggable: it is only offered when dialable.
+        /// Takes on another button's things, so one menu sets them all.
         /// </summary>
-        protected override bool IsDraggable => true;
-
-        /// <summary>One stop per whole tile.</summary>
-        protected override int Increments => kind == TractorBombYieldKind.Pull
-            ? TractorBombYield.Steps(
-                TractorBombYield.MinPull, TractorBombYield.MaxPull)
-            : TractorBombYield.Steps(
-                TractorBombYield.MinBlast, TractorBombYield.MaxBlast);
-
-        /// <summary>Whether this kind of slider is being dragged.</summary>
-        protected override bool DraggingBar
-        {
-            get => Dragging[(int)kind];
-            set => Dragging[(int)kind] = value;
-        }
-
-        /// <summary>Groups with the same kind of slider.</summary>
-        /// <param name="other">Another gizmo.</param>
-        /// <returns>True if it is a slider of the same kind.</returns>
-        public override bool GroupsWith(Gizmo other) =>
-            other is Gizmo_TractorBombYield slider && slider.kind == kind;
-
-        /// <summary>Takes on another slider's bombs.</summary>
-        /// <param name="other">The slider grouped with this one.</param>
+        /// <param name="other">The button grouped with this one.</param>
         public override void MergeWith(Gizmo other)
         {
             base.MergeWith(other);
-            if (other is Gizmo_TractorBombYield slider)
+            if (!(other is Command_TractorBombDial command))
             {
-                foreach (ITractorBombYield bomb in slider.bombs)
+                return;
+            }
+
+            foreach (ITractorBombDials t in command.targets)
+            {
+                if (t != null && !targets.Contains(t))
                 {
-                    if (!bombs.Contains(bomb))
-                    {
-                        bombs.Add(bomb);
-                    }
+                    targets.Add(t);
+                    Mixed |= t.Settings.Stop(dial) != Stop;
                 }
             }
+
+            Describe();
         }
 
-        /// <summary>What it does, and the range.</summary>
-        /// <returns>The tooltip.</returns>
-        protected override string GetTooltip() =>
-            kind == TractorBombYieldKind.Pull
-                ? "How far the tractor beam reaches: everything within it "
-                    + "is dragged to the bomb before it goes off. "
-                    + $"{TractorBombYield.MinPull} to "
-                    + $"{TractorBombYield.MaxPull} tiles."
-                : "How far the blast reaches once everything is gathered. "
-                    + $"{TractorBombYield.MinBlast} to "
-                    + $"{TractorBombYield.MaxBlast} tiles.";
+        /// <summary>
+        /// One menu, not one per selected thing: the choice applies to all
+        /// of them.
+        /// </summary>
+        /// <param name="other">Another button in the group.</param>
+        /// <returns>False: the others do nothing.</returns>
+        public override bool InheritInteractionsFrom(Gizmo other) => false;
+
+        /// <summary>Opens the menu of the three stops.</summary>
+        /// <param name="ev">The click.</param>
+        public override void ProcessInput(Event ev)
+        {
+            base.ProcessInput(ev);
+            List<FloatMenuOption> options = Options()
+                .Select(o => new FloatMenuOption(o.Label, () => Apply(o.Stop)))
+                .ToList();
+            Find.WindowStack.Add(new FloatMenu(options));
+        }
 
         /// <summary>
-        /// Sets every bomb that may still be dialled, if the radius changed.
+        /// The menu's entries: each stop with its size, the sizes worked
+        /// out for the first thing (a proximity's stop depends on its
+        /// tractor beam).
         /// </summary>
-        /// <param name="radius">The radius, in whole tiles.</param>
-        private void Set(int radius)
+        /// <returns>The three entries, smallest first.</returns>
+        public IReadOnlyList<(int Stop, string Label)> Options()
         {
-            foreach (ITractorBombYield bomb in bombs)
+            ITractorBombDials first = targets.FirstOrDefault();
+            double pull = first?.PullRadius
+                ?? TractorBombYield.DefaultPullRadius;
+            double timid = first?.TimidStop
+                ?? TractorBombApproach.DefaultTimidStop;
+            var options = new List<(int, string)>();
+            for (int s = 0; s < TractorBombDials.StopCount; s++)
             {
-                if (bomb == null || !bomb.YieldAdjustable)
-                {
-                    continue;
-                }
+                options.Add((s, TractorBombDials.MenuLabel(
+                    dial, s, pull, timid)));
+            }
 
-                if (kind == TractorBombYieldKind.Pull)
+            return options;
+        }
+
+        /// <summary>
+        /// Sets a stop on everything it sets that may still be dialled.
+        /// </summary>
+        /// <param name="stop">The stop, 0 to 2.</param>
+        /// <returns>How many things were set.</returns>
+        public int Apply(int stop)
+        {
+            int set = 0;
+            foreach (ITractorBombDials t in targets)
+            {
+                if (t != null && t.CanDial(dial))
                 {
-                    if (!Mathf.Approximately(bomb.PullRadius, radius))
-                    {
-                        bomb.PullRadius = radius;
-                    }
+                    t.Settings = t.Settings.With(dial, stop);
+                    set++;
                 }
-                else if (!Mathf.Approximately(bomb.BlastRadius, radius))
-                {
-                    bomb.BlastRadius = radius;
-                }
+            }
+
+            return set;
+        }
+
+        /// <summary>Sets its label and tooltip from its things.</summary>
+        private void Describe()
+        {
+            string title = TractorBombDials.Title(dial);
+            defaultLabel = Mixed
+                ? $"{title}: mixed"
+                : $"{title}: {TractorBombDials.Name(dial, Stop)}";
+            string what = dial switch
+            {
+                TractorBombDial.Proximity =>
+                    $"How close {forWhat} drives to a hostile before it "
+                        + "plants itself.",
+                TractorBombDial.Pull =>
+                    $"How far the tractor beam of {forWhat} reaches: "
+                        + "everything within it is dragged to the bomb "
+                        + "before it goes off.",
+                _ => $"How far the blast of {forWhat} reaches once "
+                    + "everything is gathered.",
+            };
+            string stops = string.Join(
+                "\n", Options().Select(o => o.Label));
+            defaultDesc = $"{what}\n\n{stops}\n\nClick to choose.";
+            if (targets.Count > 1)
+            {
+                defaultDesc += " The choice applies to everything selected.";
             }
         }
     }
@@ -224,91 +269,6 @@ namespace BatshitTechnology
                 {
                     robot.playerSettings.AreaRestrictionInPawnCurrentMap =
                         area;
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// The player-facing words for a Tractor Bomb's dispositions.
-    /// </summary>
-    public static class TractorBombDispositionText
-    {
-        /// <summary>A disposition's name, capitalised.</summary>
-        /// <param name="disposition">The disposition.</param>
-        /// <returns>Its name.</returns>
-        public static string Label(TractorBombDisposition disposition) =>
-            TractorBombApproach.Sanitize(disposition) switch
-            {
-                TractorBombDisposition.Cautious => "Cautious",
-                TractorBombDisposition.Nosy => "Nosy",
-                _ => "Moderate",
-            };
-    }
-
-    /// <summary>
-    /// Steps the disposition of every selected robot to the one after this
-    /// robot's: Cautious, Moderate, Nosy, and round again. One click for
-    /// the whole selection.
-    /// </summary>
-    public class Command_TractorBombDisposition : Command_Action
-    {
-        /// <summary>Makes the command for one robot.</summary>
-        /// <param name="comp">The robot's brain.</param>
-        public Command_TractorBombDisposition(CompTractorBomb comp)
-        {
-            TractorBombDisposition current =
-                comp?.Disposition ?? TractorBombApproach.Default;
-            TractorBombDisposition next = TractorBombApproach.Next(current);
-            Current = current;
-            Next = next;
-            defaultLabel = "Disposition: "
-                + TractorBombDispositionText.Label(current);
-            defaultDesc = "How close this tractor bomb drives to its "
-                + "quarry before it plants itself. Click for "
-                + TractorBombDispositionText.Label(next) + ".\n\n"
-                + "Cautious: stops 15 tiles out.\n"
-                + "Moderate: stops one tile inside its tractor beam, or 15 "
-                + "tiles out if that is nearer, so a target standing still "
-                + "is caught.\n"
-                + "Nosy: drives right up, to 3 tiles.";
-            if (comp != null)
-            {
-                defaultDesc += $"\n\nNow it stops {comp.StopDistance:0} "
-                    + "tiles out.";
-            }
-
-            icon = BT_TractorBombAssets.DispositionIcon(current);
-            action = () => SetAll(next);
-        }
-
-        /// <summary>The disposition it shows.</summary>
-        public TractorBombDisposition Current { get; }
-
-        /// <summary>The disposition a click sets.</summary>
-        public TractorBombDisposition Next { get; }
-
-        /// <summary>
-        /// One click, not one per selected robot: the choice applies to all
-        /// of them.
-        /// </summary>
-        /// <param name="other">Another command in the group.</param>
-        /// <returns>False: the others do nothing.</returns>
-        public override bool InheritInteractionsFrom(Gizmo other) => false;
-
-        /// <summary>
-        /// Gives every selected player robot that may still change it the
-        /// disposition.
-        /// </summary>
-        /// <param name="disposition">The disposition.</param>
-        public static void SetAll(TractorBombDisposition disposition)
-        {
-            foreach (Pawn robot in Find.Selector.SelectedPawns.ToList())
-            {
-                CompTractorBomb comp = robot.TryGetComp<CompTractorBomb>();
-                if (comp != null && comp.DispositionAdjustable)
-                {
-                    comp.Disposition = disposition;
                 }
             }
         }

@@ -7,7 +7,7 @@ namespace BatshitTechnology.Tests;
 /// <summary>
 /// Verifies the arithmetic of running from a Tractor Bomb in
 /// <see cref="TractorBombFlee"/> (docs/TRACTOR-BOMB.md, "Everyone Else
-/// Runs"): the flee distance follows the dialled pull radius, pawns inside
+/// Runs"): the flee distance follows the pull radius set, pawns inside
 /// the blast radius freeze, pawns inside a started pull are left to it,
 /// destinations lie clear of the flee distance, and a frozen pawn's line
 /// is stable and spread over all twenty.
@@ -15,52 +15,52 @@ namespace BatshitTechnology.Tests;
 public sealed class TractorBombFleeTests
 {
     /// <summary>
-    /// The spec's numbers: pull radius plus 8, so 18 tiles at the default
-    /// yield, 11 to 28 across Dial-A-Yield's range.
+    /// The spec's numbers: pull radius plus 8, so 23 tiles at the default
+    /// (Neighborly), 14 for Intimate and 30.5 for Popular, whatever the
+    /// blast; never less than a tile past the blast.
     /// </summary>
     /// <param name="pull">The pull radius, in tiles.</param>
     /// <param name="blast">The blast radius, in tiles.</param>
     /// <param name="expected">The flee distance, in tiles.</param>
-    [Theory(DisplayName = "Flee distance is the dialled pull plus 8")]
-    [InlineData(10, 5, 18)]
-    [InlineData(3, 2, 11)]
-    [InlineData(3, 10, 11)]
-    [InlineData(20, 10, 28)]
-    [InlineData(20, 2, 28)]
-    [InlineData(7, 9, 15)]
+    [Theory(DisplayName = "Flee distance is the pull plus 8")]
+    [InlineData(15, 7.5, 23)]
+    [InlineData(6, 3, 14)]
+    [InlineData(6, 12, 14)]
+    [InlineData(22.5, 12, 30.5)]
+    [InlineData(22.5, 3, 30.5)]
+    [InlineData(15, 12, 23)]
     public void FleeDistance_should_be_pull_plus_margin(
-        double pull, double blast, int expected)
+        double pull, double blast, double expected)
     {
         Assert.Equal(8, TractorBombFlee.FleeMargin);
         Assert.Equal(expected, TractorBombFlee.FleeDistance(pull, blast));
     }
 
     /// <summary>
-    /// Radii outside the dial's range, or not numbers at all, are clamped
-    /// as the bomb clamps them, so the distance always makes sense and
-    /// always clears the blast.
+    /// Radii outside the stops' range, or not numbers at all, are clamped,
+    /// so the distance always makes sense and always clears the blast.
     /// </summary>
     /// <param name="pull">The pull radius asked for.</param>
     /// <param name="blast">The blast radius asked for.</param>
     /// <param name="expected">The flee distance, in tiles.</param>
     [Theory(DisplayName = "Flee distance clamps nonsense radii")]
-    [InlineData(-4, 5, 11)]
-    [InlineData(500, 5, 28)]
-    [InlineData(double.NaN, double.NaN, 18)]
-    [InlineData(10.4, 4.6, 18)]
+    [InlineData(-4, 5, 14)]
+    [InlineData(500, 5, 30.5)]
+    [InlineData(double.NaN, double.NaN, 23)]
+    [InlineData(10.4, 4.6, 18.4)]
     public void FleeDistance_should_clamp_radii(
-        double pull, double blast, int expected)
+        double pull, double blast, double expected)
     {
-        int distance = TractorBombFlee.FleeDistance(pull, blast);
-        Assert.Equal(expected, distance);
+        double distance = TractorBombFlee.FleeDistance(pull, blast);
+        Assert.Equal(expected, distance, 9);
         Assert.True(distance > TractorBombYield.ClampBlast(blast));
     }
 
     /// <summary>
-    /// The too-close test at the default yield (pull 10, blast 5, flee
-    /// 18), before the pull starts: frozen inside 5 tiles (edge
-    /// included, as RimWorld's InHorDistOf includes it), fleeing out to 18
-    /// (included), unconcerned beyond.
+    /// The too-close test at the default yield (pull 15, blast 7.5, flee
+    /// 23), before the pull starts: frozen within 7.5 tiles, fleeing out
+    /// to 23 (included, as RimWorld's InHorDistOf includes the edge),
+    /// unconcerned beyond.
     /// </summary>
     /// <param name="dx">The offset along x.</param>
     /// <param name="dz">The offset along z.</param>
@@ -68,62 +68,66 @@ public sealed class TractorBombFleeTests
     [Theory(DisplayName = "Too close freezes, in range flees, beyond ignores")]
     [InlineData(0, 0, TractorBombReaction.Freeze)]
     [InlineData(3, 4, TractorBombReaction.Freeze)]
-    [InlineData(5, 0, TractorBombReaction.Freeze)]
-    [InlineData(4, 4, TractorBombReaction.Flee)]
-    [InlineData(-7, 0, TractorBombReaction.Flee)]
-    [InlineData(0, 9, TractorBombReaction.Flee)]
-    [InlineData(18, 0, TractorBombReaction.Flee)]
-    [InlineData(-12, 13, TractorBombReaction.Flee)]
-    [InlineData(19, 0, TractorBombReaction.None)]
-    [InlineData(13, 13, TractorBombReaction.None)]
+    [InlineData(7, 0, TractorBombReaction.Freeze)]
+    [InlineData(5, 5, TractorBombReaction.Freeze)]
+    [InlineData(8, 0, TractorBombReaction.Flee)]
+    [InlineData(6, 5, TractorBombReaction.Flee)]
+    [InlineData(-12, 0, TractorBombReaction.Flee)]
+    [InlineData(23, 0, TractorBombReaction.Flee)]
+    [InlineData(-16, 16, TractorBombReaction.Flee)]
+    [InlineData(24, 0, TractorBombReaction.None)]
+    [InlineData(17, 17, TractorBombReaction.None)]
     [InlineData(-200, 300, TractorBombReaction.None)]
     public void React_should_sort_pawns_by_distance(
         int dx, int dz, TractorBombReaction expected)
     {
         Assert.Equal(
-            expected, TractorBombFlee.React(dx, dz, 10, 5, pulling: false));
+            expected, TractorBombFlee.React(dx, dz, 15, 7.5, pulling: false));
     }
 
     /// <summary>
     /// Once the pull starts, everyone inside it belongs to the implosion
     /// (neither fleeing nor frozen); those outside the pull still flee,
-    /// and with a blast dialled wider than the pull, those between the two
-    /// still freeze.
+    /// and with a blast wider than the pull (Intimate and Block Party),
+    /// those between the two still freeze.
     /// </summary>
     [Fact(DisplayName = "A started pull catches everyone inside it")]
     public void React_should_leave_the_pulled_to_the_implosion()
     {
         Assert.Equal(TractorBombReaction.Caught,
-            TractorBombFlee.React(3, 0, 10, 5, pulling: true));
+            TractorBombFlee.React(3, 0, 15, 7.5, pulling: true));
         Assert.Equal(TractorBombReaction.Caught,
-            TractorBombFlee.React(6, 8, 10, 5, pulling: true));
+            TractorBombFlee.React(9, 12, 15, 7.5, pulling: true));
         Assert.Equal(TractorBombReaction.Flee,
-            TractorBombFlee.React(11, 0, 10, 5, pulling: true));
+            TractorBombFlee.React(16, 0, 15, 7.5, pulling: true));
         Assert.Equal(TractorBombReaction.None,
-            TractorBombFlee.React(19, 0, 10, 5, pulling: true));
+            TractorBombFlee.React(24, 0, 15, 7.5, pulling: true));
 
-        // Pull 3, blast 10: flee distance 11.
+        // Pull 6, blast 12: flee distance 14.
         Assert.Equal(TractorBombReaction.Caught,
-            TractorBombFlee.React(0, 3, 3, 10, pulling: true));
+            TractorBombFlee.React(0, 6, 6, 12, pulling: true));
         Assert.Equal(TractorBombReaction.Freeze,
-            TractorBombFlee.React(0, 7, 3, 10, pulling: true));
+            TractorBombFlee.React(0, 10, 6, 12, pulling: true));
         Assert.Equal(TractorBombReaction.Flee,
-            TractorBombFlee.React(0, 11, 3, 10, pulling: true));
+            TractorBombFlee.React(0, 13, 6, 12, pulling: true));
     }
 
     /// <summary>
-    /// The reaction follows the dialled radii: a 20-tile beam sends pawns
-    /// at 25 tiles running, a 3-tile one leaves them be at 12.
+    /// The reaction follows the settings: a Popular beam sends pawns at
+    /// 30 tiles running, an Intimate one leaves them be at 15, and a
+    /// fractional edge counts (30.5 includes 30, not 31).
     /// </summary>
-    [Fact(DisplayName = "Reactions follow the dialled radii")]
-    public void React_should_follow_the_dial()
+    [Fact(DisplayName = "Reactions follow the settings")]
+    public void React_should_follow_the_settings()
     {
         Assert.Equal(TractorBombReaction.Flee,
-            TractorBombFlee.React(25, 0, 20, 2, pulling: false));
+            TractorBombFlee.React(30, 0, 22.5, 3, pulling: false));
         Assert.Equal(TractorBombReaction.None,
-            TractorBombFlee.React(12, 0, 3, 2, pulling: false));
+            TractorBombFlee.React(31, 0, 22.5, 3, pulling: false));
+        Assert.Equal(TractorBombReaction.None,
+            TractorBombFlee.React(15, 0, 6, 3, pulling: false));
         Assert.Equal(TractorBombReaction.Freeze,
-            TractorBombFlee.React(0, 10, 3, 10, pulling: false));
+            TractorBombFlee.React(0, 12, 6, 12, pulling: false));
     }
 
     /// <summary>

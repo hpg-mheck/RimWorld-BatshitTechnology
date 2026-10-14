@@ -355,8 +355,7 @@ namespace BatshitTechnology
                 {
                     Pawn robot = TractorStaging.SpawnRobot(
                         map, TractorStaging.At(center, offset));
-                    robot.TryGetComp<CompTractorBomb>().Disposition =
-                        TractorBombDisposition.Nosy;
+                    SetProximity(robot, TractorBombProximity.Nosy);
                     robots.Add(robot);
                 }
 

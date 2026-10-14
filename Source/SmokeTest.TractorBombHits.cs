@@ -17,9 +17,10 @@ namespace BatshitTechnology
     public partial class GameComponent_SmokeTest
     {
         /// <summary>
-        /// A planted bomb, five seconds on its clock, is shot from 14
-        /// tiles half a second in: its pull must start within two ticks of
-        /// the bullet striking, seconds early. Steel lies 8 to 9 tiles out
+        /// A planted bomb, five seconds on its clock, is shot from 20
+        /// tiles (beyond its 15-tile pull) half a second in: its pull must
+        /// start within two ticks of the bullet striking, seconds early.
+        /// Steel lies 8 to 9 tiles out
         /// so the pull has work to do; a second bomb stands planted 4
         /// tiles off on a minute's countdown. Once the first one pulls, it
         /// is shot again: it must explode within two ticks, before it has
@@ -49,7 +50,7 @@ namespace BatshitTechnology
                 steel.Add(GenSpawn.Spawn(stack, center + offset, map));
             }
 
-            Pawn shooter = TestColonist(map, center + new IntVec3(0, 0, -14));
+            Pawn shooter = TestColonist(map, center + new IntVec3(0, 0, -20));
             int wrecked = CompTractorBomb.Wrecked;
             int vortexes = Vortexes(map);
             bomb.StartCountdown();

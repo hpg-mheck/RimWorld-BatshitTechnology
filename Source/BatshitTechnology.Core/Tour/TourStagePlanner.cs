@@ -81,11 +81,24 @@ public static class TourStagePlanner
     public const double DemoCornerReach = 87.6;
 
     /// <summary>
-    /// How far the yard keeps from the base, the grenade clearing and
-    /// AnyRim: a robot's default pull, plus 8 tiles for the things it
-    /// drags and the blast at its end.
+    /// The tour's tractors' pull: Popular, one up from the default
+    /// (the operator, 2026-10-14: "bump up to the next setting").
     /// </summary>
-    public const int TractorReach = TractorBombYield.DefaultPull + 8;
+    public const TractorBombPull TourPull = TractorBombPull.Popular;
+
+    /// <summary>The tour's tractors' blast: Block Party, one up from the default.</summary>
+    public const TractorBombBlast TourBlast = TractorBombBlast.BlockParty;
+
+    /// <summary>
+    /// How far the yard keeps from the base, the grenade clearing and
+    /// AnyRim, in whole tiles: as far as anyone runs from one of the
+    /// tour's tractors, its pull plus 8 (Core's
+    /// <see cref="TractorBombFlee.FleeDistance"/>), rounded up: 31.
+    /// </summary>
+    public static readonly int TractorReach = (int)Math.Ceiling(
+        TractorBombFlee.FleeDistance(
+            TractorBombYield.Radius(TourPull),
+            TractorBombYield.Radius(TourBlast)));
 
     /// <summary>The yard's half-width, east-west, in tiles.</summary>
     public const int YardHalfWidth = 32;
@@ -110,10 +123,12 @@ public static class TourStagePlanner
 
     /// <summary>
     /// The yard's candidate centres, from the base, best first: south-west,
-    /// south and south-east, away from AnyRim in the north-west.
+    /// south and south-east, away from AnyRim in the north-west, and far
+    /// enough south that the yard keeps <see cref="TractorReach"/> from the
+    /// base square (its top edge 32 tiles below the square's).
     /// </summary>
     public static readonly IReadOnlyList<Cell> DefaultYardOffsets =
-        new[] { new Cell(-45, -55), new Cell(0, -52), new Cell(45, -55) };
+        new[] { new Cell(-45, -62), new Cell(0, -62), new Cell(45, -62) };
 
     /// <summary>
     /// The pads' candidate cells, from the base: the four far corners,

@@ -7,10 +7,19 @@ namespace BatshitTechnology.Tests;
 /// <summary>
 /// Verifies the tour's tractor layouts, <see cref="TwinJunkyardLayout"/>
 /// and <see cref="SingleTractorLayout"/>, against the planner's yard and
-/// the Tractor Bomb's own rules.
+/// the Tractor Bomb's own rules, at the tour's settings: Popular (22.5
+/// tiles) and Block Party (12).
 /// </summary>
 public sealed class TractorLayoutTests
 {
+    /// <summary>The tour's pull radius, in tiles.</summary>
+    private static readonly double TourPull =
+        TractorBombYield.Radius(TourStagePlanner.TourPull);
+
+    /// <summary>The tour's blast radius, in tiles.</summary>
+    private static readonly double TourBlast =
+        TractorBombYield.Radius(TourStagePlanner.TourBlast);
+
     /// <summary>The yard, centred on the origin.</summary>
     private static readonly Box Yard = TourStagePlanner.YardAt(new Cell(0, 0));
 
@@ -20,12 +29,14 @@ public sealed class TractorLayoutTests
     {
         Assert.All(TwinJunkyardLayout.AllOffsets(), c => Assert.True(Yard.Contains(c), $"{c}"));
         Assert.All(SingleTractorLayout.AllOffsets(), c => Assert.True(Yard.Contains(c), $"{c}"));
-        Assert.True(Yard.Contains(new Box(-25, -1, -23, 1)), "the barn's 3x3 footprint");
+        Assert.True(Yard.Contains(new Box(-31, -1, -29, 1)), "the barn's 3x3 footprint");
     }
 
     /// <summary>
     /// Both twin robots see the army and plant close enough that their
-    /// default pulls overlap.
+    /// pulls overlap, at the tour's Popular and at the smoke test's
+    /// default Neighborly alike; neither planted bomb is inside the
+    /// other's Block Party blast before the pulls.
     /// </summary>
     [Fact(DisplayName = "The twin pulls overlap")]
     public void Twin_pulls_should_overlap()
@@ -34,7 +45,9 @@ public sealed class TractorLayoutTests
         Assert.Equal(2, plants.Count);
         Assert.All(plants, p => Assert.NotNull(p));
         double apart = plants[0]!.Value.DistanceTo(plants[1]!.Value);
-        Assert.True(apart < 2 * TractorBombYield.DefaultPull, $"apart {apart}");
+        Assert.True(apart < 2 * TractorBombYield.DefaultPullRadius, $"apart {apart}");
+        Assert.True(apart < 2 * TourPull, $"apart {apart}");
+        Assert.True(apart > TourBlast, $"apart {apart}");
         Assert.True(plants[0]!.Value.X < 0 && plants[1]!.Value.X > 0);
     }
 
@@ -55,18 +68,23 @@ public sealed class TractorLayoutTests
     }
 
     /// <summary>
-    /// The barn stands beyond the pull plus the blast of where its robot
-    /// plants, so the scene never wrecks it.
+    /// Every cell of the barn's 3x3 footprint stands more than two tiles
+    /// beyond the tour's 22.5-tile pull from where its robot plants (a
+    /// tile or two of pathing either way), so the pull never rips it
+    /// loose; the 12-tile blast falls far short of it.
     /// </summary>
-    [Fact(DisplayName = "The barn is beyond pull plus blast")]
+    [Fact(DisplayName = "The barn is beyond the pull and the blast")]
     public void Barn_should_be_beyond_pull_and_blast()
     {
         Cell? plant = SingleTractorLayout.PredictedPlant();
         Assert.NotNull(plant);
-        double gap = plant!.Value.DistanceTo(SingleTractorLayout.Barn);
-        Assert.True(
-            gap >= TractorBombYield.DefaultPull + TractorBombYield.DefaultBlast + 1,
-            $"barn {gap:F1} tiles from the plant");
+        double nearest = Enumerable.Range(-1, 3)
+            .SelectMany(dx => Enumerable.Range(-1, 3)
+                .Select(dz => SingleTractorLayout.Barn + new Cell(dx, dz)))
+            .Min(c => plant!.Value.DistanceTo(c));
+        Assert.True(nearest > TourPull + 2, $"barn {nearest:F1} tiles from the plant");
+        Assert.True(nearest > TourBlast + 2, $"barn {nearest:F1} tiles from the plant");
+        Assert.Equal(15.0, SingleTractorLayout.TourStop);
     }
 
     /// <summary>
@@ -83,14 +101,15 @@ public sealed class TractorLayoutTests
 
     /// <summary>
     /// The stray stands inside the predicted pull, so the robot protests,
-    /// and outside the party.
+    /// and outside the party; the party is inside the pull too.
     /// </summary>
     [Fact(DisplayName = "The stray is inside the pull, so the robot protests")]
     public void Stray_should_be_inside_the_pull()
     {
         Cell plant = SingleTractorLayout.PredictedPlant()!.Value;
-        Assert.True(
-            plant.DistanceTo(SingleTractorLayout.Stray) < TractorBombYield.DefaultPull);
+        Assert.True(plant.DistanceTo(SingleTractorLayout.Stray) < TourPull);
+        Assert.All(SingleTractorLayout.Party,
+            p => Assert.True(plant.DistanceTo(p) <= TourPull));
         Assert.DoesNotContain(SingleTractorLayout.Stray, SingleTractorLayout.Party);
     }
 

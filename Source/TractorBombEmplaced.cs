@@ -3,8 +3,9 @@
 // stabiliser pads over about half a second, then it counts down a rolled
 // 3 to 5 seconds under the shared warning band (CountdownWarning.cs), then
 // hosts the shared implosion (Implosion.cs): everything within its pull
-// radius, 10 tiles unless dialled, is dragged to within 1.5 tiles. It
-// explodes over its blast radius, 5 tiles unless dialled, when its pull is
+// radius (Neighborly, 15 tiles, unless set otherwise) is dragged to within
+// 1.5 tiles. It explodes over its blast radius (Firework, 7.5 tiles,
+// unless set otherwise) when its pull is
 // over: never before two seconds, as soon as everything is gathered or
 // nothing more can move after that, and at eight seconds however things
 // stand (a tug-of-war with a neighbour's pull included).
@@ -40,7 +41,7 @@ namespace BatshitTechnology
     {
         /// <summary>
         /// The implosion it hosts. Its pull radius is replaced by the
-        /// bomb's own (the default, or as dialled).
+        /// bomb's own (its Pull setting's).
         /// </summary>
         public ImplosionSettings implosion = DefaultImplosion();
 
@@ -131,7 +132,7 @@ namespace BatshitTechnology
     /// the shared warning band, implodes, and explodes.
     /// </summary>
     public class Building_TractorBomb : Building, ICountdownWarning,
-        IImplosionProof, ITractorBombYield
+        IImplosionProof, ITractorBombDials
     {
         /// <summary>Where it is in its short life.</summary>
         public enum Stage
@@ -149,8 +150,8 @@ namespace BatshitTechnology
         private Stage stage;
         private int stageTicks;
         private int countdownTicks;
-        private float dialledPull = TractorBombYield.DefaultPull;
-        private float dialledBlast = TractorBombYield.DefaultBlast;
+        private TractorBombPull pull = TractorBombYield.DefaultPull;
+        private TractorBombBlast blast = TractorBombYield.DefaultBlast;
         private Implosion implosion;
         private int emplacedTick = -1;
         private int readyTick = -1;
@@ -289,8 +290,8 @@ namespace BatshitTechnology
                 && hostileSeenAt.TryGetValue(id, out firstSeenTick);
         }
 
-        /// <summary>Its settings.</summary>
-        public TractorBombExtension Settings =>
+        /// <summary>Its def's timings and blast (its mod extension).</summary>
+        public TractorBombExtension Extension =>
             def.GetModExtension<TractorBombExtension>()
             ?? new TractorBombExtension();
 
@@ -311,7 +312,7 @@ namespace BatshitTechnology
         /// </summary>
         public int TicksUntilImplosion => stage switch
         {
-            Stage.Deploying => (Settings.deployTicks - stageTicks)
+            Stage.Deploying => (Extension.deployTicks - stageTicks)
                 + countdownTicks,
             Stage.CountingDown => countdownTicks - stageTicks,
             _ => 0,
@@ -344,42 +345,75 @@ namespace BatshitTechnology
         public int ImplosionStartedTick => implosionStartedTick;
 
         /// <summary>
-        /// Its tractor beam: as dialled once Dial-A-Yield is researched, the
-        /// default before. Setting it dials it.
+        /// Its settings as set: Pull and Blast (its proximity is the
+        /// default, and no longer matters once planted). They take effect
+        /// once Dial-A-Yield is researched, the defaults before. Setting
+        /// them sets the pull and blast if the player may still change
+        /// them (<see cref="CanDial"/>).
         /// </summary>
-        public float PullRadius
+        public TractorBombSettings Settings
         {
-            get => TractorBombYield.Effective(
-                dialledPull, dialledBlast,
-                CompTractorBomb.DialAYieldResearched).Pull;
-            set => dialledPull = TractorBombYield.ClampPull(value);
+            get => new TractorBombSettings(
+                TractorBombApproach.Default, pull, blast).Sanitized();
+            set
+            {
+                TractorBombSettings v = value.Sanitized();
+                if (CanDial(TractorBombDial.Pull))
+                {
+                    pull = v.Pull;
+                }
+
+                if (CanDial(TractorBombDial.Blast))
+                {
+                    blast = v.Blast;
+                }
+            }
         }
 
         /// <summary>
-        /// Its blast: as dialled once Dial-A-Yield is researched, the
-        /// default before. Setting it dials it.
+        /// The pull and blast in effect: as set once Dial-A-Yield is
+        /// researched, the defaults before.
         /// </summary>
-        public float BlastRadius
-        {
-            get => TractorBombYield.Effective(
-                dialledPull, dialledBlast,
-                CompTractorBomb.DialAYieldResearched).Blast;
-            set => dialledBlast = TractorBombYield.ClampBlast(value);
-        }
+        public (TractorBombPull Pull, TractorBombBlast Blast) Yield =>
+            TractorBombYield.Effective(
+                pull, blast, CompTractorBomb.DialAYieldResearched);
+
+        /// <summary>Its tractor beam in effect, in tiles.</summary>
+        public float PullRadius =>
+            (float)TractorBombYield.Radius(Yield.Pull);
+
+        /// <summary>Its blast in effect, in tiles.</summary>
+        public float BlastRadius =>
+            (float)TractorBombYield.Radius(Yield.Blast);
+
+        /// <summary>Unused once planted: the default emplacing range.</summary>
+        public float TimidStop => TractorBombApproach.DefaultTimidStop;
 
         /// <summary>
-        /// Whether the player may still dial it: a player bomb, once
-        /// Dial-A-Yield is researched, until the implosion starts.
+        /// Whether the player may still change its pull and blast: a player
+        /// bomb, once Dial-A-Yield is researched, until the implosion
+        /// starts.
         /// </summary>
         public bool YieldAdjustable =>
             CompTractorBomb.DialAYieldResearched
             && Faction == Faction.OfPlayer && stage != Stage.Imploding;
 
         /// <summary>
+        /// Whether the player may change a setting now: never its
+        /// proximity; its pull and blast while
+        /// <see cref="YieldAdjustable"/>.
+        /// </summary>
+        /// <param name="dial">The setting.</param>
+        /// <returns>True if it may.</returns>
+        public bool CanDial(TractorBombDial dial) =>
+            dial != TractorBombDial.Proximity && YieldAdjustable;
+
+        /// <summary>
         /// Sets it up before it spawns, from the robot it replaces.
         /// </summary>
-        /// <param name="pull">The robot's pull radius, in tiles.</param>
-        /// <param name="blast">The robot's blast radius, in tiles.</param>
+        /// <param name="robotSettings">
+        /// The robot's settings; its pull and blast carry over as set.
+        /// </param>
         /// <param name="robotReadyTick">
         /// When the robot was ready to emplace, or -1.
         /// </param>
@@ -387,11 +421,12 @@ namespace BatshitTechnology
         /// How long the robot protested first, in ticks.
         /// </param>
         public void Configure(
-            float pull, float blast, int robotReadyTick,
+            TractorBombSettings robotSettings, int robotReadyTick,
             int robotProtestTicks)
         {
-            dialledPull = TractorBombYield.ClampPull(pull);
-            dialledBlast = TractorBombYield.ClampBlast(blast);
+            TractorBombSettings v = robotSettings.Sanitized();
+            pull = v.Pull;
+            blast = v.Blast;
             readyTick = robotReadyTick;
             protestTicks = Mathf.Max(0, robotProtestTicks);
         }
@@ -412,7 +447,7 @@ namespace BatshitTechnology
             {
                 emplacedTick = Find.TickManager.TicksGame;
                 hostileSeed = Rand.Int;
-                FloatRange range = Settings.countdownSeconds;
+                FloatRange range = Extension.countdownSeconds;
                 countdownTicks = TractorBombTiming.RollCountdownTicks(
                     Rand.Value, range.min, range.max);
                 SoundDefOf.Building_Complete.PlayOneShot(
@@ -454,11 +489,12 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref stage, "stage");
             Scribe_Values.Look(ref stageTicks, "stageTicks");
             Scribe_Values.Look(ref countdownTicks, "countdownTicks");
+            Scribe_Values.Look(ref pull, "pull", TractorBombYield.DefaultPull);
             Scribe_Values.Look(
-                ref dialledPull, "dialledPull", TractorBombYield.DefaultPull);
-            Scribe_Values.Look(
-                ref dialledBlast, "dialledBlast",
-                TractorBombYield.DefaultBlast);
+                ref blast, "blast", TractorBombYield.DefaultBlast);
+            TractorBombProximity unused = TractorBombApproach.Default;
+            TractorBombSaves.LoadLegacy(
+                ref unused, ref pull, ref blast, withProximity: false);
             Scribe_Values.Look(ref emplacedTick, "emplacedTick", -1);
             Scribe_Values.Look(ref readyTick, "readyTick", -1);
             Scribe_Values.Look(ref protestTicks, "protestTicks");
@@ -479,8 +515,8 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref lastHitStage, "lastHitStage");
             if (Scribe.mode == LoadSaveMode.PostLoadInit)
             {
-                dialledPull = TractorBombYield.ClampPull(dialledPull);
-                dialledBlast = TractorBombYield.ClampBlast(dialledBlast);
+                pull = TractorBombYield.Sanitize(pull);
+                blast = TractorBombYield.Sanitize(blast);
                 countdownTicks = Mathf.Max(1, countdownTicks);
                 hostileRolls ??=
                     new Dictionary<int, TractorBombHostileReaction>();
@@ -513,7 +549,7 @@ namespace BatshitTechnology
             switch (stage)
             {
                 case Stage.Deploying:
-                    if (++stageTicks >= Settings.deployTicks)
+                    if (++stageTicks >= Extension.deployTicks)
                     {
                         StartCountdown();
                     }
@@ -565,8 +601,8 @@ namespace BatshitTechnology
                 Messages.Message(
                     $"{LabelCap} armed: it implodes in "
                         + $"{countdownTicks.ToStringSecondsFromTicks()}, "
-                        + $"pulling in everything within {PullRadius:0} "
-                        + $"tiles.",
+                        + "pulling in everything within "
+                        + TractorBombDials.TilesText(PullRadius) + ".",
                     this, MessageTypeDefOf.ThreatSmall, false);
             }
         }
@@ -655,7 +691,7 @@ namespace BatshitTechnology
         {
             StopAlarm();
             Overlay(Map)?.Deregister(this);
-            ImplosionSettings pull = Settings.implosion?.Copy()
+            ImplosionSettings pull = Extension.implosion?.Copy()
                 ?? TractorBombExtension.DefaultImplosion();
             pull.pullRadius = PullRadius;
             implosion = new Implosion(Position, pull, this, this);
@@ -681,7 +717,7 @@ namespace BatshitTechnology
             Map map = Map;
             IntVec3 center = Position;
             float blast = BlastRadius;
-            TractorBombExtension s = Settings;
+            TractorBombExtension s = Extension;
             Explosions++;
             LastBlastRadius = blast;
             LastExplosionTick = Find.TickManager.TicksGame;
@@ -731,7 +767,7 @@ namespace BatshitTechnology
 
             TractorBombUtility.DrawRadii(
                 Position, PullRadius, BlastRadius, true);
-            TractorBombExtension s = Settings;
+            TractorBombExtension s = Extension;
             band.Draw(
                 this.OccupiedRect(),
                 (countdownTicks - stageTicks)
@@ -752,7 +788,7 @@ namespace BatshitTechnology
             if (stage == Stage.Deploying)
             {
                 graphic = BT_TractorBombFlipGraphics.Frame(
-                    stageTicks, Settings.deployTicks) ?? graphic;
+                    stageTicks, Extension.deployTicks) ?? graphic;
             }
 
             graphic?.Draw(drawLoc, Rotation, this);
@@ -782,7 +818,7 @@ namespace BatshitTechnology
             }
         }
 
-        /// <summary>Its stage, timer and yield.</summary>
+        /// <summary>Its stage, timer, and settings by name and size.</summary>
         /// <returns>The inspect pane text.</returns>
         public override string GetInspectString()
         {
@@ -808,14 +844,21 @@ namespace BatshitTechnology
                     break;
             }
 
+            var (inPull, inBlast) = Yield;
             text.AppendLine();
-            text.Append($"Tractor beam {PullRadius:0} tiles, "
-                + $"blast {BlastRadius:0} tiles");
+            text.Append(TractorBombDials.Summary(
+                new TractorBombSettings(
+                    TractorBombApproach.Default, inPull, inBlast),
+                withProximity: false));
+            text.AppendLine();
+            text.Append("Tractor beam "
+                + TractorBombDials.TilesText(PullRadius) + ", blast "
+                + TractorBombDials.TilesText(BlastRadius));
             return text.ToString();
         }
 
         /// <summary>
-        /// Its controls: the yield sliders until it implodes, once
+        /// Its controls: Pull and Blast until it implodes, once
         /// Dial-A-Yield is researched; and DEV commands.
         /// </summary>
         /// <returns>The gizmos.</returns>
@@ -826,12 +869,13 @@ namespace BatshitTechnology
                 yield return g;
             }
 
-            if (YieldAdjustable)
+            foreach (TractorBombDial dial in TractorBombDials.All)
             {
-                yield return new Gizmo_TractorBombYield(
-                    this, TractorBombYieldKind.Pull);
-                yield return new Gizmo_TractorBombYield(
-                    this, TractorBombYieldKind.Blast);
+                if (CanDial(dial))
+                {
+                    yield return new Command_TractorBombDial(
+                        this, dial, "this tractor bomb");
+                }
             }
 
             if (DebugSettings.ShowDevGizmos && stage == Stage.CountingDown)

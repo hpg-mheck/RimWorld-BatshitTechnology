@@ -38,8 +38,8 @@ public sealed class TourStagePlannerTests
     public void Plan_should_take_the_first_clear_yard()
     {
         TourStagePlan plan = TourStagePlanner.Plan(new TourStageInput(Map250, Base));
-        Assert.Equal(TourStagePlanner.YardAt(Base + new Cell(-45, -55)), plan.Yard);
-        Assert.Equal(Base + new Cell(-45, -55), plan.YardCentre);
+        Assert.Equal(TourStagePlanner.YardAt(Base + new Cell(-45, -62)), plan.Yard);
+        Assert.Equal(Base + new Cell(-45, -62), plan.YardCentre);
         Assert.Equal(2, plan.Pads.Count);
         Assert.Null(plan.Note);
     }
@@ -50,29 +50,30 @@ public sealed class TourStagePlannerTests
     [Fact(DisplayName = "A keep-away over the first yard moves it to the next")]
     public void Plan_should_skip_a_covered_yard()
     {
-        Cell first = Base + new Cell(-45, -55);
+        Cell first = Base + new Cell(-45, -62);
         TourStagePlan plan = TourStagePlanner.Plan(new TourStageInput(Map250, Base)
         {
             ExtraYardKeepAways = new[] { new KeepAway(new Box(first.X, first.Z, first.X, first.Z), 1) },
         });
-        Assert.Equal(TourStagePlanner.YardAt(Base + new Cell(0, -52)), plan.Yard);
+        Assert.Equal(TourStagePlanner.YardAt(Base + new Cell(0, -62)), plan.Yard);
     }
 
     /// <summary>
     /// A yard within the tractor's reach of the base square is rejected
-    /// for one beyond it.
+    /// for one beyond it. The reach is how far anyone runs from one of
+    /// the tour's Popular tractors (22.5 + 8 = 30.5), rounded up.
     /// </summary>
     [Fact(DisplayName = "A yard within TractorReach of the base is rejected")]
     public void Plan_should_reject_a_yard_near_the_base()
     {
-        // (0,-40): the yard's north edge is 10 tiles from the base square,
-        // under the 18 required; (0,-60) is 30 tiles away.
+        // (0,-55): the yard's north edge is 25 tiles from the base square,
+        // under the 31 required (it passed the old 18); (0,-62) is 32 away.
         TourStagePlan plan = TourStagePlanner.Plan(new TourStageInput(Map250, Base)
         {
-            YardOffsets = new[] { new Cell(0, -40), new Cell(0, -60) },
+            YardOffsets = new[] { new Cell(0, -55), new Cell(0, -62) },
         });
-        Assert.Equal(18, TourStagePlanner.TractorReach);
-        Assert.Equal(TourStagePlanner.YardAt(Base + new Cell(0, -60)), plan.Yard);
+        Assert.Equal(31, TourStagePlanner.TractorReach);
+        Assert.Equal(TourStagePlanner.YardAt(Base + new Cell(0, -62)), plan.Yard);
     }
 
     /// <summary>
@@ -84,7 +85,7 @@ public sealed class TourStagePlannerTests
     {
         TourStagePlan plan = TourStagePlanner.Plan(new TourStageInput(Map250, Base)
         {
-            YardOffsets = new[] { new Cell(0, -52) },
+            YardOffsets = new[] { new Cell(0, -62) },
             PadOffsets = new[] { new Cell(75, -75), new Cell(75, 75) },
         });
         Assert.Equal(new[] { Base + new Cell(75, 75) }, plan.Pads);
@@ -102,10 +103,10 @@ public sealed class TourStagePlannerTests
     {
         TourStagePlan plan = TourStagePlanner.Plan(new TourStageInput(Map250, Base)
         {
-            YardOffsets = new[] { new Cell(0, -52), new Cell(-45, -55) },
+            YardOffsets = new[] { new Cell(0, -62), new Cell(-45, -62) },
             PadOffsets = new[] { new Cell(75, -75), new Cell(-75, -75), new Cell(75, 75) },
         });
-        Assert.Equal(TourStagePlanner.YardAt(Base + new Cell(-45, -55)), plan.Yard);
+        Assert.Equal(TourStagePlanner.YardAt(Base + new Cell(-45, -62)), plan.Yard);
         Assert.Equal(
             new[] { Base + new Cell(75, -75), Base + new Cell(75, 75) }, plan.Pads);
         Assert.Null(plan.Note);
@@ -151,7 +152,7 @@ public sealed class TourStagePlannerTests
             {
                 Town = withTown,
                 TownAnchor = north + new Cell(0, -30),
-                YardOffsets = new[] { new Cell(45, -55) },
+                YardOffsets = new[] { new Cell(45, -62) },
                 PadOffsets = new[] { new Cell(-75, 75), new Cell(75, 75) },
             };
     }

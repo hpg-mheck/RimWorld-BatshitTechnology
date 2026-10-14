@@ -1830,12 +1830,14 @@ namespace BatshitTechnology
         /// The Tractor Bomb, on a cleared stage at the middle of the map:
         /// the robot itself, its patrol, the Tractor Barn that builds and
         /// repairs it (SmokeTest.TractorBarn.cs), a hunt from patrol to
-        /// explosion, each disposition's stop, a protest, everyone else
+        /// explosion, each proximity's stop, a protest, everyone else
         /// running from an armed bomb, shooting planted bombs
         /// (SmokeTest.TractorBombHits.cs), hostiles' rolled reactions
-        /// (SmokeTest.TractorBombHostiles.cs), Dial-A-Yield, a robot's
-        /// death, and twin bombs whose pulls overlap
-        /// (SmokeTest.TractorBombTwins.cs).
+        /// (SmokeTest.TractorBombHostiles.cs), Dial-A-Yield's named Pull
+        /// and Blast, the barn's "Apply to every tractor", older saves'
+        /// settings, a robot's death, and twin bombs whose pulls overlap
+        /// (SmokeTest.TractorBombTwins.cs). Before Dial-A-Yield every bomb
+        /// pulls 15 tiles (Neighborly) and blasts 7.5 (Firework).
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -1853,12 +1855,14 @@ namespace BatshitTechnology
             TestTractorBombPatrol(map, center);
             TestTractorBarn(map, center);
             TestTractorBombHunt(map, center);
-            TestTractorBombDispositions(map, center);
+            TestTractorBombProximities(map, center);
             TestTractorBombProtest(map, center);
             TestTractorBombFlee(map, center);
             TestTractorBombShot(map, center);
             TestTractorBombHostileReactions(map, center);
             TestTractorBombDialAYield(map, center);
+            TestTractorBarnApplyToEveryTractor(map, center);
+            TestTractorBombOldSaves();
             TestTractorBombDeath(map, center);
             TestTractorBombTwins(map, center);
             Check("the Tractor Bomb scenarios logged no errors",
@@ -1997,8 +2001,9 @@ namespace BatshitTechnology
         /// The robot as a pawn: its own race and not a mechanoid (no
         /// mechanitor rules, even with Biotech), no needs and no mood, a
         /// per-pawn allowed area the player can set, selectable, with a
-        /// sensible inspect pane and controls, and no yield sliders before
-        /// Dial-A-Yield, which also leaves a dialled yield at the defaults.
+        /// sensible inspect pane naming its settings, and only its
+        /// Proximity button before Dial-A-Yield, which also keeps its Pull
+        /// and Blast at the defaults whatever they are set to.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -2031,19 +2036,34 @@ namespace BatshitTechnology
             List<Gizmo> gizmos = robot.GetGizmos().ToList();
             string inspect = robot.GetInspectString();
             Check("a tractor bomb is selectable, with a sensible inspect pane",
-                robot.def.selectable && inspect.Contains("Tractor beam 10 tiles")
+                robot.def.selectable
+                    && inspect.Contains("Prudent, Neighborly, Firework")
+                    && inspect.Contains("Tractor beam 15 tiles, blast 7.5 tiles")
                     && inspect.Contains("Patrols:")
                     && inspect.Contains("atrolling")
                     && gizmos.OfType<Command_TractorBombArea>().Any(),
                 $"inspect \"{inspect.Replace('\n', '|')}\", "
                     + $"{gizmos.Count} gizmos");
 
-            comp.PullRadius = 4f;
-            comp.BlastRadius = 3f;
-            Check("before Dial-A-Yield a robot has no sliders and the defaults",
-                !gizmos.OfType<Gizmo_TractorBombYield>().Any()
-                    && comp.PullRadius == 10f && comp.BlastRadius == 5f,
-                $"pull {comp.PullRadius}, blast {comp.BlastRadius}");
+            var small = new TractorBombSettings(
+                TractorBombProximity.Prudent, TractorBombPull.Intimate,
+                TractorBombBlast.BirthdayCake);
+            comp.Settings = small;
+            bool refused = comp.Settings.Pull == TractorBombYield.DefaultPull
+                && comp.Settings.Blast == TractorBombYield.DefaultBlast;
+            comp.SetSettings(small);
+            List<TractorBombDial> dials = gizmos
+                .OfType<Command_TractorBombDial>().Select(d => d.Dial)
+                .ToList();
+            Check("before Dial-A-Yield a robot has only Proximity and the "
+                    + "default yield",
+                dials.SequenceEqual(new[] { TractorBombDial.Proximity })
+                    && refused && comp.PullRadius == 15f
+                    && comp.BlastRadius == 7.5f,
+                $"buttons [{string.Join(", ", dials)}], setting refused "
+                    + $"{refused}, pull {comp.PullRadius}, blast "
+                    + $"{comp.BlastRadius} with Intimate and Birthday Cake "
+                    + "set");
             robot.Destroy(DestroyMode.Vanish);
         }
 
@@ -2101,12 +2121,13 @@ namespace BatshitTechnology
         /// A hunt from patrol to explosion. A robot sees a stunned raider
         /// 37 tiles off, drives to within 15 tiles and emplaces at once
         /// (no colonist about). Its bomb counts down 3 to 5 s, then pulls
-        /// everything within 10 tiles to within 1.5 (eleven stacks that
-        /// cannot merge, so two must wait just outside the pile) and
-        /// explodes over 5 tiles, catching what is left outside the pile.
-        /// The raider at 15 tiles is out of reach and stays put: the robot
-        /// is Cautious, so it stops 15 tiles out (Moderate, the default,
-        /// would stop at 9 and pull the raider in).
+        /// everything within 15 tiles (Neighborly, the default) to within
+        /// 1.5 (eleven stacks that cannot merge, so two must wait just
+        /// outside the pile) and explodes over 7.5 (Firework), catching
+        /// what is left outside the pile. Steel 20 tiles off is out of
+        /// reach and stays put. The robot is Timid, so it stops 15 tiles
+        /// out, at the very edge of its pull, and the raider it hunted is
+        /// pulled in too.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -2114,8 +2135,7 @@ namespace BatshitTechnology
         {
             ClearTractorStage(map, center);
             Pawn robot = TractorStaging.SpawnRobot(map, center + new IntVec3(-25, 0, 0));
-            robot.TryGetComp<CompTractorBomb>().Disposition =
-                TractorBombDisposition.Cautious;
+            SetProximity(robot, TractorBombProximity.Timid);
             Pawn quarry = SpawnStunnedHostile(map, center + new IntVec3(12, 0, 0));
             float startDistance = robot.Position.DistanceTo(quarry.Position);
             Building_TractorBomb bomb = WaitForEmplacement(
@@ -2141,7 +2161,7 @@ namespace BatshitTechnology
             // step's query) once its countdown starts.
             bool armedEarly = bomb.IsArmed
                 || TractorBombUtility.ArmedBombs(map).Contains(bomb);
-            bool defaults = bomb.PullRadius == 10f && bomb.BlastRadius == 5f;
+            bool defaults = bomb.PullRadius == 15f && bomb.BlastRadius == 7.5f;
             bool armedLater = false;
 
             // Stage the pull while its tyres flip: eleven stacks that cannot
@@ -2166,10 +2186,9 @@ namespace BatshitTechnology
 
             Pawn second = SpawnStunnedHostile(map, eye + new IntVec3(0, 0, 7));
             Thing outsider = GenSpawn.Spawn(
-                ThingMaker.MakeThing(ThingDefOf.Steel), eye + new IntVec3(0, 0, -12),
+                ThingMaker.MakeThing(ThingDefOf.Steel), eye + new IntVec3(0, 0, -20),
                 map);
             IntVec3 outsiderAt = outsider.Position;
-            IntVec3 quarryAt = quarry.Position;
             var tracked = new List<Thing>(stacks) { second };
             var last = tracked.ToDictionary(t => t, t => t.Position);
             int explosions = Building_TractorBomb.Explosions;
@@ -2210,16 +2229,14 @@ namespace BatshitTechnology
                     + $"{kv.Value.z - eye.z})")
                 .ToList();
             Check("everything within the pull ends within 1.5 tiles or is caught",
-                implosion != null && implosion.PullRadius == 10f
+                implosion != null && implosion.PullRadius == 15f
                     && implosion.GatherRadius == 1.5f && strays.Count == 0
                     && gathered >= 9,
                 $"{gathered} of {tracked.Count} within 1.5 tiles; outside the "
                     + $"blast: {string.Join(", ", strays)}");
             Check("nothing beyond the pull radius is dragged",
-                (!outsider.Spawned || outsider.Position == outsiderAt)
-                    && (!quarry.Spawned || quarry.Position == quarryAt),
-                $"steel {outsiderAt} -> {outsider.Position}, raider "
-                    + $"{quarryAt} -> {quarry.Position}");
+                outsider.Spawned && outsider.Position == outsiderAt,
+                $"steel 20 tiles out {outsiderAt} -> {outsider.Position}");
             // An explosion's wave takes a few ticks to reach anyone, even
             // at its centre: checking on the tick it went off read the
             // raider as unhurt on one run.
@@ -2227,9 +2244,9 @@ namespace BatshitTechnology
             bool hurt = second.Dead
                 || second.health.hediffSet.GetInjuredParts().Any();
             float secondAt = last[second].DistanceTo(eye);
-            Check("the bomb explodes over 5 tiles",
+            Check("the bomb explodes over 7.5 tiles",
                 bomb.Destroyed && Building_TractorBomb.Explosions == explosions + 1
-                    && Building_TractorBomb.LastBlastRadius == 5f && hurt,
+                    && Building_TractorBomb.LastBlastRadius == 7.5f && hurt,
                 $"destroyed {bomb.Destroyed}, explosions "
                     + $"+{Building_TractorBomb.Explosions - explosions}, radius "
                     + $"{Building_TractorBomb.LastBlastRadius}, raider "
@@ -2238,47 +2255,56 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Each disposition stops at its own distance from a raider
-        /// standing still 37 tiles off, at the default yield: Cautious at
-        /// 15 tiles, Moderate at 9 (one inside its 10-tile tractor beam),
-        /// Nosy at 3. A robot plants on the reachable cell nearest itself
-        /// within its stop, so each lands within a tile and a half inside
-        /// it. A new robot is Moderate, its button steps to the next, and
-        /// it says how far it stops on its inspect pane. Each bomb is
-        /// removed before it goes off.
+        /// Each proximity stops at its own distance from a raider standing
+        /// still 37 tiles off, at the default yield: Timid at 15 tiles,
+        /// Prudent at 14 (one inside its 15-tile tractor beam), Nosy at 3.
+        /// A robot plants on the reachable cell nearest itself within its
+        /// stop, so each lands within a tile and a half inside it. A new
+        /// robot is Prudent; its Proximity button's menu lists the three
+        /// with their stops, and choosing one sets it; the inspect pane
+        /// says how far it stops. Each bomb is removed before it goes off.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
-        private void TestTractorBombDispositions(Map map, IntVec3 center)
+        private void TestTractorBombProximities(Map map, IntVec3 center)
         {
-            var expected = new Dictionary<TractorBombDisposition, float>
+            var expected = new Dictionary<TractorBombProximity, float>
             {
-                [TractorBombDisposition.Cautious] = 15f,
-                [TractorBombDisposition.Moderate] = 9f,
-                [TractorBombDisposition.Nosy] = 3f,
+                [TractorBombProximity.Timid] = 15f,
+                [TractorBombProximity.Prudent] = 14f,
+                [TractorBombProximity.Nosy] = 3f,
+            };
+            string[] menu =
+            {
+                "Timid, stops 15 tiles out", "Prudent, stops 14 tiles out",
+                "Nosy, stops 3 tiles out",
             };
             var results = new List<string>();
             bool ok = true;
-            bool newIsModerate = false;
+            bool newIsPrudent = false;
             bool button = false;
-            foreach (KeyValuePair<TractorBombDisposition, float> want in expected)
+            foreach (KeyValuePair<TractorBombProximity, float> want in expected)
             {
                 ClearTractorStage(map, center);
                 Pawn robot = TractorStaging.SpawnRobot(map, center + new IntVec3(-25, 0, 0));
                 var comp = robot.TryGetComp<CompTractorBomb>();
-                if (want.Key == TractorBombDisposition.Moderate)
+                var command = comp.CompGetGizmosExtra()
+                    .OfType<Command_TractorBombDial>()
+                    .FirstOrDefault(d => d.Dial == TractorBombDial.Proximity);
+                if (want.Key == TractorBombProximity.Prudent)
                 {
-                    newIsModerate = comp.Disposition == want.Key;
-                    var command = comp.CompGetGizmosExtra()
-                        .OfType<Command_TractorBombDisposition>()
-                        .FirstOrDefault();
-                    button = command != null && command.Current == want.Key
-                        && command.Next == TractorBombDisposition.Nosy
-                        && robot.GetInspectString().Contains(
-                            "Disposition: Moderate (stops 9 tiles out)");
+                    newIsPrudent = comp.Proximity == want.Key;
+                    string pane = robot.GetInspectString();
+                    button = command != null && command.Stop == 1
+                        && command.defaultLabel == "Proximity: Prudent"
+                        && command.Options().Select(o => o.Label)
+                            .SequenceEqual(menu)
+                        && pane.Contains("Prudent, Neighborly, Firework")
+                        && pane.Contains("stops 14 tiles out");
                 }
 
-                comp.Disposition = want.Key;
+                command?.Apply((int)want.Key);
+                ok &= comp.Proximity == want.Key;
                 Pawn quarry = SpawnStunnedHostile(
                     map, center + new IntVec3(12, 0, 0));
                 Building_TractorBomb bomb = WaitForEmplacement(
@@ -2299,17 +2325,17 @@ namespace BatshitTechnology
                 RemoveTestPawns(quarry);
             }
 
-            Check("each disposition stops at its distance from a stationary "
+            Check("each proximity stops at its distance from a stationary "
                     + "target",
-                ok && newIsModerate && button,
-                $"new robot Moderate {newIsModerate}, button and pane "
+                ok && newIsPrudent && button,
+                $"new robot Prudent {newIsPrudent}, button, menu and pane "
                     + $"{button}; " + string.Join("; ", results));
         }
 
         /// <summary>
         /// A colonist inside the pull radius when the robot is ready: it
         /// protests for about three seconds, then emplaces anyway. The
-        /// robot is Cautious, so it is ready where it stands, 12 tiles from
+        /// robot is Timid, so it is ready where it stands, 12 tiles from
         /// its quarry and 4 from the colonist.
         /// </summary>
         /// <param name="map">The map.</param>
@@ -2318,8 +2344,7 @@ namespace BatshitTechnology
         {
             ClearTractorStage(map, center);
             Pawn robot = TractorStaging.SpawnRobot(map, center + new IntVec3(-6, 0, 0));
-            robot.TryGetComp<CompTractorBomb>().Disposition =
-                TractorBombDisposition.Cautious;
+            SetProximity(robot, TractorBombProximity.Timid);
             Pawn colonist = TestColonist(
                 map, robot.Position + new IntVec3(0, 0, 4));
 
@@ -2379,12 +2404,13 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// A bomb armed with a colonist and a muffalo 8 tiles off (inside
-        /// its 10-tile pull, outside its 5-tile blast) and a second
-        /// colonist 3 tiles off. The two outside the blast run beyond 18
-        /// tiles before the pull starts (the farthest each gets counts: a
-        /// muffalo that arrived just past 19 tiles was seen twice to
-        /// wander back to 17.3 before the pull); the one inside freezes
+        /// A bomb armed with a colonist 12 tiles off and a muffalo 13 off
+        /// (inside its 15-tile pull, outside its 7.5-tile blast) and a
+        /// second colonist 3 tiles off. The two outside the blast run
+        /// beyond 23 tiles before the pull starts (the farthest each gets
+        /// counts: a muffalo that arrived just past its destination was
+        /// seen twice to wander back a tile or two before the pull; a
+        /// muffalo covers about 14 tiles in the 5 s); the one inside freezes
         /// where it stands, showing one "making peace" line throughout,
         /// until the pull seizes it and its freeze ends. The countdown is
         /// held at its longest, 5 s, so that a slow-footed colonist
@@ -2398,10 +2424,10 @@ namespace BatshitTechnology
         {
             ClearTractorStage(map, center);
             Building_TractorBomb bomb = PlantTestBomb(map, center, 5f);
-            int flee = TractorBombFlee.FleeDistance(
+            double flee = TractorBombFlee.FleeDistance(
                 bomb.PullRadius, bomb.BlastRadius);
-            Pawn runner = FreshColonist(map, center + new IntVec3(8, 0, 0));
-            Pawn critter = FreshAnimal(map, center + new IntVec3(-8, 0, 0));
+            Pawn runner = FreshColonist(map, center + new IntVec3(12, 0, 0));
+            Pawn critter = FreshAnimal(map, center + new IntVec3(-13, 0, 0));
             Pawn frozen = FreshColonist(map, center + new IntVec3(0, 0, 3));
             IntVec3 frozenAt = IntVec3.Invalid;
             List<string> lines = BT_TractorBombDefOf.BT_TractorBombFreeze
@@ -2523,7 +2549,7 @@ namespace BatshitTechnology
         {
             ClearTractorStage(map, center);
             Building_TractorBomb bomb = PlantTestBomb(map, center, 5f);
-            int flee = TractorBombFlee.FleeDistance(
+            double flee = TractorBombFlee.FleeDistance(
                 bomb.PullRadius, bomb.BlastRadius);
             Pawn berserker = FreshColonist(
                 map, center + new IntVec3(0, 0, 8));
@@ -2572,7 +2598,8 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// A muffalo 7 tiles from a bomb starts to run; the pull is then
+        /// A muffalo 10 tiles from a bomb (inside its pull, outside its
+        /// blast) starts to run; the pull is then
         /// started at once (the DEV "Implode now"), so it seizes the muffalo
         /// mid-run. Its flee must end and not come back.
         /// </summary>
@@ -2582,7 +2609,7 @@ namespace BatshitTechnology
         {
             ClearTractorStage(map, center);
             Building_TractorBomb bomb = PlantTestBomb(map, center, 5f);
-            Pawn runner = FreshAnimal(map, center + new IntVec3(7, 0, 0));
+            Pawn runner = FreshAnimal(map, center + new IntVec3(10, 0, 0));
             bomb.StartCountdown();
             for (int i = 0; i < 90 && runner.CurJobDef
                 != BT_TractorBombDefOf.BT_TractorBombFlee; i++)
@@ -2767,10 +2794,10 @@ namespace BatshitTechnology
         /// <param name="flee">The flee distance, in tiles.</param>
         /// <returns>True if it is.</returns>
         private static bool MindlessInReach(
-            Pawn p, Building_TractorBomb bomb, int flee) =>
+            Pawn p, Building_TractorBomb bomb, double flee) =>
             p.Spawned && !p.Dead && !p.Downed && p.InMentalState
             && p.Awake() && !p.stances.stunner.Stunned
-            && p.Position.InHorDistOf(bomb.Position, flee)
+            && p.Position.InHorDistOf(bomb.Position, (float)flee)
             && TractorBombFleeUtility.Sees(p, bomb);
 
         /// <summary>
@@ -2790,13 +2817,16 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Dial-A-Yield: once researched, a robot and its bomb have both
-        /// sliders; dialled radii are clamped to range, carry over to the
-        /// bomb, set its implosion's reach and its blast, and the bomb's
-        /// sliders go once it starts to pull. Here the tractor beam is
-        /// dialled down to 4 tiles and the blast to 3: an item 3 tiles out
-        /// is pulled in, one 6 tiles out is left alone. The robot is
-        /// Cautious, so it emplaces where it stands, among those items.
+        /// Dial-A-Yield: once researched, a robot has its Pull and Blast
+        /// buttons beside Proximity, each with a menu of its three named
+        /// stops and their sizes; two robots' buttons group, and one choice
+        /// sets both. The settings carry over to the bomb, set its
+        /// implosion's reach and its blast and name themselves on its
+        /// inspect pane, and the bomb's buttons go once it starts to pull.
+        /// Here the robot is set to Intimate (6 tiles) and Birthday Cake
+        /// (3): an item 3 tiles out is pulled in, one 9 tiles out is left
+        /// alone. The robot is Timid, so it emplaces where it stands, among
+        /// those items.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -2807,38 +2837,67 @@ namespace BatshitTechnology
                 BT_TractorBombDefOf.BT_Research_TractorBombDialAYield,
                 doCompletionDialog: false, doCompletionLetter: false);
             Pawn robot = TractorStaging.SpawnRobot(map, center + new IntVec3(-6, 0, 0));
+            Pawn other = TractorStaging.SpawnRobot(map, center + new IntVec3(-6, 0, 20));
             var comp = robot.TryGetComp<CompTractorBomb>();
-            comp.Disposition = TractorBombDisposition.Cautious;
-            var sliders = comp.CompGetGizmosExtra()
-                .OfType<Gizmo_TractorBombYield>().ToList();
-            comp.PullRadius = 25f;
-            comp.BlastRadius = 0.5f;
-            bool clamped = comp.PullRadius == 20f && comp.BlastRadius == 2f;
-            var merged = new Gizmo_TractorBombYield(
-                comp, TractorBombYieldKind.Pull);
-            merged.MergeWith(new Gizmo_TractorBombYield(
-                new CompTractorBomb(), TractorBombYieldKind.Pull));
-            comp.PullRadius = 4f;
-            comp.BlastRadius = 3f;
-            Check("Dial-A-Yield gives robots two clamped, groupable sliders",
-                sliders.Count == 2 && clamped && merged.Bombs.Count == 2
-                    && comp.PullRadius == 4f && comp.BlastRadius == 3f,
-                $"{sliders.Count} sliders, clamped {clamped}, "
-                    + $"merged {merged.Bombs.Count}");
+            var otherComp = other.TryGetComp<CompTractorBomb>();
+            SetProximity(robot, TractorBombProximity.Timid);
+            List<Command_TractorBombDial> buttons = comp.CompGetGizmosExtra()
+                .OfType<Command_TractorBombDial>().ToList();
+            Command_TractorBombDial pull = buttons
+                .FirstOrDefault(d => d.Dial == TractorBombDial.Pull);
+            Command_TractorBombDial blast = buttons
+                .FirstOrDefault(d => d.Dial == TractorBombDial.Blast);
+            string[] pullMenu =
+            {
+                "Intimate, 6 tiles", "Neighborly, 15 tiles",
+                "Popular, 22.5 tiles",
+            };
+            string[] blastMenu =
+            {
+                "Birthday Cake, 3 tiles", "Firework, 7.5 tiles",
+                "Block Party, 12 tiles",
+            };
+            bool menus = pull != null && blast != null
+                && pull.defaultLabel == "Pull: Neighborly"
+                && blast.defaultLabel == "Blast: Firework"
+                && pull.Options().Select(o => o.Label).SequenceEqual(pullMenu)
+                && blast.Options().Select(o => o.Label).SequenceEqual(blastMenu);
+            Command_TractorBombDial otherPull = otherComp.CompGetGizmosExtra()
+                .OfType<Command_TractorBombDial>()
+                .FirstOrDefault(d => d.Dial == TractorBombDial.Pull);
+            bool grouped = pull != null && otherPull != null
+                && pull.GroupsWith(otherPull);
+            pull?.MergeWith(otherPull);
+            int setPull = pull?.Apply((int)TractorBombPull.Intimate) ?? 0;
+            int setBlast = blast?.Apply((int)TractorBombBlast.BirthdayCake) ?? 0;
+            Check("Dial-A-Yield gives robots named Pull and Blast menus that "
+                    + "set the whole selection",
+                buttons.Count == 3 && menus && grouped
+                    && pull.Targets.Count == 2 && setPull == 2 && setBlast == 1
+                    && comp.PullRadius == 6f && comp.BlastRadius == 3f
+                    && otherComp.Settings.Pull == TractorBombPull.Intimate
+                    && otherComp.Settings.Blast == TractorBombYield.DefaultBlast,
+                $"{buttons.Count} buttons, menus {menus}, grouped {grouped}, "
+                    + $"set {setPull} pulls and {setBlast} blasts; robot "
+                    + $"{comp.PullRadius}/{comp.BlastRadius}, the other "
+                    + $"{otherComp.Settings.Pull}/{otherComp.Settings.Blast}");
+            RemoveTestPawns(other);
 
             IntVec3 at = robot.Position;
             Thing near = GenSpawn.Spawn(
                 ThingMaker.MakeThing(ThingDefOf.Steel), at + new IntVec3(0, 0, 3), map);
             Thing far = GenSpawn.Spawn(
-                ThingMaker.MakeThing(ThingDefOf.WoodLog), at + new IntVec3(0, 0, -6),
+                ThingMaker.MakeThing(ThingDefOf.WoodLog), at + new IntVec3(0, 0, -9),
                 map);
             IntVec3 farAt = far.Position;
             SpawnStunnedHostile(map, center + new IntVec3(6, 0, 0));
             Building_TractorBomb bomb = WaitForEmplacement(robot, 600, out _);
-            bool bombSliders = bomb != null && bomb.GetGizmos()
-                .OfType<Gizmo_TractorBombYield>().Count() == 2;
+            List<TractorBombDial> bombButtons = bomb?.GetGizmos()
+                .OfType<Command_TractorBombDial>().Select(d => d.Dial).ToList()
+                ?? new List<TractorBombDial>();
+            string bombPane = bomb?.GetInspectString() ?? string.Empty;
             IntVec3 nearLast = near.Position;
-            bool slidersGone = false;
+            bool buttonsGone = false;
             for (int i = 0; i < 1200 && bomb != null && bomb.Spawned; i++)
             {
                 if (near.Spawned)
@@ -2848,26 +2907,158 @@ namespace BatshitTechnology
 
                 if (bomb.CurrentStage == Building_TractorBomb.Stage.Imploding)
                 {
-                    slidersGone |= !bomb.GetGizmos()
-                        .OfType<Gizmo_TractorBombYield>().Any();
+                    buttonsGone |= !bomb.GetGizmos()
+                        .OfType<Command_TractorBombDial>().Any();
                 }
 
                 Tick(1);
             }
 
             Check("Dial-A-Yield changes the radii",
-                bomb != null && bomb.Implosion?.PullRadius == 4f
+                bomb != null && bomb.Implosion?.PullRadius == 6f
                     && Building_TractorBomb.LastBlastRadius == 3f
                     && nearLast.InHorDistOf(at, 1.5f)
                     && far.Spawned && far.Position == farAt,
                 $"pull {bomb?.Implosion?.PullRadius}, blast "
                     + $"{Building_TractorBomb.LastBlastRadius}, item at 3 ended "
-                    + $"{nearLast - at}, item at 6 moved {far.Position != farAt}");
-            Check("a planted bomb can be dialled until it starts to pull",
-                bombSliders && slidersGone,
-                $"sliders while counting down {bombSliders}, gone while "
-                    + $"pulling {slidersGone}");
+                    + $"{nearLast - at}, item at 9 moved {far.Position != farAt}");
+            Check("a planted bomb names its settings and can be dialled until "
+                    + "it starts to pull",
+                bombButtons.SequenceEqual(
+                        new[] { TractorBombDial.Pull, TractorBombDial.Blast })
+                    && buttonsGone
+                    && bombPane.Contains("Intimate, Birthday Cake")
+                    && bombPane.Contains("Tractor beam 6 tiles, blast 3 tiles"),
+                $"buttons while counting down [{string.Join(", ", bombButtons)}],"
+                    + $" gone while pulling {buttonsGone}, pane "
+                    + $"\"{bombPane.Replace('\n', '|')}\"");
             Tick(60);
+        }
+
+        /// <summary>
+        /// Older saves: a robot saved with a Disposition and dialled radii
+        /// (Cautious, a 19-tile beam, a 4-tile blast) loads as Timid,
+        /// Popular and Birthday Cake; one saved Moderate with its radii
+        /// left at the old defaults (which the old version never wrote)
+        /// loads as Prudent with the new defaults; a planted bomb's dialled
+        /// 11 and 10 load as Neighborly and Block Party; and a robot saved
+        /// since loads exactly as saved. Read through RimWorld's own
+        /// loader from a small file, then stopped before anything else
+        /// loads.
+        /// </summary>
+        private void TestTractorBombOldSaves()
+        {
+            if (Scribe.mode != LoadSaveMode.Inactive)
+            {
+                Check("older saves' settings load as named stops", false,
+                    $"the loader was busy ({Scribe.mode})");
+                return;
+            }
+
+            string path = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                $"BT-smoke-oldsave-{System.Guid.NewGuid():N}.xml");
+            var found = new List<string>();
+            bool ok;
+            try
+            {
+                System.IO.File.WriteAllText(path,
+                    "<savegame>"
+                    + "<old><disposition>Cautious</disposition>"
+                    + "<dialledPull>19</dialledPull>"
+                    + "<dialledBlast>4</dialledBlast></old>"
+                    + "<plain><disposition>Moderate</disposition></plain>"
+                    + "<bomb><dialledPull>11</dialledPull>"
+                    + "<dialledBlast>10</dialledBlast></bomb>"
+                    + "<since><proximity>Nosy</proximity><pull>Popular</pull>"
+                    + "<blast>BlockParty</blast></since>"
+                    + "</savegame>");
+                var old = new CompTractorBomb();
+                var plain = new CompTractorBomb();
+                var since = new CompTractorBomb();
+                TractorBombProximity unused = TractorBombApproach.Default;
+                TractorBombPull bombPull = TractorBombYield.DefaultPull;
+                TractorBombBlast bombBlast = TractorBombYield.DefaultBlast;
+                Scribe.loader.InitLoading(path);
+                try
+                {
+                    Load("old", old.PostExposeData);
+                    Load("plain", plain.PostExposeData);
+                    Load("bomb", () => TractorBombSaves.LoadLegacy(
+                        ref unused, ref bombPull, ref bombBlast,
+                        withProximity: false));
+                    Load("since", since.PostExposeData);
+                }
+                finally
+                {
+                    Scribe.ForceStop();
+                }
+
+                ok = old.Settings == new TractorBombSettings(
+                        TractorBombProximity.Timid, TractorBombPull.Popular,
+                        TractorBombBlast.BirthdayCake)
+                    && plain.Settings == TractorBombSettings.Default
+                    && bombPull == TractorBombPull.Neighborly
+                    && bombBlast == TractorBombBlast.BlockParty
+                    && since.Settings == new TractorBombSettings(
+                        TractorBombProximity.Nosy, TractorBombPull.Popular,
+                        TractorBombBlast.BlockParty);
+                found.Add($"old {old.Settings}");
+                found.Add($"plain {plain.Settings}");
+                found.Add($"bomb {bombPull}/{bombBlast}");
+                found.Add($"since {since.Settings}");
+            }
+            catch (System.Exception e)
+            {
+                ok = false;
+                found.Add(e.GetType().Name + ": " + e.Message);
+            }
+            finally
+            {
+                try
+                {
+                    System.IO.File.Delete(path);
+                }
+                catch (System.IO.IOException)
+                {
+                    // A temp file left behind harms nothing.
+                }
+            }
+
+            Check("older saves' settings load as named stops", ok,
+                string.Join("; ", found));
+        }
+
+        /// <summary>
+        /// Runs a load step inside one node of the file being loaded.
+        /// </summary>
+        /// <param name="node">The node's name.</param>
+        /// <param name="look">The step: an ExposeData, say.</param>
+        private static void Load(string node, System.Action look)
+        {
+            if (Scribe.EnterNode(node))
+            {
+                try
+                {
+                    look();
+                }
+                finally
+                {
+                    Scribe.ExitNode();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets a robot's proximity outright, keeping its other settings.
+        /// </summary>
+        /// <param name="robot">The robot.</param>
+        /// <param name="proximity">The proximity.</param>
+        private static void SetProximity(
+            Pawn robot, TractorBombProximity proximity)
+        {
+            CompTractorBomb comp = robot?.TryGetComp<CompTractorBomb>();
+            comp?.SetSettings(comp.Settings with { Proximity = proximity });
         }
 
         /// <summary>
