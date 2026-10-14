@@ -97,6 +97,7 @@ namespace BatshitTechnology
         private void Run(Map map)
         {
             IntVec3 center = map.Center;
+            SilenceStoryteller(map);
             PrepareGround(map, CellRect.CenteredOn(center, 14));
 
             Thing reactor = Spawn(map, "BT_BatshittiumReactor", center);
@@ -131,9 +132,63 @@ namespace BatshitTechnology
             TestDamageTrigger(map, center);
             TestArmedDeviceDestroyed(map, center);
             TestSingularityGrenade(map, center);
+            QuietTheMap(map);
             TestImplosionGathers(map, center);
+            TestTractorBomb(map, center);
             TestDeathBlasts(map, center);
             TestNoErrorsLogged();
+        }
+
+        /// <summary>
+        /// Stops the storyteller for the rest of the run, so no raid or
+        /// other incident lands in the middle of a check, and notes any
+        /// hostiles already on the map. A raid on one random quick-test map
+        /// (2026-10-13) sent pirates pathing round a 325-tile Ballista,
+        /// which logged an avoid-grid error, and was the likely reason the
+        /// Artificer's bolts went missing. Quick-test maps are throwaway.
+        /// </summary>
+        /// <param name="map">The quick-test map.</param>
+        private static void SilenceStoryteller(Map map)
+        {
+            int hostiles = map.mapPawns.AllPawnsSpawned
+                .Count(p => p.HostileTo(Faction.OfPlayer));
+            Storyteller teller = Find.Storyteller;
+            teller?.storytellerComps?.Clear();
+            teller?.incidentQueue?.Clear();
+            Log.Message("[BT-SMOKE] NOTE storyteller silenced for the run; "
+                + $"{hostiles} hostile pawns on the map at the start");
+        }
+
+        /// <summary>
+        /// Calms the map before a check that something settles: every fire
+        /// put out, no hostiles, and every colonist drafted and holding
+        /// fire where it stands, so nobody fights fires or wanders through.
+        /// On one map with 1,920 fires an implosion never settled within
+        /// its cap, most likely because colonists and animals kept walking
+        /// into its reach.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        private static void QuietTheMap(Map map)
+        {
+            foreach (Thing fire in map.listerThings.ThingsOfDef(ThingDefOf.Fire)
+                .ToList())
+            {
+                fire.Destroy();
+            }
+
+            foreach (Pawn p in map.mapPawns.AllPawnsSpawned.ToList())
+            {
+                if (p.HostileTo(Faction.OfPlayer))
+                {
+                    p.Destroy(DestroyMode.Vanish);
+                }
+                else if (p.IsColonist && p.drafter != null && !p.Dead)
+                {
+                    p.jobs?.StopAll();
+                    p.drafter.Drafted = true;
+                    p.drafter.FireAtWill = false;
+                }
+            }
         }
 
         /// <summary>
@@ -455,6 +510,16 @@ namespace BatshitTechnology
                 $"held {Building_BatshittiumBallista.VolleysHeldForPower - heldBefore}, "
                     + $"bolts {left} -> {chained2.Storage.CountOf(painful)}");
             ballista.OrderAttack(LocalTargetInfo.Invalid);
+
+            // Raiders path round dangerous turrets on an avoid grid that
+            // spans the turret's range plus 4, which cannot pass the
+            // engine's ~79.8-tile radial limit: "Not enough squares to get
+            // to radius 329", seen when a raid met a Ballista set to 325.
+            // The grid regenerates whenever raiders path; force it here.
+            var avoidMark = ErrorMark();
+            map.avoidGrid.Regenerate();
+            Check("raiders' avoid grid survives a 325-tile Ballista",
+                !NewErrorSince(avoidMark), "an error was logged (see the log)");
             ballista.SetCount(4);
             ballista.SetRange(30);
         }
@@ -492,10 +557,18 @@ namespace BatshitTechnology
                 TotalBolts(map, painful) - before == 10 && fuel.Fuel == 1f,
                 $"bolts +{TotalBolts(map, painful) - before}, fuel {fuel.Fuel}");
 
+            // Haulers carry the bolts off to the Ballista and its magazines
+            // as they appear (a run saw +0 when one held all twenty at the
+            // check), and the Ballista fires painful bolts at anything
+            // hostile in range; count both.
+            int firedBefore = Building_BatshittiumBallista.BoltsFired;
             Tick(comp.Props.ticksPerUnit + 10);
+            int fired = Building_BatshittiumBallista.BoltsFired - firedBefore;
+            int made = TotalBolts(map, painful) + fired - before;
             Check("it works the next unit on its own",
-                TotalBolts(map, painful) - before == 20 && !fuel.HasFuel,
-                $"bolts +{TotalBolts(map, painful) - before}, fuel {fuel.Fuel}");
+                made == 20 && !fuel.HasFuel,
+                $"bolts +{made} ({CarriedBolts(map, painful)} carried, "
+                    + $"{fired} fired), fuel {fuel.Fuel}");
         }
 
         /// <summary>Puts bolts straight into a bolt store.</summary>
@@ -510,8 +583,9 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Every bolt of a type on the map: loose stacks plus what Ballistas
-        /// and magazines hold, so hauling between them doesn't change it.
+        /// Every bolt of a type on the map: loose stacks, what Ballistas and
+        /// magazines hold, and what pawns are carrying or have pocketed, so
+        /// hauling between them doesn't change it.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="bolt">The bolt type.</param>
@@ -524,8 +598,21 @@ namespace BatshitTechnology
                     : t is Building_BallistaMagazine m ? m.Storage : null)
                 .Where(s => s != null)
                 .Sum(s => s.CountOf(bolt));
-            return loose + stored;
+            return loose + stored + CarriedBolts(map, bolt);
         }
+
+        /// <summary>
+        /// Bolts of a type that pawns on the map are carrying or have in
+        /// their inventories.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="bolt">The bolt type.</param>
+        /// <returns>How many.</returns>
+        private static int CarriedBolts(Map map, ThingDef bolt) =>
+            map.mapPawns.AllPawnsSpawned.Sum(p =>
+                (p.carryTracker?.CarriedThing?.def == bolt
+                    ? p.carryTracker.CarriedThing.stackCount : 0)
+                + (p.inventory?.innerContainer?.TotalStackCountOfDef(bolt) ?? 0));
 
         /// <summary>
         /// Ending a burn spends one unit and starts the next; ending the
@@ -1538,6 +1625,626 @@ namespace BatshitTechnology
             }
 
             return moves.Count == 0 ? "nothing" : string.Join("; ", moves);
+        }
+
+        // ===== Tractor Bomb (docs/TRACTOR-BOMB.md) =====
+
+        /// <summary>
+        /// How far from the middle of the map the Tractor Bomb scenarios
+        /// clear their stage, in tiles.
+        /// </summary>
+        private const int TractorStageRadius = 32;
+
+        /// <summary>
+        /// The Tractor Bomb, on a cleared stage at the middle of the map:
+        /// the robot itself, its patrol, the temporary recipe, a hunt from
+        /// patrol to explosion, a protest, Dial-A-Yield and a robot's death.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBomb(Map map, IntVec3 center)
+        {
+            var mark = ErrorMark();
+            ResearchProjectDef dial =
+                BT_TractorBombDefOf.BT_Research_TractorBombDialAYield;
+            Check("Dial-A-Yield starts unresearched", !dial.IsFinished);
+            Find.ResearchManager.FinishProject(
+                BT_TractorBombDefOf.BT_Research_TractorBomb,
+                doCompletionDialog: false, doCompletionLetter: false);
+
+            TestTractorBombRobot(map, center);
+            TestTractorBombPatrol(map, center);
+            TestTractorBombRecipe(map, center);
+            TestTractorBombHunt(map, center);
+            TestTractorBombProtest(map, center);
+            TestTractorBombDialAYield(map, center);
+            TestTractorBombDeath(map, center);
+            Check("the Tractor Bomb scenarios logged no errors",
+                !NewErrorSince(mark), "an error was logged (see the log)");
+        }
+
+        /// <summary>
+        /// Clears a stage for the Tractor Bomb: concrete under open sky,
+        /// no fog, no fires anywhere, no hostiles, no wild animals near it,
+        /// and every colonist drafted (holding fire) well away from it, so
+        /// nobody wanders into a pull radius or a protest uninvited.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="stage">The stage's middle.</param>
+        private static void ClearTractorStage(Map map, IntVec3 stage)
+        {
+            PrepareGround(map, CellRect.CenteredOn(stage, TractorStageRadius));
+            foreach (IntVec3 c in CellRect.CenteredOn(stage, TractorStageRadius))
+            {
+                if (c.InBounds(map))
+                {
+                    map.fogGrid.Unfog(c);
+                }
+            }
+
+            foreach (Thing fire in map.listerThings.ThingsOfDef(ThingDefOf.Fire)
+                .ToList())
+            {
+                fire.Destroy();
+            }
+
+            IntVec3 hold = Clamp(map, stage + new IntVec3(0, 0, 70));
+            foreach (Pawn p in map.mapPawns.AllPawnsSpawned.ToList())
+            {
+                bool near = p.Position.InHorDistOf(
+                    stage, TractorStageRadius + 25);
+                if (p.HostileTo(Faction.OfPlayer)
+                    || (near && p.RaceProps.Animal && p.Faction == null)
+                    || p.TryGetComp<CompTractorBomb>() != null)
+                {
+                    p.Destroy(DestroyMode.Vanish);
+                }
+                else if (p.IsColonist && !p.Dead)
+                {
+                    HoldColonist(map, p, hold);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Drafts a colonist, holding fire, and stands it near a spot.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="p">The colonist.</param>
+        /// <param name="spot">Where to stand it.</param>
+        private static void HoldColonist(Map map, Pawn p, IntVec3 spot)
+        {
+            if (!CellFinder.TryFindRandomCellNear(
+                spot, map, 10, c => c.Standable(map) && !c.Fogged(map),
+                out IntVec3 cell))
+            {
+                cell = spot;
+            }
+
+            p.jobs?.StopAll();
+            p.Position = cell;
+            p.Notify_Teleported();
+            if (p.drafter != null)
+            {
+                p.drafter.Drafted = true;
+                p.drafter.FireAtWill = false;
+            }
+        }
+
+        /// <summary>
+        /// A hostile raider who will not move or shoot: unarmed and stunned
+        /// for longer than any scenario lasts.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="at">Where to put it.</param>
+        /// <returns>The hostile, spawned.</returns>
+        private static Pawn SpawnStunnedHostile(Map map, IntVec3 at)
+        {
+            Faction enemy = Find.FactionManager.RandomEnemyFaction(
+                allowNonHumanlike: false) ?? Faction.OfMechanoids;
+            PawnKindDef kind = enemy.def.humanlikeFaction
+                ? PawnKindDefOf.Drifter
+                : DefDatabase<PawnKindDef>.GetNamed("Mech_Scyther");
+            Pawn hostile = PawnGenerator.GeneratePawn(new PawnGenerationRequest(
+                kind, enemy, forceGenerateNewPawn: true, dontGiveWeapon: true));
+            GenSpawn.Spawn(hostile, at, map);
+            hostile.stances.stunner.StunFor(
+                100000, null, addBattleLog: false, showMote: false);
+            return hostile;
+        }
+
+        /// <summary>A fresh player robot, exactly where asked.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="at">Where to put it.</param>
+        /// <returns>The robot, spawned.</returns>
+        private static Pawn SpawnTestRobot(Map map, IntVec3 at) =>
+            (Pawn)GenSpawn.Spawn(
+                TractorBombUtility.MakeRobot(Faction.OfPlayer), at, map);
+
+        /// <summary>
+        /// Ticks until a robot has emplaced, or a cap passes, noting when it
+        /// was ready and when its bomb appeared.
+        /// </summary>
+        /// <param name="robot">The robot.</param>
+        /// <param name="maxTicks">The cap.</param>
+        /// <param name="approached">Whether it was ever seen approaching.</param>
+        /// <returns>Its bomb, or null if none appeared.</returns>
+        private static Building_TractorBomb WaitForEmplacement(
+            Pawn robot, int maxTicks, out bool approached)
+        {
+            approached = false;
+            Map map = robot.Map;
+            for (int i = 0; i < maxTicks && robot.Spawned; i++)
+            {
+                approached |= robot.CurJobDef
+                    == BT_TractorBombDefOf.BT_TractorBombApproach;
+                Tick(1);
+            }
+
+            return map.listerThings
+                .ThingsOfDef(BT_TractorBombDefOf.BT_TractorBombEmplaced)
+                .OfType<Building_TractorBomb>()
+                .OrderByDescending(b => b.EmplacedTick)
+                .FirstOrDefault(b => b.Spawned);
+        }
+
+        /// <summary>
+        /// The robot as a pawn: its own race and not a mechanoid (no
+        /// mechanitor rules, even with Biotech), no needs and no mood, a
+        /// per-pawn allowed area the player can set, selectable, with a
+        /// sensible inspect pane and controls, and no yield sliders before
+        /// Dial-A-Yield, which also leaves a dialled yield at the defaults.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombRobot(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            Pawn robot = SpawnTestRobot(map, center);
+            var comp = robot.TryGetComp<CompTractorBomb>();
+            Tick(30);
+            Check("a tractor bomb is a player robot of its own race",
+                robot.def == BT_TractorBombDefOf.BT_TractorBomb
+                    && robot.Faction == Faction.OfPlayer && comp != null
+                    && !robot.RaceProps.IsMechanoid && !robot.IsColonyMech
+                    && !robot.RaceProps.Animal && !robot.RaceProps.Humanlike
+                    && !robot.IsColonist && robot.mechanitor == null,
+                $"mech {robot.RaceProps.IsMechanoid}, colony mech "
+                    + $"{robot.IsColonyMech}, animal {robot.RaceProps.Animal}");
+            Check("a tractor bomb has no needs and no mood",
+                (robot.needs?.AllNeeds.Count ?? 0) == 0
+                    && robot.needs?.mood == null,
+                string.Join(", ", robot.needs?.AllNeeds.Select(n => n.def.defName)
+                    ?? Enumerable.Empty<string>()));
+            Check("a tractor bomb has a player-settable allowed area",
+                robot.playerSettings != null
+                    && robot.playerSettings.SupportsAllowedAreas
+                    && robot.playerSettings.RespectsAllowedArea
+                    && robot.playerSettings.AreaRestrictionInPawnCurrentMap
+                        == null);
+
+            List<Gizmo> gizmos = robot.GetGizmos().ToList();
+            string inspect = robot.GetInspectString();
+            Check("a tractor bomb is selectable, with a sensible inspect pane",
+                robot.def.selectable && inspect.Contains("Tractor beam 10 tiles")
+                    && inspect.Contains("Patrols:")
+                    && inspect.Contains("atrolling")
+                    && gizmos.OfType<Command_TractorBombArea>().Any(),
+                $"inspect \"{inspect.Replace('\n', '|')}\", "
+                    + $"{gizmos.Count} gizmos");
+
+            comp.PullRadius = 4f;
+            comp.BlastRadius = 3f;
+            Check("before Dial-A-Yield a robot has no sliders and the defaults",
+                !gizmos.OfType<Gizmo_TractorBombYield>().Any()
+                    && comp.PullRadius == 10f && comp.BlastRadius == 5f,
+                $"pull {comp.PullRadius}, blast {comp.BlastRadius}");
+            robot.Destroy(DestroyMode.Vanish);
+        }
+
+        /// <summary>
+        /// With nobody about, a robot patrols: it keeps moving, and stays
+        /// inside the allowed area the player gives it.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombPatrol(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            if (!map.areaManager.TryMakeNewAllowed(out Area_Allowed area))
+            {
+                Check("a robot patrols inside its allowed area", false,
+                    "could not make an allowed area");
+                return;
+            }
+
+            CellRect pen = CellRect.CenteredOn(center + new IntVec3(10, 0, 0), 7);
+            foreach (IntVec3 c in pen)
+            {
+                area[c] = true;
+            }
+
+            Pawn robot = SpawnTestRobot(map, pen.CenterCell);
+            robot.playerSettings.AreaRestrictionInPawnCurrentMap = area;
+            var visited = new HashSet<IntVec3>();
+            int outside = 0;
+            bool patrolled = false;
+            for (int i = 0; i < 1800; i++)
+            {
+                Tick(1);
+                patrolled |= robot.CurJobDef
+                    == BT_TractorBombDefOf.BT_TractorBombPatrol;
+                if (i % 10 == 0)
+                {
+                    visited.Add(robot.Position);
+                    if (!area[robot.Position])
+                    {
+                        outside++;
+                    }
+                }
+            }
+
+            Check("a robot patrols inside its allowed area",
+                patrolled && visited.Count >= 8 && outside == 0,
+                $"patrol job seen {patrolled}, {visited.Count} cells visited, "
+                    + $"{outside} samples outside the area");
+            robot.Destroy(DestroyMode.Vanish);
+            area.Delete();
+        }
+
+        /// <summary>
+        /// The temporary recipe at the machining table: when it completes, a
+        /// robot drives out beside the crafter.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombRecipe(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            RecipeDef recipe =
+                DefDatabase<RecipeDef>.GetNamed("BT_AssembleTractorBomb");
+            Pawn crafter = map.mapPawns.FreeColonistsSpawned
+                .FirstOrDefault(p => !p.Dead && !p.Downed);
+            int before = TractorBombUtility.CountOnMap(map, Faction.OfPlayer);
+            if (crafter != null)
+            {
+                recipe.Worker.Notify_IterationCompleted(
+                    crafter, new List<Thing>());
+            }
+
+            Pawn robot = map.mapPawns.AllPawnsSpawned.FirstOrDefault(
+                p => p.TryGetComp<CompTractorBomb>() != null);
+            Check("the temporary recipe drives a robot out beside the crafter",
+                crafter == null || (robot != null
+                    && robot.Position.InHorDistOf(crafter.Position, 5f)
+                    && TractorBombUtility.CountOnMap(map, Faction.OfPlayer)
+                        == before + 1
+                    && DefDatabase<ThingDef>.GetNamed("TableMachining")
+                        .AllRecipes.Contains(recipe)),
+                $"robot {robot?.Position}, crafter {crafter?.Position}");
+            robot?.Destroy(DestroyMode.Vanish);
+        }
+
+        /// <summary>
+        /// A hunt from patrol to explosion. A robot sees a stunned raider
+        /// 37 tiles off, drives to within 15 tiles and emplaces at once
+        /// (no colonist about). Its bomb counts down 3 to 5 s, then pulls
+        /// everything within 10 tiles to within 1.5 (eleven stacks that
+        /// cannot merge, so two must wait just outside the pile) and
+        /// explodes over 5 tiles, catching what is left outside the pile.
+        /// The raider at 15 tiles is out of reach and stays put.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombHunt(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            Pawn robot = SpawnTestRobot(map, center + new IntVec3(-25, 0, 0));
+            Pawn quarry = SpawnStunnedHostile(map, center + new IntVec3(12, 0, 0));
+            float startDistance = robot.Position.DistanceTo(quarry.Position);
+            Building_TractorBomb bomb = WaitForEmplacement(
+                robot, 1500, out bool approached);
+            float distance = bomb == null ? -1f
+                : bomb.Position.DistanceTo(quarry.Position);
+            Check("a robot finds a hostile and emplaces within 15 tiles",
+                bomb != null && approached && startDistance > 30f
+                    && bomb.Position.InHorDistOf(quarry.Position, 15f),
+                $"bomb {bomb != null}, approached {approached}, "
+                    + $"{startDistance:F1} -> {distance:F1} tiles");
+            if (bomb == null)
+            {
+                return;
+            }
+
+            Check("with no colonist in reach it emplaces at once",
+                bomb.ProtestTicks == 0 && bomb.ReadyTick >= 0
+                    && bomb.EmplacedTick - bomb.ReadyTick <= 2,
+                $"protest {bomb.ProtestTicks}, ready {bomb.ReadyTick}, "
+                    + $"emplaced {bomb.EmplacedTick}");
+            Check("an emplaced bomb is armed, flagged for the flee step",
+                TractorBombUtility.ArmedBombs(map).Contains(bomb)
+                    == bomb.IsArmed
+                    && bomb.CurrentStage == Building_TractorBomb.Stage.Deploying
+                    && bomb.PullRadius == 10f && bomb.BlastRadius == 5f);
+
+            // Stage the pull while its tyres flip: eleven stacks that cannot
+            // merge, a second raider inside the reach and one item outside.
+            IntVec3 eye = bomb.Position;
+            var stacks = new List<Thing>();
+            ThingDef[] kinds =
+            {
+                ThingDefOf.Steel, ThingDefOf.WoodLog, ThingDefOf.Plasteel,
+                ThingDefOf.Silver, ThingDefOf.Gold, ThingDefOf.Cloth,
+                ThingDefOf.ComponentIndustrial, ThingDefOf.MedicineHerbal,
+                ThingDefOf.Uranium, ThingDefOf.Jade, ThingDefOf.Chemfuel,
+            };
+            for (int i = 0; i < kinds.Length; i++)
+            {
+                IntVec3 spot = eye + (Vector3Utility.FromAngleFlat(i * 360f
+                    / kinds.Length) * (3f + (i % 4) * 2f)).ToIntVec3();
+                Thing item = ThingMaker.MakeThing(kinds[i]);
+                item.stackCount = Mathf.Min(5, kinds[i].stackLimit);
+                stacks.Add(GenSpawn.Spawn(item, spot, map));
+            }
+
+            Pawn second = SpawnStunnedHostile(map, eye + new IntVec3(0, 0, 7));
+            Thing outsider = GenSpawn.Spawn(
+                ThingMaker.MakeThing(ThingDefOf.Steel), eye + new IntVec3(0, 0, -12),
+                map);
+            IntVec3 outsiderAt = outsider.Position;
+            IntVec3 quarryAt = quarry.Position;
+            var tracked = new List<Thing>(stacks) { second };
+            var last = tracked.ToDictionary(t => t, t => t.Position);
+            int explosions = Building_TractorBomb.Explosions;
+            for (int i = 0; i < 1500 && bomb.Spawned; i++)
+            {
+                foreach (Thing t in tracked.Where(t => t.Spawned))
+                {
+                    last[t] = t.Position;
+                }
+
+                Tick(1);
+            }
+
+            int countdown = bomb.ImplosionStartedTick - bomb.CountdownStartedTick;
+            Check("the countdown is 3 to 5 s",
+                bomb.CountdownTicks >= 180 && bomb.CountdownTicks <= 300
+                    && countdown == bomb.CountdownTicks
+                    && bomb.CountdownStartedTick - bomb.EmplacedTick == 30,
+                $"rolled {bomb.CountdownTicks}, ran {countdown} ticks, "
+                    + $"flip {bomb.CountdownStartedTick - bomb.EmplacedTick}");
+
+            Implosion implosion = bomb.Implosion;
+            float blast = bomb.BlastRadius;
+            int gathered = last.Values.Count(c => c.InHorDistOf(eye, 1.5f));
+            var strays = last
+                .Where(kv => !kv.Value.InHorDistOf(eye, 1.5f)
+                    && !kv.Value.InHorDistOf(eye, blast))
+                .Select(kv => $"{kv.Key.LabelShort} ({kv.Value.x - eye.x}, "
+                    + $"{kv.Value.z - eye.z})")
+                .ToList();
+            Check("everything within the pull ends within 1.5 tiles or is caught",
+                implosion != null && implosion.PullRadius == 10f
+                    && implosion.GatherRadius == 1.5f && strays.Count == 0
+                    && gathered >= 9,
+                $"{gathered} of {tracked.Count} within 1.5 tiles; outside the "
+                    + $"blast: {string.Join(", ", strays)}");
+            Check("nothing beyond the pull radius is dragged",
+                (!outsider.Spawned || outsider.Position == outsiderAt)
+                    && (!quarry.Spawned || quarry.Position == quarryAt),
+                $"steel {outsiderAt} -> {outsider.Position}, raider "
+                    + $"{quarryAt} -> {quarry.Position}");
+            bool hurt = second.Dead
+                || second.health.hediffSet.GetInjuredParts().Any();
+            Check("the bomb explodes over 5 tiles",
+                bomb.Destroyed && Building_TractorBomb.Explosions == explosions + 1
+                    && Building_TractorBomb.LastBlastRadius == 5f && hurt,
+                $"destroyed {bomb.Destroyed}, explosions "
+                    + $"+{Building_TractorBomb.Explosions - explosions}, radius "
+                    + $"{Building_TractorBomb.LastBlastRadius}, raider hurt {hurt}");
+            Tick(60);
+        }
+
+        /// <summary>
+        /// A colonist inside the pull radius when the robot is ready: it
+        /// protests for about three seconds, then emplaces anyway.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombProtest(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            Pawn colonist = map.mapPawns.FreeColonistsSpawned
+                .FirstOrDefault(p => !p.Dead && !p.Downed);
+            Pawn robot = SpawnTestRobot(map, center + new IntVec3(-6, 0, 0));
+            if (colonist != null)
+            {
+                HoldColonist(map, colonist, robot.Position + new IntVec3(0, 0, 4));
+            }
+
+            SpawnStunnedHostile(map, center + new IntVec3(6, 0, 0));
+            var comp = robot.TryGetComp<CompTractorBomb>();
+            bool protested = false;
+            Building_TractorBomb bomb = null;
+            for (int i = 0; i < 600 && robot.Spawned; i++)
+            {
+                Tick(1);
+                protested |= robot.Spawned && comp.Protesting;
+            }
+
+            bomb = map.listerThings
+                .ThingsOfDef(BT_TractorBombDefOf.BT_TractorBombEmplaced)
+                .OfType<Building_TractorBomb>().FirstOrDefault(b => b.Spawned);
+            int delay = bomb == null ? -1 : bomb.EmplacedTick - bomb.ReadyTick;
+            Check("a colonist in the pull radius delays emplacing about 3 s",
+                colonist == null || (protested && bomb != null
+                    && delay >= 170 && delay <= 190),
+                $"protested {protested}, bomb {bomb != null}, delay {delay}");
+            Check("after its protest it emplaces anyway",
+                colonist == null || (bomb != null && bomb.ProtestTicks >= 170));
+
+            // Get the colonist clear before the pull, and let it go off.
+            if (colonist != null)
+            {
+                HoldColonist(map, colonist, Clamp(map, center + new IntVec3(0, 0, 70)));
+            }
+
+            for (int i = 0; i < 1200 && bomb != null && bomb.Spawned; i++)
+            {
+                Tick(1);
+            }
+
+            Tick(60);
+        }
+
+        /// <summary>
+        /// Dial-A-Yield: once researched, a robot and its bomb have both
+        /// sliders; dialled radii are clamped to range, carry over to the
+        /// bomb, set its implosion's reach and its blast, and the bomb's
+        /// sliders go once it starts to pull. Here the tractor beam is
+        /// dialled down to 4 tiles and the blast to 3: an item 3 tiles out
+        /// is pulled in, one 6 tiles out is left alone.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombDialAYield(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            Find.ResearchManager.FinishProject(
+                BT_TractorBombDefOf.BT_Research_TractorBombDialAYield,
+                doCompletionDialog: false, doCompletionLetter: false);
+            Pawn robot = SpawnTestRobot(map, center + new IntVec3(-6, 0, 0));
+            var comp = robot.TryGetComp<CompTractorBomb>();
+            var sliders = comp.CompGetGizmosExtra()
+                .OfType<Gizmo_TractorBombYield>().ToList();
+            comp.PullRadius = 25f;
+            comp.BlastRadius = 0.5f;
+            bool clamped = comp.PullRadius == 20f && comp.BlastRadius == 2f;
+            var merged = new Gizmo_TractorBombYield(
+                comp, TractorBombYieldKind.Pull);
+            merged.MergeWith(new Gizmo_TractorBombYield(
+                new CompTractorBomb(), TractorBombYieldKind.Pull));
+            comp.PullRadius = 4f;
+            comp.BlastRadius = 3f;
+            Check("Dial-A-Yield gives robots two clamped, groupable sliders",
+                sliders.Count == 2 && clamped && merged.Bombs.Count == 2
+                    && comp.PullRadius == 4f && comp.BlastRadius == 3f,
+                $"{sliders.Count} sliders, clamped {clamped}, "
+                    + $"merged {merged.Bombs.Count}");
+
+            IntVec3 at = robot.Position;
+            Thing near = GenSpawn.Spawn(
+                ThingMaker.MakeThing(ThingDefOf.Steel), at + new IntVec3(0, 0, 3), map);
+            Thing far = GenSpawn.Spawn(
+                ThingMaker.MakeThing(ThingDefOf.WoodLog), at + new IntVec3(0, 0, -6),
+                map);
+            IntVec3 farAt = far.Position;
+            SpawnStunnedHostile(map, center + new IntVec3(6, 0, 0));
+            Building_TractorBomb bomb = WaitForEmplacement(robot, 600, out _);
+            bool bombSliders = bomb != null && bomb.GetGizmos()
+                .OfType<Gizmo_TractorBombYield>().Count() == 2;
+            IntVec3 nearLast = near.Position;
+            bool slidersGone = false;
+            for (int i = 0; i < 1200 && bomb != null && bomb.Spawned; i++)
+            {
+                if (near.Spawned)
+                {
+                    nearLast = near.Position;
+                }
+
+                if (bomb.CurrentStage == Building_TractorBomb.Stage.Imploding)
+                {
+                    slidersGone |= !bomb.GetGizmos()
+                        .OfType<Gizmo_TractorBombYield>().Any();
+                }
+
+                Tick(1);
+            }
+
+            Check("Dial-A-Yield changes the radii",
+                bomb != null && bomb.Implosion?.PullRadius == 4f
+                    && Building_TractorBomb.LastBlastRadius == 3f
+                    && nearLast.InHorDistOf(at, 1.5f)
+                    && far.Spawned && far.Position == farAt,
+                $"pull {bomb?.Implosion?.PullRadius}, blast "
+                    + $"{Building_TractorBomb.LastBlastRadius}, item at 3 ended "
+                    + $"{nearLast - at}, item at 6 moved {far.Position != farAt}");
+            Check("a planted bomb can be dialled until it starts to pull",
+                bombSliders && slidersGone,
+                $"sliders while counting down {bombSliders}, gone while "
+                    + $"pulling {slidersGone}");
+            Tick(60);
+        }
+
+        /// <summary>
+        /// A robot destroyed before it emplaces gets its own death: a
+        /// sputtering vortex that sucks in its own parts and nothing else,
+        /// then pops, with no corpse and no death letter. One that loses
+        /// three wheels cannot move, and is wrecked rather than downed.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTractorBombDeath(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            Pawn robot = SpawnTestRobot(map, center);
+            IntVec3 at = robot.Position;
+            Thing steel = ThingMaker.MakeThing(ThingDefOf.Steel);
+            steel.stackCount = 20;
+            steel = GenSpawn.Spawn(steel, at + new IntVec3(2, 0, 0), map);
+            IntVec3 steelAt = steel.Position;
+            Pawn colonist = map.mapPawns.FreeColonistsSpawned
+                .FirstOrDefault(p => !p.Dead && !p.Downed);
+            IntVec3 colonistAt = IntVec3.Invalid;
+            if (colonist != null)
+            {
+                HoldColonist(map, colonist, at + new IntVec3(-3, 0, 0));
+                colonistAt = colonist.Position;
+            }
+
+            int letters = Find.LetterStack.LettersListForReading.Count;
+            int wrecked = CompTractorBomb.Wrecked;
+            int pops = TractorBombDeathVortex.Pops;
+            robot.Kill(new DamageInfo(DamageDefOf.Bomb, 50f));
+            var vortex = map.listerThings
+                .ThingsOfDef(BT_TractorBombDefOf.BT_TractorBombDeathVortex)
+                .FirstOrDefault(v => v.Position == at);
+            bool corpse = map.listerThings.ThingsInGroup(ThingRequestGroup.Corpse)
+                .OfType<Corpse>().Any(c => c.InnerPawn == robot);
+            Check("killing a robot before it emplaces sets off its own death",
+                robot.Dead && vortex != null && !corpse
+                    && CompTractorBomb.Wrecked == wrecked + 1
+                    && Find.LetterStack.LettersListForReading.Count == letters,
+                $"dead {robot.Dead}, vortex {vortex != null}, corpse {corpse}, "
+                    + $"letters +{Find.LetterStack.LettersListForReading.Count - letters}");
+            Tick(DeathVortexMath.TotalTicks + 5);
+            bool untouched = steel.Spawned && steel.Position == steelAt
+                && steel.stackCount == 20 && (colonist == null
+                    || (colonist.Position == colonistAt
+                        && !colonist.stances.stunner.Stunned
+                        && !colonist.health.hediffSet.GetInjuredParts().Any()));
+            Check("its vortex sucks in its own parts, nothing else, and pops",
+                (vortex == null || vortex.Destroyed)
+                    && TractorBombDeathVortex.Pops == pops + 1 && untouched,
+                $"vortex gone {vortex?.Destroyed}, pops "
+                    + $"+{TractorBombDeathVortex.Pops - pops}, others untouched "
+                    + $"{untouched}");
+
+            // Shot off its wheels: it cannot move, so it is wrecked.
+            Pawn crippled = SpawnTestRobot(map, center + new IntVec3(8, 0, 0));
+            foreach (BodyPartRecord wheel in crippled.health.hediffSet
+                .GetNotMissingParts()
+                .Where(p => p.def.defName == "BT_TractorWheel").Take(3).ToList())
+            {
+                crippled.TakeDamage(new DamageInfo(
+                    DamageDefOf.Blunt, 999f, 999f, hitPart: wheel));
+            }
+
+            Tick(2);
+            Check("a robot that loses its wheels is wrecked, not left downed",
+                crippled.Dead && CompTractorBomb.Wrecked == wrecked + 2,
+                $"dead {crippled.Dead}, downed {crippled.Downed}");
+            Tick(DeathVortexMath.TotalTicks + 5);
         }
 
         /// <summary>

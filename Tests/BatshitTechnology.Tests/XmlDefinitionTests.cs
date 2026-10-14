@@ -251,6 +251,11 @@ public sealed class XmlDefinitionTests
             .Select(int.Parse).ToList();
         Assert.Equal(325, ranges.Max());
         Assert.DoesNotContain(ranges, r => r >= 80 && r < 90); // ring cap ~79.8
+        // Raiders' avoid grid spans a dangerous turret's range plus 4, which
+        // must stay under the engine's radial limit (~79.8): a 325-tile
+        // Ballista logged "Not enough squares to get to radius 329".
+        Assert.Equal("false", ballista.Element("building")
+            ?.Element("ai_combatDangerous")?.Value);
         Assert.Equal(256, ListValues(ballista.Descendants("countPresets").Single())
             .Select(int.Parse).Max());
 
