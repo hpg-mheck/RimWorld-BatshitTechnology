@@ -6,7 +6,8 @@
 // on purpose: a group arrives (hidden faction, no goodwill, unarmed); a
 // Timid robot protests about a tourist in its pull with no colonist near;
 // a tourist killed and another hurt by a colonist change no goodwill and
-// send no letter; and dismissal leaves nothing behind and counts each.
+// send no letter; dismissal leaves nothing behind and counts each; and a
+// loaded game sends home a group it still holds (a game saved mid-tour).
 
 using System.Collections.Generic;
 using System.Linq;
@@ -23,8 +24,9 @@ namespace BatshitTechnology
         /// The tour group on the smoke map, and the robot's protest about
         /// a guest: the group arrives, a robot protests about a tourist in
         /// its pull, a tourist's death and injury by a colonist cost no
-        /// goodwill and send no letter, and dismissal counts and removes
-        /// every tourist, corpse and stitch of clothing.
+        /// goodwill and send no letter, dismissal counts and removes every
+        /// tourist, corpse and stitch of clothing, and a loaded game sends
+        /// home a group the tour never dismissed.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -42,6 +44,7 @@ namespace BatshitTechnology
             TestTractorBombProtestsAboutGuest(map, center, group);
             CheckTouristLossesCostNothing(map, group);
             CheckTouristsDismissed(group);
+            TestTouristsSentHomeOnLoad(map, center);
             Check("the tour group logged no errors",
                 !NewErrorSince(mark), "an error was logged (see the log)");
         }
@@ -194,6 +197,70 @@ namespace BatshitTechnology
                 $"{count}; again {again}; left [{string.Join(", ", left)}]; "
                     + $"lords {lords} then {lordsAfter}; fates "
                     + $"[{string.Join(", ", group.Fates)}]");
+        }
+
+        /// <summary>
+        /// A game saved during a tour and loaded again holds a group the
+        /// tour never dismissed: the tourists, their lord (it saves their
+        /// spots) and any corpse, while the session and the tour saved
+        /// nothing. A second group arrives on the smoke map and is left
+        /// as such a game finds it, one tourist dead and one downed; the
+        /// game's own GameComponent_TourGroupSweep then runs its
+        /// LoadedGame, as RimWorld does after a load, and nothing of the
+        /// tourists' faction may be left: no pawn, no corpse, no lord. A
+        /// second load finds nothing. A whole save and reload is not run
+        /// (the runner never reloads its game; docs/AI-TODO.txt).
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestTouristsSentHomeOnLoad(Map map, IntVec3 center)
+        {
+            ClearTractorStage(map, center);
+            TourGroup group = TourGroup.Arrive(map, center + new IntVec3(0, 0, -20));
+            var sweep = Current.Game.GetComponent<GameComponent_TourGroupSweep>();
+            Pawn dead = group?.Members.FirstOrDefault();
+            Pawn downed = group?.Members.Skip(1).FirstOrDefault();
+            dead?.Kill(new DamageInfo(DamageDefOf.Bomb, 99f));
+            if (downed != null)
+            {
+                HealthUtility.DamageUntilDowned(downed, allowBleedingWounds: false);
+            }
+
+            Tick(10);
+            var before = TouristsLeft(map);
+            int left = group?.LeftOnMap().Count ?? 0;
+            sweep?.LoadedGame();
+            var after = TouristsLeft(map);
+            int again = GameComponent_TourGroupSweep.SweepAllMaps("the smoke test, again");
+            Check("a loaded game sends home a tour group it still holds: no "
+                    + "tourist, corpse or lord of theirs is left",
+                group != null && sweep != null && dead != null && dead.Dead
+                    && downed != null && downed.Downed
+                    && left == group.Members.Count
+                    && before == (group.Members.Count - 1, 1, 1)
+                    && after == (0, 0, 0) && group.LeftOnMap().Count == 0
+                    && again == 0,
+                $"group {group?.Members.Count}; sweep {sweep != null}; dead "
+                    + $"{dead?.Dead}; downed {downed?.Downed}; on the map "
+                    + $"{left}; before (pawns, corpses, lords) {before}; after "
+                    + $"{after}; again {again}");
+        }
+
+        /// <summary>
+        /// What of the tourists' faction a map holds: living pawns, spawned
+        /// or held, corpses anywhere, and lords of the tourists' lord job.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <returns>The counts.</returns>
+        private static (int Pawns, int Corpses, int Lords) TouristsLeft(Map map)
+        {
+            var corpses = new List<Corpse>();
+            ThingOwnerUtility.GetAllThingsRecursively(
+                map, ThingRequest.ForGroup(ThingRequestGroup.Corpse), corpses);
+            return (
+                map.mapPawns.AllPawns.Count(TourGroup.IsTourist),
+                corpses.Count(c => TourGroup.IsTourist(c.InnerPawn)),
+                map.lordManager.lords.Count(l => l.LordJob is LordJob_ShowcaseTourists));
         }
     }
 }

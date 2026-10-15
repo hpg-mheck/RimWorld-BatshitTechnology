@@ -397,6 +397,31 @@ public sealed class ShowcaseXmlTests
     }
 
     /// <summary>
+    /// A loaded game sends home any tour group it still holds (a game
+    /// saved mid-tour; nothing about the tour is saved): the mod's
+    /// GameComponent_TourGroupSweep, which RimWorld makes for every game
+    /// through its public (Game) constructor, sweeps every map in
+    /// LoadedGame, and waits for the load's long event to finish first,
+    /// since the load runs off the main thread, where map pawns must not
+    /// be touched. The smoke runner checks the sweep itself in game.
+    /// </summary>
+    [Fact(DisplayName = "A loaded game sends leftover tourists home, on the main thread")]
+    public void Loaded_game_should_send_tourists_home()
+    {
+        string code = WithoutComments(File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Tour", "TourGroup.cs")));
+        Assert.Matches(
+            @"public\s+class\s+GameComponent_TourGroupSweep\s*:\s*GameComponent\b", code);
+        Assert.Matches(@"public\s+GameComponent_TourGroupSweep\s*\(\s*Game\s+\w+\s*\)", code);
+        Match loaded = Regex.Match(
+            code, @"public\s+override\s+void\s+LoadedGame\s*\(\s*\)\s*\{(?<body>[^}]*)\}");
+        Assert.True(loaded.Success, "the sweep must override LoadedGame");
+        Assert.Matches(
+            @"^\s*LongEventHandler\.ExecuteWhenFinished\s*\(\s*\(\s*\)\s*=>\s*SweepAllMaps\s*\(",
+            loaded.Groups["body"].Value);
+    }
+
+    /// <summary>
     /// Batshit Technology's first showcase is the directed tour, with the
     /// agreed preview, size and running time; its scenes and narration
     /// are checked by <see cref="TourXmlTests"/>.

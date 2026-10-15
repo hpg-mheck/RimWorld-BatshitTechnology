@@ -85,6 +85,39 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// The tour's yard junk (Core's TourYardJunk, laid in both tractor
+        /// scenes) neither burns nor explodes, read from the loaded game's
+        /// defs, which a unit test cannot see: every def it uses exists,
+        /// has a flammability of zero (made of its default stuff, if any)
+        /// and no explosive part. The ancient crate (0.5) and components
+        /// (0.6) that first lay there failed this.
+        /// </summary>
+        private void CheckTourYardJunkInert()
+        {
+            var found = new List<string>();
+            bool ok = true;
+            foreach (string name in TourYardJunk.Single.Concat(TourYardJunk.TwinsOuter)
+                .Select(j => j.DefName).Distinct())
+            {
+                ThingDef def = DefDatabase<ThingDef>.GetNamedSilentFail(name);
+                ThingDef stuff = def != null && def.MadeFromStuff
+                    ? GenStuff.DefaultStuffFor(def) : null;
+                float flammability = def == null ? -1f
+                    : def.GetStatValueAbstract(StatDefOf.Flammability, stuff);
+                bool explosive = def?.comps?.Any(c => c is CompProperties_Explosive) ?? false;
+                if (def == null || flammability != 0f || explosive)
+                {
+                    ok = false;
+                    found.Add($"{name}: {(def == null ? "missing" : "")}"
+                        + $" flammability {flammability}, explosive {explosive}");
+                }
+            }
+
+            Check("the tour's yard junk neither burns nor explodes", ok,
+                string.Join("; ", found));
+        }
+
+        /// <summary>
         /// The junkyard: two robots, Nosy so they plant three tiles off the
         /// army, drive in from 28 tiles either side of it (the raiders are
         /// stunned until both have planted, so the robots arrive whole).

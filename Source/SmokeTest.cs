@@ -2104,6 +2104,7 @@ namespace BatshitTechnology
             TestTractorBombOldSaves();
             TestTractorBombDeath(map, center);
             TestTractorBombTwins(map, center);
+            CheckTourYardJunkInert();
             Check("the Tractor Bomb scenarios logged no errors",
                 !NewErrorSince(mark), "an error was logged (see the log)");
         }

@@ -177,7 +177,11 @@ listed in `ROADMAP.md` for confirmation):
   preferences, so a showcase never overwrites the player's autosave
   slots. Nothing about the session is saved, so a showcase game the
   player chooses to save loads as an ordinary game and autosaves as
-  usual.
+  usual. What a showcase put on the map is saved with it, though, and
+  stays the player's; a showcase that promises to take something away
+  when it ends must also do so on a load, as Batshit Technology's tour
+  does with its tour group (`GameComponent_TourGroupSweep`;
+  docs/SHOWCASE.md, "Tourists").
 - **One command-line flag:** `-btshowcase` is retired in favour of
   `-showcase=<defName>`; `Tools/smoke-test.ps1 -Showcase` passes
   `-showcase=BT_Showcase`.

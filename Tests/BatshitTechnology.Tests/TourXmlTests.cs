@@ -236,6 +236,27 @@ public sealed class TourXmlTests
     }
 
     /// <summary>
+    /// "Guests" and "visitors" are the tour group's alone
+    /// (docs/ARTISTIC-MOTIF.md, "The cast"): a line says either word only
+    /// where it speaks of the group, at a lost guest or the grenade's
+    /// volunteer, so no line about the herd or the raiders can read as
+    /// the tourists. The stampede's title, "Uninvited Guests", is the
+    /// deliberate pun, and not a line.
+    /// </summary>
+    [Fact(DisplayName = "Only lines about the tour group speak of guests or visitors")]
+    public void Guests_should_mean_the_tour_group()
+    {
+        var reserved = new Regex(@"\b(guest|visitor)s?\b", RegexOptions.IgnoreCase);
+        var speaking = Lines().Where(l => reserved.IsMatch(l.Text)).ToList();
+        Assert.NotEmpty(speaking);
+        Assert.All(speaking, l => Assert.True(
+            l.When == TourScript.GuestsLost
+                || (l.Scene == TourScript.Grenade
+                    && (l.When == TourScript.Thrown || l.When == TourScript.ThrownAlone)),
+            $"{l.Scene}/{l.When}: {l.Text}"));
+    }
+
+    /// <summary>
     /// The closing message is narration too: since slice 13000 it goes to
     /// the narration overlay in the narrator's voice, so it keeps the same
     /// rules as the def's lines, though it lives in the keyed file. It is

@@ -124,7 +124,7 @@ with the camera moving for every beat:
    deals with a rabid raccoon on Main Street, with the same grenade, and
    the census is revised.
 9. **The Tractor of Tomorrow:** a Tractor Bomb robot finds a party of
-   raiders, protests at a colonist too close, emplaces, and implodes.
+   raiders, protests at a guest too close, emplaces, and implodes.
 10. **Two Tractors:** two robots in a junkyard, their pulls overlapping,
     and the byline.
 
@@ -132,8 +132,14 @@ The narrator speaks one line at a time, large and silent, in the lower
 third of the screen; each line is read in full and gone a couple of
 seconds before the next, so each scene opens on its title line before the
 action starts, and the whole tour runs about eight minutes. Colonists are
-held clear of every blast, barrage, pull and herd until it is over; only
-the grenade's volunteer is in harm's way, by arrangement.
+held clear of every blast, barrage, pull and herd until it is over, and
+are never in harm's way. A small tour group of three to five visitors, of
+a hidden faction made for the occasion, is shown round at closer range:
+sightseers at the stampede's line and beside the self-destructs, the
+grenade's volunteer in the junk pile, and a stray in the tractor's pull.
+What becomes of them is the world's; they go home, standing or not, when
+the tour ends, is stopped or fails, or when a game saved during the tour
+is loaded.
 A scene this map cannot stage (no clear corner, no room for the tractor yard)
 is skipped, and the captions count only the scenes that run. The bar's
 **Skip** ends the current scene. **AnyRim** is a small test town in the
@@ -143,11 +149,11 @@ a funeral home with a reserved plot for everyone, a bank vault, a town hall,
 Public Works with the Batshit equipment, and nine residents whose names
 suggest they are not long for this world. Blow it up as you please; its
 residents belong to no one who will mind. The script's window opens maximized
-at 2x UI scale. In dev mode the devices' DEV buttons show during the showcase,
-and only then. In your own dev-mode games, the Actions menu's "Mods" section
-can build AnyRim at a click, at the best site, or remove it again. See
-docs/SHOWCASE.md, and docs/SHOWCASE-API.md for how other mods can offer
-showcases of their own.
+at 2x UI scale. The tour shows no DEV buttons, even in dev mode, unless you
+turn god mode on yourself. In your own dev-mode games, the Actions menu's
+"Mods" section can build AnyRim at a click, at the best site, or remove it
+again. See docs/SHOWCASE.md, and docs/SHOWCASE-API.md for how other mods
+can offer showcases of their own.
 
 ## Research
 

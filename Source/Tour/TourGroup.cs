@@ -10,7 +10,9 @@
 // the device is armed), the volunteer into the grenade's pile, the stray
 // into the tractor's pull. When the showcase finishes,
 // stops or fails, every tourist goes, alive or dead, with corpse and
-// clothes, and the group says what became of each.
+// clothes, and the group says what became of each. A game saved during
+// the tour and loaded again sends home whatever group it still holds
+// (GameComponent_TourGroupSweep), since nothing about the tour is saved.
 
 using System;
 using System.Collections.Generic;
@@ -497,6 +499,81 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// Sends home whatever a tour group left on a map that no tour
+        /// runs on: every pawn of the tourists' faction or carrying tour
+        /// composure (standing, downed or carried), every corpse of one,
+        /// spawned or held, and every lord of
+        /// <see cref="LordJob_ShowcaseTourists"/>. A game saved during a
+        /// tour keeps its group, since the lord saves its spots while the
+        /// session saves nothing, so a loaded game calls this
+        /// (<see cref="GameComponent_TourGroupSweep"/>). Nothing else
+        /// makes such pawns: the faction is hidden and never made with a
+        /// world. Logs what went, if anything. Clothes a tourist dropped
+        /// cannot be told from anyone's, so they stay.
+        /// </summary>
+        /// <param name="map">The map, or null.</param>
+        /// <param name="why">Why, for the log.</param>
+        /// <returns>How many tourists, corpses and lords went.</returns>
+        internal static int SendHomeLeftovers(Map map, string why)
+        {
+            if (map?.mapPawns == null || map.lordManager == null)
+            {
+                return 0;
+            }
+
+            int pawns = 0;
+            foreach (Pawn p in map.mapPawns.AllPawns.Where(IsTourist).ToList())
+            {
+                if (!p.Destroyed)
+                {
+                    p.Destroy(DestroyMode.Vanish);
+                    pawns++;
+                }
+            }
+
+            var held = new List<Corpse>();
+            ThingOwnerUtility.GetAllThingsRecursively(
+                map, ThingRequest.ForGroup(ThingRequestGroup.Corpse), held);
+            int corpses = 0;
+            foreach (Corpse corpse in held.Where(c => IsTourist(c?.InnerPawn)).ToList())
+            {
+                if (!corpse.Destroyed)
+                {
+                    corpse.Destroy(DestroyMode.Vanish);
+                    corpses++;
+                }
+            }
+
+            int lords = 0;
+            foreach (Lord lord in map.lordManager.lords
+                .Where(l => l?.LordJob is LordJob_ShowcaseTourists).ToList())
+            {
+                map.lordManager.RemoveLord(lord);
+                lords++;
+            }
+
+            int gone = pawns + corpses + lords;
+            if (gone > 0)
+            {
+                Log.Message($"{ShowcaseLog.Prefix} tourists dismissed ({why}): "
+                    + $"tourists {pawns}, corpses {corpses}, lords {lords}");
+            }
+
+            return gone;
+        }
+
+        /// <summary>
+        /// Whether a pawn, living or dead, came with a tour group: of the
+        /// tourists' faction, or carrying tour composure.
+        /// </summary>
+        /// <param name="p">The pawn, or null.</param>
+        /// <returns>True for a tourist.</returns>
+        internal static bool IsTourist(Pawn p) =>
+            p != null
+            && (p.Faction?.def == BT_TouristDefOf.BT_ShowcaseTourists
+                || (p.health?.hediffSet?.HasHediff(BT_TouristDefOf.BT_TourComposure) ?? false));
+
+        /// <summary>
         /// Removes one tourist: its corpse if dead, else the tourist.
         /// </summary>
         /// <param name="p">The tourist.</param>
@@ -670,6 +747,59 @@ namespace BatshitTechnology
                     wanderRadius = job.RadiusOf(pawn),
                 };
             }
+        }
+    }
+
+    /// <summary>
+    /// Sends home any tour group a loaded game still holds. Nothing about
+    /// a showcase's session or its tour is saved, so a loaded game is
+    /// never one, and the tourists of a game saved mid-tour would
+    /// otherwise wander near their last spots for good, composed and
+    /// never hungry (docs/SHOWCASE.md, "Tourists", "Going home").
+    /// RimWorld makes one for every game; it saves nothing.
+    /// </summary>
+    public class GameComponent_TourGroupSweep : GameComponent
+    {
+        /// <summary>Made by RimWorld for every game, new or loaded.</summary>
+        /// <param name="game">The game.</param>
+        public GameComponent_TourGroupSweep(Game game)
+        {
+        }
+
+        /// <summary>
+        /// After a game loads, sends home the tourists on every map. The
+        /// load runs off the main thread, so the sweep waits until it is
+        /// finished (at once when no long event runs, as in the smoke
+        /// runner's call).
+        /// </summary>
+        public override void LoadedGame()
+        {
+            LongEventHandler.ExecuteWhenFinished(() => SweepAllMaps("a loaded game"));
+        }
+
+        /// <summary>
+        /// Sends home the tourists on every map of the current game; a
+        /// map that fails is logged and the rest still swept.
+        /// </summary>
+        /// <param name="why">Why, for the log.</param>
+        /// <returns>How many tourists, corpses and lords went.</returns>
+        internal static int SweepAllMaps(string why)
+        {
+            int gone = 0;
+            foreach (Map map in Find.Maps?.ToList() ?? new List<Map>())
+            {
+                try
+                {
+                    gone += TourGroup.SendHomeLeftovers(map, why);
+                }
+                catch (Exception e)
+                {
+                    Log.Warning($"{ShowcaseLog.Prefix} tourists left on a map "
+                        + $"could not be sent home ({why}): {e}");
+                }
+            }
+
+            return gone;
         }
     }
 }

@@ -229,6 +229,15 @@ the colonists.
   up, every tourist goes: the living and the downed, the dead with their
   corpses, and any clothes left lying about, and the lord with them. The
   log says what became of each (`[BT-SHOWCASE] tourists dismissed`).
+  A game saved during the tour and loaded again is an ordinary game, but
+  its tourists' lord was saved with them; so when any game loads, the
+  mod's `GameComponent_TourGroupSweep` sends home whatever group it
+  holds: every pawn of the tourists' faction or wearing tour composure,
+  standing, downed or carried, every corpse of one, and every lord of
+  theirs (`[BT-SHOWCASE] tourists dismissed (a loaded game)`). The load
+  runs off the main thread, so the sweep waits until it has finished.
+  Clothes a tourist dropped before the save cannot be told from anyone
+  else's, and stay.
 - **Checked.** The tour verifier checks at READY that the group is three
   to five tourists of the hidden faction, not hostile, none a colonist,
   waiting in the base; at the grenade's end that its volunteer was a
@@ -239,8 +248,12 @@ the colonists.
   its faction never hostile. The SUMMARY's `tourists` counts them. The
   smoke test runs the same group on its own map: a robot protests about
   a tourist with no colonist near, a tourist killed and another hurt by
-  a colonist cost no goodwill and send no letter, and dismissal leaves
-  nothing behind (`Source/SmokeTest.Tourists.cs`).
+  a colonist cost no goodwill and send no letter, dismissal leaves
+  nothing behind, and a second group, one dead and one downed, is gone
+  after the game's own sweep runs its `LoadedGame` (no pawn, corpse or
+  lord of theirs left), as after a load (`Source/SmokeTest.Tourists.cs`;
+  the runner never saves and reloads its game, so the lord's own save is
+  not exercised).
 
 What becomes of them is the world's: on tour-04 (three tourists, so one
 sightseer) the volunteer died in the pile in two runs of three and lived
@@ -519,14 +532,19 @@ faults (`docs/AI-TODO.txt`), checked on contact sheets of
 - **The yard has junk.** The single tractor's yard held only the barn
   and the party, so its pull looked sparse; 22 pieces now lie in it
   (Core's `TourYardJunk.Single`): slag and rock chunks, stacks of
-  silver, gold, jade, uranium, plasteel and components, and three
-  ancient crates, 13 to 31 tiles from where the robot plants, so each
+  silver, gold, jade, uranium and plasteel, and three ancient engine
+  blocks, 13 to 31 tiles from where the robot plants, so each
   is seen to slide in before the blast takes it, and clear of the
   robot's road, the barn and the stray's way out. The twins gain an
   outer ring of 16 more (`TourYardJunk.TwinsOuter`), 13 to 25 tiles
   from the nearer bomb, for their pulls to drag in from afar. Bright
   metals and stone read against the yard's concrete where steel does
-  not, and nothing in it burns or goes off when hit.
+  not, and nothing in it burns or goes off when hit: every def is from
+  Core's `TourYardJunk.InertDefs`, and the smoke runner reads each one's
+  flammability (zero) and parts (nothing explosive) from the loaded
+  game. The yard first held three ancient crates and a stack of
+  components, which burn (flammability 0.5 and 0.6); review of the run
+  swapped them for engine blocks and uranium on 2026-10-15.
 - **Closer on the junk.** The twins open at zoom 28 (was 45) and plant
   at 22 (was 30), where the junk reads as junk rather than specks; both
   tractor scenes' pulls are at 44 (was 52), where the 33.75-tile pull's

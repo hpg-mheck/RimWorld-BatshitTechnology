@@ -168,13 +168,13 @@
         <text>Note that the area now meets local lawn care standards.</text></li>
       <!-- stampede -->
       <li><scene>stampede</scene><when>start</when><delayTicks>500</delayTicks>
-        <text>Not every visitor calls ahead.</text></li>
+        <text>Not everyone calls ahead.</text></li>
       <li><scene>stampede</scene><when>herd</when>
         <text>A herd of boomalopes has taken a keen interest in the family.</text></li>
       <li><scene>stampede</scene><when>volley</when>
         <text>Two hundred fifty-six largely inaccurate—but highly explosive—Ballista bolts make for a firm, but neighborly, "No."</text></li>
       <li><scene>stampede</scene><when>stragglers</when>
-        <text>A few guests have stayed on. The Ballista will see them out.</text></li>
+        <text>A few have stayed on. The Ballista will see them out.</text></li>
       <li><scene>stampede</scene><when>aftermath</when>
         <text>The east has been cleared. The rain will see to the rest.</text></li>
       <li><scene>stampede</scene><when>guestsLost</when>

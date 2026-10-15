@@ -238,10 +238,14 @@ public static class SingleTractorLayout
 /// things in from afar. Each piece lies inside the yard, inside a pull
 /// and outside every blast (so it is seen to slide before the blast takes
 /// it), and clear of the robots' roads, the barn and the stray's way out.
-/// Chunks and crates count one; the stacks are bright metals and stone,
-/// which read against the yard's concrete where steel would not, and
-/// nothing that burns or goes off when hit. The smoke runner's junkyard
-/// (<see cref="TwinJunkyardLayout"/>) is unchanged.
+/// Chunks and engine blocks count one; the stacks are bright metals and
+/// stone, which read against the yard's concrete where steel would not.
+/// Nothing in it burns or goes off when hit: vanilla's flammability is
+/// zero for each def, and the smoke runner checks it against the loaded
+/// game ("the tour's yard junk neither burns nor explodes"), since the
+/// ancient crate (0.5) and components (0.6) that first lay here do burn.
+/// The smoke runner's junkyard (<see cref="TwinJunkyardLayout"/>) is
+/// unchanged.
 /// </summary>
 public static class TourYardJunk
 {
@@ -251,8 +255,20 @@ public static class TourYardJunk
     /// <summary>The rock chunk's def.</summary>
     public const string Rock = TwinJunkyardLayout.RockDef;
 
-    /// <summary>The ancient crate's def (a building, torn down by a pull).</summary>
-    public const string Crate = TwinJunkyardLayout.CrateDef;
+    /// <summary>
+    /// The ancient engine block's def (a building of rusted metal, torn
+    /// down by a pull), where an ancient crate, which burns, first lay.
+    /// </summary>
+    public const string EngineBlock = "AncientRustedEngineBlock";
+
+    /// <summary>
+    /// Every def the tour's junk may use: chunks, bright metals, stone
+    /// and engine blocks, none of which burns or goes off when hit.
+    /// </summary>
+    public static readonly IReadOnlyList<string> InertDefs = new[]
+    {
+        Slag, Rock, EngineBlock, "Silver", "Gold", "Jade", "Uranium", "Plasteel",
+    };
 
     /// <summary>
     /// The single tractor's yard: east of the party, south of the road,
@@ -277,12 +293,12 @@ public static class TourYardJunk
         new LaidStack("Jade", new Cell(8, 14), 15),
         new LaidStack("Uranium", new Cell(30, 10), 20),
         new LaidStack("Plasteel", new Cell(-3, -14), 25),
-        new LaidStack("ComponentIndustrial", new Cell(0, -10), 8),
+        new LaidStack("Uranium", new Cell(0, -10), 15),
         new LaidStack("Silver", new Cell(22, -1), 40),
         new LaidStack("Jade", new Cell(-18, 10), 15),
-        new LaidStack(Crate, new Cell(20, -6), 1),
-        new LaidStack(Crate, new Cell(-10, -6), 1),
-        new LaidStack(Crate, new Cell(28, 5), 1),
+        new LaidStack(EngineBlock, new Cell(20, -6), 1),
+        new LaidStack(EngineBlock, new Cell(-10, -6), 1),
+        new LaidStack(EngineBlock, new Cell(28, 5), 1),
     };
 
     /// <summary>
@@ -303,9 +319,9 @@ public static class TourYardJunk
         new LaidStack("Uranium", new Cell(10, -13), 20),
         new LaidStack(Slag, new Cell(20, -12), 1),
         new LaidStack("Plasteel", new Cell(28, -10), 25),
-        new LaidStack(Crate, new Cell(30, 6), 1),
+        new LaidStack(EngineBlock, new Cell(30, 6), 1),
         new LaidStack(Slag, new Cell(31, -5), 1),
-        new LaidStack(Crate, new Cell(-30, 6), 1),
+        new LaidStack(EngineBlock, new Cell(-30, 6), 1),
         new LaidStack("Silver", new Cell(-31, -5), 40),
     };
 }

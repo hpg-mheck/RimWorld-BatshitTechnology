@@ -560,8 +560,20 @@ tourists. The smoke runner (Source/SmokeTest.Tourists.cs) runs the same
 group on its own map: it arrives as above; a Timid robot protests about
 a tourist in its pull with no colonist near (the guest protest); a
 tourist killed and another hurt by a colonist change no goodwill or
-relation and send no letter; and dismissal counts every tourist and
-leaves nothing behind, twice over.
+relation and send no letter; dismissal counts every tourist and
+leaves nothing behind, twice over; and (review of slice 19000, Fixer) a
+second group, one dead and one downed, is gone after the game's own
+GameComponent_TourGroupSweep runs its LoadedGame, as after loading a
+game saved mid-tour: no pawn, corpse or lord of theirs left, and a
+second sweep finds nothing. The runner never saves and reloads its
+game, so the lord's own save and load are not exercised (AI-TODO). A
+unit test (ShowcaseXmlTests) holds the sweep to LoadedGame, waiting
+for the load's long event, since loading runs off the main thread.
+The tour's yard junk (Core's TourYardJunk) is checked against the
+loaded game's defs, which a unit test cannot read: every def it uses
+exists, has zero flammability and no explosive part ("the tour's yard
+junk neither burns nor explodes", at the end of the Tractor Bomb's
+checks). The unit test holds the layout to TourYardJunk.InertDefs.
 
 The stampede's facts (Source/SmokeTestTour.Stampede.cs) use Core's
 Stampede rules but measure the world each tick rather than asking the

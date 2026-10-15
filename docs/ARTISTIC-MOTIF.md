@@ -297,7 +297,12 @@ public information film's cheerful voice, warm, confident and on message.
   guest lost is never mourned, only noted: "Our guests are enjoying an
   unusually close look." In-game, the guests' faction is a "tour group"
   of the "Batshit Technology Visitor Programme", and their composure
-  hediff reads like the lanyard it is.
+  hediff reads like the lanyard it is. "Guests" and "visitors" belong to
+  the tour group alone: no line calls the herd, the raiders or anyone
+  else either, so a line about them never reads as the tourists ("A few
+  have stayed on", not "A few guests"). The stampede's title, "Uninvited
+  Guests", is the one deliberate pun (TourXmlTests hold the lines to
+  this).
   Outcomes speak to what happened on screen: a volunteer knocked flat is
   "comforted. Completely.", and an empty pile gets its own line. A line
   that must state a number the world decides is computed, never

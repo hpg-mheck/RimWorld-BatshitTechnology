@@ -234,19 +234,24 @@ public sealed class TractorLayoutTests
     }
 
     /// <summary>
-    /// The junk is made of things that neither burn nor go off when hit,
-    /// so a pull and a blast in the yard start no fire beyond it.
+    /// The junk comes only from the inert list, so a pull and a blast in
+    /// the yard start no fire beyond it; the list names no def vanilla
+    /// 1.6 makes flammable (the ancient crate at 0.5 and components at
+    /// 0.6 once lay here). The defs' own flammability is not readable
+    /// here: the smoke runner reads it from the loaded game ("the tour's
+    /// yard junk neither burns nor explodes").
     /// </summary>
-    [Fact(DisplayName = "The tour's junk is nothing that burns or explodes")]
-    public void Junk_should_be_neither_flammable_nor_explosive()
+    [Fact(DisplayName = "The tour's junk comes only from the inert list")]
+    public void Junk_should_come_from_the_inert_list()
     {
-        string[] allowed =
-        {
-            TourYardJunk.Slag, TourYardJunk.Rock, TourYardJunk.Crate, "Silver",
-            "Gold", "Jade", "Uranium", "Plasteel", "ComponentIndustrial",
-        };
+        string[] flammable = { "ComponentIndustrial", "AncientCrate", "WoodLog", "Chemfuel" };
         Assert.All(TourYardJunk.Single.Concat(TourYardJunk.TwinsOuter),
-            j => Assert.Contains(j.DefName, allowed));
+            j => Assert.Contains(j.DefName, TourYardJunk.InertDefs));
+        Assert.All(flammable, f => Assert.DoesNotContain(f, TourYardJunk.InertDefs));
+        Assert.Equal(
+            TourYardJunk.InertDefs.OrderBy(d => d, System.StringComparer.Ordinal),
+            TourYardJunk.Single.Concat(TourYardJunk.TwinsOuter).Select(j => j.DefName)
+                .Distinct().OrderBy(d => d, System.StringComparer.Ordinal));
     }
 
     /// <summary>The distance from a cell to a straight segment.</summary>
