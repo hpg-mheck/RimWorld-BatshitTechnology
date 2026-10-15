@@ -3,15 +3,20 @@
 // and "The Quiet Storyteller"). They run in the smoke game, which has no
 // launch of its own: a seed is resolved as a launch would resolve it, the
 // global random state is reseeded and put back, the map is fingerprinted
-// around a stack of steel that comes and goes, and the directed test run
-// is watched holding a harmless storyteller part and giving it back. What
-// only a launched game shows (the SEED and MAPHASH cues, the settle hold,
-// a seed from the command line) the tour verifier checks
-// (Source/SmokeTestTour.cs).
+// around a stack of steel that comes and goes, the map seed's prefix is
+// seen passing Map.NextGenSeed through to vanilla in this ordinary game
+// and pinning it only while its window is open for this very game, and
+// the directed test run is watched holding a harmless storyteller part
+// and giving it back. What only a launched game shows (the SEED, MAPSEED
+// and MAPHASH cues, the map seed's window opened by the launcher and
+// closed as the game starts, the settle hold, a seed from the command
+// line) the tour verifier checks (Source/SmokeTestTour.cs).
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization;
 using BatshitTechnology.Showcases;
 using RimWorld;
 using Verse;
@@ -164,6 +169,189 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// In the smoke run's ordinary game (a quick test, never a
+        /// showcase) the map seed's window is closed and the patched
+        /// Map.NextGenSeed is vanilla's own: <c>System.HashCode.Combine</c>
+        /// of the map's place, its counter and the world's seed, computed
+        /// here through that same method in this process. The counter
+        /// advances by one and the prefix counts the call as passed
+        /// through, not pinned. With the window open for another game it
+        /// stays vanilla. The map's counter is put back afterwards, so the
+        /// smoke run's own map is left as it was.
+        /// </summary>
+        /// <param name="map">The quick-test map.</param>
+        private void TestMapSeedPassesThrough(Map map)
+        {
+            bool closed = !ShowcaseMapSeed.Armed && !ShowcaseMapSeed.PinsFor(Current.Game);
+            long pinnedBefore = ShowcaseMapSeed.PinnedTotal;
+            long passedBefore = ShowcaseMapSeed.PassedTotal;
+            int? counter = MapGenCounter(map);
+            int? vanilla = null, got = null, afterOne = null;
+            int? otherVanilla = null, otherGot = null;
+            int pinnedForOther = -2;
+            string error = null;
+            try
+            {
+                int place = ShowcaseMapSeed.Place(map);
+                int world = Find.World.info.Seed;
+                vanilla = VanillaGenSeed(place, counter.Value, world);
+                got = map.NextGenSeed;
+                afterOne = MapGenCounter(map);
+                var other = (Game)FormatterServices.GetUninitializedObject(typeof(Game));
+                ShowcaseMapSeed.Arm(other);
+                otherVanilla = VanillaGenSeed(place, afterOne.Value, world);
+                otherGot = map.NextGenSeed;
+            }
+            catch (Exception e)
+            {
+                error = e.ToString();
+            }
+            finally
+            {
+                pinnedForOther = ShowcaseMapSeed.Disarm();
+                SetMapGenCounter(map, counter);
+            }
+
+            long pinned = ShowcaseMapSeed.PinnedTotal - pinnedBefore;
+            long passed = ShowcaseMapSeed.PassedTotal - passedBefore;
+            Check("in an ordinary game the map seed's window is closed and "
+                    + "Map.NextGenSeed is vanilla's, even with the window open "
+                    + "for another game",
+                error == null && closed && ShowcaseMapSeed.Installed
+                    && vanilla.HasValue && got == vanilla && afterOne == counter + 1
+                    && otherVanilla.HasValue && otherGot == otherVanilla
+                    && pinnedForOther == 0 && pinned == 0 && passed == 2
+                    && MapGenCounter(map) == counter && !ShowcaseMapSeed.Armed,
+                $"closed {closed}; installed {ShowcaseMapSeed.Installed}; counter "
+                    + $"{counter?.ToString() ?? "unreadable"} -> {afterOne}; got {got}, "
+                    + $"vanilla {vanilla}; for another game got {otherGot}, vanilla "
+                    + $"{otherVanilla}, its window pinned {pinnedForOther}; pinned "
+                    + $"{pinned}, passed through {passed}; counter put back "
+                    + $"{MapGenCounter(map) == counter}"
+                    + (error == null ? string.Empty : $"; threw {error}"));
+        }
+
+        /// <summary>
+        /// With the window open for this very game (as the launcher opens
+        /// it for a showcase's game), Map.NextGenSeed is pinned: the same
+        /// three inputs combined with <c>Gen.HashCombineInt</c>
+        /// (ShowcaseMapSeed.Combine), the counter advanced by one, the
+        /// call counted as pinned; closing the window says one seed was
+        /// pinned, and the next call is vanilla's again. The window is
+        /// closed and the map's counter put back whatever happens.
+        /// </summary>
+        /// <param name="map">The quick-test map.</param>
+        private void TestMapSeedPins(Map map)
+        {
+            long pinnedBefore = ShowcaseMapSeed.PinnedTotal;
+            int? counter = MapGenCounter(map);
+            int? expected = null, got = null, afterOne = null;
+            int? vanillaAfter = null, gotAfter = null;
+            bool openWhileArmed = false, pinsWhileArmed = false;
+            int closedWith = -2;
+            string error = null;
+            try
+            {
+                int place = ShowcaseMapSeed.Place(map);
+                int world = Find.World.info.Seed;
+                ShowcaseMapSeed.Arm(Current.Game);
+                openWhileArmed = ShowcaseMapSeed.Armed;
+                pinsWhileArmed = ShowcaseMapSeed.PinsFor(Current.Game);
+                expected = ShowcaseMapSeed.Combine(place, counter.Value, world);
+                got = map.NextGenSeed;
+                afterOne = MapGenCounter(map);
+                closedWith = ShowcaseMapSeed.Disarm();
+                vanillaAfter = VanillaGenSeed(place, afterOne.Value, world);
+                gotAfter = map.NextGenSeed;
+            }
+            catch (Exception e)
+            {
+                error = e.ToString();
+            }
+            finally
+            {
+                int late = ShowcaseMapSeed.Disarm();
+                if (closedWith == -2)
+                {
+                    closedWith = late;
+                }
+
+                SetMapGenCounter(map, counter);
+            }
+
+            long pinned = ShowcaseMapSeed.PinnedTotal - pinnedBefore;
+            Check("with the window open for its game, Map.NextGenSeed is "
+                    + "pinned to Gen.HashCombineInt of vanilla's inputs, and "
+                    + "closing the window makes it vanilla's again",
+                error == null && openWhileArmed && pinsWhileArmed
+                    && expected.HasValue && got == expected && afterOne == counter + 1
+                    && closedWith == 1 && pinned == 1
+                    && vanillaAfter.HasValue && gotAfter == vanillaAfter
+                    && !ShowcaseMapSeed.Armed && MapGenCounter(map) == counter,
+                $"open {openWhileArmed}, pins this game {pinsWhileArmed}; counter "
+                    + $"{counter?.ToString() ?? "unreadable"} -> {afterOne}; got {got}, "
+                    + $"pinned value {expected}; closing said {closedWith}; pinned "
+                    + $"{pinned}; then got {gotAfter}, vanilla {vanillaAfter}; counter "
+                    + $"put back {MapGenCounter(map) == counter}"
+                    + (error == null ? string.Empty : $"; threw {error}"));
+        }
+
+        /// <summary>
+        /// Vanilla's Map.NextGenSeed for given inputs, computed as vanilla
+        /// computes it (<c>System.HashCode.Combine&lt;int, int, int&gt;</c>,
+        /// RimWorld 1.6.4871), through reflection, since the mod compiles
+        /// against .NET Framework 4.7.2, which has no System.HashCode; the
+        /// game's runtime has it. Its per-process seed is this process's,
+        /// so the value matches vanilla's here and nowhere else.
+        /// </summary>
+        /// <param name="place">The map's place.</param>
+        /// <param name="counter">The map's counter.</param>
+        /// <param name="worldSeed">The world's seed.</param>
+        /// <returns>The seed.</returns>
+        /// <exception cref="MissingMethodException">
+        /// Thrown when the runtime has no System.HashCode.Combine.
+        /// </exception>
+        private static int VanillaGenSeed(int place, int counter, int worldSeed)
+        {
+            Type hashCode = typeof(object).Assembly.GetType("System.HashCode")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .Select(a => a.GetType("System.HashCode"))
+                    .FirstOrDefault(t => t != null);
+            MethodInfo combine = hashCode?.GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .FirstOrDefault(m => m.Name == "Combine" && m.GetGenericArguments().Length == 3);
+            if (combine == null)
+            {
+                throw new MissingMethodException("System.HashCode", "Combine");
+            }
+
+            return (int)combine.MakeGenericMethod(typeof(int), typeof(int), typeof(int))
+                .Invoke(null, new object[] { place, counter, worldSeed });
+        }
+
+        /// <summary>Vanilla's private generation counter of a map.</summary>
+        private static readonly FieldInfo MapGenCounterField = typeof(Map).GetField(
+            "generatedId", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        /// <summary>A map's generation counter, or null if unreadable.</summary>
+        /// <param name="map">The map.</param>
+        /// <returns>The counter.</returns>
+        private static int? MapGenCounter(Map map) =>
+            MapGenCounterField?.FieldType == typeof(int)
+                ? (int)MapGenCounterField.GetValue(map)
+                : (int?)null;
+
+        /// <summary>Puts a map's generation counter back, if it was read.</summary>
+        /// <param name="map">The map.</param>
+        /// <param name="value">The counter as read, or null.</param>
+        private static void SetMapGenCounter(Map map, int? value)
+        {
+            if (value.HasValue && MapGenCounterField?.FieldType == typeof(int))
+            {
+                MapGenCounterField.SetValue(map, value.Value);
+            }
+        }
+
+        /// <summary>
         /// Gives the storyteller one harmless part before a test run, so
         /// the run can be seen to hold it and give it back.
         /// </summary>
@@ -194,8 +382,8 @@ namespace BatshitTechnology
         /// Checks the record cues and the storyteller around a test run
         /// that finished: the storyteller quiet from START to FINISHED and
         /// its part given back at once; STAGEHASH just before READY,
-        /// matching the session's; no SEED or MAPHASH, since nothing was
-        /// launched; and no reseed without a seed.
+        /// matching the session's; no SEED, MAPSEED or MAPHASH, since
+        /// nothing was launched; and no reseed without a seed.
         /// </summary>
         /// <param name="mark">The last message before the run.</param>
         /// <param name="part">The storyteller part lent for the run.</param>
@@ -226,11 +414,12 @@ namespace BatshitTechnology
                     + $"[{string.Join(" | ", cues.Where(c => !c.StartsWith("SCENE")))}]; "
                     + $"parts now {parts.Count}");
             Check("STAGEHASH comes just before READY with the session's "
-                    + "fingerprint; an adopted run logs no SEED or MAPHASH and "
-                    + "does not reseed",
+                    + "fingerprint; an adopted run logs no SEED, MAPSEED or "
+                    + "MAPHASH and does not reseed",
                 stage >= 0 && stage == ready - 1 && stageHash != null
                     && cues[stage].StartsWith($"STAGEHASH {stageHash} (", StringComparison.Ordinal)
                     && !cues.Any(c => c.StartsWith("SEED ", StringComparison.Ordinal)
+                        || c.StartsWith("MAPSEED ", StringComparison.Ordinal)
                         || c.StartsWith("MAPHASH ", StringComparison.Ordinal))
                     && !reseeded,
                 $"STAGEHASH at {stage}, READY at {ready}, session {stageHash ?? "none"}; "
@@ -255,7 +444,9 @@ namespace BatshitTechnology
 
         /// <summary>Whether a cue is one of the API's record cues.</summary>
         /// <param name="cue">The cue, without the prefix.</param>
-        /// <returns>True for SEED, MAPHASH, STAGEHASH and STORYTELLER.</returns>
+        /// <returns>
+        /// True for SEED, MAPSEED, MAPHASH, STAGEHASH and STORYTELLER.
+        /// </returns>
         private static bool IsRecord(string cue) =>
             ShowcaseLog.RecordCues.Contains(cue.Split(' ')[0]);
 

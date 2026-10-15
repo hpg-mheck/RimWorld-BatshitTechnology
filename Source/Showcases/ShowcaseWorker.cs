@@ -28,12 +28,16 @@ namespace BatshitTechnology.Showcases
         public const string Prefix = "[BT-SHOWCASE]";
 
         /// <summary>
-        /// The record cues: what a run was (its seed, its fingerprints, the
-        /// storyteller's state), rather than how it went. Tooling comparing
-        /// a run's flow of cues can leave them out.
+        /// The record cues: what a run was (its seed, whether its map's
+        /// seeds were pinned, its fingerprints, the storyteller's state),
+        /// rather than how it went. Tooling comparing a run's flow of cues
+        /// can leave them out.
         /// </summary>
         public static readonly IReadOnlyCollection<string> RecordCues =
-            new HashSet<string> { "SEED", "MAPHASH", "STAGEHASH", "STORYTELLER" };
+            new HashSet<string>
+            {
+                "SEED", "MAPSEED", "MAPHASH", "STAGEHASH", "STORYTELLER",
+            };
 
         /// <summary>
         /// Raised after each cue is logged, on the thread that logged it

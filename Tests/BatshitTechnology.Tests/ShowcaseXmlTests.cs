@@ -171,15 +171,20 @@ public sealed class ShowcaseXmlTests
     }
 
     /// <summary>
-    /// The Showcases button is the mod's one Harmony patch. Any C# use of
-    /// Harmony needs the HarmonyLib namespace (a using, an alias, a fully
+    /// The mod has exactly two Harmony patches, both made in the button's
+    /// file: the Showcases button's postfix on
+    /// OptionListingUtility.DrawOptionListing (approved 2026-10-13) and
+    /// the showcase map seed's prefix on the Map.NextGenSeed getter
+    /// (approved 2026-10-14, requests item 22). Any C# use of Harmony
+    /// needs the HarmonyLib namespace (a using, an alias, a fully
     /// qualified name) or a Harmony attribute, so no other file may
-    /// mention either; and the button's own file makes one Harmony
-    /// instance, under the mod's package id, and one Patch call, with no
-    /// bulk or reverse patching.
+    /// mention either; and the button's file makes one Harmony instance,
+    /// under the mod's package id, and two Patch calls, one postfix and
+    /// one prefix on those targets, with no transpiler, finalizer, bulk
+    /// or reverse patching.
     /// </summary>
-    [Fact(DisplayName = "The Showcases button is the mod's only Harmony patch")]
-    public void Harmony_should_patch_only_the_menu_button()
+    [Fact(DisplayName = "The Showcases button and the map seed are the mod's only Harmony patches")]
+    public void Harmony_should_patch_only_the_menu_button_and_the_map_seed()
     {
         string source = Path.Combine(FixturesDirectory, "Source");
         string buttonFile = Path.Combine(source, "Showcases", "ShowcaseMenuButton.cs");
@@ -200,13 +205,53 @@ public sealed class ShowcaseXmlTests
             "HarmonyId = \"breakpoint8088.BatshitTechnology.",
             button,
             StringComparison.Ordinal);
-        Assert.Single(Regex.Matches(button, @"\.Patch\s*\("));
+        Assert.Equal(2, Regex.Matches(button, @"\.Patch\s*\(").Count);
         Assert.Single(Regex.Matches(
             button, @"new\s*(Harmony(Lib\.Harmony)?)?\s*\(\s*HarmonyId\s*\)"));
+        Assert.Single(Regex.Matches(
+            button,
+            @"postfix\s*:\s*new\s+HarmonyMethod\s*\(\s*typeof\s*\(\s*ShowcaseMenuButton\s*\)"
+                + @"\s*,\s*nameof\s*\(\s*Postfix\s*\)\s*\)"));
+        Assert.Single(Regex.Matches(
+            button,
+            @"prefix\s*:\s*new\s+HarmonyMethod\s*\(\s*typeof\s*\(\s*ShowcaseMapSeed\s*\)"
+                + @"\s*,\s*nameof\s*\(\s*ShowcaseMapSeed\.Prefix\s*\)\s*\)"));
+        Assert.Single(Regex.Matches(
+            button, @"nameof\s*\(\s*OptionListingUtility\.DrawOptionListing\s*\)\s*,"));
+        Assert.Single(Regex.Matches(
+            button,
+            @"PropertyGetter\s*\(\s*typeof\s*\(\s*Map\s*\)\s*,"
+                + @"\s*nameof\s*\(\s*Map\.NextGenSeed\s*\)"));
         Assert.DoesNotMatch(
             @"PatchAll|PatchCategory|CreateClassProcessor|CreateProcessor|ReversePatch"
-                + @"|\[\s*Harmony",
+                + @"|transpiler\s*:|finalizer\s*:|\[\s*Harmony",
             button);
+    }
+
+    /// <summary>
+    /// The map seed's prefix decides before it does anything: its first
+    /// statement asks the window (GenerationPin.Take, bound to the game
+    /// being generated) and returns true, running vanilla's getter, when
+    /// the window does not pin this game. The window's rules themselves
+    /// are unit tested (GenerationPinTests).
+    /// </summary>
+    [Fact(DisplayName = "The map seed's prefix passes through unless its window pins the game")]
+    public void Map_seed_prefix_should_pass_through_outside_its_window()
+    {
+        string file = Path.Combine(
+            FixturesDirectory, "Source", "Showcases", "ShowcaseMapSeed.cs");
+        string code = WithoutComments(File.ReadAllText(file));
+        Match prefix = Regex.Match(
+            code,
+            @"public\s+static\s+bool\s+Prefix\s*\([^)]*\)\s*\{\s*(?<first>if\s*\((?<cond>[^{]*)\)"
+                + @"\s*\{\s*return\s+true\s*;\s*\})");
+
+        Assert.True(prefix.Success, "Prefix must open with its pass-through test.");
+        Assert.Matches(@"!\s*Pin\.Take\s*\(\s*Current\.Game\s*\)", prefix.Groups["cond"].Value);
+        Assert.Single(Regex.Matches(code, @"return\s+false\s*;"));
+        Assert.Matches(
+            @"static\s+readonly\s+GenerationPin\s+Pin\s*=\s*new\s+GenerationPin\s*\(\s*\)",
+            code);
     }
 
     /// <summary>

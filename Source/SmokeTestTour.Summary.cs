@@ -32,8 +32,11 @@ namespace BatshitTechnology
         /// <summary>The SUMMARY line's prefix; the JSON follows it.</summary>
         internal const string SummaryPrefix = "[BT-TOUR] SUMMARY ";
 
-        /// <summary>The SUMMARY's layout version, raised when fields change.</summary>
-        private const int SummaryVersion = 1;
+        /// <summary>
+        /// The SUMMARY's layout version, raised when fields change: 2 adds
+        /// mapSeeds.
+        /// </summary>
+        private const int SummaryVersion = 2;
 
         /// <summary>The cues the verifier takes a shot at.</summary>
         private static readonly HashSet<string> ShotCues =
@@ -186,6 +189,7 @@ namespace BatshitTechnology
                 { "seedSource", session?.Seed == null
                     ? null : ShowcaseSeed.SourceName(session.Seed.Source) },
                 { "worldSeed", Find.World?.info?.seedString },
+                { "mapSeeds", session?.MapSeedsPinned },
                 { "mapHash", session?.MapHash },
                 { "stageHash", session?.StageHash },
                 { "biome", map?.Biome?.defName },

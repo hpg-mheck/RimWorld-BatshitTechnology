@@ -2,7 +2,7 @@
 // (docs/SHOWCASE-API.md; phase 4000, slices 6000 and 8000). Part of the
 // -btsmoketest runner (Source/SmokeTest.cs); runs after the device tests,
 // in two parts. First, checks that tick the game inside one frame, as the
-// device tests do: the Harmony patch and the menu column's gates, the
+// device tests do: the two Harmony patches and the menu column's gates, the
 // launcher's guards, launch verdicts against Core's, a directed test
 // showcase run through Skip, a timeout and its closing message (narration
 // on the overlay, never in vanilla's messages), scenes that throw, the god
@@ -245,10 +245,20 @@ namespace BatshitTechnology
         /// <summary>The note on every test flag, looked for in the text.</summary>
         private const string FlagNote = "smoke test flag";
 
-        /// <summary>The one patch the mod may hold, as Harmony reports it.</summary>
-        private const string ExpectedPatch =
+        /// <summary>
+        /// The two patches the mod may hold, as Harmony reports them
+        /// (ShowcaseMenuButton.OwnPatches, sorted): the map seed's prefix
+        /// and the button's postfix, both under the button's Harmony id.
+        /// </summary>
+        private static readonly string[] ExpectedPatches =
+        {
+            "Verse.Map.get_NextGenSeed: prefix "
+                + "BatshitTechnology.Showcases.ShowcaseMapSeed.Prefix "
+                + $"[{ShowcaseMenuButton.HarmonyId}]",
             "Verse.OptionListingUtility.DrawOptionListing: postfix "
-            + "BatshitTechnology.Showcases.ShowcaseMenuButton.Postfix";
+                + "BatshitTechnology.Showcases.ShowcaseMenuButton.Postfix "
+                + $"[{ShowcaseMenuButton.HarmonyId}]",
+        };
 
         /// <summary>How long the frame-driven checks may take, in seconds.</summary>
         private const float ShowcaseFramesTimeout = 120f;
@@ -378,6 +388,8 @@ namespace BatshitTechnology
             TestShowcaseSeeds();
             TestGlobalReseed();
             TestMapFingerprint(map);
+            TestMapSeedPassesThrough(map);
+            TestMapSeedPins(map);
             TestDirectorRun(map);
             TestFaultyScenes(map);
             TestDevButtonLoan(map);
@@ -390,17 +402,21 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// The Showcases button is the mod's only Harmony patch: one
-        /// postfix, on the method vanilla's menus draw their options with.
+        /// The mod holds exactly two Harmony patches, both installed under
+        /// the button's Harmony id: the Showcases button's postfix, on the
+        /// method vanilla's menus draw their options with, and the
+        /// showcase map seed's prefix, on the Map.NextGenSeed getter.
         /// </summary>
         private void TestShowcasePatch()
         {
             List<string> patches = ShowcaseMenuButton.OwnPatches();
-            Check("the Showcases button is the mod's only Harmony patch, a "
-                    + "postfix on the menu method",
-                ShowcaseMenuButton.Installed
-                    && patches.Count == 1 && patches[0] == ExpectedPatch,
-                $"installed {ShowcaseMenuButton.Installed}; patches: "
+            Check("the mod's only Harmony patches are the Showcases button's "
+                    + "postfix on the menu method and the map seed's prefix on "
+                    + "Map.NextGenSeed",
+                ShowcaseMenuButton.Installed && ShowcaseMapSeed.Installed
+                    && patches.SequenceEqual(ExpectedPatches),
+                $"installed: button {ShowcaseMenuButton.Installed}, map seed "
+                    + $"{ShowcaseMapSeed.Installed}; patches: "
                     + (patches.Count == 0 ? "none" : string.Join("; ", patches)));
         }
 

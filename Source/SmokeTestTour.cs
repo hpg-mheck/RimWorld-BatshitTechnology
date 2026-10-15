@@ -11,7 +11,9 @@
 // storyteller for every showcase (no raid lands mid-tour); the verifier
 // checks that it is quiet from READY to FINISHED and given back after,
 // that the run's seed and fingerprints were logged (SEED, MAPHASH,
-// STAGEHASH), and that the stage was set up before the game's first tick.
+// STAGEHASH), that the map's seeds were pinned while it generated and the
+// map seed's window closed before START and stayed closed (MAPSEED), and
+// that the stage was set up before the game's first tick.
 // At the end it logs one "[BT-TOUR] SUMMARY {json}" line, what trials
 // compare seeds by (Source/SmokeTestTour.Summary.cs, Tools/tour-trials.ps1),
 // and with -btshots it saves the game's frame at READY and at each SCENE,
@@ -52,6 +54,12 @@ namespace BatshitTechnology
 
         /// <summary>Ticks seen while waiting for READY.</summary>
         private int tourWaitTicks;
+
+        /// <summary>
+        /// Seeds the map seed's prefix had pinned in this process at READY,
+        /// or -1 before READY.
+        /// </summary>
+        private long mapSeedsPinnedAtReady = -1;
 
         /// <summary>
         /// Whether this run verifies the tour; read once, because the
@@ -182,6 +190,7 @@ namespace BatshitTechnology
                 tourWatch.EndTick = now;
                 CheckTour(tourWatch);
                 CheckStorytellerGivenBack(session, tourWatch);
+                CheckMapSeedStayedClosed();
                 Finish();
             }
         }
@@ -244,6 +253,59 @@ namespace BatshitTechnology
                 session.Reseeded && director.StartTick == 0,
                 $"reseeded {session.Reseeded}; set up at tick {director.StartTick}, "
                     + $"READY seen at {now}");
+            CheckMapSeedAtReady(session, run);
+        }
+
+        /// <summary>
+        /// The map seed's window at READY: the prefix is installed; the
+        /// MAPSEED cue comes between GAME and MAPHASH and says the map's
+        /// seeds were pinned, as many as the session holds, at least one;
+        /// every seed pinned in this process was pinned in that window
+        /// (the verify run generates no other map); and the window is
+        /// closed, so the prefix would pass this game's next seed through
+        /// to vanilla. Notes the count, for the check at the end.
+        /// </summary>
+        /// <param name="session">The showcase session.</param>
+        /// <param name="run">The cues since the run's GAME cue.</param>
+        private void CheckMapSeedAtReady(
+            GameComponent_ShowcaseSession session, List<string> run)
+        {
+            int cue = run.FindIndex(c => c.StartsWith("MAPSEED ", StringComparison.Ordinal));
+            int map = run.FindIndex(c => c.StartsWith("MAPHASH ", StringComparison.Ordinal));
+            int pinned = session.MapSeedsPinned;
+            long total = ShowcaseMapSeed.PinnedTotal;
+            bool open = ShowcaseMapSeed.Armed;
+            bool pins = ShowcaseMapSeed.PinsFor(Current.Game);
+            mapSeedsPinnedAtReady = total;
+            string wanted = pinned == 1 ? "MAPSEED pinned (1 seed)"
+                : $"MAPSEED pinned ({pinned} seeds)";
+            Check("tour: the map's seeds were pinned while it generated, and "
+                    + "the window closed before START",
+                ShowcaseMapSeed.Installed && pinned > 0 && cue == 1 && map == cue + 1
+                    && run[cue] == wanted && total == pinned && !open && !pins,
+                $"installed {ShowcaseMapSeed.Installed}; cue "
+                    + $"'{(cue >= 0 ? run[cue] : "none")}' at {cue}, MAPHASH at {map}; "
+                    + $"session {pinned}; pinned in this process {total}, passed "
+                    + $"through {ShowcaseMapSeed.PassedTotal}; open {open}; pins "
+                    + $"this game {pins}");
+        }
+
+        /// <summary>
+        /// The map seed's window stayed closed to the end: no seed was
+        /// pinned after READY, and the prefix would still pass this
+        /// game's seeds through.
+        /// </summary>
+        private void CheckMapSeedStayedClosed()
+        {
+            long total = ShowcaseMapSeed.PinnedTotal;
+            bool open = ShowcaseMapSeed.Armed;
+            bool pins = ShowcaseMapSeed.PinsFor(Current.Game);
+            Check("tour: the map seed's window stayed closed after READY",
+                mapSeedsPinnedAtReady >= 0 && total == mapSeedsPinnedAtReady
+                    && !open && !pins,
+                $"pinned at READY {mapSeedsPinnedAtReady}, now {total}; passed "
+                    + $"through {ShowcaseMapSeed.PassedTotal}; open {open}; pins "
+                    + $"this game {pins}");
         }
 
         /// <summary>

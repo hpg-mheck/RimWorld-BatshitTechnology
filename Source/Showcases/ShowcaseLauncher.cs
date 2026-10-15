@@ -14,7 +14,11 @@
 // fresh random one; a SEED cue names it): the set-up and the biome's tile
 // are drawn under a Rand state derived from it, and so is the map's
 // preparation, which replaces PageUtility.InitGameStart with the same two
-// calls; the map itself vanilla seeds from the world's seed and the tile
+// calls. The map is seeded from the world's seed and the tile: the
+// launcher opens ShowcaseMapSeed's window for the new game as soon as it
+// exists, so the mod's second Harmony patch pins Map.NextGenSeed while
+// that game's map is generated; the session closes it as the game starts,
+// and the launcher on any failure and whenever the main menu shows
 // (docs/SHOWCASE-API.md, "Seeds").
 
 using System;
@@ -237,9 +241,11 @@ namespace BatshitTechnology.Showcases
         /// Called whenever the main menu is shown, by the main-menu
         /// button's patch, which runs when the menu is drawn in the Entry
         /// scene. Gives back any god mode a showcase still held (the
-        /// viewer quit the showcase game to the menu), then, the first
-        /// time, acts on <c>-showcase=&lt;defName&gt;</c>: starts the
-        /// showcase, or logs why not.
+        /// viewer quit the showcase game to the menu), closes the map
+        /// seed's window if a failed generation left it open (no game is
+        /// generating while the menu takes input), then, the first time,
+        /// acts on <c>-showcase=&lt;defName&gt;</c>: starts the showcase,
+        /// or logs why not.
         /// </summary>
         /// <remarks>
         /// Under <c>-quicktest</c> the menu leaves the command line alone.
@@ -254,6 +260,7 @@ namespace BatshitTechnology.Showcases
         {
             MainMenuShownCount++;
             ShowcaseGodMode.Restore();
+            ReleaseMapSeed("the main menu");
             if (commandLineHandled
                 || !ShowcaseStartRules.MenuActsOnCommandLine(
                     GenCommandLine.CommandLineArgPassed(ShowcaseStartRules.QuickTestArg)))
@@ -278,8 +285,9 @@ namespace BatshitTechnology.Showcases
         /// session adopts the command line's showcase on the quick-test
         /// map, as vanilla generated it (250 cells, a random tile). The
         /// def's <c>mapSize</c> and <c>biome</c> are not applied (that
-        /// would take a second Harmony patch); a MAPSIZE or BIOME cue says
-        /// so. Returns the request once, or null.
+        /// would take another Harmony patch), and its map is not pinned to
+        /// the seed; MAPSIZE, BIOME and MAPSEED cues say so. Returns the
+        /// request once, or null.
         /// </summary>
         /// <returns>The showcase and whether it is forced, or null.</returns>
         public static LaunchRequest TakeQuickTestRequest()
@@ -434,7 +442,11 @@ namespace BatshitTechnology.Showcases
         /// starting colonists and the biome's tile. The state is pushed
         /// and popped, as vanilla's world generation does on this thread;
         /// the main thread draws nothing from Rand meanwhile (see
-        /// <see cref="LoadingTips"/>).
+        /// <see cref="LoadingTips"/>). Then it opens the map seed's window
+        /// for the new game (<see cref="ShowcaseMapSeed"/>), which the
+        /// session closes once the map is generated; if anything here
+        /// throws after that, it closes the window before the long event's
+        /// handler reports the error.
         /// </summary>
         /// <param name="def">The showcase.</param>
         /// <param name="forced">Whether it was forced.</param>
@@ -453,12 +465,46 @@ namespace BatshitTechnology.Showcases
                 Rand.PopState();
             }
 
-            lock (Gate)
+            try
             {
-                pending = new LaunchRequest(def, Current.Game, forced, seed);
-            }
+                ShowcaseMapSeed.Arm(Current.Game);
+                lock (Gate)
+                {
+                    pending = new LaunchRequest(def, Current.Game, forced, seed);
+                }
 
-            InitGameStart(seed);
+                InitGameStart(seed);
+            }
+            catch
+            {
+                ReleaseMapSeed("a failed generation");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Closes the map seed's window, if it is open, and says so with a
+        /// warning: it should have been closed as the showcase's game
+        /// started. Never throws.
+        /// </summary>
+        /// <param name="where">What closed it, for the warning.</param>
+        internal static void ReleaseMapSeed(string where)
+        {
+            try
+            {
+                int pinned = ShowcaseMapSeed.Disarm();
+                if (pinned >= 0)
+                {
+                    Log.Warning($"{ShowcaseLog.Prefix} {where} closed the "
+                        + $"showcase map seed's window, left open after {pinned} "
+                        + "seeds; that game's map was not finished");
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not close the showcase "
+                    + $"map seed's window: {e.Message}");
+            }
         }
 
         /// <summary>
@@ -467,8 +513,10 @@ namespace BatshitTechnology.Showcases
         /// are made here under a Rand state derived from the seed. The
         /// first gives the colonists their work priorities, breaking ties
         /// at random; the second founds the player's settlement, with a
-        /// random name. The map that follows is seeded by vanilla from the
-        /// world's seed and the starting tile.
+        /// random name. The map that follows is seeded from the world's
+        /// seed and the starting tile, pinned by the map seed's window; if
+        /// either call throws, the window is closed before the error goes
+        /// on to vanilla's handler.
         /// </summary>
         /// <param name="seed">The launch's seed.</param>
         private static void InitGameStart(ResolvedSeed seed)
@@ -481,6 +529,11 @@ namespace BatshitTechnology.Showcases
                     {
                         Find.GameInitData.PrepForMapGen();
                         Find.Scenario.PreMapGenerate();
+                    }
+                    catch
+                    {
+                        ReleaseMapSeed("a failed preparation");
+                        throw;
                     }
                     finally
                     {
