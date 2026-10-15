@@ -253,8 +253,9 @@ namespace BatshitTechnology.Showcases
         /// <summary>
         /// Called whenever the main menu is shown, by the main-menu
         /// button's patch, which runs when the menu is drawn in the Entry
-        /// scene. Gives back any god mode a showcase still held (the
-        /// viewer quit the showcase game to the menu), closes the map
+        /// scene. Gives back any god mode and storyteller flags a
+        /// showcase still held (the viewer quit the showcase game to the
+        /// menu), closes the map
         /// seed's window if a failed generation left it open (no game is
         /// generating while the menu takes input), then, the first time,
         /// acts on <c>-showcase=&lt;defName&gt;</c>: starts the showcase,
@@ -273,6 +274,7 @@ namespace BatshitTechnology.Showcases
         {
             MainMenuShownCount++;
             ShowcaseGodMode.Restore();
+            ShowcaseScreen.Restore();
             ReleaseMapSeed("the main menu");
             if (commandLineHandled
                 || !ShowcaseStartRules.MenuActsOnCommandLine(

@@ -351,6 +351,69 @@ class SmokeScriptTests(Workspace):
                 self.assertIn(f"Data folder: {self.work / 'rel' / 'data'}", out)
                 self.assertIn("RimWorld not found", out)
 
+    def test_presentation_needs_a_verify_run(self) -> None:
+        """-Presentation without -Verify is refused before anything starts."""
+        for shell in self.shells:
+            with self.subTest(shell=Path(shell).stem):
+                result = run_ps(shell, [
+                    "-File", str(SMOKE), "-Showcase", "-Presentation",
+                    "-DataFolder", str(self.work / "data"),
+                    "-RimWorld", str(self.work / "NoRimWorldHere")], cwd=self.work)
+                out = result.stdout + result.stderr
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn("-Presentation presents a verify run", out)
+
+    def fake_launchable(self) -> tuple[Path, Path]:
+        """A fake RimWorld with Harmony, and a fake built mod.
+
+        smoke-test.ps1 gets as far as writing its prefs, then fails to
+        start the empty RimWorldWin64.exe.
+
+        Returns:
+            The RimWorld folder and the mod root.
+        """
+        rimworld = self.work / "FakeRimWorld"
+        (rimworld / "Data" / "Core").mkdir(parents=True, exist_ok=True)
+        (rimworld / "RimWorldWin64.exe").write_bytes(b"")
+        (rimworld / "Version.txt").write_text("1.6.4871 rev1", encoding="utf-8")
+        harmony = rimworld / "Mods" / "Harmony" / "About"
+        harmony.mkdir(parents=True, exist_ok=True)
+        (harmony / "About.xml").write_text(
+            "<ModMetaData><packageId>brrainz.harmony</packageId></ModMetaData>",
+            encoding="utf-8")
+        mod = self.work / "FakeBuiltMod"
+        (mod / "Assemblies").mkdir(parents=True, exist_ok=True)
+        (mod / "Assemblies" / "BatshitTechnology.dll").write_bytes(b"")
+        (mod / "About").mkdir(exist_ok=True)
+        (mod / "About" / "About.xml").write_text(
+            "<ModMetaData><packageId>test.batshit</packageId></ModMetaData>",
+            encoding="utf-8")
+        return rimworld, mod
+
+    def test_presentation_writes_the_viewing_prefs(self) -> None:
+        """A presentation has no dev mode or Learning helper, 1920 by 1080
+        at 1x, muted; a plain verify run keeps dev mode, small."""
+        rimworld, mod = self.fake_launchable()
+        cases = [("present", ["-Presentation"], "False", "1920", "1"),
+                 ("verify", [], "True", "1280", "1")]
+        for shell in self.shells:
+            for name, extra, dev, width, scale in cases:
+                with self.subTest(shell=Path(shell).stem, run=name):
+                    data = self.work / f"data-{name}-{Path(shell).stem}"
+                    run_ps(shell, [
+                        "-File", str(SMOKE), "-Showcase", "-Verify", *extra,
+                        "-RimWorld", str(rimworld), "-ModRoot", str(mod),
+                        "-DataFolder", str(data)], cwd=self.work)
+                    prefs = (data / "Config" / "Prefs.xml").read_text(
+                        encoding="utf-8-sig")
+                    self.assertIn(f"<devMode>{dev}</devMode>", prefs)
+                    self.assertIn(
+                        f"<adaptiveTrainingEnabled>{dev}</adaptiveTrainingEnabled>",
+                        prefs)
+                    self.assertIn(f"<screenWidth>{width}</screenWidth>", prefs)
+                    self.assertIn(f"<uiScale>{scale}</uiScale>", prefs)
+                    self.assertIn("<volumeMaster>0</volumeMaster>", prefs)
+
 
 class GameTrackingTests(Workspace):
     """Only a game tied to a run by pid and start time is ever stopped."""

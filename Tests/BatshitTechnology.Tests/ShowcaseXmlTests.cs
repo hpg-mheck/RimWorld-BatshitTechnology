@@ -318,8 +318,8 @@ public sealed class ShowcaseXmlTests
     {
         "defName", "label", "description", "summary", "previewTexPath",
         "estimatedMinutes", "order", "requiredMods", "compatibility",
-        "mapSize", "biome", "seed", "holdWeather", "workerClass", "scenes",
-        "narration",
+        "mapSize", "biome", "seed", "holdWeather", "quietScreen", "workerClass",
+        "scenes", "narration",
     };
 
     /// <summary>
@@ -364,6 +364,36 @@ public sealed class ShowcaseXmlTests
             ShowcaseDefs(), d => d.Element("defName")?.Value == "BT_Showcase");
 
         Assert.Equal("Clear", def.Element("holdWeather")?.Value);
+    }
+
+    /// <summary>
+    /// The def's <c>quietScreen</c> field exists in the source as a bool,
+    /// and the directed tour keeps the screen quiet (slice 19000b:
+    /// alerts, letters and messages piled up over the film).
+    /// </summary>
+    [Fact(DisplayName = "BT_Showcase keeps the screen quiet")]
+    public void BT_Showcase_should_keep_the_screen_quiet()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Showcases", "ShowcaseDef.cs"));
+        Assert.Matches(new Regex(@"public bool quietScreen;"), source);
+        XElement def = Assert.Single(
+            ShowcaseDefs(), d => d.Element("defName")?.Value == "BT_Showcase");
+
+        Assert.Equal("true", def.Element("quietScreen")?.Value);
+    }
+
+    /// <summary>
+    /// The directed tour asks for no DEV buttons: its director never
+    /// lends god mode (slice 19000b: viewing runs show no developer
+    /// clutter).
+    /// </summary>
+    [Fact(DisplayName = "The tour asks for no DEV buttons")]
+    public void Tour_director_should_not_ask_for_dev_buttons()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Tour", "BatshitTourDirector.cs"));
+        Assert.DoesNotMatch(new Regex(@"EnableDevButtons\s*\("), source);
     }
 
     /// <summary>

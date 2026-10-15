@@ -30,7 +30,11 @@
 // (set-up, Stop, FINISHED, a loaded game). A def's holdWeather is held
 // from the set-up until the showcase finishes or stops (a scene may
 // borrow the weather for its run), then the weather from before is given
-// back (docs/SHOWCASE-API.md, "The Held Weather"). Two
+// back (docs/SHOWCASE-API.md, "The Held Weather"). A def's quietScreen
+// keeps vanilla's alerts, letters, messages and Learning helper off the
+// film from the set-up until the showcase finishes or stops
+// (ShowcaseScreen; docs/SHOWCASE-API.md, "The Quiet Screen"); what it
+// borrowed is given back on every way out, as god mode is. Two
 // internal seams, AdoptForTest and ReleaseForTest, let the smoke runner
 // (Source/SmokeTestShowcases.cs) run test showcases in its own game.
 
@@ -176,6 +180,15 @@ namespace BatshitTechnology.Showcases
         /// How many times the hold found another weather and replaced it.
         /// </summary>
         private int weatherRestarts;
+
+        /// <summary>
+        /// The tick the quiet screen began (letters that arrive from then
+        /// on are taken off), or -1 while the screen is not kept quiet.
+        /// </summary>
+        private int quietSince = -1;
+
+        /// <summary>Set when keeping the screen quiet threw, so it is logged once.</summary>
+        private bool quietFailed;
 
         /// <summary>
         /// Whether the session paused the game while the map settles, and
@@ -385,6 +398,13 @@ namespace BatshitTechnology.Showcases
         public int WeatherRestarts => weatherRestarts;
 
         /// <summary>
+        /// Gets a value indicating whether the screen is kept quiet now:
+        /// the showcase asks for it (<see cref="ShowcaseDef.quietScreen"/>)
+        /// and is running (docs/SHOWCASE-API.md, "The Quiet Screen").
+        /// </summary>
+        public bool ScreenQuiet => Running && quietSince >= 0;
+
+        /// <summary>
         /// Lends the weather to a scene that wants weather of its own (the
         /// tour's stampede brings rain): the hold stands aside until the
         /// same borrower gives it back with <see cref="ReclaimWeather"/>.
@@ -457,6 +477,7 @@ namespace BatshitTechnology.Showcases
         public override void StartedNewGame()
         {
             int pinned = ShowcaseMapSeed.Disarm();
+            ShowcaseScreen.Restore();
             ulong? state = ShowcaseRandom.Snapshot();
             LaunchRequest request = ShowcaseLauncher.TakeRequestFor(game)
                 ?? ShowcaseLauncher.TakeQuickTestRequest();
@@ -502,6 +523,7 @@ namespace BatshitTechnology.Showcases
             ShowcaseLauncher.ReleaseMapSeed("a loaded game");
             ShowcaseLauncher.TakeRequestFor(game);
             ShowcaseGodMode.Restore();
+            ShowcaseScreen.Restore();
         }
 
         /// <summary>
@@ -522,6 +544,11 @@ namespace BatshitTechnology.Showcases
             }
 
             UpdateNarration();
+            if (ScreenQuiet)
+            {
+                KeepScreenQuiet();
+            }
+
             if (begun && settleHeld)
             {
                 ReleaseSettleHold();
@@ -601,6 +628,7 @@ namespace BatshitTechnology.Showcases
                 ShowcaseLog.Cue("FINISHED", def.defName);
                 RestoreStoryteller();
                 GiveBackWeather();
+                QuietScreenEnds();
                 SayFarewellWhenQuiet();
             }
         }
@@ -715,6 +743,7 @@ namespace BatshitTechnology.Showcases
             ShowcaseLog.Cue("STOPPED", def.defName);
             RestoreStoryteller();
             GiveBackWeather();
+            QuietScreenEnds();
             if (byViewer)
             {
                 Message("BT_Showcases_Stopped".Translate());
@@ -796,6 +825,8 @@ namespace BatshitTechnology.Showcases
             ShowcaseGodMode.Restore();
             RestoreStoryteller();
             GiveBackWeather();
+            QuietScreenEnds();
+            quietFailed = false;
             weatherRestarts = 0;
             ReleaseSettleHold();
             settleHeld = false;
@@ -831,8 +862,9 @@ namespace BatshitTechnology.Showcases
         /// tooling waits on before maximizing the window. Before the set
         /// up it lets the game run again (it was held paused while the map
         /// settled), quiets the storyteller if a test adopted the game,
-        /// holds the def's weather if it names one, and reseeds the global
-        /// random state from the launch's seed, so
+        /// holds the def's weather if it names one, quiets the screen if
+        /// the def asks (so letters from the set-up never show), and
+        /// reseeds the global random state from the launch's seed, so
         /// the same seed stages the same things in the same places. A set
         /// up that throws is logged and ends the showcase; the game stays
         /// open, with its storyteller back.
@@ -846,6 +878,7 @@ namespace BatshitTechnology.Showcases
             ReleaseSettleHold();
             QuietStoryteller();
             HoldWeather(map);
+            QuietScreenBegins();
             reseeded = seed != null
                 && ShowcaseRandom.Reseed(seed.Derive(ShowcaseSeed.Stage));
             try
@@ -863,6 +896,7 @@ namespace BatshitTechnology.Showcases
                     + $"up: {e}");
                 RestoreStoryteller();
                 GiveBackWeather();
+                QuietScreenEnds();
                 return;
             }
 
@@ -1320,6 +1354,68 @@ namespace BatshitTechnology.Showcases
             {
                 GUI.color = color;
             }
+        }
+
+        /// <summary>
+        /// Starts the quiet screen if the def asks for it: lends the
+        /// storyteller def's alert and adaptive-training flags and notes
+        /// the tick, from which arriving letters are taken off. Never
+        /// throws: a failure is logged and leaves the screen as it is.
+        /// </summary>
+        private void QuietScreenBegins()
+        {
+            if (def == null || !def.quietScreen)
+            {
+                return;
+            }
+
+            try
+            {
+                quietSince = Find.TickManager?.TicksGame ?? 0;
+                ShowcaseScreen.Lend(game?.storyteller?.def);
+            }
+            catch (Exception e)
+            {
+                quietSince = -1;
+                Log.Error($"{ShowcaseLog.Prefix} could not quiet the screen for "
+                    + $"{def.defName}: {e}");
+            }
+        }
+
+        /// <summary>
+        /// Keeps the screen quiet for this frame (ShowcaseScreen.Keep).
+        /// Guarded: one failure is logged and the screen is left alone for
+        /// the rest of the run, with the flags given back.
+        /// </summary>
+        private void KeepScreenQuiet()
+        {
+            try
+            {
+                ShowcaseScreen.Keep(quietSince);
+            }
+            catch (Exception e)
+            {
+                if (!quietFailed)
+                {
+                    quietFailed = true;
+                    Log.Error($"{ShowcaseLog.Prefix} could not keep the screen "
+                        + $"quiet, and leaves it alone: {e}");
+                }
+
+                QuietScreenEnds();
+            }
+        }
+
+        /// <summary>
+        /// Ends the quiet screen: the storyteller def's flags are given
+        /// back and letters are left to arrive. Does nothing but forget
+        /// the start when the screen was not quiet, so every way out
+        /// calls it.
+        /// </summary>
+        private void QuietScreenEnds()
+        {
+            quietSince = -1;
+            ShowcaseScreen.Restore();
         }
 
         /// <summary>

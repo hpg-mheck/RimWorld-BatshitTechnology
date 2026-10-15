@@ -1,7 +1,9 @@
 // Batshit Technology - the directed tour's verifier.
 // Runs only when RimWorld starts with -bttourverify as well as
 // -showcase=BT_Showcase (Tools/smoke-test.ps1 -Showcase -Verify). Once the
-// tour is READY it switches to Superfast, watches every tick (the scene
+// tour is READY it switches to Superfast (with -btpresentation, from
+// -Presentation, it leaves the showcase's own speed, so its frames show
+// what a viewer sees), watches every tick (the scene
 // that runs, its caption, the world facts at each scene's end, colonists'
 // deaths), and after FINISHED and the farewell checks the cues, endings,
 // captions and narration, then logs "[BT-SMOKE] DONE" through the smoke
@@ -37,6 +39,12 @@ namespace BatshitTechnology
     {
         private const string TourVerifyFlag = "bttourverify";
         private const string TourSkipArg = "bttourskip";
+
+        /// <summary>
+        /// The flag that makes a verify run a presentation: the tour plays
+        /// at its own speed, not Superfast (smoke-test.ps1 -Presentation).
+        /// </summary>
+        private const string TourPresentationFlag = "btpresentation";
         private const string ShowcaseCuePrefix = "[BT-SHOWCASE] ";
 
         /// <summary>Ticks allowed beyond the scenes' timeouts.</summary>
@@ -70,6 +78,13 @@ namespace BatshitTechnology
         /// </summary>
         private static readonly bool TourVerifying =
             GenCommandLine.CommandLineArgPassed(TourVerifyFlag);
+
+        /// <summary>
+        /// Whether this verify run is a presentation (-btpresentation):
+        /// the verifier leaves the game's speed alone; read once.
+        /// </summary>
+        private static readonly bool TourPresenting =
+            GenCommandLine.CommandLineArgPassed(TourPresentationFlag);
 
         /// <summary>
         /// Arms the scenes the verifier forces to decline, from
@@ -144,6 +159,14 @@ namespace BatshitTechnology
                     // scene's start notes them.
                     CheckShowcaseRecordsAtReady(session, director, now);
                     CheckCleanStageAtReady(session, director);
+                    CheckQuietScreenAtReady(session, director);
+                    if (TourPresenting)
+                    {
+                        Log.Message("[BT-SMOKE] NOTE presentation: the tour plays at "
+                            + $"its own speed ({Find.TickManager.CurTimeSpeed}), not "
+                            + "Superfast");
+                    }
+
                     Log.Message($"[BT-SMOKE] NOTE tour READY at tick {now}; "
                         + $"{director.Scenes.Count} scenes run, deadline tick "
                         + $"{tourWatch.DeadlineTick}; "
@@ -166,7 +189,7 @@ namespace BatshitTechnology
                 return;
             }
 
-            if (Find.TickManager.CurTimeSpeed != TimeSpeed.Superfast)
+            if (!TourPresenting && Find.TickManager.CurTimeSpeed != TimeSpeed.Superfast)
             {
                 Find.TickManager.CurTimeSpeed = TimeSpeed.Superfast;
             }
@@ -194,6 +217,7 @@ namespace BatshitTechnology
                 CheckTour(tourWatch);
                 CheckStorytellerGivenBack(session, tourWatch);
                 CheckWeatherGivenBack(session, tourWatch);
+                CheckQuietScreenGivenBack(session, tourWatch);
                 CheckMapSeedStayedClosed();
                 Finish();
             }
@@ -1076,6 +1100,7 @@ namespace BatshitTechnology
                 }
 
                 SampleCleanStage();
+                SampleQuietScreen();
 
                 foreach (Implosion i in Running())
                 {
@@ -1201,6 +1226,7 @@ namespace BatshitTechnology
                 }
 
                 CleanStageFacts(scene);
+                QuietScreenFacts(scene);
 
                 switch (scene)
                 {

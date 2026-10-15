@@ -332,7 +332,10 @@ namespace BatshitTechnology
         /// </summary>
         public void Arm() => Arm(null);
 
-        /// <summary>Starts the countdown, with an optional reason for the letter.</summary>
+        /// <summary>
+        /// Starts the countdown, with an optional reason for the letter.
+        /// No letter is sent while a showcase keeps the screen quiet.
+        /// </summary>
         /// <param name="reason">Why it started, or null for a player order.</param>
         private void Arm(string reason)
         {
@@ -344,6 +347,15 @@ namespace BatshitTechnology
             ticksLeft = Mathf.Max(1, Mathf.RoundToInt(Props.countdownSeconds * TicksPerSecond));
             Overlay(parent.Map).Register(this);
             SoundDefOf.PsychicPulseGlobal.PlayOneShot(new TargetInfo(parent.Position, parent.Map));
+
+            // A showcase keeping its screen quiet would take the letter off
+            // again, but not before a big threat's letter paused the game
+            // (the default pause preference), halting the film.
+            if (Showcases.ShowcaseScreen.IsQuiet)
+            {
+                return;
+            }
+
             string why = reason == null ? "" : reason + ". ";
             Find.LetterStack.ReceiveLetter(
                 reason == null ? "Self-destruct armed" : "Self-destruct triggered",

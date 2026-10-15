@@ -7,8 +7,11 @@
 // verifier's facts are; the rest come from the API's cues and the
 // session's records. With -btshots the verifier also saves the game's own
 // rendered frame (Unity's ScreenCapture, so windows over the game do not
-// matter) at READY and at each SCENE, BEAT and END cue, one a frame, to
-// <data folder>\shots\NN-<scene>-<cue>.png.
+// matter) for READY and each SCENE, BEAT and END cue, one a frame, to
+// <data folder>\shots\NN-<scene>-<cue>.png: a few ticks after the cue,
+// by its kind (Core's TourShotTiming: a volley's bolts landing, a blast's
+// fireball, a pull under way), in the order the cues came. The game
+// quits only once every frame asked for is saved.
 
 using System;
 using System.Collections.Generic;
@@ -38,16 +41,29 @@ namespace BatshitTechnology
         /// startReseeded, startState and settleRetries, and makes the
         /// stampede's killedFirstVolley null when no volley left; 4 adds
         /// cleared, unstagedHostiles, turnedHostile, screams and weather
-        /// (slice 19000a's clean stage).
+        /// (slice 19000a's clean stage); 5 adds screen (slice 19000b's
+        /// quiet screen) and presentation.
         /// </summary>
-        private const int SummaryVersion = 4;
+        private const int SummaryVersion = 5;
 
         /// <summary>The cues the verifier takes a shot at.</summary>
         private static readonly HashSet<string> ShotCues =
             new HashSet<string> { "READY", "SCENE", "BEAT", "END" };
 
-        /// <summary>Shots waiting for a frame, by file name; guarded by itself.</summary>
-        private static readonly Queue<string> pendingShots = new Queue<string>();
+        /// <summary>
+        /// Shots waiting for their tick and a frame, by file name; guarded
+        /// by itself.
+        /// </summary>
+        private static readonly ShotQueue pendingShots = new ShotQueue();
+
+        /// <summary>
+        /// Set when the run has finished but shots still wait: the game
+        /// quits once they are saved.
+        /// </summary>
+        private static bool shutdownAfterShots;
+
+        /// <summary>Frames passed since the last shot was handed to Unity.</summary>
+        private static int framesAfterLastShot;
 
         /// <summary>Whether the verifier listens for shot cues.</summary>
         private static bool shotsArmed;
@@ -82,7 +98,8 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Names a shot for a cue the verifier shoots at: NN, the scene (or
-        /// "tour" for READY), and the cue with its moment or outcome.
+        /// "tour" for READY), and the cue with its moment or outcome; it is
+        /// due a few ticks on (<see cref="TourShotTiming.DelayTicks"/>).
         /// </summary>
         /// <param name="cue">The cue word.</param>
         /// <param name="detail">The cue's detail.</param>
@@ -98,19 +115,27 @@ namespace BatshitTechnology
             string what = cue == "BEAT" || cue == "END"
                 ? $"{cue}-{(parts.Length > 1 ? parts[1] : string.Empty)}"
                 : cue;
+            int delay = TourShotTiming.DelayTicks(
+                cue, cue == "BEAT" && parts.Length > 1 ? parts[1] : null);
+            int due = (Find.TickManager?.TicksGame ?? 0) + delay;
             lock (pendingShots)
             {
                 shotsNamed++;
-                pendingShots.Enqueue(
-                    $"{shotsNamed:00}-{FileSafe(scene)}-{FileSafe(what)}.png");
+                pendingShots.Add(
+                    $"{shotsNamed:00}-{FileSafe(scene)}-{FileSafe(what)}.png",
+                    due, Time.realtimeSinceStartup);
             }
         }
 
         /// <summary>
-        /// Hands one waiting shot to Unity, which saves the frame as it
-        /// finishes rendering; one a frame, so none overwrites another.
+        /// Hands the first waiting shot to Unity once it is due, which
+        /// saves the frame as it finishes rendering; one a frame, so none
+        /// overwrites another. Once the run has finished every waiting
+        /// shot is taken at once, and when none is left the game quits
+        /// (a couple of frames on, so the last is written).
         /// </summary>
-        private static void PumpTourShots()
+        /// <param name="flush">Whether to take shots before they are due.</param>
+        private static void PumpTourShots(bool flush)
         {
             if (!shotsArmed)
             {
@@ -120,13 +145,22 @@ namespace BatshitTechnology
             string name;
             lock (pendingShots)
             {
-                if (pendingShots.Count == 0)
+                name = pendingShots.TakeDue(
+                    Find.TickManager?.TicksGame ?? 0, Time.realtimeSinceStartup, flush);
+            }
+
+            if (name == null)
+            {
+                if (shutdownAfterShots && ShotsWaiting == 0 && ++framesAfterLastShot > 2)
                 {
-                    return;
+                    shutdownAfterShots = false;
+                    Root.Shutdown();
                 }
 
-                name = pendingShots.Dequeue();
+                return;
             }
+
+            framesAfterLastShot = 0;
 
             try
             {
@@ -136,6 +170,18 @@ namespace BatshitTechnology
             catch (Exception e)
             {
                 Log.Message($"[BT-SMOKE] NOTE shot {name} failed: {e.Message}");
+            }
+        }
+
+        /// <summary>Gets how many shots wait to be taken.</summary>
+        private static int ShotsWaiting
+        {
+            get
+            {
+                lock (pendingShots)
+                {
+                    return pendingShots.Count;
+                }
             }
         }
 
@@ -211,6 +257,7 @@ namespace BatshitTechnology
                     && cues.Any(c => c.Cue == "FINISHED") },
                 { "skipForced", TourScene.SkippedForTest.OrderBy(k => k).ToList() },
                 { "shots", shotsTaken },
+                { "presentation", TourPresenting },
             };
             if (watch == null)
             {
@@ -405,6 +452,7 @@ namespace BatshitTechnology
                 summary.Add("twins", Tractor(TourScript.Twins, cues));
                 summary.Add("narration", Narration());
                 AddCleanStageTo(summary);
+                AddQuietScreenTo(summary);
                 summary.Add("storyteller", new JsonLine
                 {
                     { "held", StorytellerPartsHeld },

@@ -32,15 +32,32 @@
 #                                         # 1 to 64 of A-Z a-z 0-9 . _ -
 #   .\Tools\smoke-test.ps1 -Showcase -Verify -Shots
 #                                         # also save the game's own frame
-#                                         # at READY and each SCENE, BEAT
-#                                         # and END cue, to
-#                                         # <DataFolder>\shots\NN-*.png
+#                                         # for READY and each SCENE, BEAT
+#                                         # and END cue, a few ticks after
+#                                         # it (the action in frame), to
+#                                         # <DataFolder>\shots\NN-*.png;
+#                                         # Tools\contact-sheet.ps1 tiles
+#                                         # them into sheets
+#   .\Tools\smoke-test.ps1 -Showcase -Verify -Presentation -Shots
+#                                         # verify as a presentation: the
+#                                         # tour plays at its own speed,
+#                                         # not Superfast, with no dev mode
+#                                         # and no Learning helper, in a
+#                                         # 1920 by 1080 window at 1x UI,
+#                                         # the layout of the maximized 2x
+#                                         # viewing window on a 4K screen,
+#                                         # so the frames show what a
+#                                         # viewer sees; muted; the
+#                                         # timeout defaults to 2400 s
 # Every showcase logs the seed it used ([BT-SHOWCASE] SEED <text>
 # (<source>)); pass that text to -Seed to repeat the run's map and stage.
 # Tools\tour-trials.ps1 runs the verifier over many seeds in parallel.
 # Runs left open for a person to watch (-Showcase without -Verify, and
 # -KeepOpen) get a maximized window and 2x UI scale; test runs, -Verify
-# included, stay small and muted.
+# included, stay small and muted. A showcase to watch, and -Presentation,
+# also turn dev mode and the Learning helper off (these are this script's
+# own prefs, in its data folder, never a player's); -KeepOpen keeps dev
+# mode for a developer.
 # Defaults: the repository this script sits in, $env:RIMWORLD_DIR, and a
 # data folder under %TEMP%. Relative paths are taken from the current
 # folder and made absolute first (RimWorld starts in its own folder, and
@@ -64,7 +81,10 @@ param(
   # With -Showcase: the seed to generate from (-showcaseseed=<text>).
   [string]$Seed = '',
   # With -Verify: save the game's frame at the tour's cues (-btshots).
-  [switch]$Shots
+  [switch]$Shots,
+  # With -Verify: play the tour at its own speed with the viewing prefs
+  # (-btpresentation), so -Shots frames show what a viewer sees.
+  [switch]$Presentation
 )
 $ErrorActionPreference = 'Stop'
 # Absolute paths, from the current folder, before anything uses them:
@@ -84,6 +104,14 @@ if ($Seed -and $Seed -cnotmatch '^[A-Za-z0-9._-]{1,64}$') {
   throw "-Seed '$Seed' is not a usable seed: 1 to 64 of A-Z, a-z, 0-9, '.', '_' and '-'."
 }
 if ($Shots -and -not $Verify) { throw '-Shots saves a verify run''s frames; pass -Verify too.' }
+if ($Presentation -and -not $Verify) {
+  throw '-Presentation presents a verify run; pass -Showcase -Verify too.'
+}
+# The tour plays for about seven minutes at its own speed, against under
+# three at Superfast.
+if ($Presentation -and -not $PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+  $TimeoutSeconds = 2400
+}
 if (-not $RimWorld -or -not (Test-Path (Join-Path $RimWorld 'RimWorldWin64.exe'))) {
   throw "RimWorld not found at '$RimWorld'. Set RIMWORLD_DIR or pass -RimWorld."
 }
@@ -106,7 +134,8 @@ if (Test-Path $link) {
 }
 
 # 2. Isolated config: Harmony, Core, the installed DLCs and this mod;
-# muted, windowed, running in the background, dev mode on.
+# muted, windowed, running in the background, dev mode on (off, with the
+# Learning helper, for what a viewer sees).
 $config = Join-Path $DataFolder 'Config'
 New-Item -ItemType Directory -Force $config | Out-Null
 $version = (Get-Content (Join-Path $RimWorld 'Version.txt') -TotalCount 1).Trim()
@@ -153,12 +182,25 @@ $(& $li $expansions)
 </ModsConfigData>
 "@ | Set-Content -Encoding UTF8 (Join-Path $config 'ModsConfig.xml')
 if ($Verify -and -not $Showcase) { throw '-Verify verifies the tour; pass -Showcase too.' }
-# A verify run is a test run: small and muted unless kept open.
+# A verify run is a test run: small and muted unless kept open. What a
+# viewer sees (a showcase to watch, or a verify run presented as one) has
+# no dev mode, so no developer toolbar or DEV buttons, and no Learning
+# helper; a presentation stays muted. A presentation is not maximized:
+# its window is 1920 by 1080 at 1x, the layout a viewer sees in the
+# maximized 2x window on a 4K screen (an effective 1920 by about 1050),
+# at a size every machine can show. 1600 by 900 at 2x would be an
+# effective 800 by 450, which RimWorld 1.6 refuses outside dev mode
+# (ResolutionUtility.Update logs "Resolution too small" and resets the
+# scale; it is under 1024 by 768).
 $watching = $Showcase -and -not $Verify
+$viewingPrefs = $watching -or $Presentation
 $forViewing = $watching -or $KeepOpen
 $volume = if ($watching) { '0.6' } else { '0' }
-$width, $height = if ($forViewing) { 1600, 900 } else { 1280, 720 }
+$width, $height = if ($Presentation) { 1920, 1080 }
+  elseif ($forViewing) { 1600, 900 } else { 1280, 720 }
 $uiScale = if ($forViewing) { '2' } else { '1' }
+$devMode = if ($viewingPrefs) { 'False' } else { 'True' }
+$training = if ($viewingPrefs) { 'False' } else { 'True' }
 @"
 <?xml version="1.0" encoding="utf-8"?>
 <PrefsData>
@@ -168,7 +210,8 @@ $uiScale = if ($forViewing) { '2' } else { '1' }
   <screenHeight>$height</screenHeight>
   <uiScale>$uiScale</uiScale>
   <runInBackground>True</runInBackground>
-  <devMode>True</devMode>
+  <devMode>$devMode</devMode>
+  <adaptiveTrainingEnabled>$training</adaptiveTrainingEnabled>
   <pauseOnError>False</pauseOnError>
   <automaticPauseMode>Never</automaticPauseMode>
   <langFolderName>English</langFolderName>
@@ -188,6 +231,7 @@ if ($Verify) {
   $runnerFlags += '-bttourverify'
   if ($TourSkip) { $runnerFlags += "-bttourskip=$TourSkip" }
   if ($Shots) { $runnerFlags += '-btshots' }
+  if ($Presentation) { $runnerFlags += '-btpresentation' }
 }
 if ($Seed) { $runnerFlags += "-showcaseseed=$Seed" }
 $gameArgs = @("-savedatafolder=`"$DataFolder`"") + $runnerFlags + @(

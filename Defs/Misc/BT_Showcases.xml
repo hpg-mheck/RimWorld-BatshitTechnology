@@ -37,6 +37,11 @@
          (docs/SHOWCASE-API.md, "The Held Weather"). The stampede borrows
          it for its rain and gives it back. -->
     <holdWeather>Clear</holdWeather>
+    <!-- Alerts ("Need colonist beds", "Pen needed"), letters ("Ancient
+         mech", "Roof collapsed") and top-left messages piled up over the
+         film: the screen is kept quiet while the tour runs
+         (docs/SHOWCASE-API.md, "The Quiet Screen"). -->
+    <quietScreen>true</quietScreen>
     <workerClass>BatshitTechnology.BatshitTourDirector</workerClass>
     <scenes>
       <li Class="BatshitTechnology.DeviceParadeScene">

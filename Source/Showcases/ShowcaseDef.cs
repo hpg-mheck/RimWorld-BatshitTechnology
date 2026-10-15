@@ -94,6 +94,17 @@ namespace BatshitTechnology.Showcases
         public WeatherDef holdWeather;
 
         /// <summary>
+        /// Whether to keep the screen clear of vanilla's clutter while the
+        /// showcase runs (false by default): no alerts and no Learning
+        /// helper (the storyteller def's <c>disableAlerts</c> and
+        /// <c>disableAdaptiveTraining</c>, lent and given back), no letter
+        /// that arrives after the showcase begins, and no top-left message,
+        /// each taken off before it is drawn. Nothing a player set is
+        /// changed (docs/SHOWCASE-API.md, "The Quiet Screen").
+        /// </summary>
+        public bool quietScreen;
+
+        /// <summary>
         /// The code that runs the showcase: a <see cref="ShowcaseWorker"/>
         /// subclass. The default, <see cref="ShowcaseDirector"/>, runs
         /// <see cref="scenes"/>.

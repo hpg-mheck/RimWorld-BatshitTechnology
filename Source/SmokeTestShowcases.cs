@@ -149,8 +149,9 @@ namespace BatshitTechnology
     }
 
     /// <summary>
-    /// A smoke-test worker that asks for its devices' DEV buttons, as
-    /// BatshitTourDirector does, and never finishes on its own.
+    /// A smoke-test worker that asks for its devices' DEV buttons, as a
+    /// showcase may (the tour no longer does), and never finishes on its
+    /// own.
     /// </summary>
     internal class SmokeDevButtonsWorker : ShowcaseWorker
     {
@@ -401,6 +402,7 @@ namespace BatshitTechnology
             TestDirectorRun(map);
             TestFaultyScenes(map);
             TestDevButtonLoan(map);
+            TestQuietScreen(map);
             BeginStopRun(map);
 
             Find.TickManager.CurTimeSpeed = TimeSpeed.Paused;

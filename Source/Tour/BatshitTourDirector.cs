@@ -28,16 +28,16 @@ namespace BatshitTechnology
         public TourStage Stage { get; private set; } = TourStage.Empty;
 
         /// <summary>
-        /// Builds the stage, then the scenes. In dev mode the devices'
-        /// DEV buttons show too (lent by the API and given back when the
-        /// showcase ends). A build that throws is logged once and leaves an
-        /// empty stage, on which every scene that needs the stage
-        /// declines, so the tour still ends rather than stalls.
+        /// Builds the stage, then the scenes. The tour is a film, so it
+        /// asks for no DEV buttons, even in dev mode (slice 19000b: the
+        /// operator's viewing runs show no developer clutter). A build
+        /// that throws is logged once and leaves an empty stage, on which
+        /// every scene that needs the stage declines, so the tour still
+        /// ends rather than stalls.
         /// </summary>
         /// <param name="map">The showcase's map.</param>
         public override void Setup(Map map)
         {
-            EnableDevButtons();
             try
             {
                 Stage = Showcase.Build(map, PlannedHerd()) ?? TourStage.Empty;

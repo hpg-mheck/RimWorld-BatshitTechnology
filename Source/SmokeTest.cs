@@ -79,11 +79,17 @@ namespace BatshitTechnology
         /// Once per game, after the map has settled for a couple of
         /// seconds, runs the test; then advances the frame-driven showcase
         /// checks on later frames, and quits when they are done. In a tour
-        /// verify run with shots, takes one waiting shot a frame.
+        /// verify run, samples the screen once a frame, and with shots
+        /// takes one waiting shot a frame once it is due.
         /// </summary>
         public override void GameComponentUpdate()
         {
-            PumpTourShots();
+            PumpTourShots(flush: finished);
+            if (!finished)
+            {
+                tourWatch?.SampleScreenFrame();
+            }
+
             if (finished)
             {
                 return;
@@ -170,7 +176,16 @@ namespace BatshitTechnology
             Log.Message($"[BT-SMOKE] DONE passed={passed} failed={failed}");
             if (!GenCommandLine.CommandLineArgPassed(KeepOpenFlag))
             {
-                Root.Shutdown();
+                // Shots still waiting are taken first, one a frame, and
+                // the game quits after the last (PumpTourShots).
+                if (ShotsWaiting > 0)
+                {
+                    shutdownAfterShots = true;
+                }
+                else
+                {
+                    Root.Shutdown();
+                }
             }
         }
 
