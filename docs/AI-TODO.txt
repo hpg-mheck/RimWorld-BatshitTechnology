@@ -667,14 +667,12 @@ Three review fixes have no automated check, for these reasons:
     build that removed the layouts suffix inside MapSeedCue, which both
     sides share; MapSeedCueTests do prove the suffix). Sabotage it alone
     in the next sabotage build (the cue saying one layout more).
-  - Hostiles that arrive early in the tour although the storyteller is quiet
-    ("Sorne Geneline" pawns, one to six, on 9 of the 32 trial maps; mostly
-    during the first scene, but on two maps without AnyRim already there as it
-    began): their source is not traced. In the first post-fix run of tour-04
-    they hurt two colonists by the base from the stampede on and killed one in
-    the tractor scene (its three pre-fix runs passed; of its three later runs,
-    two passed). Find what sends them (a quest, a map's own event) before
-    relying on a seed whose maps get them.
+  - (Done in slice 19000a, 2026-10-15.) Hostiles that arrived early in the
+    tour although the storyteller was quiet ("Sorne Geneline" pawns, one to
+    six, on 9 of the 32 trial maps): an ancient temple's dormant hives,
+    woken when the stage cleared the fog, and on two maps cave hives'
+    insects. The stage now removes the map's own hostiles before the fog
+    goes (docs/SHOWCASE.md, "A Clean Stage").
 
 - [ ] Tour-wide issues from the seed trials (slice 18000, 2026-10-15), for
   slice 19000. Found in the best-of-32 trials and the four finalists'
@@ -690,9 +688,10 @@ Three review fixes have no automated check, for these reasons:
   - The stampede enters at x 240 to 247 of 250, so 35 to 40 per cent
     of the herd and volley frames is black off-map space. Reframe, or
     move the band inward.
-  - Map hostiles that wake during the first scene ("Sorne Geneline",
-    Dark entities, Mechhive; see the item above). The READY check
-    misses them; the stage should clear them or keep them asleep.
+  - (Done in 19000a.) Map hostiles that wake during the first scene
+    ("Sorne Geneline", Dark entities, Mechhive). The stage clears them
+    (hives, hostile pawns asleep or awake, casket occupants) before it
+    clears the fog, and the READY check counts dormant ones too.
   - Raccoon: Ned throws with the raccoon 8 to 20 tiles off, and the
     singularity takes Ned and Constance on about half of all seeds
     (the census falls from 9 to 6 to 8). The scene can time out if the
@@ -707,19 +706,26 @@ Three review fixes have no automated check, for these reasons:
     at the same cell (77,63) on tour-05 and tour-22. With little in the
     yard the single pull looks sparse (tour-17: 0 fixtures, about 185
     item moves); stage more junk. The twins' junk is small at 1x.
+    Since slice 18500 the stray starts at (-8,12), inside the 33.75-tile
+    pull; in one of slice 19000a's three tour-17 runs it was still inside
+    when the pull began and died (docs/AI-KNOWN-ISSUES.txt). Step 19000c
+    makes a tourist the stray, or starts the colonist outside the pull.
   - Clutter: vanilla's alerts and letters down the right edge
     ("Self-destruct armed" long after both have gone off, "Need colonist
     beds", "Pen needed", "Roof collapse", "Ancient mech", deaths,
     burials), the top-left messages ("Emplaced tractor bomb armed..."),
     and in verify runs dev mode's gizmos and the Learning helper. The
     operator's viewing should show none of them.
-  - The stampede's volley zone is fixed, so on some seeds it kills an
-    anima tree (the psychic scream and a mood hit; tour-17, tour-27).
-    Clear the zone's trees or check for one.
+  - (Done in 19000a.) The stampede's volley zone is fixed, so on some
+    seeds it killed an anima tree (the psychic scream and a mood hit;
+    tour-17, tour-27). The stage removes every anima tree on the map and
+    every tree in the volleys' zone, silently; the verifier fails a scream.
   - The retire barrages set the shrubland alight and collapse nearby
     ruins' roofs; the smoke and fire alerts carry into AnyRim.
-  - Rain and fog grey out the middle scenes on several seeds,
-    tour-04's included. Consider holding the weather clear.
+  - (Done in 19000a.) Rain and fog grey out the middle scenes on several
+    seeds, tour-04's included. BT_Showcase now holds the weather clear
+    (the Showcase API's holdWeather); the stampede borrows it for its
+    rain.
   - The tractor scene sometimes drops to 22 to 25 ticks a second with
     stalls of 0.8 to 4.3 s at Superfast (performance, not speed mode:
     watch it in the viewing).
@@ -733,10 +739,10 @@ Three review fixes have no automated check, for these reasons:
     Neighborly and Popular. Raise it by half too if the operator says so
     (DefaultTimidStop, the robot's emplaceRange, the smoke proximity
     check, the descriptions and docs/TRACTOR-BOMB.md).
-  - The tour's 33.75-tile pulls reach past the yard's 29-tile height and
-    uproot every plant there, so an anima tree within about 44 tiles of
-    the yard's centre would scream. Fold the yard's reach into slice
-    19000a's tree clearing (with the stampede's volley zone).
+  - (Done in 19000a.) The tour's 33.75-tile pulls reach past the yard's
+    29-tile height and uproot every plant there, so an anima tree within
+    about 44 tiles of the yard's centre would scream. The stage now
+    removes every anima tree on the map, wherever it stands.
   - The bigger pulls rip more fixtures outside the yard (tour-04: 26 in
     the single pull, 49 in one twin, against 0 and 2 to 5 before); see
     what they are on 19000d's contact sheets.

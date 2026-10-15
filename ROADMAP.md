@@ -98,8 +98,8 @@ sense runs.
 | 16000 | Named yield settings | Done |
 | 17000 | Operator's viewing | Done |
 | 18000 | Showcase seeds, best of 32 | Done |
-| 18500 | Pull radii up by half | Now |
-| 19000 | Tourists, viewing feedback | Planned |
+| 18500 | Pull radii up by half | Done |
+| 19000 | Tourists, viewing feedback | Now |
 | 20000 | Merge into `trunk` | Planned |
 
 Slice 11000 delivered the twin-bomb junkyard test and the multi-bomb
@@ -171,7 +171,13 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
   volunteer and the tractor's stray), a clean stage (map hostiles,
   the volley zone's trees, clear weather), less clutter (dev mode,
   the Learning helper, stale alerts, letters and messages), and the
-  camera and framing faults the seed trials found.
+  camera and framing faults the seed trials found. Step 19000a, a clean
+  stage, done 2026-10-15: the stage removes the map's own hostiles
+  before it clears the fog (the "Sorne Geneline" insects were a
+  temple's hive, woken by the clearing), every anima tree and the
+  volley zone's trees, and the Showcase API holds the weather clear
+  (`docs/SHOWCASE.md`, "A Clean Stage"; `docs/SHOWCASE-API.md`, "The
+  Held Weather").
 - **20000:** the merge into `trunk`.
 
 ### Decisions

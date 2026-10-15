@@ -199,6 +199,7 @@ A `ShowcaseDef` (written in XML as
 | `mapSize` | Width and height in cells (default 250, limits 75 to 400) |
 | `biome` | A start in a random valid tile of that biome, if any exists |
 | `seed` | The seed the game is generated from; blank is random ("Seeds") |
+| `holdWeather` | A weather held while it runs ("The Held Weather") |
 | `workerClass` | A `ShowcaseWorker` subclass (default `ShowcaseDirector`) |
 | `scenes` | For a director: scenes in order, keys unique |
 | `narration` | Lines of `scene`, `when`, `delayTicks` and `text` |
@@ -590,19 +591,54 @@ If a set-up fails, they are given back at once. The parts belong to the
 showcase's game, so leaving it mid-showcase takes them along, and a
 showcase game the viewer saves rebuilds them on loading. Not covered:
 incidents that quests make (a fresh game has none), and the hostiles a
-map starts with (dark entities, a mechhive); clearing those (item 19,
-part two) is not done, since a showcase's seed can choose a map without
-them.
+map starts with (dark entities, a mechhive, an ancient temple's hives).
+The API leaves those to the showcase: the tour's stage removes them
+before it clears the fog (item 19, part two, built in slice 19000a;
+docs/SHOWCASE.md, "A Clean Stage").
+
+### The Held Weather
+
+A def may name a weather to hold, `holdWeather` (slice 19000a; the tour
+holds `Clear`, since rain and fog greyed out its middle scenes). From the
+set-up until the showcase finishes or stops, the session keeps that
+weather showing, without Harmony and without drawing a random number:
+
+- **At the set-up**, before the worker, it notes the weather as it is
+  (current, last and age), makes the held weather both the current and
+  the last one at once, and logs `WEATHER held <def> (was <def>)`.
+- **Every tick** after the map's weather has ticked, Core's
+  `WeatherHold.Next` decides: another current weather is replaced at once
+  (counted as a restart); a transition back to the held weather is
+  settled, the last weather made the held one; and the held weather's
+  age goes back to 0 once past 1,000 ticks. RimWorld 1.6.4871's weather
+  decider starts the next weather when the age passes the current turn:
+  10,000 ticks for a new game's first weather, else the weather's own
+  duration (15,000 at the least), cut to a quarter while a large fire
+  burns, so never under 2,500, and it never fires. A vanilla
+  `GameCondition_ForceWeather` would do the same, but a condition is
+  saved with the map, and nothing about a session may be saved.
+- **A scene may borrow the weather** for weather of its own
+  (`YieldWeather(scene)`, then `ReclaimWeather(scene)`; the tour's
+  stampede brings rain). The hold stands aside while it is lent, and
+  takes it back by itself once the borrower is no longer its director's
+  current scene, so a scene that fails in its end cannot keep it.
+- **When it finishes or stops**, or its set-up fails, the weather from
+  before is given back, and `WEATHER given back (<def>)` is logged after
+  the `STORYTELLER` cue; the decider carries on from there.
+
+The weather's state belongs to the map and is saved as usual, so a
+showcase game the viewer saves keeps the weather it had, and the hold,
+being the session's, does not survive the load.
 
 ### Log Cues
 
 Every API cue is one log message, `[BT-SHOWCASE] <CUE> <detail>`; the
 prefix carries the host mod's tag while the API lives in this mod. The
-API's errors and warnings carry the same prefix, but are not cues. Five
+API's errors and warnings carry the same prefix, but are not cues. Six
 are record cues (`ShowcaseLog.RecordCues`): they say what a run was
 (its seed, whether its map's seeds were pinned, its fingerprints, the
-storyteller's state) rather than how it went, so tooling comparing a
-run's flow of cues can leave them out. A
+storyteller's state, the held weather) rather than how it went, so
+tooling comparing a run's flow of cues can leave them out. A
 `ShowcaseLog.Cued` event lets capture tooling in the assembly listen
 for cues (the tour verifier's shots do).
 
@@ -630,6 +666,9 @@ for cues (the tour verifier's shots do).
   a failed set-up.
 - `START <def>`: the map has settled and the worker is being set up
   (with `forced` if it was).
+- `WEATHER held <def> (was <def>)` (record): the def's weather is held
+  from here. And `WEATHER given back (<def>)` after `FINISHED` or
+  `STOPPED` (following the `STORYTELLER` cue), or a failed set-up.
 - `STAGEHASH <hex> (...)` (record): the map's fingerprint once the
   worker is set up, just before `READY`.
 - `READY`: the worker is set up; capture tools maximize and start here.
@@ -651,8 +690,8 @@ for cues (the tour verifier's shots do).
 
 Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
 `Tools/smoke-test.ps1 -Showcase` does. `BT_Showcase` adds its own cues
-(`ANYRIM` or "AnyRim skipped"); its scenes log the director's
-`SCENE`, `BEAT`, `END` and `SKIPPED` cues above.
+(`ANYRIM` or "AnyRim skipped", and "stage cleared: ..."); its scenes log
+the director's `SCENE`, `BEAT`, `END` and `SKIPPED` cues above.
 
 ## Tests
 
@@ -717,7 +756,13 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
     `Map.NextGenSeed` gives vanilla's own value (computed through
     `System.HashCode.Combine` in the same process), even with the window open
     for another game, while with the window open for its own game it gives the
-    pinned value, and is vanilla's again once closed.
+    pinned value, and is vanilla's again once closed;
+  - from slice 19000a (`Source/SmokeTestShowcases.Weather.cs`): the directed
+    test showcase holds Clear over the smoke game's fog from its start,
+    undoes another weather on the next tick with its age under the
+    decider's turn, stands aside while a scene has borrowed the weather and
+    takes it back once that scene is skipped, and gives the fog back when
+    it finishes and when it is stopped.
 - **Showcase run:** `Tools/smoke-test.ps1 -Showcase` starts BT_Showcase
   through the main menu with `-showcase=BT_Showcase` and waits for
   `[BT-SHOWCASE] READY`, failing on a `REFUSED` or `FAILED` cue or a mod

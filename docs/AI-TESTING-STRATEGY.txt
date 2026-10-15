@@ -353,6 +353,17 @@ which past ten in one tick logs "started 10 jobs in one tick"), and it
 must leave unhurt, with no error logged. Without Odyssey's quail the
 check is skipped with a note.
 
+Slice 19000a added five for the Showcase API's held weather
+(Source/SmokeTestShowcases.Weather.cs). The directed test showcase holds
+Clear, and the smoke game's weather is set to fog before each run: the
+hold replaces the fog at once as the run begins; it undoes another
+weather (rain, its age set to 5,000) on the next tick, with the age back
+under WeatherHold.MaxHeldAge and one restart counted; a scene that
+borrows the weather keeps its rain while it runs and the hold takes it
+back by itself once that scene is skipped; and the fog is given back
+when the run finishes and when the second run is stopped. The smoke
+game's own weather is put back after each.
+
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
 PowerNetManager.UpdatePowerNetsAndConnections_First). Destructive
@@ -430,6 +441,26 @@ state the start left). MAPSEED's expected text now comes from Core's
 MapSeedCue with the layouts and landmark the session read, and a NOTE
 names the tile's landmark, its mutators and the map's layouts whose
 rooms the seed does not pin.
+
+Slice 19000a added the clean stage's checks
+(Source/SmokeTestTour.CleanStage.cs; docs/SHOWCASE.md, "A Clean Stage").
+At READY: no map hostile is left, dormant ones counted (hives, asleep or
+awake; hostile pawns, inactive or dormant ones included; pawns in the
+map's ancient caskets), no anima tree stands and no tree stands in the
+volleys' zone, which exists; and the def's weather is held and showing.
+Every tick until FINISHED it classifies each hostile pawn as it first
+appears: one a scene staged (TourScene.StagedHostiles: the herd, the
+raccoon, the raiders), one already on the map at READY that turned
+hostile (noted, not failed: a provoked wild animal), or one that
+appeared unstaged; and it counts the ticks on which the held weather did
+not show while no scene had borrowed it. At each scene's end three more
+world facts: no hostile appeared that the tour did not stage; no anima
+tree screamed (the colonists' AnimaScream memories did not grow); and
+the weather held (for a scene that borrowed it, the stampede, that it
+was given back by its end). After the farewell: no tick showed another
+weather, the session holds none, and a WEATHER cue gave it back after
+FINISHED. The SUMMARY (version 4) adds cleared, unstagedHostiles,
+turnedHostile, screams and weather.
 
 The stampede's facts (Source/SmokeTestTour.Stampede.cs) use Core's
 Stampede rules but measure the world each tick rather than asking the

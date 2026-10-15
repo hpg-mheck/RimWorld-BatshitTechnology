@@ -168,15 +168,27 @@
   no code with the implosion. It resembles the queue outside the
   1.5-tile pile that the sideways slip fixed on 2026-10-13 (silver and a
   component stuck at (0, 2) and (0, 3)); not yet explained. Seen again
-  once in slice 18000 and in three of seven full runs of slice 18500
-  (2026-10-15; the step changed no implosion code), each time the same
-  silver stack at (0, 2), on a random quick-test map; still not traced.
+  once in slice 18000, in three of seven full runs of slice 18500
+  (2026-10-15; the step changed no implosion code), and in three of the
+  six full runs of slice 19000a (one of them a sabotage build), each
+  time the same silver stack at (0, 2), on a random quick-test map;
+  still not traced.
 - Smoke-test flakes on some random maps, not yet explained: "AnyRim's
   devices and lamps are powered" fails when two or three of AnyRim's 23
   consumers sit on a power net with no generator ("connected; net
-  surplus 0 W"; 2 of 6 runs on 2026-10-14, and once in slice 7000), and
-  "the colonist sat in the squeezer" fails when the colonist never sits
-  (twice in slice 6000). Both passed on the other maps.
+  surplus 0 W"; 2 of 6 runs on 2026-10-14, once in slice 7000, and once
+  in slice 19000a, 3 of 23 on 2 nets), and "the colonist sat in the
+  squeezer" fails when the colonist never sits (twice in slice 6000).
+  Both passed on the other maps.
+- Smoke flake (slice 19000a, 2026-10-15): "fires survive the shockwave
+  out to its edge" failed once, on a quick-test map with only 65
+  burnable cells beyond half the replicator's blast radius: 11 fires
+  survived there against the 13 the check wants (a fifth of them),
+  21 in the radius in all (.local/tmp/p3k-19000a-final2-smoke). The
+  check runs early in the smoke sequence, before any showcase check,
+  and nothing the slice changed runs outside a showcase; it passed in
+  every other recorded run. Rain on that map would explain it, but the
+  log does not record the weather.
 - Tour (BT_Showcase): on some random maps colonists die. The step 5
   verifier (smoke-test.ps1 -Showcase -Verify) caught it twice on
   2026-10-14: one colonist died during the tractor scene on one map,
@@ -301,3 +313,13 @@
   API holds it quiet for every showcase until FINISHED, then gives it
   back, so a raid in the farewell is possible; a colonist lost after
   FINISHED is noted, not failed.
+- Tour (BT_Showcase), slice 19000a (2026-10-15): on tour-17 the tractor
+  scene's colonist stray, Bowman, started at (72,64), was sent north at
+  the protest, and was still inside the 33.75-tile pull when it began:
+  pulled in with the four raiders (the SUMMARY's pullsPawns 5, against 4
+  in the run before), bitten and stabbed by them, and killed by the
+  blast (.local/tmp/p3k-19000a-v2-tour17). One of the slice's tour-17
+  runs; the other passed, and so did every tour-04 run. The stray's
+  layout is slice 18500's; the tour after READY repeats only partly
+  (below), so its flight differs from run to run. Step 19000c replaces
+  the colonist stray with a tourist, or starts it outside the pull.

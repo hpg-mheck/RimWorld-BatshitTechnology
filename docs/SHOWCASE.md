@@ -104,13 +104,67 @@ Its known weaknesses:
 
 - An ancient walled structure stands 20 to 25 tiles north-east of the
   base, beside the defence volley's craters.
-- Three "Sorne Geneline" hostiles appear during the first scene. Their
-  source is untraced (`docs/AI-TODO.txt`). In two of its eight runs,
-  colonists were hurt while they were still about.
+- Three "Sorne Geneline" hostiles appeared during the first scene: insects
+  from the temple's dormant hive, woken when the stage cleared the fog. In
+  two of its eight runs, colonists were hurt while they were still about.
+  Since slice 19000a the stage removes the hive first ("A Clean Stage").
 - Rock chunks lie piled beside the Transmogrifier.
 - Grass fires start around the pads.
 
 The runner-up is `tour-17`, a grassland.
+
+### A Clean Stage
+
+Built in slice 19000a (2026-10-15), from the seed trials' tour-wide issues.
+The stage (`Source/Showcase.cs`, with `Source/Tour/StageClearing.cs`) clears
+three things before READY; none of it touches map generation, so MAPHASH
+stays, and none of it draws a random number.
+
+- **The map's own hostiles.** The pads clear the whole map's fog so every
+  blast can be watched, and clearing the fog wakes what the map kept asleep.
+  An ancient temple (the walled structure with rows of caskets) holds one of
+  three things: one or two dormant hives, which wake on their next
+  tick-interval once unfogged and spawn their first insects ("Sorne
+  Geneline", the insects' fixed faction name, the same on every seed); one
+  to five sleeping mechanoids; or, with Anomaly, two to five fleshbeasts,
+  both woken at once by the unfogging (RimWorld 1.6.4871: `Hive`,
+  `FogGrid.Unfog`, `Pawn.Notify_Unfogged`). So after AnyRim is built (its
+  site search steers clear of hostiles, so the town stands where it always
+  did) and before the fog goes, the stage removes every hive; every egg
+  sac (Odyssey) and stasis cocoon, which release an insect when killed or
+  disturbed (on tour-17 the reactor's blast burst two egg sacs into
+  larvae); every hostile pawn (asleep, dormant or awake); and every pawn
+  sealed in one of the map's ancient cryptosleep caskets, which a stray
+  bolt would otherwise release with every casket of its group. Removing
+  the last hive would give the colonists vanilla's "defeated insect hive"
+  memory, which they did not earn; it is taken back.
+- **Trees whose death would hurt.** Every anima tree on the map goes (its
+  psychic scream and five days of bad mood when killed; on tour-17 and
+  tour-27 the stampede's volley killed one every run, and the tractors'
+  pulls uproot every plant within about 44 tiles of the yard's centre), and
+  every other tree in the volleys' zone: everything east of the base's
+  square to the map's edge, from the herd's band and the base's square out
+  30 tiles north and south (Core's `Stampede.VolleyZone`: a 256-bolt
+  volley's footprint at the grid's 76-tile reach is 29.8 tiles). The zone
+  takes the band as the stampede will choose it, without its shuffle.
+- **How.** Everything goes with `DestroyMode.Vanish`: no corpse, no jelly,
+  no stump and no leavings, and neither the scream, its sound nor the
+  tree-lovers' mood follows (both on-destroy comps ignore Vanish).
+- **The weather.** `BT_Showcase` holds the weather clear for the whole tour
+  (the Showcase API's `holdWeather`; docs/SHOWCASE-API.md, "The Held
+  Weather"): rain and fog had greyed out the middle scenes on several seeds,
+  tour-04's included, because the stampede's fires shorten the weather's
+  turn and weight the next pick 15 times towards rain. The stampede still
+  brings its own rain: it borrows the weather for its run and gives it back
+  at its end.
+
+The log's `[BT-SHOWCASE] stage cleared:` line says what went. On tour-04 the
+tour verifier checks, at READY, that no map hostile is left (dormant ones
+counted), no anima tree stands and no tree stands in the volley zone, and
+that the weather is held; at each scene's end, that no hostile appeared that
+a scene did not stage (the herd, the raccoon, the raiders), that no anima
+tree screamed, and that the weather held (or, for the stampede, was given
+back); and after FINISHED, that the weather was given back.
 
 ## The Scenes
 
@@ -249,17 +303,19 @@ slice 14000. Core's `Stampede` holds the rules; the scene is
   the last bolt has landed. While the first volley waits, the scene logs where
   the herd is every 600 ticks; it gives up 1,800 ticks after tick 360 and
   sends the herd home.
-- **Fire.** It rains for the scene: the rain starts at full strength as the
-  scene opens, so the boomalopes' fires cannot take the grassland, and the
-  bolts' bomb waves put out any fire they touch. During the aftermath's hold
-  the scene puts out a share of whatever still burns each tick, so the last is
-  out as it ends; at the end it puts out the rest and gives back the weather
-  from before, at once. In the verify runs 0 to 13 fires were burning at the
-  aftermath, all out by the end. No batteries were added: a vanilla battery
-  under open sky can short-circuit in rain. The verifier counts fires near
-  the base while the scene runs (none may start within the 25-tile
-  keep-away); its count after the scene shows only that the clean-up ran,
-  since the scene's end puts every fire out.
+- **Fire.** It rains for the scene (the scene borrows the weather the
+  showcase holds clear, and gives it back at its end): the rain starts at
+  full strength as the scene opens, so the boomalopes' fires cannot take the
+  grassland, and the bolts' bomb waves put out any fire they touch. During
+  the aftermath's hold the scene puts out a share of whatever still burns
+  each tick, so the last is out as it ends; at the end it puts out the rest
+  and gives back the weather from before (clear), at once. In the verify
+  runs 0 to 13 fires were burning at the aftermath, all out by the end. No
+  batteries were added: a vanilla battery under open sky can short-circuit
+  in rain. The verifier counts fires near the base while the scene runs
+  (none may start within the 25-tile keep-away); its count after the scene
+  shows only that the clean-up ran, since the scene's end puts every fire
+  out.
 - **Safety.** The colonists are moved inside the base's square and drafted
   with Fire At Will off, so none wanders east and none fires at a
   boomalope near the base (the grenadier, holding the singularity

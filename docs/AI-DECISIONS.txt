@@ -2435,3 +2435,103 @@ False"). One all-scene run of tour-04 before fix (6) had a colonist cut in the
 grenade scene (the known starting-hostiles flake; the grenade is unchanged).
 No game of this step is left running; the operator's data folder was not used,
 and no -KeepOpen or plain -Showcase run was made.
+2026-10-15 Claude: Tractor Bomb slice 19000a, a clean stage. Built overnight
+under the approved plan ("Fine, finish Phase 3000."), from the read-only
+research of .local/scratch/phase3000-finish/research.md. (1) The early
+hostiles: "Sorne Geneline" is the hidden insect faction's fixed name, which
+is why it was the same on every seed; on 7 of the 9 seeds that had them,
+tour-04 and tour-17 included, they came from an ancient temple's dormant
+hive, which wakes on its first tick-interval once its cell is unfogged, and
+the stage clears the whole map's fog for the pads (the other two had cave
+hives). Temple mechanoids and fleshbeasts wake the same way, at once. The
+first verify of tour-17 then found a second source with the new fact: the
+reactor's blast burst two of Odyssey's egg sacs into larvae. Decisions: the
+stage removes rather than keeps asleep (refogging leaves black squares any
+breach undoes, and an awake hive that spawns nothing is still the defence
+volley's target); it clears the whole map, not only the tour's reach (the fog
+goes map-wide and the pads' blasts reach 84 tiles from two corners); and it
+does so after AnyRim is built and before the pads clear the fog, since
+AnyRim's site search keeps 15 and 35 tiles from hostile pawns and buildings,
+so clearing first could move the town on the pinned seed, and nothing ticks
+in between. It removes every hive, every non-player thing with
+CompSpawnPawnOnDestroyed or CompPawnSpawnOnWakeup (egg sacs, stasis
+cocoons), every hostile pawn, asleep or awake, and every pawn in the map's
+ancient cryptosleep caskets (their items stay; with no pawn inside, a hit no
+longer opens the casket's group), all with DestroyMode.Vanish, and takes back
+the "defeated insect hive" memory the last hive's removal gives. (2) Trees:
+every anima tree on the map (any plant with the scream's comp, wherever it
+stands: the stampede killed one on tour-17 and tour-27, and the 33.75-tile
+pulls uproot plants 44 tiles from the yard's centre) and every tree in the
+volleys' zone, Core's Stampede.VolleyZone: east of the base's square to the
+map's edge, the herd's band and the square plus 30 tiles north and south (a
+256-bolt volley's footprint at the grid's 76-tile reach is 29.8). The zone
+follows the band the stampede will choose, found by the new
+StampedeScene.BandCells without EntryCells' shuffle, so no random number is
+drawn and the stampede's own draws are unchanged. Vanish fires neither the
+scream, its sound nor any mood. (3) Weather: a Showcase API option, the
+def's holdWeather, which BT_Showcase sets to Clear. The session clamps it
+each tick (Core's WeatherHold: another weather is replaced at once, a
+transition back is settled, the age goes back to 0 past 1,000 ticks, under
+the decider's shortest turn of 2,500) rather than registering vanilla's
+GameCondition_ForceWeather, because a condition is saved with the map and
+nothing of a session may be; it draws no random number. The weather from
+before is given back at FINISHED, at Stop and after a failed set-up, with
+WEATHER record cues placed after the STORYTELLER cue, so the existing cue
+checks stand. A scene may borrow the weather (YieldWeather and
+ReclaimWeather); the stampede does, so its rain, its fire safety and its
+"the rain will see to the rest" line are unchanged; a borrower that is no
+longer the current scene gives it back by itself. The trials' grey middle
+scenes came from the stampede's fires, which cut the weather's turn to a
+quarter and weight the next pick towards rain. (4) The verifier
+(Source/SmokeTestTour.CleanStage.cs): at READY the stage is clean, dormant
+ones counted, and the def's weather is held; at each scene's end no hostile
+appeared that a scene did not stage (TourScene.StagedHostiles: the herd, the
+raccoon, the raiders), no anima tree screamed, and the weather held (for the
+stampede, it was given back by its end); after FINISHED the weather was
+given back. A pawn already on the map at READY that turns hostile later (a
+provoked wild animal) is noted, not failed: it did not appear, and the
+colonist-harm facts judge what it does. SUMMARY version 4 adds cleared,
+unstagedHostiles, turnedHostile, screams and weather. Five smoke checks cover
+the held weather with the directed test showcase. (5) Determinism: MAPHASH
+807b81f05fe15c80 on tour-04, unchanged; STAGEHASH 5bbfccb83e5dcfc3 (was
+fe29e8884f2c2be5), the same in two processes (.local/tmp/
+p3k-19000a-final-tour04). tour-04 cleared 1 hive, 2 casket occupants, 1
+anima tree and 50 zone trees; tour-17 (MAPHASH fbdfda1b460cb8e8, STAGEHASH
+2b7ffac084f4fa96) 2 hives, 2 egg sacs, 6 casket occupants, 1 anima tree and
+23 zone trees. (6) Sabotage (.local/scratch/phase3000-finish/
+sabotage-19000a.txt). Build 1 (S1 hostiles left, S2 trees left, S3 the hold
+not kept after the set-up, S4 nothing given back, S7 the set-up not
+replacing the weather): smoke 213 passed, 6 failed, the held weather's first
+four checks and the known implosion flake's two; an all-scene tour-04 verify
+19 and 3: the READY clean check (1 hive, 2 casket occupants, 1 anima tree,
+50 zone trees), the world facts (three insects appearing unstaged in the home
+scene; the weather showing fog from the replicator's retirement on) and the
+weather's return. Build 2 (S2, S4, and S6, the def without holdWeather): the
+XML unit test failed (784 of 785 passed); smoke 217 and 2, both "given back"
+checks (on finishing and on Stop, which build 1 masked, its fog never having
+been replaced); a defence-and-stampede verify of tour-17 18 and 4: READY
+clean (1 anima tree, 23 zone trees), READY weather ("def none"), the world
+facts (the stampede's anima scream, colonists' memories 0 to 3; the weather)
+and the weather's return. Not sabotaged: the stampede's "the weather, lent
+to the scene, was given back by its end", since the session takes a lent
+weather back by itself once the scene ends and the smoke's borrowing check
+covers that path. Restored with git checkout, rebuilt. (7) Gate (DLL 02:23, 0
+warnings, 0 errors, 0 Def problems): 785 unit and XML tests (was 775);
+all-scene verifies: tour-04 twice, 22 passed and 0 failed each (19 before,
+three checks added; .local/tmp/p3k-19000a-final-tour04); tour-17 22 and 0
+(p3k-19000a-final-tour17). Full smoke: 219 passed, 0 failed
+(p3k-19000a-smoke1, built from the committed source the final DLL was
+rebuilt from; 214 before, five checks added); on the final DLL 217 and 2
+three times (-final-, -final2-, -final3-smoke), every failure a flake of
+docs/AI-KNOWN-ISSUES.txt: the implosion's silver stack at (0, 2) twice, and
+once AnyRim's unpowered lamps with a new one, "fires survive the shockwave"
+(11 fires against 13 wanted on a map with 65 burnable cells; it runs
+before any showcase check, and nothing of the slice runs outside a
+showcase). Earlier in the step: tour-04 22 and 0, and tour-17 21 and 1 (the
+larvae, fixed) and 20 and 2: the tractor scene's colonist stray was pulled
+in with the raiders and killed, a slice 18500 layout that the tour's partial
+repeat after READY exposes on tour-17 once in three runs
+(docs/AI-KNOWN-ISSUES.txt); step 19000c replaces that stray.
+Requests item 19 is resolved; its part two is built. No game of this step is
+left running; the operator's data folder was not used, and no -KeepOpen or
+plain -Showcase run was made.

@@ -92,14 +92,17 @@ Matt "Breakpoint" Heck:
 18. (Resolved 2026-10-14: "test both". The junk-pile grenade scene stays,
     and the Raccoon Incident is built as its own scene; ROADMAP.md,
     phase 3000, slice 15000.)
-19. (Part one resolved 2026-10-14 by the operator's default answer, yes:
+19. (Resolved. Part one 2026-10-14 by the operator's default answer, yes:
     random incidents are off from a showcase's start until it finishes
     or stops, then the storyteller is given back; built in slice 18000,
-    docs/SHOWCASE-API.md, "The Quiet Storyteller". Part two, clearing the
-    hostiles a map starts with, is not done: a showcase's seed can choose
-    a map without them; reopen it if seed choice does not cover the
-    tour.) Showcase games run the quick test's storyteller, so raids and
-    dark entities can arrive mid-tour; in four of six verify runs in
+    docs/SHOWCASE-API.md, "The Quiet Storyteller". Part two 2026-10-15,
+    under the approved plan to finish phase 3000 ("Fine, finish Phase
+    3000."): the pinned seed did not cover it, since tour-04's temple hive
+    woke when the stage cleared the fog; the tour's stage now removes the
+    map's own hostiles before that, built in slice 19000a,
+    docs/SHOWCASE.md, "A Clean Stage".) Showcase games run the quick
+    test's storyteller, so raids and dark entities can arrive mid-tour;
+    in four of six verify runs in
     slice 15000 (2026-10-14) they did, killing colonists the tour did not
     and, once, timing out the grenade scene under a raid. Should a
     showcase's game have random incidents switched off while the
