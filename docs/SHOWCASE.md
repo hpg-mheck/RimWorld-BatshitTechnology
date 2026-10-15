@@ -47,9 +47,9 @@ on its own 250-cell map.
 
 ## The Map
 
-The quick test always generates a 250 by 250 map on a random tile, biome
-and terrain. Its centre is (125,125). RimWorld's x grows east and z grows
-north.
+The quick test always generates a 250 by 250 map. The tour's seed picks
+its tile, biome and terrain (below); a different seed gives a different
+map. Its centre is (125,125). RimWorld's x grows east and z grows north.
 
 | Area | Where | Contents |
 |------|-------|----------|
@@ -59,6 +59,58 @@ north.
 | Grenade range | Clearing at (100,125) | Junk pile, two colonists |
 | Self-destruct pads | Two corners at centre ±75 | A replicator, a reactor |
 | AnyRim | North-west, about (55,163) | The test town |
+
+### The Tour's Seed
+
+`BT_Showcase` pins the seed `tour-04` (`Defs/Misc/BT_Showcases.xml`), so
+every launch builds the same world, tile, colonists, map and stage
+(`docs/SHOWCASE-API.md`, "Seeds"). A `-showcaseseed=<text>` command line
+overrides it, and `Tools/tour-trials.ps1` tries the tour on others.
+
+It was chosen on 2026-10-14 and 2026-10-15 (slice 18000), at Matt
+"Breakpoint" Heck's request to "try 32 variations of the demo scenario"
+and "select the best one":
+
+1. **Trials.** The full tour ran once on each of `tour-01` to `tour-32`.
+   Nine seeds passed every hard requirement: all ten scenes completed,
+   nobody harmed, AnyRim placed, the grenade thrown, Ned's throw and the
+   tractor's protest. The rest failed on hostiles the map started with
+   (dark entities, mechs) or on faults in the tour's own script.
+2. **Repeats.** Six candidates ran three more times each. Every one
+   repeated its map and stage checksums (`MAPHASH`, `STAGEHASH`) in
+   every process. tour-04 and tour-17 were clean in four of four runs;
+   tour-05 and tour-27 in two.
+3. **A close look.** Four finalists (tour-04, tour-17, tour-05,
+   tour-27) were judged scene by scene from 51 frames a run and their
+   logs. The map was weighed above the script, which will change.
+
+Why tour-04, an arid shrubland:
+
+- The stampede's band on the east edge is open (326 of 328 cells), and
+  the 256-bolt volley killed all 200 boomalopes at once in every run,
+  with no fire near the base.
+- Both self-destruct pads stand in open ground with readable rings. On
+  tour-17 a mountain overhang covers a quarter of the reactor's ring;
+  on tour-27 an outcrop covers half of it and splits the stampede.
+- AnyRim stands on flat ground at (51,166), with every sign, house and
+  car legible.
+- The tractor yard is roomy, and its single pull is the busiest of the
+  four (about 415 item moves against tour-17's 187).
+- No anima tree stands in the volley zone. On tour-17 and tour-27 the
+  stampede's volley kills one every run.
+- It has the fewest map-made hostiles of the four (three).
+
+Its known weaknesses:
+
+- An ancient walled structure stands 20 to 25 tiles north-east of the
+  base, beside the defence volley's craters.
+- Three "Sorne Geneline" hostiles appear during the first scene. Their
+  source is untraced (`docs/AI-TODO.txt`). In two of its eight runs,
+  colonists were hurt while they were still about.
+- Rock chunks lie piled beside the Transmogrifier.
+- Grass fires start around the pads.
+
+The runner-up is `tour-17`, a grassland.
 
 ## The Scenes
 

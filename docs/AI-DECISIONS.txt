@@ -2315,3 +2315,38 @@ starting-hostiles flake (docs/AI-KNOWN-ISSUES.txt); every new fact passed in
 both, and neither logged an error. No RimWorld of this session is left
 running; the operator's data folder was never used, and no -KeepOpen or plain
 -Showcase run was made.
+2026-10-15 Claude: Tractor Bomb slice 18000, the tour's seed. BT_Showcase
+pins tour-04 (Defs/Misc/BT_Showcases.xml; docs/SHOWCASE.md, "The Tour's
+Seed"), for the operator's "try 32 variations of the demo scenario. Select
+the best one." Method: the full tour once on tour-01 to tour-32
+(Tools/tour-trials.ps1 -Count 32, parallel 8); a scoring script
+(.local/scratch/seeds18000/score.py) applied hard requirements (every scene
+completed, nobody harmed, AnyRim placed, the grenade thrown, Ned's throw,
+the tractor's protest) and ranked the rest by map-driven qualities (the
+stampede's first volley, fires near the base, the twins' and the tractor's
+catch, hostiles at READY) above script-driven ones (narration cuts, waits,
+length), since the operator will still adjust the script. Nine qualified.
+Six candidates were rerun three times each with frames: all repeated MAPHASH
+and STAGEHASH in every process. Four finalists (tour-04, tour-17, tour-05,
+tour-27) were judged scene by scene from 51 frames a run and the logs, by
+one evaluator each and a judge, and the lead checked the judge's key frames.
+Ranking: tour-04, tour-17, tour-05, tour-27. tour-04 won on its map: an
+open stampede band (326 of 328 cells; 200 of 200 in the first volley every
+run, no fire near the base), both pads in open ground (tour-17's reactor
+ring is a quarter under a mountain overhang, tour-27's half on an outcrop,
+which also splits its stampede), a legible AnyRim, a roomy tractor yard with
+the busiest single pull (about 415 item moves against tour-17's 187), no
+anima tree in the volley zone (tour-17 and tour-27 lose one every run) and
+the fewest map hostiles (three). Against it: three untraced "Sorne
+Geneline" hostiles wake in the first scene, and colonists were hurt in two
+of its eight runs while they were about (both after the review fixes
+changed the start's random tail; tour-27 was clean in four of four since,
+but its map is the weakest to film). Kept because the stage can clear
+map hostiles (docs/AI-TODO.txt, the tour-wide issues, slice 19000) while it
+cannot move a mountain. Runner-up: tour-17. Verified: two runs with no
+-showcaseseed (.local/tmp/s18-pin-verify) logged "SEED tour-04 (def)",
+MAPHASH 807b81f05fe15c80 and STAGEHASH fe29e8884f2c2be5, the same as every
+command-line run of tour-04 before and after the review fixes. The tour-wide
+faults the finalists showed (camera cuts that lag the caption, an off-map
+stampede frame, the raccoon and grenade casualties, the tractor's stray,
+vanilla's alerts) are in docs/AI-TODO.txt for slice 19000.

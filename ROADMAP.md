@@ -33,7 +33,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 |---|---|---|---|
 | 1000 | Foundations (v0.8) | `trunk` | Done |
 | 2000 | AnyRim | `trunk` | Done |
-| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 18000) |
+| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 19000 next) |
 | 4000 | Showcase API | `trunk` | Done |
 | 5000 | Sound pipeline | `feature/audio` | Next |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
@@ -97,7 +97,7 @@ sense runs.
 | 15000 | Raccoon Incident | Done |
 | 16000 | Named yield settings | Done |
 | 17000 | Operator's viewing | Done |
-| 18000 | Showcase seeds, best of 32 | Now |
+| 18000 | Showcase seeds, best of 32 | Done |
 | 19000 | Tourists, viewing feedback | Planned |
 | 20000 | Merge into `trunk` | Planned |
 
@@ -147,7 +147,9 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
   generation, to get repeatable results. Implement this, and try 32
   variations of the demo scenario. Select the best one." A showcase
   def names its seed; the tour is tried on 32 seeds and pinned to the
-  best.
+  best. Done 2026-10-15: `BT_Showcase` pins `tour-04`, an arid
+  shrubland (`docs/SHOWCASE.md`, "The Tour's Seed"); the tour-wide
+  faults the trials showed are in `docs/AI-TODO.txt` for 19000.
 - **19000, tourists:** a small party of visitors as the tour's
   unfortunates, in place of colonists (the colonists are already held
   clear of every blast until it is over); deferred from the review step,

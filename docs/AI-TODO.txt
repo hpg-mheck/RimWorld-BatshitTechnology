@@ -624,7 +624,9 @@ Three review fixes have no automated check, for these reasons:
     game generates its map, named in the XML test and the smoke check,
     and trials show MAPHASH and STAGEHASH repeat (docs/AI-DECISIONS.txt,
     slice 18000, the map seed's patch).]
-  - The lead's best-of-32 batch (Tools/tour-trials.ps1 -Count 32), then
+  - [Done 2026-10-15: BT_Showcase pins tour-04 (docs/SHOWCASE.md, "The
+    Tour's Seed"; docs/AI-DECISIONS.txt, slice 18000, the tour's seed).]
+    The lead's best-of-32 batch (Tools/tour-trials.ps1 -Count 32), then
     BT_Showcase's seed. Its SUMMARY fields are in
     docs/AI-TESTING-STRATEGY.txt ("Tour trials").
   - Requests item 19, part two (clearing the hostiles a map starts with)
@@ -673,3 +675,54 @@ Three review fixes have no automated check, for these reasons:
     the tractor scene (its three pre-fix runs passed; of its three later runs,
     two passed). Find what sends them (a quest, a map's own event) before
     relying on a seed whose maps get them.
+
+- [ ] Tour-wide issues from the seed trials (slice 18000, 2026-10-15), for
+  slice 19000. Found in the best-of-32 trials and the four finalists'
+  frames (.local/tmp/tour-finalists, 51 frames a run); none is the
+  pinned map's fault, and each touched several seeds:
+  - The camera cuts after the scene's caption, so each scene's first
+    frames show the last scene's place (AnyRim opens on the reactor's
+    smoke, the grenade on the Memorial Gardens, the tractor on AnyRim's
+    south gate).
+  - The defence volley's beat frames the Artificer, never the 16 bolts
+    or their craters; both self-destructs' blast beats catch the pad
+    just before or after it goes, never during.
+  - The stampede enters at x 240 to 247 of 250, so 35 to 40 per cent
+    of the herd and volley frames is black off-map space. Reframe, or
+    move the band inward.
+  - Map hostiles that wake during the first scene ("Sorne Geneline",
+    Dark entities, Mechhive; see the item above). The READY check
+    misses them; the stage should clear them or keep them asleep.
+  - Raccoon: Ned throws with the raccoon 8 to 20 tiles off, and the
+    singularity takes Ned and Constance on about half of all seeds
+    (the census falls from 9 to 6 to 8). The scene can time out if the
+    raccoon dies first and Ned wanders (tour-27). Its "thrown" beat
+    pulls back so far that Ned, the raccoon and the grenade sit under
+    the caption bar.
+  - Grenade: the volunteer's survival is a coin flip, and the pull can
+    reach a thrower about 10 tiles from the pile. Death, burial and
+    eulogy alerts then stay up for the rest of the tour.
+  - Tractor: the stray stands 6 tiles from the bomb, inside its
+    22.5-tile pull, and lives only if it flees in time; it was downed
+    at the same cell (77,63) on tour-05 and tour-22. With little in the
+    yard the single pull looks sparse (tour-17: 0 fixtures, about 185
+    item moves); stage more junk. The twins' junk is small at 1x.
+  - Clutter: vanilla's alerts and letters down the right edge
+    ("Self-destruct armed" long after both have gone off, "Need colonist
+    beds", "Pen needed", "Roof collapse", "Ancient mech", deaths,
+    burials), the top-left messages ("Emplaced tractor bomb armed..."),
+    and in verify runs dev mode's gizmos and the Learning helper. The
+    operator's viewing should show none of them.
+  - The stampede's volley zone is fixed, so on some seeds it kills an
+    anima tree (the psychic scream and a mood hit; tour-17, tour-27).
+    Clear the zone's trees or check for one.
+  - The retire barrages set the shrubland alight and collapse nearby
+    ruins' roofs; the smoke and fire alerts carry into AnyRim.
+  - Rain and fog grey out the middle scenes on several seeds,
+    tour-04's included. Consider holding the weather clear.
+  - The tractor scene sometimes drops to 22 to 25 ticks a second with
+    stalls of 0.8 to 4.3 s at Superfast (performance, not speed mode:
+    watch it in the viewing).
+  - At Superfast the narration overlay lags the action and two lines
+    sometimes ghost over each other; normal-speed runs showed 54 of 54
+    lines. Check at normal speed before judging.

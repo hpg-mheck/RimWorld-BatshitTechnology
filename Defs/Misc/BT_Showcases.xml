@@ -27,6 +27,11 @@
     <estimatedMinutes>8</estimatedMinutes>
     <order>0</order>
     <mapSize>250</mapSize>
+    <!-- Picked from 32 trial seeds (tour-01 to tour-32), 2026-10-14:
+         flat arid shrubland with an open stampede band, clean pads, a
+         legible AnyRim and a roomy tractor yard (docs/SHOWCASE.md, "The
+         Tour's Seed"). A -showcaseseed= command line overrides it. -->
+    <seed>tour-04</seed>
     <workerClass>BatshitTechnology.BatshitTourDirector</workerClass>
     <scenes>
       <li Class="BatshitTechnology.DeviceParadeScene">
