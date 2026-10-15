@@ -6,7 +6,8 @@
 // for the scenes, and then lets the API's director run them: each scene
 // declines a map that lacks what it needs, so the caption counts only the
 // scenes that run. Each tick it watches the tour group: a tourist lost
-// during a scene that narrates it plays that scene's guestsLost beat.
+// during a scene that narrates it plays that scene's guestsLost beat
+// (after the scene's intro, if it was lost during it).
 // When the tour finishes, stops or fails to set up, the group goes home,
 // alive or dead (docs/SHOWCASE.md, "Tourists").
 
@@ -126,7 +127,8 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Notes each tourist newly lost (downed, dead or gone) and lets
-        /// the scene showing narrate it.
+        /// the scene showing narrate it, at once or, for a loss in its
+        /// intro, once the intro is over.
         /// </summary>
         private void WatchTourists()
         {
@@ -135,6 +137,8 @@ namespace BatshitTechnology
             {
                 return;
             }
+
+            (CurrentScene as TourScene)?.GuestLostAfterIntro();
 
             foreach (Pawn p in group.Members)
             {

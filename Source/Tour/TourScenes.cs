@@ -46,6 +46,13 @@ namespace BatshitTechnology
         private HashSet<string> played;
 
         /// <summary>
+        /// When this run notes a lost guest: once, and not in the intro
+        /// (Core's <see cref="GuestLossCue"/>).
+        /// </summary>
+        [Unsaved]
+        private GuestLossCue guestLoss;
+
+        /// <summary>
         /// Gets the tour's stage; empty (never null) outside a tour.
         /// </summary>
         public TourStage Stage =>
@@ -115,6 +122,7 @@ namespace BatshitTechnology
             introTicks = TourPacing.IntroTicks(StartLines(), FirstBeatTick);
             played = new HashSet<string>();
             held = new List<Pawn>();
+            guestLoss = new GuestLossCue();
             SetupScene();
             TourGroup group = Stage.Tourists;
             if (group != null && !group.Dismissed)
@@ -139,11 +147,26 @@ namespace BatshitTechnology
         /// <summary>
         /// A tourist was lost while this scene showed: plays its
         /// guestsLost beat once, without moving the camera, if the scene
-        /// narrates it (Core's <see cref="TourScript.NarratesGuestsLost"/>).
+        /// narrates it (Core's <see cref="TourScript.NarratesGuestsLost"/>);
+        /// in the intro, the beat waits for the intro's end
+        /// (<see cref="GuestLostAfterIntro"/>).
         /// </summary>
         internal void GuestLost()
         {
-            if (played != null && TourScript.NarratesGuestsLost(key))
+            if (played != null && guestLoss != null
+                && TourScript.NarratesGuestsLost(key) && guestLoss.Lost(InIntro))
+            {
+                BeatOnce(TourScript.GuestsLost, null, select: false);
+            }
+        }
+
+        /// <summary>
+        /// Plays a guestsLost beat held back through the intro, on the
+        /// first tick after it; the director asks every tick.
+        /// </summary>
+        internal void GuestLostAfterIntro()
+        {
+            if (played != null && guestLoss != null && guestLoss.Due(InIntro))
             {
                 BeatOnce(TourScript.GuestsLost, null, select: false);
             }

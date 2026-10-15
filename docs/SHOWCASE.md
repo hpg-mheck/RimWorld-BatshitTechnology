@@ -224,7 +224,12 @@ the colonists.
   its `guestsLost` beat, once: "Our guests are enjoying an unusually
   close look." The stampede, both pads and the tractor have it; the
   grenade's volunteer has its own outcomes ("Our volunteer has been
-  comforted. Completely.").
+  comforted. Completely."). A tourist lost during a scene's intro (one
+  hurt at the replicator's pad who dies as the reactor's scene begins,
+  as on tour-17 in the review fixes) waits for the intro's end, so the
+  narrator introduces the scene first and the line follows its start
+  lines (Core's `GuestLossCue`); before, the verifier's "narration
+  follows the cues" failed on it.
 - **Going home.** When the tour finishes, is stopped, or fails to set
   up, every tourist goes: the living and the downed, the dead with their
   corpses, and any clothes left lying about, and the lord with them. The

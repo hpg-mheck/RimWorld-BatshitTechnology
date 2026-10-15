@@ -8,8 +8,8 @@ namespace BatshitTechnology.Tests;
 /// Verifies Core's <see cref="TourGroupPlan"/> and
 /// <see cref="TourGroupCount"/> (docs/SHOWCASE.md, "Tourists"; slice
 /// 19000c): the group's size, its roles by arrival order, where the
-/// sightseers stand for the stampede and the pads, and how its fates are
-/// counted.
+/// sightseers stand for the stampede and the pads, how its fates are
+/// counted, and when a scene notes a lost guest (<see cref="GuestLossCue"/>).
 /// </summary>
 public sealed class TourGroupTests
 {
@@ -108,5 +108,57 @@ public sealed class TourGroupTests
         Assert.False(new TourGroupCount(4, 1, 1, 1, 0).AccountedFor);
         Assert.False(new TourGroupCount(4, 3, 2, 0, -1).AccountedFor);
         Assert.True(new TourGroupCount(0, 0, 0, 0, 0).AccountedFor);
+    }
+
+    /// <summary>
+    /// A loss after the intro plays the guestsLost line at once, and only
+    /// once a scene; later losses say nothing more.
+    /// </summary>
+    [Fact(DisplayName = "A guest lost after the intro is noted at once, once")]
+    public void Guest_loss_after_the_intro_should_play_once()
+    {
+        var cue = new GuestLossCue();
+        Assert.False(cue.Due(inIntro: false));
+        Assert.True(cue.Lost(inIntro: false));
+        Assert.False(cue.Lost(inIntro: false));
+        Assert.False(cue.Due(inIntro: false));
+        Assert.False(cue.Waiting);
+    }
+
+    /// <summary>
+    /// A loss in the intro (tour-17, slice 19000's review fixes: a
+    /// sightseer hurt at the replicator's pad died as the reactor's scene
+    /// began) waits through the intro and plays on its first tick after,
+    /// once, so the line follows the scene's start lines.
+    /// </summary>
+    [Fact(DisplayName = "A guest lost in the intro is noted when the intro ends")]
+    public void Guest_loss_in_the_intro_should_wait()
+    {
+        var cue = new GuestLossCue();
+        Assert.False(cue.Lost(inIntro: true));
+        Assert.True(cue.Waiting);
+        Assert.False(cue.Lost(inIntro: true));
+        Assert.False(cue.Due(inIntro: true));
+        Assert.True(cue.Due(inIntro: false));
+        Assert.False(cue.Due(inIntro: false));
+        Assert.False(cue.Lost(inIntro: false));
+        Assert.False(cue.Waiting);
+    }
+
+    /// <summary>
+    /// A new run forgets the last: a loss waiting and a line played both
+    /// go, so each scene notes its own losses.
+    /// </summary>
+    [Fact(DisplayName = "Each scene run notes its own guest losses")]
+    public void Guest_loss_cue_should_reset_per_scene()
+    {
+        var cue = new GuestLossCue();
+        Assert.True(cue.Lost(inIntro: false));
+        cue.Reset();
+        Assert.False(cue.Lost(inIntro: true));
+        cue.Reset();
+        Assert.False(cue.Waiting);
+        Assert.False(cue.Due(inIntro: false));
+        Assert.True(cue.Lost(inIntro: false));
     }
 }

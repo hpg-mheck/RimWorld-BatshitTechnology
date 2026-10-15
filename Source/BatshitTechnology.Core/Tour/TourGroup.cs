@@ -179,3 +179,66 @@ public readonly record struct TourGroupCount(
         $"{Arrived} arrived: {Standing} standing, {Downed} downed, "
         + $"{Dead} dead, {Gone} gone";
 }
+
+/// <summary>
+/// When a scene says its guestsLost line: once a scene, and never while
+/// the scene's intro is being read. A tourist lost in the intro (one
+/// hurt in the scene before, who dies as the next one begins) waits for
+/// the intro's end, so the narrator introduces the scene before noting
+/// the guests, and the line follows the scene's start lines. One per
+/// scene run; the scene resets it as it begins.
+/// </summary>
+public sealed class GuestLossCue
+{
+    /// <summary>Whether a loss in the intro waits to be said.</summary>
+    private bool waiting;
+
+    /// <summary>Whether the line has been played this run.</summary>
+    private bool played;
+
+    /// <summary>Gets whether a loss waits for the intro's end.</summary>
+    public bool Waiting => waiting;
+
+    /// <summary>Forgets the last run: a scene begins.</summary>
+    public void Reset()
+    {
+        waiting = false;
+        played = false;
+    }
+
+    /// <summary>A tourist was lost.</summary>
+    /// <param name="inIntro">Whether the scene is still in its intro.</param>
+    /// <returns>True when the line plays now; false when it waits or has played.</returns>
+    public bool Lost(bool inIntro)
+    {
+        if (played)
+        {
+            return false;
+        }
+
+        if (inIntro)
+        {
+            waiting = true;
+            return false;
+        }
+
+        waiting = false;
+        played = true;
+        return true;
+    }
+
+    /// <summary>Asked every tick: whether a loss held through the intro plays now.</summary>
+    /// <param name="inIntro">Whether the scene is still in its intro.</param>
+    /// <returns>True once, on the first tick after the intro with a loss waiting.</returns>
+    public bool Due(bool inIntro)
+    {
+        if (!waiting || inIntro || played)
+        {
+            return false;
+        }
+
+        waiting = false;
+        played = true;
+        return true;
+    }
+}
