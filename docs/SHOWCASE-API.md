@@ -221,10 +221,20 @@ A scene (`ShowcaseScene`, or a subclass named with `Class="..."`) has a
 `settleTicks` (0), a `focusOffset` from the map's centre, `selectSubject`
 (true), and `shots`. A shot has `atTick`, an `offset` (from the scene's
 focus, or the map's centre with `fromMapCenter`), a `zoom` (8 to 80,
-default 24), and either a glide (`pan`, the default, over `panSeconds`,
-0.6) or a cut. Subclasses override `Subject`, `UnavailableReason`,
-`Setup`, `Tick`, `IsDone`, `End` and `OutcomeKey`; a scene holding
-mutable state overrides `CloneForRun`.
+default 24), either a glide (`pan`, the default, over `panSeconds`,
+0.6) or a cut, and `keepOnMap` (off by default). A shot that keeps on
+the map is moved in from an edge until its view no longer shows the
+black beyond the map, and a view bigger than the map is centred on it
+(Core's `ShotFraming`; the view is twice the zoom tall and that times
+the screen's aspect ratio wide). A scene with no shots opens with a cut
+to its focus at zoom 24, so its caption never shows the last scene's
+place; give a scene's own opening shot `<pan>false</pan>` for the same
+(slice 19000d). The director's last camera move is
+`ShowcaseDirector.LastFraming` (scene, beat, centre, zoom, cut or glide,
+tick), for tests and capture tooling to compare with where the camera
+is. Subclasses override `Subject`, `UnavailableReason`, `Setup`, `Tick`,
+`IsDone`, `End` and `OutcomeKey`; a scene holding mutable state
+overrides `CloneForRun`.
 
 Two hooks were added for the directed tour (phase 3000, slice 12000):
 

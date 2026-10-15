@@ -153,3 +153,17 @@ Matt "Breakpoint" Heck:
     Also for your eye: the tour's single tractor is now Nosy, not
     Prudent, because from the barn's door a Prudent robot would plant
     within its 33.75-tile pull of the barn (docs/SHOWCASE.md).
+24. The tour's sequence (slice 19000d, 2026-10-15). After the viewing in
+    slice 17000 you said: "Pretty sweet. Needs work on the sequence, but
+    the general capability definitely works." What should change? Slice
+    19000 fixed only what the seed trials showed (each scene now opens
+    with a cut to its own place, no shot shows the black beyond the
+    map, the raccoon's throw is framed clear of the caption bar, the
+    tractor yard has junk, and the twins are framed closer); nothing in
+    the order or pacing was changed on a guess. For example: the order
+    of the ten scenes (home, defence, stampede, the replicator's pad,
+    the reactor's pad, AnyRim, grenade, raccoon, tractor, twins); a
+    scene to drop or merge (the two pads; the grenade and the raccoon);
+    the time between scenes (each opens with about 12 to 16 seconds of
+    the last scene's outcome and its own title line, request 20); or
+    the shots within a scene.

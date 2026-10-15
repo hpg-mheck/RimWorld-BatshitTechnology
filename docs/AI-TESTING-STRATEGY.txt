@@ -411,12 +411,15 @@ each SCENE, BEAT and END cue, one a frame, to
 an all-scene tour). Since slice 19000b each frame is taken a few ticks
 after its cue, so the action is in it (Core's TourShotTiming): READY and
 END at once, SCENE after 20 ticks, a beat after 30 unless its kind needs
-more or less (a volley or the stampede's stragglers 150, the bolts
-landing; a pull 60, things on the move; the herd 45; a blast 15, the
-fireball spreading; a throw 10, the grenade in the air). Frames are
-taken in the order their cues came (a later one waits for an earlier),
-any frame is taken after 3 s of real time if its tick does not come,
-and the game quits only once every frame asked for is saved.
+more or less (a pull 60, things on the move; the herd 45; a blast 15,
+the fireball spreading, but the replicator's 45 and the reactor's
+barrage 100; a throw 10, the grenade in the air). Since slice 19000d a
+volley's frame (the defence's, the stampede's and its stragglers') is
+taken 8 ticks after the first of the mod's bolts in flight is seen to
+land, or at 300 ticks if none is. Frames are taken in the order their
+cues came (a later one waits for an earlier), any frame is taken after
+8 s of real time if its tick does not come, and the game quits only
+once every frame asked for is saved.
 Tools\contact-sheet.ps1 -Path <DataFolder> tiles them into
 <DataFolder>\sheets\NN-<scene>.png, one sheet per scene with each
 frame labelled by its name (-PerSheet N for a fixed count instead);
@@ -521,6 +524,22 @@ screen stayed quiet. After the farewell: nothing is lent and the
 storyteller def's alerts and adaptive training are on again. The
 SUMMARY (version 5) adds screen (frames sampled, lettersTakenOff,
 messagesSeen, stale, loudTicks) and presentation.
+
+Slice 19000d added the camera's checks (Source/SmokeTestTour.Camera.cs;
+docs/SHOWCASE.md, "Camera and Framing"). Every frame until FINISHED,
+while a scene runs, it measures how far the camera's view reaches beyond
+the map's edge (the camera's real position and root size, and the
+screen's aspect ratio; Core's ShotFraming.Overhang). One frame after the
+director frames a scene's opening shot (ShowcaseDirector.LastFraming),
+the camera must be within 2 tiles of it and at its zoom, having cut
+there; a glide from the last scene's place is still far off. One frame
+after the raccoon's thrown beat, Ned, the raccoon and the grenade (in
+the air, and where it is going) must each be on screen and clear of the
+caption bar and the narration (ShotFraming.InClearView). At each
+scene's end up to three more world facts: the camera cut to the
+scene's place as it opened; it kept on the map (no frame more than 1.5
+tiles beyond its edge); and, for the raccoon, the throw's shot. The
+SUMMARY (version 7) adds camera.
 
 Slice 19000c added the tour group's checks
 (Source/SmokeTestTour.Tourists.cs; docs/SHOWCASE.md, "Tourists"). At
@@ -722,7 +741,13 @@ null without a volley):
   leftOnMap (tourists, corpses or clothes still on the map after
   dismissal);
 - storyteller: held (parts held at READY), awakeTicks (ticks before
-  FINISHED with parts) and restored.
+  FINISHED with parts) and restored;
+- camera (version 7): openingsMissed (scenes whose opening shot the
+  camera was not at a frame later, with what it was), offMapFrames and
+  framesSampled (frames, while a scene ran, whose view reached more
+  than 1.5 tiles beyond the map), worstOverhang (tiles), and
+  throwFramed (whether the raccoon's throw was framed clear of the
+  overlays; null when it was not played).
 
 A SUMMARY that fails to build still comes, with the counts and a
 summaryError; a tour that never became READY gives the run's records and

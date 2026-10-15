@@ -486,6 +486,64 @@ was built.
   counting down still goes off. At the end of the last scene the
   director lets go of the camera on its own.
 
+### Camera and Framing
+
+Built in slice 19000d (2026-10-15) from the seed trials' tour-wide
+faults (`docs/AI-TODO.txt`), checked on contact sheets of
+`-Presentation -Shots` runs of `tour-04`:
+
+- **Each scene opens with a cut.** Its opening shot (`<pan>false</pan>`
+  in `BT_Showcases.xml`) cuts to the scene's place on the tick its
+  caption and opening line appear. It used to glide there over 0.6 s
+  from the last scene's place, so AnyRim opened on the reactor's smoke,
+  and at Superfast, where 0.6 s is hundreds of ticks, the first frames
+  of every scene showed the scene before. Beats within a scene still
+  glide, except the raccoon's throw, which cuts.
+- **No shot shows the black beyond the map.** Every shot keeps on the
+  map (the Showcase API's `keepOnMap`): a view that would reach past an
+  edge is moved in until its edge meets the map's. The stampede's herd
+  enters at the east edge (x 240 to 247 of 250), so 35 to 40 per cent
+  of its herd and volley frames were black; now the frame's east edge
+  is the map's, with the herd near it and the open ground it crosses in
+  view. The entry band is unchanged, so the first volley's kill and the
+  fire safety are as before. The pads and the tractor yard, near other
+  edges on `tour-04`, gain the same.
+- **The throw shows who threw what at whom.** The raccoon's "thrown"
+  beat frames Ned, the raccoon and the grenade (in the air, and where
+  it is going) in the part of the screen the caption bar (the top 15
+  per cent), the narration (the bottom 32) and the sides (8 each) leave
+  clear, at the closest zoom from 20 to 34 that fits them with 4 tiles
+  to spare (Core's `ShotFraming.Fit`). It had glided from Main Street
+  with all three under the caption bar. The scene's outcomes are as
+  before: Ned's throw belongs to Overcharge (phase 15000).
+- **The yard has junk.** The single tractor's yard held only the barn
+  and the party, so its pull looked sparse; 22 pieces now lie in it
+  (Core's `TourYardJunk.Single`): slag and rock chunks, stacks of
+  silver, gold, jade, uranium, plasteel and components, and three
+  ancient crates, 13 to 31 tiles from where the robot plants, so each
+  is seen to slide in before the blast takes it, and clear of the
+  robot's road, the barn and the stray's way out. The twins gain an
+  outer ring of 16 more (`TourYardJunk.TwinsOuter`), 13 to 25 tiles
+  from the nearer bomb, for their pulls to drag in from afar. Bright
+  metals and stone read against the yard's concrete where steel does
+  not, and nothing in it burns or goes off when hit.
+- **Closer on the junk.** The twins open at zoom 28 (was 45) and plant
+  at 22 (was 30), where the junk reads as junk rather than specks; both
+  tractor scenes' pulls are at 44 (was 52), where the 33.75-tile pull's
+  ring just fits the view's 88 tiles, and their blasts at 34 (was 45).
+- **Frames at the moment.** The verifier's frames of a volley wait for
+  its bolts to land (8 ticks after the first), rather than a fixed 150
+  ticks that caught the defence's bolts just after and the stampede's
+  still in the air; the replicator's blast is taken at 45 ticks (the
+  bomb's fireball 30 tiles out) and the reactor's at 100 (its barrage
+  landing), rather than 15, when each showed little more than the pad
+  (`docs/AI-TESTING-STRATEGY.txt`, section 4).
+
+The tour verifier checks the camera every frame (`docs/AI-TESTING-
+STRATEGY.txt`, section 4): each scene's opening cut landed, no frame
+reached past the map's edge, and the throw was framed clear of the
+overlays.
+
 ### The Story *(draft)*
 
 Requested by Matt "Breakpoint" Heck on 2026-10-13: a narrative to tie the

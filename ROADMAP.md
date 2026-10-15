@@ -191,7 +191,14 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
   grenade's volunteer and the tractor's stray are tourists, the robot
   protests about a friendly guest as about a colonist, a lost guest is
   narrated, and the group goes home, alive or dead, when the showcase
-  ends (`docs/SHOWCASE.md`, "Tourists").
+  ends (`docs/SHOWCASE.md`, "Tourists"). Step 19000d, camera and
+  framing, done 2026-10-15: each scene opens with a cut to its own
+  place as its caption appears, no shot shows the black beyond the
+  map (the Showcase API's `keepOnMap`), the raccoon's throw is framed
+  clear of the caption bar, the tractor yard has junk for its pull,
+  and the twins are framed closer (`docs/SHOWCASE.md`, "Camera and
+  Framing"). What "needs work on the sequence" means is asked in
+  `docs/AI-requests-for-humans.txt`, item 24.
 - **20000:** the merge into `trunk`.
 
 ### Decisions

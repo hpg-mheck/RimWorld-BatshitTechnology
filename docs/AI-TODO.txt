@@ -693,16 +693,21 @@ Three review fixes have no automated check, for these reasons:
   slice 19000. Found in the best-of-32 trials and the four finalists'
   frames (.local/tmp/tour-finalists, 51 frames a run); none is the
   pinned map's fault, and each touched several seeds:
-  - The camera cuts after the scene's caption, so each scene's first
-    frames show the last scene's place (AnyRim opens on the reactor's
-    smoke, the grenade on the Memorial Gardens, the tractor on AnyRim's
-    south gate).
-  - The defence volley's beat frames the Artificer, never the 16 bolts
-    or their craters; both self-destructs' blast beats catch the pad
-    just before or after it goes, never during.
-  - The stampede enters at x 240 to 247 of 250, so 35 to 40 per cent
-    of the herd and volley frames is black off-map space. Reframe, or
-    move the band inward.
+  - (Done in 19000d.) The camera cuts after the scene's caption, so each
+    scene's first frames show the last scene's place (AnyRim opens on
+    the reactor's smoke, the grenade on the Memorial Gardens, the
+    tractor on AnyRim's south gate). Each scene now opens with a cut on
+    the tick its caption appears; the verifier checks it landed.
+  - (Done in 19000b and 19000d.) The defence volley's beat frames the
+    Artificer, never the 16 bolts or their craters; both
+    self-destructs' blast beats catch the pad just before or after it
+    goes, never during. A volley's frame now waits for its bolts to
+    land; the replicator's blast is taken at 45 ticks, the reactor's at
+    100.
+  - (Done in 19000d.) The stampede enters at x 240 to 247 of 250, so 35
+    to 40 per cent of the herd and volley frames is black off-map
+    space. Every tour shot now keeps on the map (the band is
+    unchanged); the verifier fails a frame reaching past the edge.
   - (Done in 19000a.) Map hostiles that wake during the first scene
     ("Sorne Geneline", Dark entities, Mechhive). The stage clears them
     (hives, hostile pawns asleep or awake, casket occupants) before it
@@ -712,7 +717,9 @@ Three review fixes have no automated check, for these reasons:
     (the census falls from 9 to 6 to 8). The scene can time out if the
     raccoon dies first and Ned wanders (tour-27). Its "thrown" beat
     pulls back so far that Ned, the raccoon and the grenade sit under
-    the caption bar.
+    the caption bar. (Framing done in 19000d: the throw cuts to a shot
+    that fits all three in the clear part of the screen; the outcomes
+    stay for Overcharge, phase 15000.)
   - Grenade: the volunteer's survival is a coin flip, and the pull can
     reach a thrower about 10 tiles from the pile. Death, burial and
     eulogy alerts then stay up for the rest of the tour.
@@ -721,6 +728,9 @@ Three review fixes have no automated check, for these reasons:
     at the same cell (77,63) on tour-05 and tour-22. With little in the
     yard the single pull looks sparse (tour-17: 0 fixtures, about 185
     item moves); stage more junk. The twins' junk is small at 1x.
+    (Done in 19000d: 22 pieces of junk in the single yard and 16 more
+    round the twins' junkyard; the twins open at zoom 28 and plant at
+    22; both pulls at 44.)
     Since slice 18500 the stray starts at (-8,12), inside the 33.75-tile
     pull; in one of slice 19000a's three tour-17 runs it was still inside
     when the pull began and died (docs/AI-KNOWN-ISSUES.txt). Step 19000c
@@ -784,3 +794,26 @@ Three review fixes have no automated check, for these reasons:
     20, none carried or fired, its fuel spent. It runs before any
     showcase check, and nothing of the slice runs outside a showcase;
     watch for it again (docs/AI-KNOWN-ISSUES.txt).
+
+- [ ] Slice 19000d follow-ups (camera and framing, 2026-10-15):
+  - Request 24 (docs/AI-requests-for-humans.txt): what "needs work on
+    the sequence" means; nothing in the order or pacing was changed on
+    a guess.
+  - An END frame is taken on the tick its scene ends, and the next
+    scene begins (and now cuts) on that same tick, so the END frame
+    shows the next scene's place, not the last of its own (before, it
+    showed the camera mid-glide). The SCENE frame 20 ticks on shows the
+    same place. A frame taken a tick before the end is impossible
+    without the director ending a scene a tick ahead; not done, since
+    the frames are only for checking and the viewer sees no gap.
+  - The camera's checks (Source/SmokeTestTour.Camera.cs) judge each
+    opening a frame after it; a scene framed twice within one frame
+    (an opening and a beat) would read "not judged". No scene beats
+    within its first 150 ticks, so none can at today's speeds.
+  - The throw's framing fits Ned, the raccoon and the grenade as the
+    grenade leaves Ned's hand; the singularity that follows is framed
+    by the same shot, so a raccoon far from Ned leaves the pull's edge
+    out of view. Overcharge (phase 15000) reworks the throw.
+  - No unit test covers the director's keepOnMap arithmetic in the game
+    (UI.screenWidth, CameraDriver); Core's ShotFraming tests cover the
+    rule, and the verifier's "kept on the map" fact the result.

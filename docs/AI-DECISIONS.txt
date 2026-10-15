@@ -2742,3 +2742,80 @@ all-scene runs (the first before the sightseers stayed for the look);
 on tour-17, 3 of 5 (and the volunteer downed, then healed).
 No game of this step is left running; the operator's data folder was
 not used, and no -KeepOpen or plain -Showcase run was made.
+
+2026-10-15 Claude: Tractor Bomb slice 19000d, camera and framing. Built
+overnight from the seed trials' tour-wide faults (docs/AI-TODO.txt), checked
+on contact sheets of -Presentation -Shots runs of tour-04 (a baseline from
+19000c's DLL, .local/tmp/p3k-19000d-base-present, and the runs after). (1) The
+opening cut. Each scene's opening shot glided 0.6 s (the API's default) from
+the last scene's place, so at normal speed the caption and opening line showed
+the old place for a moment, and at Superfast for hundreds of ticks. Each
+BT_Showcase scene's opening shot is now a cut (<pan>false</pan>), on the tick
+its caption appears; the director's implicit opening shot (a scene with no
+shots) cuts too. Beats still glide, except the raccoon's throw. (2) Off the
+map. Every tour shot keeps on the map: a new ShowcaseShot field, keepOnMap
+(off by default, so other showcases' shots frame exactly where they say),
+moves a view in from an edge until it shows nothing beyond the map (Core's
+ShotFraming; the view is 2 x zoom tall and that times the aspect ratio wide,
+from CameraDriver.CurrentViewRect). The stampede's herd and volley frames were
+35 to 40 per cent black; the pads' blasts and the tractor yard's blast and end
+frames on tour-04 showed it too. The stampede's entry band was kept, so its
+first volley's kill and its fire safety are untouched; the herd is near the
+frame's east edge with the open ground it crosses in view. (3) The throw. The
+raccoon's thrown beat now cuts to a shot that fits Ned, the raccoon and the
+grenade (in the air, and where it is going) in the part of the screen the
+overlays leave clear (top 15 per cent for the colonist and caption bars,
+bottom 32 for the narration, 8 at each side), at the closest zoom from 20 to
+34 that holds them with 4 tiles to spare (ShotFraming.Fit). Outcomes unchanged
+(Overcharge, phase 15000). (4) Junk. The single yard gets 22 pieces
+(TourYardJunk.Single) and the twins an outer ring of 16
+(TourYardJunk.TwinsOuter), each inside the yard, inside a pull, outside every
+blast, clear of the robots' roads, the barn and the stray's way out; bright
+metals, stone, chunks and ancient crates, which read against the concrete,
+nothing that burns or goes off. The smoke runner's junkyard is unchanged. (5)
+Zoom. The twins open at 28 (was 45) and plant at 22 (was 30), where the junk
+reads; both pulls at 44 (was 52; the 67.5-tile ring just fits 88 tiles),
+blasts at 34 (was 45). (6) Frames. A volley's frame waits for its bolts: 8
+ticks after the first of the mod's projectiles in flight is seen to land, at
+most 300 ticks (Core's ShotQueue.Landed, TourShotTiming.LandingTicks); the
+replicator's blast at 45 ticks and the reactor's at 100 (per scene,
+TourShotTiming.SceneBeatTicks); the real-time fallback went from 3 to 8 s, so
+it never cuts a 300-tick wait short at normal speed. (7) The sequence: the
+operator's "needs work on the sequence" (slice 17000) is not guessed at;
+request 24 asks. (8) Checks: the verifier's camera facts
+(Source/SmokeTestTour.Camera.cs): a frame after each opening, the camera
+within 2 tiles and at the zoom of the cut; every frame, no view more than 1.5
+tiles past the map's edge; a frame after the throw, Ned, the raccoon and the
+grenade in the clear view; and the yard's junk all laid. SUMMARY version 7
+adds camera. Unit and XML tests: ShotFraming, the shot timing and queue, every
+opening a cut kept on the map, the junk layouts. (9) Determinism: no stage
+change: MAPHASH 807b81f05fe15c80 and STAGEHASH ba2b5a7f044f45cf, both
+unchanged from 19000c. (10) Sabotage
+(.local/scratch/phase3000-finish/sabotage-19000d.txt): a unit build (S4
+KeepOnMap no clamp, S5 the stampede's opening glides, S6 junk on the robot's
+road, S7 volley frames never wait, S9 Fit ignores the overlays): 827 and 10,
+each caught; build 1 (S1 every shot glides, S2 keepOnMap ignored): targeted
+tour-04 verify 25 and 1, the opening and on-the-map facts failing in all four
+scenes; build 2 (S3 the throw's old glide, S8 no junk): 25 and 1, the throw's
+grenade and target 5 to 7 per cent from the top, and 0 of 22 and 0 of 16
+pieces laid. Every new check failed at least once. (11) Gate: DLL from
+198424d, 0 errors and 0 warnings, 0 Def problems; unit and XML 837 passed, 0
+failed (816 before); full smoke 232 and 0 (p3k-19000d-final-smoke; no smoke
+check added, the implosion flake not seen); all-scene verifies on tour-04, 26
+and 0 twice in two parallel processes (p3k-19000d-final-trials: MAPHASH,
+STAGEHASH and start state the same in both), and on tour-17, 26 and 0 (MAPHASH
+fbdfda1b460cb8e8, STAGEHASH 3e545fe519d9f53a, both unchanged), every scene
+completing on both seeds; camera on all three: no opening missed, no frame
+past the map's edge (worst 0.2 tiles, the shake), the throw framed.
+Presentations on tour-04: p3k-19000d-present1 (the code commit's camera,
+before the junk fact) 26 and 0, 11,534 frames, none past the edge; and
+p3k-19000d-final-present (the final DLL) 26 and 0, 11,548 frames, none past
+the edge, 22 of 22 and 16 of 16 pieces of junk laid, the single pull moving
+2,683 items (2,468 in the baseline, without it). Contact sheets: no black
+beyond the map (the stampede's herd at the frame's east edge, the open ground
+in view), the replicator's fireball and the reactor's barrage caught landing,
+the defence's bolts exploding, the throw with Ned and the raccoon below the
+caption bar, junk in the single yard and the twins' junkyard readable at 22.
+An END frame now shows the next scene's place (it begins on the same tick;
+docs/AI-TODO.txt). No game of this step is left running; the operator's data
+folder was not used, and no -KeepOpen or plain -Showcase run was made.
