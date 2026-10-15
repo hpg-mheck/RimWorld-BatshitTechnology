@@ -726,3 +726,17 @@ Three review fixes have no automated check, for these reasons:
   - At Superfast the narration overlay lags the action and two lines
     sometimes ghost over each other; normal-speed runs showed 54 of 54
     lines. Check at normal speed before judging.
+
+- [ ] Slice 18500 follow-ups (pull radii up by half, 2026-10-15):
+  - Request 23 (docs/AI-requests-for-humans.txt): Timid's 15-tile
+    emplacing range stayed, so Prudent now stops where Timid does at
+    Neighborly and Popular. Raise it by half too if the operator says so
+    (DefaultTimidStop, the robot's emplaceRange, the smoke proximity
+    check, the descriptions and docs/TRACTOR-BOMB.md).
+  - The tour's 33.75-tile pulls reach past the yard's 29-tile height and
+    uproot every plant there, so an anima tree within about 44 tiles of
+    the yard's centre would scream. Fold the yard's reach into slice
+    19000a's tree clearing (with the stampede's volley zone).
+  - The bigger pulls rip more fixtures outside the yard (tour-04: 26 in
+    the single pull, 49 in one twin, against 0 and 2 to 5 before); see
+    what they are on 19000d's contact sheets.

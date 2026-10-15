@@ -8,7 +8,8 @@ steps 2 to 10 are built, the Tractor Barn (8) last (see "As Built"
 below), with the decisions taken after the core build applied alongside
 it, and so is step 11's multi-bomb physics (2026-10-14). On 2026-10-14 the
 operator replaced Disposition and the Dial-A-Yield sliders with three named
-settings ("Named Settings", below; built in slice 16000).
+settings ("Named Settings", below; built in slice 16000), and on 2026-10-15
+he raised every pull by half (slice 18500).
 
 ## The Tractor Bomb
 
@@ -42,10 +43,11 @@ bomb when it finds them.
 - **Detonation:** a singularity effect like the Ergonomic Singularity
   Grenade's. Everything within its pull is sucked in to within 1.5 tiles
   of the centre, then it explodes. As specified the pull was 10 tiles and
-  the blast 5; since the named settings (2026-10-14) a bomb pulls 15
-  tiles (Neighborly) and blasts 7.5 (Firework) unless set otherwise. It
-  is built on the shared implosion extracted from the grenade, which the
-  Colony Bomb reuses later.
+  the blast 5; with the named settings (2026-10-14) a bomb pulled 15
+  tiles (Neighborly), and since the pulls were raised by half
+  (2026-10-15) it pulls 22.5 and blasts 7.5 (Firework) unless set
+  otherwise. It is built on the shared implosion extracted from the
+  grenade, which the Colony Bomb reuses later.
 - **Research:** a new project, Tractor Bomb, after the Ergonomic
   Singularity Grenade.
 - **Cost:** 60 steel, 3 components and 5 batshittium per bomb.
@@ -146,29 +148,34 @@ defaults of 10 and 5. The named settings below replaced them on
 Specified by the operator on 2026-10-14 ("three amusing names for each
 of three settings"), with one amendment the same day: "keep the default in
 the middle. However, bump up the middle and large settings by 50% each."
-Built in slice 16000.
+Built in slice 16000. On 2026-10-15 the operator raised the pulls again:
+"expand the pull radii for all tractor levels by 50%" (slice 18500; they
+were 6, 15 and 22.5 tiles). The blasts did not change.
 
 - **Proximity** (how close it drives): **Timid** stops 15 tiles out;
   **Prudent** (the default) at 15 tiles or one inside its pull, whichever
   is nearer; **Nosy** drives up to 3 tiles.
-- **Pull** (the tractor beam): **Intimate**, 6 tiles; **Neighborly** (the
-  default), 15; **Popular**, 22.5.
+- **Pull** (the tractor beam): **Intimate**, 9 tiles; **Neighborly** (the
+  default), 22.5; **Popular**, 33.75.
 - **Blast:** **Birthday Cake**, 3 tiles; **Firework** (the default), 7.5;
   **Block Party**, 12.
 
 - **Proximity** replaces Disposition and behaves the same: Timid was
-  Cautious, Prudent was Moderate. It needs no research. Prudent stops 14
-  tiles out at Neighborly, 5 at Intimate and 15 at Popular (its 15-tile
-  emplacing range is nearer than 21.5).
+  Cautious, Prudent was Moderate. It needs no research. Prudent stops 8
+  tiles out at Intimate and 15 at Neighborly and Popular (its 15-tile
+  emplacing range is nearer than 21.5 or 32.75), so at those two pulls it
+  stops where Timid does. Timid's 15 tiles and Nosy's 3 are distances of
+  their own, not fractions of the pull, and were not raised with it
+  (decided in slice 18500; see `docs/AI-DECISIONS.txt`).
 - **Pull and Blast** need Tractor Bomb Dial-A-Yield; before it, every bomb
   pulls and blasts at the defaults, whatever is set. There are no custom
   values, only the three stops. The radii are exact: RimWorld's radial
   patterns and explosions take fractional radii.
 - **Per unit:** a robot shows a button for each setting it may change; a
   planted bomb shows Pull and Blast until its pull starts. A click opens a
-  menu of the three names with their sizes ("Popular, 22.5 tiles";
-  "Prudent, stops 14 tiles out"). With several selected, the buttons
-  group, and the choice applies to all of them.
+  menu of the three names with their sizes ("Popular, 33.75 tiles";
+  "Prudent, stops 8 tiles out" at Intimate). With several selected, the
+  buttons group, and the choice applies to all of them.
 - **Production defaults:** the Tractor Barn shows the same three buttons,
   which set what its new robots leave with. Robots from anywhere else
   take the defaults.
@@ -181,9 +188,13 @@ Built in slice 16000.
 - **Saves:** an older save's dialled numbers snap to the nearest stop (a
   pull of 3 to 10 tiles is Intimate, 11 to 18 Neighborly, 19 and 20
   Popular; a blast of 2 to 5 is Birthday Cake, 6 to 9 Firework, 10 Block
-  Party). A radius the old version left at its default it never wrote,
-  so that setting loads at the new default. Cautious, Moderate and Nosy
-  load as Timid, Prudent and Nosy.
+  Party). A pull snaps against the stops as they were when this was
+  built (6, 15 and 22.5 tiles, Core's `TractorBombYield.Legacy*Pull`),
+  so each old number keeps the stop it meant, and that stop then pulls
+  at today's radius. A bomb saved by name keeps its name and gets the
+  new radius. A radius the old version left at its default it never
+  wrote, so that setting loads at the new default. Cautious, Moderate
+  and Nosy load as Timid, Prudent and Nosy.
 
 ## As Built
 
@@ -219,8 +230,9 @@ build settled a detail, it is recorded here; the decisions log
   - **Proximity** (Disposition until 2026-10-14; see "Named
     Settings"): how close it drives before it plants itself, saved with
     it. **Timid** stops 15 tiles out. **Prudent**, the default, stops one
-    tile inside its tractor beam or 15 tiles out, whichever is nearer: 14
-    tiles at the default pull. **Nosy** drives right up, to 3 tiles. The
+    tile inside its tractor beam or 15 tiles out, whichever is nearer: 15
+    tiles at the default pull (22.5 tiles), 8 at Intimate. **Nosy**
+    drives right up, to 3 tiles. The
     arithmetic is Core's `TractorBombApproach`. Once planted the setting
     no longer matters, so a planted bomb has none; the robot's inspect
     pane says how far it stops.
@@ -296,8 +308,8 @@ build settled a detail, it is recorded here; the decisions log
   runs one of the three trees; mechanoids, drones, babies and Anomaly's
   entities do not run.
   - **Who reacts:** anyone in a clear line of sight of an armed bomb
-    (counting down or pulling) within its pull radius plus 8 tiles: 23 at
-    the default pull, 14 at Intimate and 30.5 at Popular.
+    (counting down or pulling) within its pull radius plus 8 tiles: 30.5
+    at the default pull, 17 at Intimate and 41.75 at Popular.
   - **Hostiles react individually** (Decisions 9): anyone not hostile to
     the bomb (colonists, guests, neutrals, wild animals) reacts at once.
     A pawn hostile to it (a raider, or an animal or insect of a hostile
@@ -315,6 +327,10 @@ build settled a detail, it is recorded here; the decisions log
     beyond that distance from every bomb in sight, that vanilla would
     accept as a flee destination (reachable, standable, unclaimed, not a
     doorway or dangerous ground). A pawn with nowhere to go carries on.
+    The search visits at most about 25,800 cells (Core's
+    `TractorBombFlee.SearchCells`: four and a half times the circle the
+    longest flee, 41.75 tiles, leaves; it was 12,000 for the sliders'
+    28).
     Its status reads "running from a tractor bomb.", and colonists show
     vanilla's fleeing icon.
   - **Too close:** a pawn inside the blast radius when it first reacts
@@ -386,7 +402,7 @@ build settled a detail, it is recorded here; the decisions log
     (review of slice 16000). Its tooltips speak of "each tractor bomb
     this barn builds".
   - **Descriptions:** the robot's and the Tractor Bomb research's give
-    the factory settings' sizes (15 tiles, 7.5 tiles) and the robot's
+    the factory settings' sizes (22.5 tiles, 7.5 tiles) and the robot's
     Proximity stops by name; `XmlDefinitionTests` keep them so.
   - **Repair hopper:** the steel for repairs, a vanilla refuelable store
     of 20 that haulers top up below 75%. A work table with one takes no
@@ -526,3 +542,8 @@ Answered by Matt "Breakpoint" Heck on 2026-10-13:
     and 22.5 tiles; blast 3, 7.5 and 12. Settable per unit, for a whole
     selection, as the barn's production defaults, and for every tractor at
     once. See "Named Settings".
+11. **Pull radii up by half** (2026-10-15): "expand the pull radii for
+    all tractor levels by 50%." Pull 9, 22.5 and 33.75 tiles; the blasts,
+    the emplacing range (Timid's 15 tiles) and Nosy's 3 tiles unchanged;
+    old saves' dialled pulls keep the stops they meant. Built in slice
+    18500.

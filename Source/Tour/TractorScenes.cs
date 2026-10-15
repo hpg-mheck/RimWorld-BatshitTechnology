@@ -217,6 +217,22 @@ namespace BatshitTechnology
         [Unsaved]
         private List<Building_TractorBomb> bombs;
 
+        /// <summary>
+        /// What became of the barn by the time the scene ended: "standing",
+        /// "destroyed", "gone" (despawned, as a ripped-loose building
+        /// minified is), "none", or "not ended". Taken in
+        /// <see cref="End"/>, before the next scene's set-up clears the
+        /// yard; the verifier checks it.
+        /// </summary>
+        [Unsaved]
+        private string barnAtEnd = "not ended";
+
+        /// <summary>
+        /// Gets what became of the barn by the scene's end: "standing" if
+        /// the pull left it alone.
+        /// </summary>
+        internal string BarnAtEnd => barnAtEnd;
+
         /// <summary>Gets the bomb, else the robot, else the barn.</summary>
         public override Thing Subject
         {
@@ -249,6 +265,7 @@ namespace BatshitTechnology
             PrepareYard();
             robot = null;
             straySent = false;
+            barnAtEnd = "not ended";
             bombs = new List<Building_TractorBomb>();
             barn = TractorStaging.SpawnBarn(
                 Map, TractorStaging.At(Centre, SingleTractorLayout.Barn));
@@ -328,6 +345,9 @@ namespace BatshitTechnology
         /// <param name="ending">How it ended.</param>
         public override void End(SceneEnd ending)
         {
+            barnAtEnd = barn == null ? "none"
+                : barn.Destroyed ? "destroyed"
+                : barn.Spawned ? "standing" : "gone";
             base.End(ending);
             if (Alive(stray) && stray.drafter != null)
             {

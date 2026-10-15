@@ -14,7 +14,9 @@ run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
   planner and tractor layouts (TourScriptTests, TourStagePlannerTests,
   TractorLayoutTests: the yard and pads keep their distances, the twin
   pulls overlap, the barn stands beyond the tour's Popular pull and
-  Block Party blast), and the Tractor Bomb's named settings
+  Block Party blast with the scene's Nosy robot, a Prudent one would
+  reach it, and the stray stands in the pull, outside the blast, and
+  retreats clear in time), and the Tractor Bomb's named settings
   (TractorBombYieldTests, TractorBombProximityTests,
   TractorBombDialsTests: the operator's names and radii, the defaults
   before Dial-A-Yield, older saves' numbers and Dispositions snapping to
@@ -111,12 +113,13 @@ area; the temporary recipe drives one out; a robot spots a stunned
 raider 37 tiles off, emplaces within 15 tiles at once, and its bomb is
 armed only once its 3-5 s countdown starts, pulls eleven unmergeable
 stacks and a second raider to within 1.5 tiles or into the blast,
-leaves steel 20 tiles off alone, and explodes over 7.5 tiles (the
-defaults, Neighborly and Firework); a colonist four tiles off delays
+leaves steel 28 tiles off alone, and explodes over 7.5 tiles (the
+defaults, Neighborly at 22.5 tiles and Firework); a colonist four tiles
+off delays
 emplacing by three seconds, then it emplaces anyway; Dial-A-Yield gives
 Pull and Blast buttons whose menus name each stop with its size, two
 robots' buttons group and one choice sets both, Intimate and Birthday
-Cake (6 and 3 tiles) change what is caught, and the planted bomb names
+Cake (9 and 3 tiles) change what is caught, and the planted bomb names
 its settings and keeps its buttons only until it pulls; the barn's
 settings go with its new robots, its own buttons set them, and "Apply
 to every tractor" reaches robots and bombs not yet pulling but not one
@@ -124,15 +127,17 @@ already pulling, and its own count of each matches the robots and
 not-yet-pulling bombs counted independently; with two barns selected
 "Apply to every tractor" is disabled with its reason and never runs
 once per barn; older saves (a Disposition, dialled radii) load as
-named stops through RimWorld's own loader, the planted bomb through
+named stops through RimWorld's own loader (a dialled pull snapping
+against the old stops, 6, 15 and 22.5, and then pulling at today's
+radius), the planted bomb through
 its own ExposeData (so Thing's "def" and "id" and the bomb's legacy
 loader all run); and a killed
 robot's vortex pops without touching anything, as does one that loses
 its wheels. Everyone else runs (TestTractorBombFlee, on freshly made,
 undrafted, healthy pawns, with the countdown held at 5 s): a colonist
-12 tiles and a muffalo 13 tiles from an armed bomb sprint past 23 tiles
-before its pull starts; a colonist 3 tiles off freezes where it stands
-with one of the twenty "making peace" lines, unchanged, until the pull
+20 tiles and a muffalo 21 tiles from an armed bomb sprint past 30.5
+tiles before its pull starts; a colonist 3 tiles off freezes where it
+stands with one of the twenty "making peace" lines, unchanged, until the pull
 seizes it and
 its freeze ends; a berserk colonist and a manhunting muffalo in plain
 sight neither run nor freeze; a muffalo seized mid-run by a pull started
@@ -387,7 +392,8 @@ FINISHED and the farewell it checks that:
    no bolt outside the volley and the stampede; the pad device destroyed
    and the aftermath idle; at least 16 bolts spent; the stampede's facts
    (below); one more implosion for the grenade and for the raccoon, and
-   the raccoon's facts (below); tractor explosions up by 1, then by 2;
+   the raccoon's facts (below); tractor explosions up by 1 with the
+   Tractor Barn still standing after the pull, then by 2;
    superposed pulls up for the twins; and every completed scene played
    its beats (the parade's planned devices, else
    TourScript.RequiredMoments, which leaves out only the tractor's

@@ -159,7 +159,8 @@ to the base, every other is drafted with Fire At Will off, and every
 is moved out again and logged. The reach is 87.6 tiles round a pad
 (the self-destruct's blast, fires, secondaries and barrage, with the
 planner's margin), 16 tiles round the grenade's pile, and the yard
-grown by 31 tiles for the tractors. The grenade's grenadier and
+grown by 42 tiles for the tractors (31 before the pulls were raised by
+half). The grenade's grenadier and
 volunteer and the tractor's stray are placed by their scenes and
 spared. They are let go when the scene ends, however it ends. A
 hauler had walked back into the reactor's barrage in one verify run
@@ -189,18 +190,28 @@ minutes at normal speed, against about 4.2 before), and the menu says
 8 minutes (it said 7); `TourXmlTests` hold the def to these rules.
 
 The tour's tractors run one setting up from the defaults: Popular (a
-22.5-tile pull) and Block Party (a 12-tile blast), as the operator asked on
+33.75-tile pull since the pulls were raised by half on 2026-10-15; 22.5
+before) and Block Party (a 12-tile blast), as the operator asked on
 2026-10-14 ("bump up to the next setting"; slice 16000, Core's
 `TourStagePlanner.TourPull` and `TourBlast`). The barn in the Tractor of
-Tomorrow is set the same, and says so on its pane. That robot is Prudent,
-so it stops 15 tiles short of the party (its emplacing range is nearer
-than 21.5); the barn stands 30 tiles west of the yard's centre and the
-party 12 east, so the pull, reaching 22.5 tiles from where the robot
-plants, falls more than 2 tiles short of the barn. The stray it protests
-about is a colonist with nothing to do, else the one in the Brain
-Squeezer, else the grenadier (drafted and holding fire); the scene logs
-whom it chose. The twins stay Nosy and plant 14 tiles apart, each outside
-the other's blast.
+Tomorrow is set the same, and says so on its pane. That robot is Nosy
+(Core's `SingleTractorLayout.TourProximity`; Prudent before slice 18500):
+from the barn's door it sees the party at most 45 tiles off, so a robot
+that stopped 15 tiles short would plant within 30 tiles of the barn, and
+the 33.75-tile pull would tear it down. Nosy, it stops 3 tiles short, at
+about (9,0) from the yard's centre; the barn stands 30 tiles west of the
+centre and the party 12 east, so the pull falls more than 2 tiles short
+of the barn, and the raiders stand inside the blast, where they freeze.
+The verifier checks at the scene's end that the barn still stands; with a
+Prudent robot it was torn down.
+The stray it protests about stands 21 tiles from where the robot plants,
+inside the pull but well outside the blast (it stood 7.6 tiles off
+before, and was downed there on two trial seeds); sent 30 tiles north,
+it leaves the pull within 18 and ends beyond the flee distance. It is a
+colonist with nothing to do, else the one in the Brain Squeezer, else
+the grenadier (drafted and holding fire); the scene logs whom it chose.
+The twins stay Nosy and plant 14 tiles apart, each outside the other's
+blast. Both scenes' pull shots open to zoom 52 for the wider rings.
 
 ### Scene 3: Uninvited Guests (the Stampede)
 
@@ -517,12 +528,15 @@ right?".
   keeps colonists out of its reach from set-up to its end, not only as
   it arms ("The Scenes" above).
 - **The tractor yard and the pads are planned together** (Core's
-  `TourStagePlanner`, slice 12000). The yard, 65 by 29 tiles, keeps 31
+  `TourStagePlanner`, slice 12000). The yard, 65 by 29 tiles, keeps 42
   tiles from the base square, the grenade clearing and every part of
   AnyRim: as far as anyone runs from one of the tour's Popular tractors
-  (its 22.5-tile pull plus 8), rounded up (18 before slice 16000). Its
-  candidates lie south-west, south and south-east of the base, 62 tiles
-  south of it, so the yard's top edge is 32 tiles below the square's.
+  (its 33.75-tile pull plus 8), rounded up (18 before slice 16000, 31
+  before slice 18500). Its candidates lie south-west, south and
+  south-east of the base, 73 tiles south of it (62 before slice 18500),
+  so the yard's top edge is 43 tiles below the square's, a tile more
+  than it needs. The pulls reach beyond the yard's 29-tile height and
+  uproot what grows there.
   Each pad keeps 87.6 tiles from AnyRim and from the yard, measured
   from the device's own cell. The first yard that
   leaves two pads wins; failing that, the one that leaves the most. Every

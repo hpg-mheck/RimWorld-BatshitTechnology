@@ -154,7 +154,12 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
 - **18500, pull radii:** the operator, 2026-10-15: "expand the pull
   radii for all tractor levels by 50%." Intimate, Neighborly and
   Popular go from 6, 15 and 22.5 tiles to 9, 22.5 and 33.75; the
-  tour's staging follows.
+  tour's staging follows. Done 2026-10-15: old saves keep the stops
+  they meant; the emplacing range (Timid, 15) stays, so Prudent stops
+  at 15 at the two larger pulls (request 23 asks whether it should
+  move); the tour's yard moves 11 tiles further south and its single
+  tractor is Nosy, so its pull spares the barn
+  (`docs/TRACTOR-BOMB.md`, "Named Settings"; `docs/SHOWCASE.md`).
 - **19000, tourists:** a small party of visitors as the tour's
   unfortunates, in place of colonists (the colonists are already held
   clear of every blast until it is over); deferred from the review step,

@@ -1248,10 +1248,19 @@ namespace BatshitTechnology
                         Fact(scene, $"superposed pulls up ({superposed})",
                             superposed > 0);
                         break;
-                    case TractorBombScene _:
+                    case TractorBombScene single:
                         int one =
                             Building_TractorBomb.Explosions - explosionsAtStart;
                         Fact(scene, $"explosions up by 1 ({one})", one >= 1);
+
+                        // The barn stands beyond the 33.75-tile pull: a
+                        // robot that stopped short of the party from its
+                        // door (Prudent) would tear it down (slice 18500).
+                        // Read as the scene ended: the next scene's set-up
+                        // clears the yard before this sample.
+                        Fact(scene, "the Tractor Barn stands after the pull "
+                                + $"({single.BarnAtEnd})",
+                            single.BarnAtEnd == "standing");
                         break;
                 }
             }

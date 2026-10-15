@@ -136,3 +136,18 @@ Matt "Breakpoint" Heck:
     now pins the map and the stage as well as the world, starting tile,
     colonists and settlement; docs/SHOWCASE-API.md, "Seeds" and Decision
     1, and docs/AI-DECISIONS.txt, slice 18000.)
+23. The Tractor Bomb's Proximity after the pulls went up by half (slice
+    18500, 2026-10-15). Built as asked: Intimate 9, Neighborly 22.5,
+    Popular 33.75 tiles. Timid's 15 tiles (the robot's emplacing range)
+    and Nosy's 3 are distances of their own, so they stayed; Prudent,
+    "15 tiles or one inside its pull, whichever is nearer", now stops at
+    15 at Neighborly and Popular, the same as Timid (8 at Intimate). The
+    menu therefore reads "Timid, stops 15 tiles out" and "Prudent, stops
+    15 tiles out" at the default pull. Before, the two differed by one
+    tile there. Keep it so (the robot drives as before and its bigger
+    beam catches more; recommended), or raise the emplacing range by
+    half as well (Timid 22.5, Prudent 21.5 at the default, as the old
+    pattern had it, though then the beam catches no more than before)?
+    Also for your eye: the tour's single tractor is now Nosy, not
+    Prudent, because from the barn's door a Prudent robot would plant
+    within its 33.75-tile pull of the barn (docs/SHOWCASE.md).
