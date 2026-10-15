@@ -817,3 +817,25 @@ Three review fixes have no automated check, for these reasons:
   - No unit test covers the director's keepOnMap arithmetic in the game
     (UI.screenWidth, CameraDriver); Core's ShotFraming tests cover the
     rule, and the verifier's "kept on the map" fact the result.
+
+- [ ] Slice 19000 review fixes follow-ups (Fixer, 2026-10-15):
+  - A whole save and reload of a game holding a tour group was not run:
+    the smoke runner never reloads its game. Its check calls the game's
+    own GameComponent_TourGroupSweep.LoadedGame on a group left as a
+    loaded game would find it (one dead, one downed), and a unit test
+    (ShowcaseXmlTests) holds LoadedGame to waiting for the load's long
+    event; the tourists' lord's own ExposeData round trip is not
+    exercised. Justification: no other smoke check reloads a game
+    either (see the Tractor Bomb's older saves above).
+  - Clothes a tourist dropped before a save stay after the load's sweep:
+    they cannot be told from anyone else's. Tourists never undress in
+    the tour, so none were ever seen.
+  - The hidden tourist faction stays in a loaded game's faction manager
+    after the sweep. Hidden, with no goodwill and no members, it shows
+    nowhere; removing a faction mid-game risks references from the
+    world's pawns and history, so it is left.
+  - Core's GuestLossCue holds a guest lost in a scene's intro until the
+    intro ends (tour-17's verify, 25 and 1, before the fix). The fix
+    cannot be forced in a run (a tourist must die in an intro); its
+    rule is unit tested, and the verifier's "narration follows the
+    cues" fact watches every run.

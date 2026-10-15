@@ -2819,3 +2819,69 @@ caption bar, junk in the single yard and the twins' junkyard readable at 22.
 An END frame now shows the next scene's place (it begins on the same tick;
 docs/AI-TODO.txt). No game of this step is left running; the operator's data
 folder was not used, and no -KeepOpen or plain -Showcase run was made.
+
+2026-10-15 Claude: Tractor Bomb slice 19000, the review's fixes (Fixer),
+overnight after the two read-only reviewers of git diff 3d5a795..HEAD. Each
+finding was checked against the code and the game's data first; all five held
+(the first and third are one fault). (1) Tourists after a load. Only
+TourGroup.Dismiss removed tourists, from the director's finish, stop and
+failed set-up, none of it saved, while LordJob_ShowcaseTourists saves each
+tourist's spot; a game saved by hand mid-tour (only autosave is suppressed)
+loaded with its group wandering near their last spots for good. Fixed in the
+mod, not the Showcase API, since the group is the tour's:
+GameComponent_TourGroupSweep (Source/Tour/TourGroup.cs), which RimWorld makes
+for every game, sends home in LoadedGame every pawn of the tourists' faction
+or wearing tour composure (standing, downed or carried), every corpse of one
+(spawned or held), and every lord of theirs, logging "[BT-SHOWCASE] tourists
+dismissed (a loaded game)". Both marks, since a corpse keeps them both. A load
+runs in an asynchronous long event and MapPawns asserts the main thread, so
+the sweep goes through LongEventHandler.ExecuteWhenFinished. Dropped clothes
+cannot be told from anyone's and stay; the hidden faction stays (AI-TODO).
+SHOWCASE-API.md now says a showcase that promises to take something away must
+also do so on a load. (2) Junk. The test "The tour's junk is nothing that
+burns or explodes" only matched names, and two names burn in vanilla 1.6:
+ComponentIndustrial (0.6) and AncientCrate (0.5). The single yard's component
+stack became 15 uranium and the five crates ancient engine blocks (Core, 1x1,
+pass-through, flammability 0, at home in a tractor yard), in the same cells,
+so the layout tests and the stage are unchanged (the junk is laid at the
+tractor scenes' set-up, after READY: STAGEHASH ba2b5a7f044f45cf as before).
+Core's TourYardJunk.InertDefs lists the allowed defs; the unit test is renamed
+to what it checks ("comes only from the inert list") and a smoke check reads
+each used def's flammability and parts from the loaded game ("the tour's yard
+junk neither burns nor explodes"). (3) README: the tour shows no DEV buttons
+unless the viewer turns god mode on; colonists are never in harm's way; the
+tour group is described; the robot protests at a guest. (4) Wording: the
+stampede's "Not every visitor calls ahead." and "A few guests have stayed on."
+became "Not everyone calls ahead." and "A few have stayed on. The Ballista
+will see them out.", since the sightseers now stand within the stragglers'
+reach. ARTISTIC-MOTIF.md reserves "guests" and "visitors" for the tour group,
+the title "Uninvited Guests" kept as the one pun, and a TourXmlTests rule
+holds the lines to it. (5) Found in the gate: tour-17's first all-scene verify
+failed "narration follows the cues" (25 and 1): a sightseer hurt at the
+replicator's pad died as the reactor's scene began, so its guestsLost line
+came before the scene's start line. Core's GuestLossCue holds a loss in the
+intro until the intro ends (unit tested); the next tour-17 run passed. (6) The
+implosion flake (the lead's 02:50 note) had already been traced and fixed in
+19000c (the tumble); this step only watched it: seven full smokes in a row
+have passed since the fix (AI-KNOWN-ISSUES), so it is taken as fixed. The
+squeezer flake was seen once more, in the sabotage smoke, on a map where its
+colonist could not reach the squeezer; not chased. (7) Sabotage
+(.local/scratch/phase3000-finish/sabotage-fixer.py), one build: S1 LoadedGame
+does nothing, S2 Cloth (1.2) added to InertDefs and the single yard, S3 the
+stragglers line says "guests" again, S4 GuestLossCue ignores the intro. Unit
+838 and 4: the sweep's wiring, the guests rule and two guest-loss tests
+failed, and the junk name test passed under S2, as meant (only the game's data
+can see it); full smoke 227 and 7 (p3k-fixer-sab-smoke): the loaded-game check
+(after: 2 tourists, 1 corpse, 1 lord) and the junk check (Cloth, flammability
+1.2) failed, with the known squeezer flake's five. Restored and rebuilt. (8)
+Gate on the final DLL (af52bd1): build clean, 0 Def problems; unit and XML 842
+passed, 0 failed (837 before the step); full smoke 234 and 0 twice
+(p3k-fixer-final-smoke, -final2-smoke; 232 before, two checks added); tour-04
+all-scene 26 and 0 twice in two parallel processes (p3k-fixer-final-trials04:
+MAPHASH 807b81f05fe15c80, STAGEHASH ba2b5a7f044f45cf, start state the same in
+both); tour-17 all-scene 26 and 0 (p3k-fixer-final-tour17: MAPHASH
+fbdfda1b460cb8e8, STAGEHASH 3e545fe519d9f53a, unchanged); 22 of 22 and 16 of
+16 pieces of junk laid; every scene completed on both seeds. Before the
+guest-loss fix the same code ran smoke 234 and 0 and tour-04 26 and 0 twice.
+No game of this step is left running; the operator's data folder was not used,
+and no -KeepOpen or plain -Showcase run was made. No request was needed.

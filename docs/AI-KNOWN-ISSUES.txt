@@ -188,14 +188,33 @@
   three stacks in a row, was unsound: its stacks moved on and freed the
   way, so it passed with the fix disabled). The failure's message now
   lists what fills the pile. The exact pile of a failing run was never
-  captured, so watch the next full runs to confirm.
+  captured, so watch the next full runs to confirm. Watched (review
+  fixes, 2026-10-15): every full smoke since the fix passed both checks,
+  seven in a row (two in 19000c, one in 19000d, and four in the review
+  fixes, p3k-fixer-smoke1, -sab-smoke, -final-smoke and -final2-smoke,
+  the sabotage build touching nothing of the implosion), where three of
+  seven and three of six had failed before it. At the old rate of about
+  one in two, seven clean runs by chance is under one in a hundred:
+  taken as fixed. Reopen if it is seen again.
 - Smoke-test flakes on some random maps, not yet explained: "AnyRim's
   devices and lamps are powered" fails when two or three of AnyRim's 23
   consumers sit on a power net with no generator ("connected; net
   surplus 0 W"; 2 of 6 runs on 2026-10-14, once in slice 7000, and once
   in slice 19000a, 3 of 23 on 2 nets), and "the colonist sat in the
-  squeezer" fails when the colonist never sits (twice in slice 6000).
-  Both passed on the other maps.
+  squeezer" fails when the colonist never sits (twice in slice 6000;
+  once in 19000b; once in the review fixes' sabotage smoke,
+  p3k-fixer-sab-smoke, with "can reach False": the colonist 10 tiles
+  from the squeezer on that random map could not path to it, so its
+  four companions failed with it). Both passed on the other maps. Not
+  chased, as the lead asked: they run before any showcase check.
+- Tour verifier (review fixes, 2026-10-15, fixed): on tour-17 a
+  sightseer hurt at the replicator's pad died as the reactor's scene
+  began, so the guestsLost line was said before that scene's start line
+  and "narration follows the cues" failed (25 and 1,
+  p3k-fixer-tour17). Outcomes after the stage vary from run to run, so
+  earlier tour-17 runs had their losses later. Core's GuestLossCue now
+  holds a loss in the intro until the intro ends (docs/SHOWCASE.md,
+  "Tourists"); the next tour-17 run passed 26 and 0.
 - Smoke flake (slice 19000a, 2026-10-15): "fires survive the shockwave
   out to its edge" failed once, on a quick-test map with only 65
   burnable cells beyond half the replicator's blast radius: 11 fires
