@@ -1923,3 +1923,134 @@ s (a mid-scene beat), and 8 to 11 lines replaced before their full
 reading time, against 28 to 30 before.
 No RimWorld of this session is left running; the operator's data folder
 was never used, and no -KeepOpen or plain -Showcase run was made.
+
+2026-10-14 Claude: Tractor Bomb slice 18000, showcase seeds (phase 3000).
+Matt "Breakpoint" Heck asked: "Showcases should be able to specify the
+random number seed used for map generation, to get repeatable results.
+Implement this, and try 32 variations of the demo scenario. Select the
+best one." This step built the capability, the tooling and the proof;
+the lead runs the 32 trials and sets BT_Showcase's seed. Commits
+262155f (Core), 9c1540b (API), af56ea2 (verifier), 9735df0 (trials
+tool), then the docs. Decisions:
+- Seed precedence: -showcaseseed=<text>, else the def's new seed field,
+  else a fresh random seed from GenText.RandomSeedString (words, like
+  vanilla's world seeds). A seed is 1 to 64 ASCII letters, digits, '-',
+  '_' or '.' (RimWorld's command line splits at '=', the cue at spaces
+  and brackets, and trials use seeds in folder names); a malformed one
+  is refused with an error and the next in order used. Every launch logs
+  "SEED <text> (command line|def|random)".
+- Derived seeds are the 32-bit FNV-1a of "<seed>/<purpose>" (Core's
+  Fnv1a, pinned to the published vectors), never string.GetHashCode.
+- The quick-test set-up and the biome's tile run under
+  Rand.PushState(world seed) on the long event's thread, as vanilla's
+  world generation does; the world's seed string, starting tile and
+  colonists follow. The launcher queues PageUtility.InitGameStart's two
+  calls itself under a "prep" seed (work priorities break ties at
+  random; the settlement's name is random). The loading tips are
+  shuffled first, on the main thread: their first draw shuffles with
+  the shared Rand mid-generation.
+- The session holds the game paused from StartedNewGame until the
+  worker is set up: before, the settling frames ran a frame-rate-
+  dependent number of ticks before the stage. Then it sets the global
+  Rand afresh from a "stage" seed through Rand.StateCompressed by
+  reflection (the public Seed setter logs "Modifying the initial rand
+  seed" unless something is pushed), exactly as that setter would.
+- Fingerprints (Core's MapFingerprint): size, terrain and roof per cell
+  in order; spawned buildings, items, plants and filth (def, cell,
+  rotation, stuff, stack) and pawns (name, kind, faction) as a multiset;
+  no motes, projectiles, fire, thing IDs or pawn cells. MAPHASH at the
+  end of InitNewGame, STAGEHASH just before READY. Reading draws no Rand.
+- Requests item 19, part one, by the operator's default answer: the
+  session holds the storyteller's parts (and drops queued incidents)
+  from its start until FINISHED, STOPPED or a failed set-up, then gives
+  them back; STORYTELLER cues mark it. The verifier no longer silences
+  the storyteller; it checks the API did. Part two (clearing starting
+  hostiles) is left to seed choice.
+- SEED, MAPHASH, STAGEHASH and STORYTELLER are record cues
+  (ShowcaseLog.RecordCues): the smoke checks of a run's flow leave them
+  out; new checks look at them. ShowcaseLog.Cued lets the verifier's
+  shots listen for cues.
+- The verifier's SUMMARY is one line of strict JSON (Core's JsonLine;
+  RimWorld ships no JSON library), built after the final log check so
+  it carries the final counts. Shots use Unity's ScreenCapture, one a
+  frame. A colonist's death after FINISHED is noted, not failed, since
+  the storyteller is back.
+- Tools/tour-trials.ps1 runs each trial in a hidden shell of the same
+  PowerShell edition through -EncodedCommand (an empty -TourSkip
+  survives), records trial.json and exit.txt in each run's folder (so
+  -Collect rebuilds results), and stops only the games whose pids its
+  runs reported. Windows PowerShell 5.1 cannot wrap a generic List in
+  @() ("Argument types do not match", which crashed the first batch);
+  the lists are walked with ToArray.
+Finding: RimWorld 1.6.4871 cannot generate the same map in two
+processes. Two processes with seed s18-b drew the same world ("diana"),
+tile (100610) and colonists, and every Rand checkpoint matched through
+the preparation and every gen step's draws, yet MAPHASH and STAGEHASH
+differed in every pair (s18-a 24216529.. and 91a8cbbf.., s18-b
+79d535b1.. and aea1c94a.., DLL 19:26:25). A temporary diagnostic build
+(Harmony patches on every GenStep.Generate and on Rand's members, never
+committed) found the first divergent step, ScatterShrines: 11 Rand draws
+in both processes, different temples. BaseGen seeds each symbol from
+Map.NextGenSeed, which is System.HashCode.Combine(tile, counter, world
+seed), and System.HashCode mixes in a random per-process seed. Scatter
+groups, prefabs, layouts and unique weapons use it too, and plants,
+chunks and animals placed later shift with them. No other thread drew
+on Rand during the gen steps. With NextGenSeed made deterministic (the
+same inputs through Gen.HashCombineInt, in the diagnostic build), every
+gen step matched across processes, and MAPHASH and STAGEHASH repeated
+for s18-a (0ca9bf0e.., c7de31d2..), s18-b (59717c88.., 9029f74f..) and
+an unseeded run's seed passed back in (cowboy: world "gore", tile 71529,
+2ef62cf1.., 6ce7f61d..). Making that the rule needs a second Harmony
+patch, which Decision 1 of docs/SHOWCASE-API.md rules out without the
+operator: asked as requests item 22, with the proven code in
+.local/scratch/seeds18000/proposed-nextgenseed-patch.md. Until then a
+seed pins the world, tile, colonists and settlement only.
+How far a tour repeats with its map and stage pinned (diagnostic build,
+all ten scenes): every scene outcome matched for s18-a and for cowboy,
+not for s18-b (the grenade's volunteer lived once and died once); from
+the second scene the details drift (scene lengths by up to about 320
+ticks, the stampede's kills and volleys, fires, pull catches, colonist
+harm). Per-frame code draws on the same global Rand (sections printed
+as they come into view, pawn renderers built on first draw, sounds), and
+the ticks a frame holds vary with load; window size and camera change
+which sections print. Not pinnable without isolating rendering's Rand.
+Timing (verify runs, all scenes): alone, about 175 s a tour (cowboy, 146
+s of scenes, 166 ticks a second overall); at -Parallel 4 the same seed
+ran at the same rate; at -Parallel 8 each tour ran 10 to 25 per cent
+slower (199 to 247 s), so twice the throughput. Recommended for 32
+seeds: -Parallel 8, about 15 to 20 minutes (4, about 30).
+Sabotage (.local/scratch/seeds18000/sabotage.py, one build, DLL
+20:04:06, 17 sabotages; restored by git checkout, byte for byte against
+the index, touched, rebuilt: DLL 20:09:11): unit tests 9 failed, 747
+passed, exactly the targets (FNV vectors and UTF-8, derived seeds,
+precedence, any-order and the fingerprint pin, JSON strings, seed
+characters, refused seeds); the XML test failed on a fixture with
+"<seed>two words</seed>"; smoke 202 passed, 7 failed, exactly the seven
+new checks (seed resolution, config error, reseed, fingerprint,
+storyteller held and given back, STAGEHASH before READY, Stop); two
+quick verify runs (every scene declined) 9 passed, 7 failed each: the
+five new checks (quiet at READY, the SEED cue, MAPHASH and STAGEHASH,
+set up at tick 0, parts back after FINISHED; the stage was set up at
+tick 238 and 239), plus the two failures every all-declined run has
+(no facts checked, no narration expected); and with the world seed
+unpushed the same seed gave two worlds ("ratlord", tile 7881;
+"village", tile 111464).
+Runs (each build confirmed by the DLL's timestamp; 0 warnings, 0 errors,
+0 Def problems): 756 unit and XML tests (was 738: ShowcaseSeedTests,
+MapFingerprintTests, JsonLineTests and the def's seed); 18 Python tests
+(8 skipped: Pillow is not installed in this shell's Python). DLL
+19:21:06 (the API): full smoke 209 passed, 0 failed. Final DLL 20:09:11
+(sources as committed): full smoke 207 passed, 2 failed (the known
+implosion silver-stack pair), rerun 192 passed, 1 failed (AnyRim found
+no site on that map, the known map-dependent outcome, so its checks did
+not run; the implosion pair passed); the seven new smoke checks passed
+in both. Default verify 16 passed, 0 failed; all-scene verify (-TourSkip
+'') 16 passed, 0 failed. Trials on the committed code: eight random
+seeds at -Parallel 8, seven 16 passed, 0 failed, and one whose game was
+killed on purpose 82 s in, which got a row ("no DONE line") while the
+others carried on; that batch's seed "delta", passed back in, gave the
+same world ("ulyana"), tile 107881, Desert, AnyRim site (49,176) and
+every scene's outcome, but a different MAPHASH and STAGEHASH and
+different starting hostiles, as the finding above says. No RimWorld of
+this session is left running; the operator's data folder was never
+used, and no -KeepOpen or plain -Showcase run was made.

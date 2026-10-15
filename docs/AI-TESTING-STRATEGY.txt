@@ -286,6 +286,20 @@ build (docs/AI-DECISIONS.txt, 2026-10-14, slices 6000 and 8000; the
 overlay's three, Tractor Bomb slice 13000), except the 4K narration
 check, which was not sabotaged.
 
+Slice 18000 added seven (Source/SmokeTestShowcases.Seeds.cs): a launch's
+seed is the def's, else a fresh random one each launch, and the smoke
+run passes none on the command line; a malformed def seed is a
+configuration error; reseeding the global random state repeats a seed's
+draws and another seed draws differently (the run's own state is put
+back); the map fingerprint is stable, draws nothing from Rand, sees a
+stack of steel come and go, and covers every cell and pawn; the directed
+test run holds a harmless storyteller part from its start and gives it
+back just after FINISHED; STAGEHASH comes just before READY with the
+session's fingerprint, and an adopted run logs no SEED or MAPHASH and
+does not reseed; and Stop gives the storyteller its parts back. The
+record cues are left out of the older checks' cue sequences. All seven
+failed against the slice's sabotage build (docs/AI-DECISIONS.txt).
+
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
 PowerNetManager.UpdatePowerNetsAndConnections_First). Destructive
@@ -298,11 +312,16 @@ belongs on input events only, never on a repaint or layout event.
 
     .\Tools\smoke-test.ps1 -Showcase -Verify
 
-starts BT_Showcase through the Showcase API, as -Showcase does (the
-verifier silences the storyteller at READY, as the smoke run does, so no
-raid lands mid-tour; hostiles the map starts with stay), and adds
--bttourverify and -bttourskip=anyrim (-TourSkip changes the list; pass
--TourSkip '' to run all ten scenes). The raccoon scene needs the town
+starts BT_Showcase through the Showcase API, as -Showcase does (the API
+quiets the storyteller for every showcase, so no raid lands mid-tour;
+hostiles the map starts with stay), and adds -bttourverify and
+-bttourskip=anyrim (-TourSkip changes the list; pass -TourSkip '' to
+run all ten scenes). -Seed <text> generates from that seed
+(-showcaseseed=), and -Shots saves the game's own frame (Unity's
+ScreenCapture, so windows over the game do not matter) at READY and at
+each SCENE, BEAT and END cue, one a frame, to
+<DataFolder>\shots\NN-<scene>-<cue>.png (about 50 shots and 56 MB for
+an all-scene tour). The raccoon scene needs the town
 shown first, so it declines whenever the AnyRim scene is forced to, and
 the default run skips both. The verifier
 (Source/SmokeTestTour.cs, part of the smoke runner) forces the listed
@@ -331,9 +350,20 @@ FINISHED and the farewell it checks that:
    titles (8 with AnyRim, and so the raccoon, skipped);
 4. the narration log holds every line the def gives for each SCENE,
    BEAT and END cue, in cue order, under its scene, with a target;
-5. no colonist died but the grenade's volunteer;
+5. no colonist died but the grenade's volunteer (a death after
+   FINISHED, when the storyteller is back and the colony the viewer's,
+   is noted, not failed);
 6. nothing logged an error or a mod warning (the smoke runner's own
    final check).
+
+Slice 18000 added the Showcase API's records. At READY: the storyteller
+is quiet (no part, nothing queued, parts held); the launch logged its
+seed in a SEED cue, from the source its precedence picks (the command
+line's when -Seed was passed, else the def's, else random); MAPHASH came
+before START and STAGEHASH just before READY, as the session holds them;
+and the stage was set up from the seed (reseeded) at tick 0, before the
+game's first tick. After the farewell: the storyteller stayed quiet until
+FINISHED and has its parts back, as many as were held.
 
 The stampede's facts (Source/SmokeTestTour.Stampede.cs) use Core's
 Stampede rules but measure the world each tick rather than asking the
@@ -400,9 +430,115 @@ cue's lines spaced, timeouts covering the intro) and the closing
 message to the narration rules; XmlDefinitionTests hold the robot's
 and the research's descriptions to the named settings' sizes.
 
-It then logs "[BT-SMOKE] DONE" and quits, and the script reports as a
-smoke run does. A tour that never finishes fails at a deadline: the sum
-of the scenes' timeouts plus 3,000 ticks.
+It then logs one "[BT-TOUR] SUMMARY {json}" line (below), then
+"[BT-SMOKE] DONE", and quits, and the script reports as a smoke run
+does, printing the SUMMARY too. A tour that never finishes fails at a
+deadline: the sum of the scenes' timeouts plus 3,000 ticks.
+
+### Tour trials
+
+    .\Tools\tour-trials.ps1 -Count 32               # tour-01 .. tour-32
+    .\Tools\tour-trials.ps1 -Seeds alpha,beta -Repeat 2 -RandomRuns 1
+
+runs the verifier (smoke-test.ps1 -Showcase -Verify, every scene unless
+-TourSkip says otherwise) over a list of seeds, -Parallel games at once
+(default 4), -Repeat runs a seed (default 1), each in its own data
+folder under a fresh .local\tmp\tour-trials-<stamp>\ (or -OutDir), with
+-Shots passed on if given. -RandomRuns adds unseeded runs; each logs
+its random seed, which can then be passed back in. A run that crashes,
+hangs or times out (-TimeoutSeconds, default 1500, plus a 240 s margin)
+gets a row with the error and the others carry on; only games the
+script started, by the pid each run reports, are ever stopped. It
+writes results.json (each run's row, with its SUMMARY whole) and
+results.csv (one row a run: run, seed, seedSource, repeat, exitCode,
+error, passed, failed, wallSeconds, mapHash, stageHash, then the SUMMARY
+flattened: nested fields dotted, as scenes.home.tps, lists joined with
+';'), prints a table, and for every seed run more than once says
+whether its MAPHASH and STAGEHASH repeated. It exits 1 if any run left
+no SUMMARY.
+
+The SUMMARY's fields (Source/SmokeTestTour.Summary.cs; version 1):
+
+- version; seed and seedSource (command line, def or random); worldSeed
+  (the world's seed string, drawn from the seed); mapHash and stageHash
+  (the MAPHASH and STAGEHASH cues); biome, tile (the starting tile's
+  id) and mapSize;
+- passed, failed (the verifier's counts, the final log check included)
+  and finished (FINISHED was reached); skipForced (the -TourSkip keys);
+  shots (frames saved);
+- hostilesAtReady and hostileKinds ("Fingerspike x1"): hostile pawns on
+  the map as the tour began, the map's own dark entities or mechs;
+- readyTick, finishedTick and totalTicks (READY to the end of watching);
+- scenes, by key in script order: outcome (the END cue's word, such as
+  completed, timedOut or raccoonLost; or declined, with why from its
+  SKIPPED cue; or notRun), ending (the director's SceneEnd), ticks,
+  seconds (real), tps (average game ticks a real second) and
+  longestTickMs (the longest real gap between two ticks);
+- colonists (at READY), harmed (colonist harm not excused, each with its
+  scene), excused (harm beside a starting hostile, or the volunteer's),
+  deaths and deathsAfterTour;
+- volunteer: name, grenadeOutcome (the grenade's END word) and atEnd
+  (alive, downed, dead or gone);
+- stampede: herd, killedFirstVolley (the herd's dead as the second
+  volley left, or at the end after a single volley), volleys,
+  volleyBolts (each volley's bolts), killed (dead at the end),
+  deadAtFirstEntry (dead when the first live boomalope reached the
+  keep-away, or null), peakFires (on the map at once), firesNearBase
+  (new fires inside the keep-away at once) and firstVolleyTick (scene
+  tick);
+- grenade: thrown, and ticksToThrow (from the scene's start);
+- anyRim: placed, site (the crossroads, "x,z") and residents (at READY);
+- raccoon: outcome, ned (alive, downed, dead, gone or missing), thrower,
+  censusBefore and censusAfter (AnyRim's population as the scene began
+  and as the census line was said);
+- tractor and twins: pulls (implosions begun in the scene), pullsPawns
+  (pawns each pull caught), pullsItemMoves (item moves each made),
+  pullsFixtures (fixtures each uninstalled or tore down) and
+  hostilesStretched (hostiles newly stretch-marked); the tractor also
+  protest (its protest beat played) and stray (the colonist placed in
+  the robot's pull and why, or why none);
+- narration: said, shown, cutShort and longestWaitSeconds, replayed at
+  normal speed (as the overlay-pacing NOTE);
+- storyteller: held (parts held at READY), awakeTicks (ticks before
+  FINISHED with parts) and restored.
+
+A SUMMARY that fails to build still comes, with the counts and a
+summaryError; a tour that never became READY gives the run's records and
+an error.
+
+What the trials showed in slice 18000 (2026-10-14; details in
+docs/AI-DECISIONS.txt):
+
+- Repeatability. As built, two processes with one seed draw the same
+  world seed string, tile, colonists and settlement, but not the same
+  map: vanilla's Map.NextGenSeed is random per process
+  (docs/SHOWCASE-API.md, "Seeds"), so MAPHASH and STAGEHASH differed in
+  every pair (seeds s18-a and s18-b, twice each). With NextGenSeed made
+  deterministic in an uncommitted diagnostic build, both seeds repeated
+  MAPHASH and STAGEHASH exactly, and an unseeded run's logged seed
+  (cowboy), passed back in, gave its world, tile, map and stage again.
+- How far a tour repeats once its map and stage do: every scene's
+  outcome matched in two of three pairs (cowboy; s18-a's scenes all
+  completed in both runs), but from the second scene on the details
+  drift: scene lengths by 1 to about 320 ticks, the stampede's first volley by
+  a few ticks and its kills (one run needed a second volley), fires,
+  each pull's catch, and which colonists were hurt; in s18-b the
+  grenade's volunteer lived in one run and died in the other. The game
+  draws on its one global random state from per-frame code as well as
+  per-tick code (the map's sections printed as they come into view,
+  pawns' renderers built on first draw, sounds), and how many ticks fall
+  in each frame depends on load, so the draws a tick sees shift.
+  Window size and camera matter for the same reason (only visible
+  sections are printed).
+- Timing. A full ten-scene tour took about 175 s of wall time alone
+  (cowboy: 146 s of scenes, 166 game ticks a second overall, Superfast's
+  cap of about 288 in quiet scenes); at -Parallel 4 the same seed ran
+  at the same rate (173 s), and dark-entity maps ran 190 to 290 s. At
+  -Parallel 8 each tour ran 10 to 25 per cent slower (199 to 247 s) but
+  twice as many at once. The tractor scene runs at about 48 ticks a
+  second in every run (vanilla's forced normal speed), about a minute
+  of each tour. For 32 seeds: about 30 minutes at -Parallel 4, 15 to 20
+  at -Parallel 8 (each game takes about 1.5 GB of memory).
 
 Sabotage runs in slice 12000, step 5 proved checks 1, 2 and 6, and
 check 5 caught a real death on one map (see docs/AI-DECISIONS.txt). The

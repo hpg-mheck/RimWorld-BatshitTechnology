@@ -226,3 +226,26 @@
   verify, DLL 14:19:35); the scene now logs the grenadier's state every
   600 ticks while the throw is overdue. The tractor scene runs at about
   48 game ticks a second in verify runs (see docs/AI-TODO.txt).
+- Showcase seeds (slice 18000, 2026-10-14): a seed pins a showcase's
+  world, starting tile, colonists and settlement in any process, but not
+  its map: RimWorld 1.6's Map.NextGenSeed mixes System.HashCode's random
+  per-process seed into the Rand blocks of ancient shrines, ruins, junk
+  clusters, mechanoid remains, prefabs, layouts and unique weapons, and
+  the plants, rock chunks and animals placed after them shift with them.
+  So MAPHASH and STAGEHASH differ between launches of one seed, and so
+  does the stage built on the map (in one pair AnyRim found a site in one
+  run and none in the other). Terrain, rock, ores, geysers and roads
+  repeat. The proven fix is a second Harmony patch (a deterministic
+  NextGenSeed while a showcase's map generates), awaiting approval
+  (docs/AI-requests-for-humans.txt, item 22). Within one process the
+  same seed would repeat the map; trials run a process each.
+- Even with the map and stage pinned, a tour after READY repeats only
+  partly: the game draws on its one global random state from code that
+  runs per frame (effects, sounds, the interface) as well as per tick,
+  and how many ticks fall in each frame depends on the machine's load.
+  docs/AI-TESTING-STRATEGY.txt ("Tour trials") records how far the
+  verify runs repeated.
+- The verifier no longer silences the storyteller at READY: the Showcase
+  API holds it quiet for every showcase until FINISHED, then gives it
+  back, so a raid in the farewell is possible; a colonist lost after
+  FINISHED is noted, not failed.

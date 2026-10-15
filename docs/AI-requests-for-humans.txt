@@ -92,15 +92,21 @@ Matt "Breakpoint" Heck:
 18. (Resolved 2026-10-14: "test both". The junk-pile grenade scene stays,
     and the Raccoon Incident is built as its own scene; ROADMAP.md,
     phase 3000, slice 15000.)
-19. Showcase games run the quick test's storyteller, so raids and dark
-    entities can arrive mid-tour; in four of six verify runs in slice
-    15000 (2026-10-14) they did, killing colonists the tour did not and,
-    once, timing out the grenade scene under a raid. Should a showcase's
-    game have random incidents switched off while the showcase runs (a
-    Showcase API change, for every showcase), and should the tour's stage
-    builder clear the hostiles a map starts with (dark entities, a
-    mechhive), which killed colonists near the base in later runs?
-    Recommended: yes to both.
+19. (Part one resolved 2026-10-14 by the operator's default answer, yes:
+    random incidents are off from a showcase's start until it finishes
+    or stops, then the storyteller is given back; built in slice 18000,
+    docs/SHOWCASE-API.md, "The Quiet Storyteller". Part two, clearing the
+    hostiles a map starts with, is not done: a showcase's seed can choose
+    a map without them; reopen it if seed choice does not cover the
+    tour.) Showcase games run the quick test's storyteller, so raids and
+    dark entities can arrive mid-tour; in four of six verify runs in
+    slice 15000 (2026-10-14) they did, killing colonists the tour did not
+    and, once, timing out the grenade scene under a raid. Should a
+    showcase's game have random incidents switched off while the
+    showcase runs (a Showcase API change, for every showcase), and should
+    the tour's stage builder clear the hostiles a map starts with (dark
+    entities, a mechhive), which killed colonists near the base in later
+    runs? Recommended: yes to both.
 20. The tour's pacing on the overlay (review step, 2026-10-14): every
     line is now read in full and gone two seconds before the next, and
     each scene holds its action until its start line has cleared, as
@@ -123,3 +129,24 @@ Matt "Breakpoint" Heck:
     goodwill letters; recommended), or (b) AnyRim's own residents'
     faction, presented as visiting relatives. And should a tourist stand
     in for the grenade's volunteer, so no colonist is ever harmed?
+22. Showcase seeds (slice 18000, 2026-10-14): Matt "Breakpoint" Heck, a
+    seed now pins a showcase's world, starting tile, colonists and
+    settlement, but RimWorld 1.6 itself will not generate the same map
+    twice in two processes: Map.NextGenSeed is System.HashCode.Combine(
+    tile, counter, world seed), and System.HashCode mixes in a random
+    seed chosen once per process. Ancient shrines, ruins, junk clusters,
+    mechanoid remains and the like are seeded from it, and the plants,
+    rock chunks and animals placed after them shift too; so the map, and
+    the tour's stage on it, differ from launch to launch whatever the
+    seed. A diagnostic run proved it: with NextGenSeed made deterministic
+    (the same three inputs, combined with Gen.HashCombineInt), two
+    processes gave the same map and stage, gen step by gen step. Making
+    that the rule takes a second Harmony patch, a prefix on the
+    Map.NextGenSeed getter, active only while a showcase's game generates
+    its map (every other map stays exactly vanilla); Decision 1 keeps the
+    Showcase API patch-free but for the menu button. May it be added?
+    Recommended: yes; without it, "the best of 32 seeds" picks a world
+    and a starting place, not a map or a stage. The alternative without
+    Harmony is to leave those gen steps out of showcase maps (no ancient
+    shrines, ruins or junk clusters), which changes how a showcase's map
+    looks. Proposal and proof: docs/AI-DECISIONS.txt, slice 18000.

@@ -5,7 +5,9 @@ with the adversarial review's fixes), with `BT_Showcase` as its first
 client; awaiting the merge into `trunk` (slice 8000). "As Built" below is
 the contract as it stands. The narration overlay ("The Narration
 Overlay") was added on `feature/tractor-bomb` (phase 3000, slice
-13000). Requested by Matt "Breakpoint" Heck on 2026-10-13: a game API
+13000); seeds, fingerprints and the quiet storyteller ("Seeds",
+"Fingerprints" and "The Quiet Storyteller") in slice 18000. Requested by
+Matt "Breakpoint" Heck on 2026-10-13: a game API
 for showcases, and a **Showcases** button on the
 main menu that lists the mods offering showcases and each mod's
 showcases, as multi-stage menus or selection screens. "Because these are
@@ -192,6 +194,7 @@ A `ShowcaseDef` (written in XML as
 | `compatibility` | Entries of `packageId`, `severity` and `note` |
 | `mapSize` | Width and height in cells (default 250, limits 75 to 400) |
 | `biome` | A start in a random valid tile of that biome, if any exists |
+| `seed` | The seed the game is generated from; blank is random ("Seeds") |
 | `workerClass` | A `ShowcaseWorker` subclass (default `ShowcaseDirector`) |
 | `scenes` | For a director: scenes in order, keys unique |
 | `narration` | Lines of `scene`, `when`, `delayTicks` and `text` |
@@ -203,9 +206,9 @@ worker's own beat name. A `stopped` line is said only when its delay is
 0: Stop ends all narration, so the configuration check reports a delayed
 one. Setup code should read `map.Size` rather than assume `mapSize` (see
 the command line below). Configuration errors (dev mode, at start-up)
-cover the worker class, the map size and running time, malformed
-package ids, scene keys and timings, narration naming a missing scene,
-and delayed `stopped` lines.
+cover the worker class, the map size and running time, a malformed
+seed, malformed package ids, scene keys and timings, narration naming a
+missing scene, and delayed `stopped` lines.
 
 A scene (`ShowcaseScene`, or a subclass named with `Class="..."`) has a
 `key`, a caption `title`, `minTicks` (120), `timeoutTicks` (3600),
@@ -271,10 +274,14 @@ Two hooks were added for the directed tour (phase 3000, slice 12000):
     still never autosaves); the camera and the colony are the viewer's,
     and a device already counting down still goes off.
 - **The session** (`GameComponent_ShowcaseSession`) adopts the
-  launcher's request for its own new game only, waits 120 frames for the
-  map to settle, sets the worker up, ticks it, suppresses autosave,
-  draws the caption bar and the narration overlay, and hands the overlay
-  the closing message once any queued narration has been said.
+  launcher's request for its own new game only, logs the new map's
+  fingerprint, quiets the storyteller, holds the game paused for the 120
+  frames it waits for the map to settle, reseeds the global random state
+  from the launch's seed, sets the worker up, logs the stage's
+  fingerprint, ticks the worker, suppresses autosave, draws the caption
+  bar and the narration overlay, hands the overlay the closing message
+  once any queued narration has been said, and gives the storyteller
+  back when the showcase finishes or stops.
 
 ### The Narration Overlay
 
@@ -361,6 +368,9 @@ own DEV buttons check `DebugSettings.ShowDevGizmos`, as vanilla's do.
   saying why.
 - `-showcaseforce` also lets `-showcase=` start a showcase flagged
   fatal, as Force start does. Missing requirements can never be forced.
+- `-showcaseseed=<text>` gives the seed for any showcase launched in that
+  run, from the menu or the command line, over the def's own ("Seeds").
+  `Tools/smoke-test.ps1 -Seed <text>` passes it.
 - With `-quicktest` as well, vanilla generates its own quick-test game
   (250 cells, a random tile) and draws the main menu for a single frame
   on the way; the menu then leaves the command line alone, and the
@@ -372,21 +382,175 @@ own DEV buttons check `DebugSettings.ShowDevGizmos`, as vanilla's do.
   because there is no any player faction base", then an exception in
   `Game.InitNewGame`, observed on RimWorld 1.6.4871.)
 
+### Seeds
+
+Requested by Matt "Breakpoint" Heck on 2026-10-14: "Showcases should be
+able to specify the random number seed used for map generation, to get
+repeatable results." Built in slice 18000.
+
+- **The seed.** Every launch has one, a short text like a world seed: 1
+  to 64 ASCII letters, digits, `-`, `_` or `.` (so it survives
+  RimWorld's command line, which splits at `=`, the cue, and a folder
+  name). In order: `-showcaseseed=<text>` on the command line (for
+  trials), else the def's `seed`, else a fresh random one made at launch
+  from the game's own seed words (`GenText.RandomSeedString`). A
+  malformed seed offered is refused with an error naming why, and the
+  next in order is used; a malformed def seed is also a configuration
+  error. Core's `ShowcaseSeed` holds the rules, unit tested.
+- **The cue.** `SEED <text> (<source>)`, the source being `command
+  line`, `def` or `random`, is logged as the game is queued, so any run,
+  a random one included, can be pinned later by copying its seed into
+  the def or the command line.
+- **What it seeds.** Each stage of a launch draws under its own Rand
+  seed, the 32-bit FNV-1a hash of `<seed>/<purpose>` (never
+  `string.GetHashCode`, which a runtime may vary per process):
+  1. `world`: the quick-test set-up, pushed and popped around it on the
+     long event's thread as vanilla's world generation is. It draws the
+     world's seed string (so the world follows: vanilla seeds each world
+     step from that string), the starting tile, the starting colonists,
+     and then the def's biome's tile.
+  2. `prep`: the map's preparation. The launcher queues vanilla's
+     `PageUtility.InitGameStart` itself, with its same two calls under
+     this seed: the colonists' work priorities (which break ties at
+     random) and the player's settlement (its name is random).
+  3. The map: vanilla seeds it from the world's seed and the starting
+     tile, so it follows from the two above.
+  4. `stage`: the global random state, set afresh (as `Rand.Seed`
+     would, through its private state, since the public setter logs an
+     error unless something is pushed) just before the worker is set
+     up.
+- **Before the stage, no tick.** The session holds the game paused while
+  the map settles (120 frames), and sets the worker up before the
+  game's first tick (tick 0); before, the game ran as many ticks in
+  those frames as the frame rate allowed, and pawns, plants and the
+  random state moved on by a different amount every run. The speed is
+  put back as the worker is set up (the tour's stage sets Normal
+  anyway).
+- **The loading screen.** Rand is one global state, shared by every
+  thread. While the game generates on the long event's thread, the main
+  thread draws the loading screen, and the first time it shows the
+  gameplay tips it shuffles them with Rand. Done mid-generation, that
+  shuffle would steal draws from the seeded sequence at a moment that
+  depends on thread timing. The launcher shuffles them first, on the
+  main thread, as vanilla would (`LoadingTips.Prime`); nothing else on
+  the loading screen draws on Rand (RimWorld 1.6.4871).
+- **What a seed pins.** The world, the starting tile, the colonists
+  (names, traits, gear, work priorities) and the settlement, in any
+  process; and, within one process, the whole map and the stage the
+  worker builds. Checked in slice 18000: two processes with the same
+  seed drew the same world seed string, tile and colonists, and every
+  Rand checkpoint matched, through the preparation and every gen step's
+  draws.
+- **What vanilla stops it pinning: the map's structures.** RimWorld
+  1.6.4871 cannot generate the same map twice in two processes.
+  `Map.NextGenSeed` is `System.HashCode.Combine(tile, counter, world
+  seed)`, and `System.HashCode` mixes in a random seed chosen once per
+  process. BaseGen (every symbol: ancient shrines, ruins), the scatter
+  groups (mechanoid remains, junk clusters), prefabs, layouts and
+  unique weapons seed their Rand blocks from it, so those structures
+  differ from process to process, and every later gen step that walks
+  the map (plants, rock chunks, animals) shifts with them. Terrain,
+  rock, ores, geysers and roads repeat; the rest does not, so neither
+  do `MAPHASH` and `STAGEHASH`, nor the stage built on the map. A
+  diagnostic run proved the cause (`docs/AI-DECISIONS.txt`, slice
+  18000): with `NextGenSeed` made deterministic (the same three
+  inputs, combined with `Gen.HashCombineInt`), every gen step, the
+  `MAPHASH` and the `STAGEHASH` matched across processes. That takes a
+  Harmony patch, which Decision 1 rules out without the operator's
+  approval; it is asked in `docs/AI-requests-for-humans.txt` (item 22).
+- **What it cannot pin even then.** After `READY` the game draws on the same
+  global random state from code that runs per frame rather than per
+  tick (effects, motes, sounds and the interface draw on Rand), and how
+  many ticks fall in each frame depends on the machine's load and the
+  speed: Superfast in a verify run, Normal for a viewer, whose own
+  clicks and camera add more. So the run after `READY` repeats only as
+  far as those draws happen not to land between ticks that matter; how
+  far that is for the tour is measured by `Tools/tour-trials.ps1` and
+  recorded in `docs/AI-TESTING-STRATEGY.txt` ("Tour trials"). A seed
+  also does not cover a `-quicktest` game: vanilla generated that map
+  unseeded, so its cue adds `quicktest map, not pinned` (the stage is
+  still seeded).
+- **Viewing and verify runs.** Nothing in generation or staging depends
+  on the window, the UI scale or the speed, so a viewing run
+  (`-Showcase`: Normal speed, a maximized window at 2x UI) and a verify
+  run (`-Showcase -Verify`: Superfast, a small muted window) of one seed
+  pin the same things. The verifier's forced declines (`-TourSkip`)
+  change which scenes run, and so everything after the first one
+  skipped.
+
+### Fingerprints
+
+The session logs a map's fingerprint twice: `MAPHASH` as the new game
+starts (at the end of `Game.InitNewGame`, before any tick) and
+`STAGEHASH` just before `READY`, once the worker is set up. Each is
+Core's `MapFingerprint`, a 64-bit FNV-1a hash, written as sixteen hex
+digits and followed by what it covered, as in `f70e1a4a4518bc51 (62500
+cells, 35221 things, 53 pawns)`. It covers:
+
+- the map's size, and every cell's terrain and roof, in cell order;
+- every spawned building, item, plant and filth: its def, cell,
+  rotation, stuff and stack count;
+- every pawn on the map, spawned or held (in a bed, a Brain Squeezer):
+  its full name, kind and faction (def and name).
+
+Things and pawns count as a multiset, whatever order the map lists
+them in. Motes, projectiles, fire and other passing effects are left
+out, as are thing IDs (a mote drawn in a frame takes an ID) and pawns'
+cells (pawns walk). Reading a map draws nothing from Rand, so logging a
+fingerprint never changes the run. The session's `MapHash` and
+`StageHash` hold the same hex. Core's tests pin the hash against an
+independent reference; the smoke run checks that it is stable, sees a
+stack of steel come and go, and covers every cell and pawn.
+
+### The Quiet Storyteller
+
+Random incidents are off while a showcase runs, for every showcase
+(requests item 19, part one; the operator's default answer, "yes"). From
+the session's start (the new game, or a smoke test's adoption) until the
+showcase finishes or stops, the session holds the storyteller's parts
+(`Storyteller.storytellerComps`) and drops any incident it had queued,
+so no raid, manhunter pack or dark entity is sent mid-showcase. When it
+finishes or stops, the parts are given back, since the closing line
+hands the colony to the viewer; a `STORYTELLER` cue marks each change.
+If a set-up fails, they are given back at once. The parts belong to the
+showcase's game, so leaving it mid-showcase takes them along, and a
+showcase game the viewer saves rebuilds them on loading. Not covered:
+incidents that quests make (a fresh game has none), and the hostiles a
+map starts with (dark entities, a mechhive); clearing those (item 19,
+part two) is not done, since a showcase's seed can choose a map without
+them.
+
 ### Log Cues
 
 Every API cue is one log message, `[BT-SHOWCASE] <CUE> <detail>`; the
 prefix carries the host mod's tag while the API lives in this mod. The
-API's errors and warnings carry the same prefix, but are not cues.
+API's errors and warnings carry the same prefix, but are not cues. Four
+are record cues (`ShowcaseLog.RecordCues`): they say what a run was
+(its seed, its fingerprints, the storyteller's state) rather than how it
+went, so tooling comparing a run's flow of cues can leave them out. A
+`ShowcaseLog.Cued` event lets capture tooling in the assembly listen
+for cues (the tour verifier's shots do).
 
 - `LAUNCH <def>`: a game is being generated for it; with `forced`, or
   `quicktest` when it is adopted on a quick-test map.
+- `SEED <text> (<source>)` (record): the launch's seed and where it came
+  from (`command line`, `def` or `random`); with `; quicktest map, not
+  pinned` on a quick-test map.
 - `BIOME <biome>`: a tile of the biome was chosen; or `... not found;
   random start`; or `... ignored; quicktest map`.
 - `MAPSIZE <n> ignored; quicktest map is <m>`: the quick-test map cannot
   have the def's size.
 - `GAME <def>`: the new game's session adopted the showcase.
+- `MAPHASH <hex> (<n> cells, <n> things, <n> pawns)` (record): the new
+  map's fingerprint, before any tick.
+- `STORYTELLER quiet (<n> parts held)` (record): random incidents are
+  off; with `, <n> queued incidents dropped` if any were queued. And
+  `STORYTELLER restored (<n> parts)` after `FINISHED` or `STOPPED`, or
+  a failed set-up.
 - `START <def>`: the map has settled and the worker is being set up
   (with `forced` if it was).
+- `STAGEHASH <hex> (...)` (record): the map's fingerprint once the
+  worker is set up, just before `READY`.
 - `READY`: the worker is set up; capture tools maximize and start here.
 - `SCENE <key>`: a director scene began.
 - `END <key> <outcome>`: it ended: `completed`, `timedOut`, `skipped`,
@@ -415,14 +579,19 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
   grouping showcases by mod, requirement and compatibility checks, the
   launch decision, the caption and its bar's layout, narration (including
   delayed `stopped` lines), the narration overlay's timing and layout,
-  the god-mode loan, and the Force-start and command-line rules.
+  the god-mode loan, and the Force-start and command-line rules; from
+  slice 18000, the seed's precedence, characters and refusals, the
+  derived Rand seeds and FNV-1a (pinned to the published vectors), and
+  the map fingerprint (pinned to an independent reference, blind to the
+  order of things and pawns, changed by every field it covers).
 - **XML tests:** every `ShowcaseDef`'s fields (worker classes matched by
   exact namespace), the keyed text and the keys the code uses, preview
   images, the Harmony dependency, that no file but the button's uses
   Harmony, that only the god-mode loan sets god mode and every DEV
   button needs dev mode, and that the smoke runner's test showcases are
   never shipped. Narration scene keys are checked by the def's
-  configuration check (no shipped def has narration yet).
+  configuration check (no shipped def has narration yet). A def's
+  `seed`, if any, must be well formed.
 - **Smoke** (`Source/SmokeTestShowcases.cs`, with test showcases made in
   code; details in `docs/AI-TESTING-STRATEGY.txt`):
   - the button is the mod's only Harmony patch, vanilla's main menu gets
@@ -448,12 +617,25 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
     stopped scene's own line alone;
   - god mode is lent only in dev mode and given back on every way out;
   - a showcase game never autosaves, an ordinary one does, the session
-    saves nothing, and the save folder gains no files.
+    saves nothing, and the save folder gains no files;
+  - from slice 18000 (`Source/SmokeTestShowcases.Seeds.cs`): a launch's
+    seed is the def's, else a fresh random one; a malformed def seed is
+    a configuration error; the global reseed repeats a seed's draws; the
+    fingerprint is stable, draws no Rand and sees a stack come and go;
+    the storyteller is held from a run's start and given back after
+    `FINISHED` and after Stop; `STAGEHASH` comes just before `READY`.
 - **Showcase run:** `Tools/smoke-test.ps1 -Showcase` starts BT_Showcase
   through the main menu with `-showcase=BT_Showcase` and waits for
   `[BT-SHOWCASE] READY`, failing on a `REFUSED` or `FAILED` cue or a mod
   error before it. The run on to `FINISHED` is checked by hand in the
   verification runs, since the game is left open for the viewer.
+- **Tour verify run:** `Tools/smoke-test.ps1 -Showcase -Verify` checks
+  Batshit Technology's tour to `FINISHED`, and, for the API, that the
+  launch logged its seed from the source its precedence picks,
+  `MAPHASH` came before `START` and `STAGEHASH` just before `READY`, the
+  stage was set up at tick 0, and the storyteller was quiet until
+  `FINISHED` and given back after it (`docs/AI-TESTING-STRATEGY.txt`,
+  section 4). `Tools/tour-trials.ps1` runs it over many seeds.
 
 ## Decisions
 
@@ -493,3 +675,16 @@ Overlay"):
    instant replacement would flash lines past unread.
 10. **The closing message is narration** and goes to the overlay; the
     Stop confirmation stays a vanilla message, made silent.
+
+Asked for by Matt "Breakpoint" Heck on 2026-10-14 (slice 18000), with
+the details settled while building (see "Seeds", "Fingerprints" and "The
+Quiet Storyteller"):
+
+11. **Every showcase has a seed:** the command line's, the def's, or a
+    fresh random one, logged so any run can be pinned. It pins the
+    world, tile, colonists and settlement; the map and stage wait on a
+    second Harmony patch (requests item 22).
+12. **No random incidents during a showcase** (requests item 19, part
+    one, the operator's default answer): the storyteller is held from
+    the session's start and given back when the showcase finishes or
+    stops.
