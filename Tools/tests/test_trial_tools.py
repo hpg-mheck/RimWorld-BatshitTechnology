@@ -221,67 +221,73 @@ class CollectTests(unittest.TestCase):
                 rows = {r["run"]: r for r in csv.DictReader(f)}
         return out, rows
 
-    def each(self):
-        """Yields each edition's output and rows, inside a subtest.
+    def editions(self) -> list[tuple[str, str, dict[str, dict]]]:
+        """Each edition's name, output and rows, for a test to walk.
 
-        Yields:
-            The output and the rows by run.
+        Returns:
+            The edition, the output and the rows by run, per edition.
         """
-        for edition, (out, rows) in self.results.items():
-            with self.subTest(edition=edition):
-                yield out, rows
+        return [(edition, out, rows)
+                for edition, (out, rows) in self.results.items()]
 
     def test_one_hash_is_not_called_same(self) -> None:
         """A seed with one hash among its runs is not compared."""
-        for out, _ in self.each():
-            self.assertIn(
-                "alpha: 2 runs; MAPHASH not compared (1 of 2 runs; 1 without "
-                "one); STAGEHASH not compared (1 of 2 runs; 1 without one)", out)
+        for edition, out, _ in self.editions():
+            with self.subTest(edition=edition):
+                self.assertIn(
+                    "alpha: 2 runs; MAPHASH not compared (1 of 2 runs; 1 without "
+                    "one); STAGEHASH not compared (1 of 2 runs; 1 without one)", out)
 
     def test_no_hash_is_not_called_differs(self) -> None:
         """A seed none of whose runs logged a hash is not compared."""
-        for out, _ in self.each():
-            self.assertIn(
-                "beta: 2 runs; MAPHASH not compared (0 of 2 runs; 2 without one)",
-                out)
+        for edition, out, _ in self.editions():
+            with self.subTest(edition=edition):
+                self.assertIn(
+                    "beta: 2 runs; MAPHASH not compared (0 of 2 runs; 2 without one)",
+                    out)
 
     def test_agreeing_and_differing_hashes(self) -> None:
         """Runs that agree are the same; runs that disagree differ."""
-        for out, _ in self.each():
-            self.assertIn(
-                "gamma: 3 runs; MAPHASH same (2 of 3 runs; 1 without one)", out)
-            self.assertIn(
-                "delta: 2 runs; MAPHASH DIFFERS (2 values in 2 of 2 runs); "
-                "STAGEHASH same (2 of 2 runs)", out)
+        for edition, out, _ in self.editions():
+            with self.subTest(edition=edition):
+                self.assertIn(
+                    "gamma: 3 runs; MAPHASH same (2 of 3 runs; 1 without one)", out)
+                self.assertIn(
+                    "delta: 2 runs; MAPHASH DIFFERS (2 values in 2 of 2 runs); "
+                    "STAGEHASH same (2 of 2 runs)", out)
 
     def test_seeds_differing_in_case_are_not_repeats(self) -> None:
         """Omega and omega are two seeds, so neither is a repeat."""
-        for out, _ in self.each():
-            self.assertNotIn("Omega:", out)
-            self.assertNotIn("omega:", out)
+        for edition, out, _ in self.editions():
+            with self.subTest(edition=edition):
+                self.assertNotIn("Omega:", out)
+                self.assertNotIn("omega:", out)
 
     def test_wall_seconds_need_a_recorded_end(self) -> None:
         """No recorded end, no wall time; a recorded one gives it."""
-        for _, rows in self.each():
-            self.assertEqual("300", rows["alpha-r1"]["wallSeconds"])
-            self.assertEqual("", rows["gamma-r1"]["wallSeconds"])
-            self.assertEqual("", rows["alpha-r2"]["wallSeconds"])
+        for edition, _, rows in self.editions():
+            with self.subTest(edition=edition):
+                self.assertEqual("300", rows["alpha-r1"]["wallSeconds"])
+                self.assertEqual("", rows["gamma-r1"]["wallSeconds"])
+                self.assertEqual("", rows["alpha-r2"]["wallSeconds"])
 
     def test_a_stopped_runs_problem_is_read_back(self) -> None:
         """problem.txt and the watcher's exit.txt rebuild the row."""
-        for _, rows in self.each():
-            self.assertEqual("timed out after 1740 s; stopped",
-                             rows["stopped-r1"]["error"])
-            self.assertEqual("1740", rows["stopped-r1"]["wallSeconds"])
-            self.assertEqual("-1", rows["stopped-r1"]["exitCode"])
+        for edition, _, rows in self.editions():
+            with self.subTest(edition=edition):
+                self.assertEqual("timed out after 1740 s; stopped",
+                                 rows["stopped-r1"]["error"])
+                self.assertEqual("1740", rows["stopped-r1"]["wallSeconds"])
+                self.assertEqual("-1", rows["stopped-r1"]["exitCode"])
 
     def test_maps_with_layouts_are_listed(self) -> None:
         """A run whose map holds a layout is named, with its landmark."""
-        for out, _ in self.each():
-            self.assertIn("== Maps holding layouts", out)
-            self.assertIn("ruins-r1 (seed ruins): 1 layout(s); landmark "
-                          "AncientGarrison", out)
-            self.assertNotIn("gamma-r1 (seed gamma)", out)
+        for edition, out, _ in self.editions():
+            with self.subTest(edition=edition):
+                self.assertIn("== Maps holding layouts", out)
+                self.assertIn("ruins-r1 (seed ruins): 1 layout(s); landmark "
+                              "AncientGarrison", out)
+                self.assertNotIn("gamma-r1 (seed gamma)", out)
 
 
 class StartTests(Workspace):
