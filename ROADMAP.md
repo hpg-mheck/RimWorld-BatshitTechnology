@@ -247,7 +247,10 @@ In order, each on its own branch:
   ends. If the pawn dies, is incapacitated, or drops the grenade (if
   practical) for some reason, the countdown keeps going, and the
   grenade detonates wherever it is when the countdown expires, without
-  a throw. Still open: how the tour or AnyRim might show it.
+  a throw. Showing it: "Needless to say, Ned should use the Overcharge
+  option. Poorly." Ned "Overkill" Lessly overcharges in the tour's
+  Raccoon Incident (Tractor Bomb slice 15000), and it goes about as well
+  as his name suggests; the census revises accordingly.
 
 ## Tuning and Upkeep
 
