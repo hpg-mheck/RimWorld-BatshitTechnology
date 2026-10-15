@@ -34,9 +34,11 @@ namespace BatshitTechnology
 
         /// <summary>
         /// The SUMMARY's layout version, raised when fields change: 2 adds
-        /// mapSeeds.
+        /// mapSeeds; 3 adds landmark, mutators, unpinnedLayouts,
+        /// startReseeded, startState and settleRetries, and makes the
+        /// stampede's killedFirstVolley null when no volley left.
         /// </summary>
-        private const int SummaryVersion = 2;
+        private const int SummaryVersion = 3;
 
         /// <summary>The cues the verifier takes a shot at.</summary>
         private static readonly HashSet<string> ShotCues =
@@ -190,6 +192,12 @@ namespace BatshitTechnology
                     ? null : ShowcaseSeed.SourceName(session.Seed.Source) },
                 { "worldSeed", Find.World?.info?.seedString },
                 { "mapSeeds", session?.MapSeedsPinned },
+                { "landmark", session?.Landmark },
+                { "mutators", session?.Mutators?.ToList() },
+                { "unpinnedLayouts", session?.UnpinnedLayouts },
+                { "startReseeded", session?.StartReseeded },
+                { "startState", session?.StartState },
+                { "settleRetries", session?.SettleReleaseRefused },
                 { "mapHash", session?.MapHash },
                 { "stageHash", session?.StageHash },
                 { "biome", map?.Biome?.defName },
@@ -407,7 +415,15 @@ namespace BatshitTechnology
             /// Each scene of the script, by key: how it ended (its END cue's
             /// outcome and the director's ending), or that it declined and
             /// why; and for one that ran, its ticks, its average ticks a
-            /// real second and its longest gap between ticks.
+            /// real second and its longest gap between ticks. The ticks a
+            /// second measure the game's speed mode more than the map: at
+            /// Superfast RimWorld 1.6 aims at 60 a second (1x) while
+            /// hostiles near colonists force normal speed, 360 (6x) as a
+            /// rule, and 720 (12x) when nothing is happening (every
+            /// colonist dead, say), as far as the machine keeps up, and
+            /// under -Parallel the other games' load counts too. They are
+            /// no score of smoothness; the longest gap includes any shot's
+            /// capture.
             /// </summary>
             /// <param name="cues">The tour's cues.</param>
             /// <returns>The scenes.</returns>
@@ -470,9 +486,10 @@ namespace BatshitTechnology
 
             /// <summary>
             /// The stampede: the herd, its dead before the second volley left
-            /// (or at the end, after a single volley), the volleys and their
-            /// bolts, the herd's dead at the end, the most fires on the map
-            /// and near the base, and the scene tick of the first volley.
+            /// (or at the end, after a single volley; null when no volley
+            /// left, Core's Stampede.KilledFirstVolley), the volleys and
+            /// their bolts, the herd's dead at the end, the most fires on the
+            /// map and near the base, and the scene tick of the first volley.
             /// </summary>
             /// <returns>The stampede's record, or null if it never ran.</returns>
             private JsonLine Stampede()
@@ -487,7 +504,8 @@ namespace BatshitTechnology
                 return new JsonLine
                 {
                     { "herd", s.Scene.Herd.Count },
-                    { "killedFirstVolley", s.DeadAtSecondVolley ?? dead },
+                    { "killedFirstVolley", Core.Stampede.KilledFirstVolley(
+                        s.Volleys.Count, s.DeadAtSecondVolley, dead) },
                     { "volleys", s.Volleys.Count },
                     { "volleyBolts", s.Volleys },
                     { "killed", dead },

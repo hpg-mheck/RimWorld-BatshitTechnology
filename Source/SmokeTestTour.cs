@@ -12,7 +12,9 @@
 // checks that it is quiet from READY to FINISHED and given back after,
 // that the run's seed and fingerprints were logged (SEED, MAPHASH,
 // STAGEHASH), that the map's seeds were pinned while it generated and the
-// map seed's window closed before START and stayed closed (MAPSEED), and
+// map seed's window closed before START and stayed closed (MAPSEED, which
+// also names the layouts and landmark a seed cannot pin; a NOTE repeats
+// them), that the rest of the game's start was drawn from the seed, and
 // that the stage was set up before the game's first tick.
 // At the end it logs one "[BT-TOUR] SUMMARY {json}" line, what trials
 // compare seeds by (Source/SmokeTestTour.Summary.cs, Tools/tour-trials.ps1),
@@ -200,8 +202,10 @@ namespace BatshitTechnology
         /// part, nothing queued); the seed the launch logged in its SEED
         /// cue, from the source its precedence picks; MAPHASH logged before
         /// START and STAGEHASH just before READY, matching the session's;
-        /// the global random state reseeded; and the stage set up before
-        /// the game's first tick, so no frame-timed tick ran before it.
+        /// the rest of the game's start, after the map, drawn from the
+        /// seed; the global random state reseeded; and the stage set up
+        /// before the game's first tick, so no frame-timed tick ran before
+        /// it.
         /// </summary>
         /// <param name="session">The showcase session.</param>
         /// <param name="director">The tour's director.</param>
@@ -248,6 +252,11 @@ namespace BatshitTechnology
                         StringComparison.Ordinal),
                 $"records [{string.Join(" | ", run.Where(IsRecord))}]; MAPHASH at {map}, "
                     + $"START at {start}, STAGEHASH at {stage}, READY at {ready}");
+            Check("tour: the rest of the game's start, after its map, was "
+                    + "drawn from the seed",
+                session.StartReseeded && session.StartState != null,
+                $"start reseeded {session.StartReseeded}; state at the start's end "
+                    + $"{session.StartState ?? "unread"}");
             Check("tour: the stage was set up from the seed before the game's "
                     + "first tick",
                 session.Reseeded && director.StartTick == 0,
@@ -259,11 +268,13 @@ namespace BatshitTechnology
         /// <summary>
         /// The map seed's window at READY: the prefix is installed; the
         /// MAPSEED cue comes between GAME and MAPHASH and says the map's
-        /// seeds were pinned, as many as the session holds, at least one;
-        /// every seed pinned in this process was pinned in that window
-        /// (the verify run generates no other map); and the window is
-        /// closed, so the prefix would pass this game's next seed through
-        /// to vanilla. Notes the count, for the check at the end.
+        /// seeds were pinned, as many as the session holds, at least one,
+        /// with the layouts and landmark the session noted (Core's
+        /// MapSeedCue); every seed pinned in this process was pinned in
+        /// that window (the verify run generates no other map); and the
+        /// window is closed, so the prefix would pass this game's next
+        /// seed through to vanilla. Notes the count, for the check at the
+        /// end, and what of the map the seed cannot pin.
         /// </summary>
         /// <param name="session">The showcase session.</param>
         /// <param name="run">The cues since the run's GAME cue.</param>
@@ -277,8 +288,17 @@ namespace BatshitTechnology
             bool open = ShowcaseMapSeed.Armed;
             bool pins = ShowcaseMapSeed.PinsFor(Current.Game);
             mapSeedsPinnedAtReady = total;
-            string wanted = pinned == 1 ? "MAPSEED pinned (1 seed)"
-                : $"MAPSEED pinned ({pinned} seeds)";
+            string wanted = "MAPSEED " + MapSeedCue.Detail(
+                true, pinned, false, session.UnpinnedLayouts, session.Landmark);
+            Log.Message("[BT-SMOKE] NOTE tour map: landmark "
+                + $"{session.Landmark ?? "none"}; mutators "
+                + $"[{string.Join(", ", session.Mutators)}]; "
+                + (session.UnpinnedLayouts > 0
+                    ? $"{session.UnpinnedLayouts} layout(s) whose rooms the seed "
+                        + "does not pin, so MAPHASH may differ in another process"
+                    : session.UnpinnedLayouts == 0
+                        ? "no layouts, so the seed pins the whole map"
+                        : "layouts unread"));
             Check("tour: the map's seeds were pinned while it generated, and "
                     + "the window closed before START",
                 ShowcaseMapSeed.Installed && pinned > 0 && cue == 1 && map == cue + 1
