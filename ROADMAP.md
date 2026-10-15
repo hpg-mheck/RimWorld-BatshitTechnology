@@ -240,12 +240,14 @@ In order, each on its own branch:
   seconds, cannot be aborted, and doubles the radius and power of all
   effects." Today's grenade pulls over 10 tiles for exactly 5 s
   (`Defs/ThingDefs/Items_SingularityGrenade.xml`); overcharged,
-  20 tiles at double strength and damage. Design open: whether the five
-  seconds are spent in the thrower's hands (so a thrower downed or
-  interrupted mid-charge drops it, still charging, at their feet) or on
-  the ground after it lands; how the option is chosen (a toggle on the
-  carrier, or a second throw command); and how the tour or AnyRim might
-  show it.
+  20 tiles at double strength and damage. The operator's design, the
+  same day: the Overcharge button is simply a toggle. If it is active
+  when the grenade is thrown, a five-second countdown locks the pawn in
+  place and commits it to the throw, which happens when the countdown
+  ends. If the pawn dies, is incapacitated, or drops the grenade (if
+  practical) for some reason, the countdown keeps going, and the
+  grenade detonates wherever it is when the countdown expires, without
+  a throw. Still open: how the tour or AnyRim might show it.
 
 ## Tuning and Upkeep
 
