@@ -33,7 +33,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 |---|---|---|---|
 | 1000 | Foundations (v0.8) | `trunk` | Done |
 | 2000 | AnyRim | `trunk` | Done |
-| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slices 18500 to 20000) |
+| 3000 | Tractor Bomb | `trunk` | Done |
 | 4000 | Showcase API | `trunk` | Done |
 | 5000 | Sound pipeline | `feature/audio` | Next |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
@@ -64,11 +64,26 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
   fixed (among them god mode leaking into the player's next colony).
   317 unit and XML tests; smoke 131/131 twice. Questions 14 to 16 in
   `docs/AI-requests-for-humans.txt` came out of it.
+- **Phase 3000, Tractor Bomb** (merged 2026-10-15; `docs/TRACTOR-BOMB.md`,
+  "As Built"; the tour in `docs/SHOWCASE.md`): the robot, the emplaced
+  bomb and its implosion, flee and freeze, Dial-A-Yield's named settings
+  (pulls of 9, 22.5 and 33.75 tiles), the Tractor Barn, Disposition and
+  hostile reactions, deaths and art; and the directed tour that shows it
+  off: ten narrated scenes on a pinned seed (tour-04), a clean stage, a
+  quiet screen, tourists as its unfortunates, and cuts that keep to the
+  map. 842 unit and XML tests; smoke 234/0; the tour 26/0 on tour-04
+  and tour-17, each map and stage repeating across processes. Items 23
+  and 24 of `docs/AI-requests-for-humans.txt` are open from its last
+  night.
 
-## Now: Phase 3000, Tractor Bomb
+Nothing is in progress. Phase 5000 is next once its specification's
+questions are answered.
 
-Branch: `feature/tractor-bomb`. Specification: `docs/TRACTOR-BOMB.md`
-(its "As Built" section describes what slices 1000 to 11000 delivered).
+## Phase 3000, Tractor Bomb (Done)
+
+Branch: `feature/tractor-bomb`, merged into `trunk` on 2026-10-15.
+Specification: `docs/TRACTOR-BOMB.md` (its "As Built" section describes
+what slices 1000 to 11000 delivered).
 
 An expendable robot that patrols for enemies, drives in as far as its
 Disposition allows, emplaces itself, counts down, drags everything in its
@@ -99,8 +114,8 @@ sense runs.
 | 17000 | Operator's viewing | Done |
 | 18000 | Showcase seeds, best of 32 | Done |
 | 18500 | Pull radii up by half | Done |
-| 19000 | Tourists, viewing feedback | Now |
-| 20000 | Merge into `trunk` | Planned |
+| 19000 | Tourists, viewing feedback | Done |
+| 20000 | Merge into `trunk` | Done |
 
 Slice 11000 delivered the twin-bomb junkyard test and the multi-bomb
 physics: superposed pulls with random bias jitter, absolute durations (the
@@ -198,8 +213,16 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
   clear of the caption bar, the tractor yard has junk for its pull,
   and the twins are framed closer (`docs/SHOWCASE.md`, "Camera and
   Framing"). What "needs work on the sequence" means is asked in
-  `docs/AI-requests-for-humans.txt`, item 24.
-- **20000:** the merge into `trunk`.
+  `docs/AI-requests-for-humans.txt`, item 24. A read-only review of the
+  night's work (two lenses) found five faults, none high; all were
+  fixed (tourists sent home when a saved tour is loaded, inert yard
+  junk, the README, the stampede's wording), and the implosion's smoke
+  flake was traced and fixed on the way (`docs/AI-KNOWN-ISSUES.txt`).
+- **20000, the merge into `trunk`,** done 2026-10-15 after the lead's
+  own gate on the final code: build clean, 842 unit and XML tests,
+  smoke 234/0, tour-04 and tour-17 26/0 twice each (MAPHASH and
+  STAGEHASH repeating), and a presentation capture read on contact
+  sheets.
 
 ### Decisions
 

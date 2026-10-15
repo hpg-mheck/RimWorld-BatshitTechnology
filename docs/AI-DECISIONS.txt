@@ -2885,3 +2885,29 @@ fbdfda1b460cb8e8, STAGEHASH 3e545fe519d9f53a, unchanged); 22 of 22 and 16 of
 guest-loss fix the same code ran smoke 234 and 0 and tour-04 26 and 0 twice.
 No game of this step is left running; the operator's data folder was not used,
 and no -KeepOpen or plain -Showcase run was made. No request was needed.
+2026-10-15 Claude: Tractor Bomb slice 20000, the lead's gate and the merge
+into trunk. The overnight workflow (plan .local/scratch/phase3000-finish/
+plan.md; nine agents: 18500, research, 19000a to 19000d, two reviewers, a
+fixer; about 5 h, 3.6M subagent tokens) finished at 05:57 with everything
+pushed. The operator's "Fine, finish Phase 3000" was taken as approval to
+merge once the lead's own gate, run on the final code (af52bd1; 6929c8c
+docs only) apart from the agents' runs, was green: build clean, 0 Def
+problems; 842 unit and XML tests passed, 0 failed; full smoke 234 and 0
+(.local/tmp/p3k-lead-smoke); tour-trials -Seeds tour-04,tour-17 -Repeat 2,
+all scenes, 26 and 0 in each of the four runs (p3k-lead-trials): tour-04
+MAPHASH 807b81f05fe15c80, STAGEHASH ba2b5a7f044f45cf, tour-17 fbdfda1b460cb8e8
+and 3e545fe519d9f53a, map, stage and start state the same in both runs of
+each; and a -Presentation -Shots run of the pinned tour (seed from the def),
+26 and 0, no colonist dead, every tourist accounted for, the storyteller's
+parts, the weather and the alerts given back (p3k-lead-present). The lead
+read its 52 frames on five contact sheets: a quiet screen (no DEV buttons,
+alerts, letters or messages), every scene opening on its own place, no shot
+off the map, the pulls, volleys and blasts in frame. Two things left for
+the operator's sequence question (request 24) rather than fixed on a guess:
+each scene opens under the previous scene's last line, and the tractor
+scene's end frame already shows the twins' yard. The Harmony patches are
+still the two approved (the Showcases button, Map.NextGenSeed). trunk had
+not moved since the branch last took it in (6564a9f), so the merge is a
+plain --no-ff merge of feature/tractor-bomb. Open for the operator from
+the night: requests 23 (Timid and Prudent both stop 15 tiles out now) and
+24 (the sequence).
