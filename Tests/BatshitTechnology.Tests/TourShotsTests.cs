@@ -31,7 +31,8 @@ public sealed class TourShotsTests
     [Fact(DisplayName = "Each beat kind has its delay")]
     public void DelayTicks_should_time_beats_by_moment()
     {
-        Assert.Equal(60, TourShotTiming.DelayTicks("BEAT", "volley"));
+        Assert.Equal(150, TourShotTiming.DelayTicks("BEAT", "volley"));
+        Assert.Equal(150, TourShotTiming.DelayTicks("BEAT", TourScript.Stragglers));
         Assert.Equal(60, TourShotTiming.DelayTicks("BEAT", "pull"));
         Assert.Equal(45, TourShotTiming.DelayTicks("BEAT", "herd"));
         Assert.Equal(15, TourShotTiming.DelayTicks("BEAT", "blast"));
@@ -43,11 +44,11 @@ public sealed class TourShotsTests
 
     /// <summary>
     /// Every beat of the tour's script waits more than nothing and at
-    /// most a second, so a frame shows its action without lagging its
-    /// scene.
+    /// most two and a half seconds (a volley's flight), so a frame shows
+    /// its action without lagging its scene.
     /// </summary>
-    [Fact(DisplayName = "Every scripted beat waits up to a second")]
-    public void DelayTicks_should_keep_every_scripted_beat_within_a_second()
+    [Fact(DisplayName = "Every scripted beat waits up to 2.5 seconds")]
+    public void DelayTicks_should_keep_every_scripted_beat_within_the_limit()
     {
         foreach (string moment in TourScript.Scenes.SelectMany(s => s.Moments))
         {

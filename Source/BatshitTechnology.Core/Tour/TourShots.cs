@@ -10,8 +10,8 @@ namespace BatshitTechnology.Core;
 /// frame, taken at the cue, showed only the Artificer). The delay depends
 /// on the cue and, for a beat, on its moment: a blast is caught while its
 /// fireball spreads, a volley while its bolts land, a pull while things
-/// slide. The delays are short, at most a second of game time, so a frame
-/// never lags its scene by much.
+/// slide. The delays are short, at most two and a half seconds of game
+/// time (a volley's flight), so a frame never lags its scene by much.
 /// </summary>
 public static class TourShotTiming
 {
@@ -30,18 +30,23 @@ public static class TourShotTiming
     /// </summary>
     public const int SceneTicks = 20;
 
-    /// <summary>The longest any delay is: one second.</summary>
-    public const int MaxDelayTicks = TicksPerSecond;
+    /// <summary>
+    /// The longest any delay is: two and a half seconds, a volley's
+    /// flight.
+    /// </summary>
+    public const int MaxDelayTicks = TicksPerSecond * 5 / 2;
 
     /// <summary>
     /// Delays for beats whose action takes a moment to show, by moment.
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
-    /// <item>volley, stragglers: 60. The Ballista's painful bolt flies at
-    /// 0.6 tiles a tick (speed 60), so a bolt reaches the defence's
-    /// target, 30 tiles out, in about 50 ticks; a second shows them
-    /// landing.</item>
+    /// <item>volley, stragglers: 150. A volley launches every bolt at
+    /// once, and the really painful bolt flies at 0.45 tiles a tick
+    /// (speed 45), so it reaches the defence's target, 60 tiles east of
+    /// the base's centre, in about 130 ticks; at 150 they are landing.
+    /// (At 60, a slice 19000b presentation showed them still in the
+    /// air, too small to see.)</item>
     /// <item>pull: 60. An implosion pulls for 2 to 8 seconds; one second
     /// in, things are visibly on the move.</item>
     /// <item>herd: 45. The stampede is well in from the map's edge.</item>
@@ -53,8 +58,8 @@ public static class TourShotTiming
     private static readonly Dictionary<string, int> BeatTicks =
         new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            { "volley", 60 },
-            { TourScript.Stragglers, 60 },
+            { "volley", 150 },
+            { TourScript.Stragglers, 150 },
             { "pull", 60 },
             { "herd", 45 },
             { "blast", 15 },
