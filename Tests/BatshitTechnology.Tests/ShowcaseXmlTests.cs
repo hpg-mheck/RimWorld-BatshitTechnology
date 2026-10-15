@@ -273,8 +273,35 @@ public sealed class ShowcaseXmlTests
     {
         "defName", "label", "description", "summary", "previewTexPath",
         "estimatedMinutes", "order", "requiredMods", "compatibility",
-        "mapSize", "biome", "workerClass", "scenes", "narration",
+        "mapSize", "biome", "seed", "workerClass", "scenes", "narration",
     };
+
+    /// <summary>
+    /// The def's <c>seed</c> field exists in the source as a string, and a
+    /// ShowcaseDef that pins a seed pins a usable one (1 to 64 ASCII
+    /// letters, digits, '-', '_' or '.'), which the game would otherwise
+    /// refuse with an error at launch.
+    /// </summary>
+    [Fact(DisplayName = "A ShowcaseDef's seed, if any, is well formed")]
+    public void ShowcaseDefs_should_pin_only_well_formed_seeds()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Showcases", "ShowcaseDef.cs"));
+        Assert.Matches(new Regex(@"\[NoTranslate\]\s+public string seed;"), source);
+
+        foreach (XElement def in ShowcaseDefs())
+        {
+            XElement? seed = def.Element("seed");
+            if (seed == null || string.IsNullOrWhiteSpace(seed.Value))
+            {
+                continue;
+            }
+
+            string name = def.Element("defName")?.Value ?? "(no defName)";
+            Assert.True(ShowcaseSeed.IsWellFormed(seed.Value.Trim()),
+                $"{name}: seed '{seed.Value}': {ShowcaseSeed.WhyMalformed(seed.Value.Trim())}");
+        }
+    }
 
     /// <summary>
     /// Batshit Technology's first showcase is the directed tour, with the

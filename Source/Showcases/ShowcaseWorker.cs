@@ -27,6 +27,24 @@ namespace BatshitTechnology.Showcases
         /// </summary>
         public const string Prefix = "[BT-SHOWCASE]";
 
+        /// <summary>
+        /// The record cues: what a run was (its seed, its fingerprints, the
+        /// storyteller's state), rather than how it went. Tooling comparing
+        /// a run's flow of cues can leave them out.
+        /// </summary>
+        public static readonly IReadOnlyCollection<string> RecordCues =
+            new HashSet<string> { "SEED", "MAPHASH", "STAGEHASH", "STORYTELLER" };
+
+        /// <summary>
+        /// Raised after each cue is logged, on the thread that logged it
+        /// (the generation's cues come from the long event's worker
+        /// thread), with the cue word and its detail. A handler that throws
+        /// is logged as a warning and does not stop the cue. Capture
+        /// tooling in this assembly, such as the tour verifier's shots,
+        /// listens here rather than reading the log back.
+        /// </summary>
+        internal static event Action<string, string> Cued;
+
         /// <summary>Writes one cue: the prefix, a word, and details.</summary>
         /// <param name="cue">The cue word, such as SCENE or END.</param>
         /// <param name="detail">What it concerns; may be empty.</param>
@@ -35,6 +53,14 @@ namespace BatshitTechnology.Showcases
             Log.Message(detail.NullOrEmpty()
                 ? $"{Prefix} {cue}"
                 : $"{Prefix} {cue} {detail}");
+            try
+            {
+                Cued?.Invoke(cue, detail);
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{Prefix} a listener to the {cue} cue failed: {e.Message}");
+            }
         }
     }
 

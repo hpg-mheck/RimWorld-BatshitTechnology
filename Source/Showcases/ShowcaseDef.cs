@@ -68,6 +68,19 @@ namespace BatshitTechnology.Showcases
         public BiomeDef biome;
 
         /// <summary>
+        /// The seed the showcase's game is generated from, like a world
+        /// seed: the same seed gives the same world, starting tile,
+        /// colonists and map, and the worker sets up under a random state
+        /// drawn from it. Blank means a fresh random seed each launch
+        /// (logged, so a run can be pinned later); a
+        /// <c>-showcaseseed=&lt;text&gt;</c> command line overrides it.
+        /// 1 to 64 ASCII letters, digits, '-', '_' or '.'
+        /// (docs/SHOWCASE-API.md, "Seeds").
+        /// </summary>
+        [NoTranslate]
+        public string seed;
+
+        /// <summary>
         /// The code that runs the showcase: a <see cref="ShowcaseWorker"/>
         /// subclass. The default, <see cref="ShowcaseDirector"/>, runs
         /// <see cref="scenes"/>.
@@ -229,6 +242,13 @@ namespace BatshitTechnology.Showcases
             if (estimatedMinutes <= 0f)
             {
                 yield return "estimatedMinutes must be positive";
+            }
+
+            string pinned = ShowcaseSeed.Normalize(seed);
+            if (pinned != null && !ShowcaseSeed.IsWellFormed(pinned))
+            {
+                yield return $"seed '{pinned}' is not usable: "
+                    + ShowcaseSeed.WhyMalformed(pinned);
             }
 
             foreach (string id in requiredMods ?? new List<string>())

@@ -10,7 +10,12 @@
 // showcase was asked for, tied to that Game object, so a stale request
 // can never turn the player's next real colony into a showcase.
 // Quick Test is a dev-mode button, but the calls it makes need no dev
-// mode.
+// mode. Every launch has a seed (the command line's, the def's, or a
+// fresh random one; a SEED cue names it): the set-up and the biome's tile
+// are drawn under a Rand state derived from it, and so is the map's
+// preparation, which replaces PageUtility.InitGameStart with the same two
+// calls; the map itself vanilla seeds from the world's seed and the tile
+// (docs/SHOWCASE-API.md, "Seeds").
 
 using System;
 using System.Collections.Generic;
@@ -30,12 +35,21 @@ namespace BatshitTechnology.Showcases
         /// <param name="def">The showcase.</param>
         /// <param name="game">The game generated for it.</param>
         /// <param name="forced">Whether Force start was confirmed.</param>
-        public LaunchRequest(ShowcaseDef def, Game game, bool forced)
+        /// <param name="seed">
+        /// The seed it was generated from, or null (a smoke test's planted
+        /// request); the session then sets up without reseeding.
+        /// </param>
+        public LaunchRequest(
+            ShowcaseDef def, Game game, bool forced, ResolvedSeed seed = null)
         {
             Def = def ?? throw new ArgumentNullException(nameof(def));
             Game = game ?? throw new ArgumentNullException(nameof(game));
             Forced = forced;
+            Seed = seed;
         }
+
+        /// <summary>Gets the seed the game was generated from, or null.</summary>
+        public ResolvedSeed Seed { get; }
 
         /// <summary>Gets the showcase.</summary>
         public ShowcaseDef Def { get; }
@@ -86,6 +100,37 @@ namespace BatshitTechnology.Showcases
                 : null;
 
         /// <summary>
+        /// Gets the seed passed as <c>-showcaseseed=&lt;text&gt;</c>, or
+        /// null. It overrides every showcase's own seed, for trials.
+        /// </summary>
+        public static string CommandLineSeed =>
+            GenCommandLine.TryGetCommandLineArg(
+                ShowcaseSeed.CommandLineArg, out string value)
+                ? value
+                : null;
+
+        /// <summary>
+        /// Resolves a launch's seed: the command line's, else the def's,
+        /// else a fresh random one made from the game's own seed words.
+        /// A malformed seed offered is refused with an error (whoever
+        /// passed it expected that map) and the next in order is used.
+        /// </summary>
+        /// <param name="def">The showcase, or null.</param>
+        /// <returns>The seed.</returns>
+        internal static ResolvedSeed ResolveSeed(ShowcaseDef def)
+        {
+            ResolvedSeed seed = ShowcaseSeed.Resolve(
+                CommandLineSeed, def?.seed, GenText.RandomSeedString);
+            foreach (string refusal in seed.Refused)
+            {
+                Log.Error($"{ShowcaseLog.Prefix} seed refused, {refusal}; using "
+                    + seed.CueDetail);
+            }
+
+            return seed;
+        }
+
+        /// <summary>
         /// Starts a showcase from the main menu: queues the generation of
         /// a fresh game, the way vanilla's Quick Test does.
         /// </summary>
@@ -131,10 +176,13 @@ namespace BatshitTechnology.Showcases
                 decision.Verdict == LaunchVerdict.Forced
                     ? $"{def.defName} forced"
                     : def.defName);
+            ResolvedSeed seed = ResolveSeed(def);
+            ShowcaseLog.Cue("SEED", seed.CueDetail);
+            LoadingTips.Prime();
             ShowcaseDef chosen = def;
             bool wasForced = decision.Verdict == LaunchVerdict.Forced;
             LongEventHandler.QueueLongEvent(
-                () => Generate(chosen, wasForced),
+                () => Generate(chosen, wasForced, seed),
                 "GeneratingMap",
                 doAsynchronously: true,
                 GameAndMapInitExceptionHandlers.ErrorWhileGeneratingMap);
@@ -270,8 +318,13 @@ namespace BatshitTechnology.Showcases
             }
 
             ShowcaseLog.Cue("LAUNCH", $"{def.defName} quicktest");
+
+            // Vanilla generated this map unseeded; the seed still pins the
+            // worker's random state, so the cue says what it cannot pin.
+            ResolvedSeed seed = ResolveSeed(def);
+            ShowcaseLog.Cue("SEED", $"{seed.CueDetail}; quicktest map, not pinned");
             return new LaunchRequest(
-                def, Current.Game, verdict == CommandLineVerdict.LaunchForced);
+                def, Current.Game, verdict == CommandLineVerdict.LaunchForced, seed);
         }
 
         /// <summary>
@@ -373,21 +426,71 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Generates the showcase's game. Runs inside the long event, on a
-        /// worker thread, as vanilla's Quick Test does.
+        /// worker thread, as vanilla's Quick Test does. The quick-test
+        /// set-up and the biome's tile are drawn under a Rand state
+        /// derived from the seed: the world's seed string (vanilla's
+        /// GenText.RandomSeedString), so the world, which vanilla seeds
+        /// from that string step by step; then the starting tile, the
+        /// starting colonists and the biome's tile. The state is pushed
+        /// and popped, as vanilla's world generation does on this thread;
+        /// the main thread draws nothing from Rand meanwhile (see
+        /// <see cref="LoadingTips"/>).
         /// </summary>
         /// <param name="def">The showcase.</param>
         /// <param name="forced">Whether it was forced.</param>
-        private static void Generate(ShowcaseDef def, bool forced)
+        /// <param name="seed">The launch's seed.</param>
+        private static void Generate(ShowcaseDef def, bool forced, ResolvedSeed seed)
         {
-            Root_Play.SetupForQuickTestPlay();
-            Find.GameInitData.mapSize = def.MapSizeClamped;
-            PreferBiome(def);
-            lock (Gate)
+            Rand.PushState(seed.Derive(ShowcaseSeed.World));
+            try
             {
-                pending = new LaunchRequest(def, Current.Game, forced);
+                Root_Play.SetupForQuickTestPlay();
+                Find.GameInitData.mapSize = def.MapSizeClamped;
+                PreferBiome(def);
+            }
+            finally
+            {
+                Rand.PopState();
             }
 
-            PageUtility.InitGameStart();
+            lock (Gate)
+            {
+                pending = new LaunchRequest(def, Current.Game, forced, seed);
+            }
+
+            InitGameStart(seed);
+        }
+
+        /// <summary>
+        /// Loads the Play scene to generate the map: vanilla's
+        /// PageUtility.InitGameStart (RimWorld 1.6.4871), whose two calls
+        /// are made here under a Rand state derived from the seed. The
+        /// first gives the colonists their work priorities, breaking ties
+        /// at random; the second founds the player's settlement, with a
+        /// random name. The map that follows is seeded by vanilla from the
+        /// world's seed and the starting tile.
+        /// </summary>
+        /// <param name="seed">The launch's seed.</param>
+        private static void InitGameStart(ResolvedSeed seed)
+        {
+            LongEventHandler.QueueLongEvent(
+                () =>
+                {
+                    Rand.PushState(seed.Derive(ShowcaseSeed.Prep));
+                    try
+                    {
+                        Find.GameInitData.PrepForMapGen();
+                        Find.Scenario.PreMapGenerate();
+                    }
+                    finally
+                    {
+                        Rand.PopState();
+                    }
+                },
+                "Play",
+                "GeneratingMap",
+                doAsynchronously: true,
+                null);
         }
 
         /// <summary>

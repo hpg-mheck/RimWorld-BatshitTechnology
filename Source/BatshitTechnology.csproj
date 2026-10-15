@@ -85,6 +85,7 @@
     <Compile Include="SmokeTest.TractorBombHostiles.cs" />
     <Compile Include="SmokeTest.TractorBombTwins.cs" />
     <Compile Include="SmokeTestShowcases.cs" />
+    <Compile Include="SmokeTestShowcases.Seeds.cs" />
     <Compile Include="SmokeTestTour.cs" />
     <Compile Include="SmokeTestTour.Raccoon.cs" />
     <Compile Include="SmokeTestTour.Stampede.cs" />
@@ -113,6 +114,7 @@
     <Compile Include="Showcases\GameComponent_ShowcaseSession.cs" />
     <Compile Include="Showcases\NarrationOverlayDrawer.cs" />
     <Compile Include="Showcases\ShowcaseDef.cs" />
+    <Compile Include="Showcases\ShowcaseDeterminism.cs" />
     <Compile Include="Showcases\ShowcaseDirector.cs" />
     <Compile Include="Showcases\ShowcaseGodMode.cs" />
     <Compile Include="Showcases\ShowcaseLauncher.cs" />

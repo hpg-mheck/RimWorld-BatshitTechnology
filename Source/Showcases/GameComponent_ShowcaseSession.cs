@@ -10,11 +10,20 @@
 // about the session is saved: a showcase game the player chooses to save
 // loads as an ordinary game. God mode a showcase borrowed for its
 // developer buttons (ShowcaseGodMode) is given back when the showcase
-// stops or finishes, and again whenever a game that is not a showcase starts or loads. Two
+// stops or finishes, and again whenever a game that is not a showcase
+// starts or loads. Random incidents are off while a showcase runs: the
+// storyteller's parts are held from the session's start until the
+// showcase finishes or stops, then given back, since the closing line
+// hands the colony to the viewer. For repeatability (docs/SHOWCASE-API.md,
+// "Seeds"), the session logs the new map's fingerprint (MAPHASH), holds
+// the game paused while the map settles, so no frame-timed ticks run
+// before the worker, reseeds the global random state from the launch's
+// seed, and logs the stage's fingerprint (STAGEHASH) before READY. Two
 // internal seams, AdoptForTest and ReleaseForTest, let the smoke runner
 // (Source/SmokeTestShowcases.cs) run test showcases in its own game.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using RimWorld;
@@ -104,6 +113,36 @@ namespace BatshitTechnology.Showcases
         /// <summary>How many frames the overlay has drawn text in.</summary>
         private int narrationFrames;
 
+        /// <summary>The seed the game was generated from, or null.</summary>
+        private ResolvedSeed seed;
+
+        /// <summary>The new map's fingerprint, as hex, or null.</summary>
+        private string mapHash;
+
+        /// <summary>The stage's fingerprint at READY, as hex, or null.</summary>
+        private string stageHash;
+
+        /// <summary>
+        /// Whether the global random state was reseeded from the seed as
+        /// the worker was set up.
+        /// </summary>
+        private bool reseeded;
+
+        /// <summary>
+        /// The storyteller's parts while the showcase holds them, or null
+        /// when it does not: random incidents are off while it does.
+        /// </summary>
+        private List<StorytellerComp> heldStorytellerComps;
+
+        /// <summary>
+        /// Whether the session paused the game while the map settles, and
+        /// so must unpause it when it sets the worker up.
+        /// </summary>
+        private bool settleHeld;
+
+        /// <summary>The game's speed before the settle hold.</summary>
+        private TimeSpeed speedBeforeSettle = TimeSpeed.Normal;
+
         /// <summary>Created by RimWorld for every game.</summary>
         /// <param name="game">The game.</param>
         public GameComponent_ShowcaseSession(Game game)
@@ -172,9 +211,48 @@ namespace BatshitTechnology.Showcases
         internal NarrationOverlay Narration => narration;
 
         /// <summary>
-        /// Takes the launcher's request for this game, if there is one. A
-        /// game that is not a showcase gives back any god mode an earlier
-        /// showcase still held.
+        /// Gets the seed this game was generated from, or null for a game
+        /// the smoke runner adopted.
+        /// </summary>
+        public ResolvedSeed Seed => seed;
+
+        /// <summary>
+        /// Gets the new map's fingerprint (the MAPHASH cue's), as hex, or
+        /// null before the game started.
+        /// </summary>
+        public string MapHash => mapHash;
+
+        /// <summary>
+        /// Gets the stage's fingerprint at READY (the STAGEHASH cue's), as
+        /// hex, or null before READY.
+        /// </summary>
+        public string StageHash => stageHash;
+
+        /// <summary>
+        /// Gets a value indicating whether the global random state was
+        /// reseeded from the seed as the worker was set up.
+        /// </summary>
+        public bool Reseeded => reseeded;
+
+        /// <summary>
+        /// Gets a value indicating whether the showcase holds the
+        /// storyteller's parts, so no random incident comes.
+        /// </summary>
+        public bool StorytellerQuiet => heldStorytellerComps != null;
+
+        /// <summary>
+        /// Gets how many storyteller parts the showcase holds, or -1 when
+        /// it holds none.
+        /// </summary>
+        public int StorytellerCompsHeld => heldStorytellerComps?.Count ?? -1;
+
+        /// <summary>
+        /// Takes the launcher's request for this game, if there is one,
+        /// then fingerprints the new map (MAPHASH), quiets the storyteller,
+        /// and holds the game paused while the map settles. A game that is
+        /// not a showcase gives back any god mode an earlier showcase
+        /// still held. Runs at the end of Game.InitNewGame, inside the
+        /// long event, before the game's first tick.
         /// </summary>
         public override void StartedNewGame()
         {
@@ -188,7 +266,11 @@ namespace BatshitTechnology.Showcases
 
             def = request.Def;
             forced = request.Forced;
+            seed = request.Seed;
             ShowcaseLog.Cue("GAME", def.defName);
+            mapHash = Fingerprint(game.CurrentMap ?? game.Maps.FirstOrDefault(), "MAPHASH");
+            QuietStoryteller();
+            HoldWhileSettling();
         }
 
         /// <summary>
@@ -286,6 +368,7 @@ namespace BatshitTechnology.Showcases
                 farewellPending = true;
                 ShowcaseGodMode.Restore();
                 ShowcaseLog.Cue("FINISHED", def.defName);
+                RestoreStoryteller();
                 SayFarewellWhenQuiet();
             }
         }
@@ -397,6 +480,7 @@ namespace BatshitTechnology.Showcases
 
             ShowcaseGodMode.Restore();
             ShowcaseLog.Cue("STOPPED", def.defName);
+            RestoreStoryteller();
             if (byViewer)
             {
                 Message("BT_Showcases_Stopped".Translate());
@@ -447,11 +531,19 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Forgets the showcase and everything about its run, giving back
-        /// any god mode it borrowed.
+        /// any god mode it borrowed, the storyteller's parts it held, and
+        /// the game's speed if it was holding the game while the map
+        /// settled.
         /// </summary>
         private void ResetRun()
         {
             ShowcaseGodMode.Restore();
+            RestoreStoryteller();
+            ReleaseSettleHold();
+            seed = null;
+            mapHash = null;
+            stageHash = null;
+            reseeded = false;
             def = null;
             forced = false;
             worker = null;
@@ -468,16 +560,25 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Makes the worker and sets it up on the map, then logs READY,
-        /// the cue capture tooling waits on before maximizing the window.
-        /// A set-up that throws is logged and ends the showcase; the game
-        /// stays open.
+        /// Makes the worker and sets it up on the map, then logs the
+        /// stage's fingerprint (STAGEHASH) and READY, the cue capture
+        /// tooling waits on before maximizing the window. Before the set
+        /// up it lets the game run again (it was held paused while the map
+        /// settled), quiets the storyteller if a test adopted the game,
+        /// and reseeds the global random state from the launch's seed, so
+        /// the same seed stages the same things in the same places. A set
+        /// up that throws is logged and ends the showcase; the game stays
+        /// open, with its storyteller back.
         /// </summary>
         /// <param name="map">The showcase's map.</param>
         private void Begin(Map map)
         {
             begun = true;
             ShowcaseLog.Cue("START", forced ? $"{def.defName} forced" : def.defName);
+            ReleaseSettleHold();
+            QuietStoryteller();
+            reseeded = seed != null
+                && ShowcaseRandom.Reseed(seed.Derive(ShowcaseSeed.Stage));
             try
             {
                 worker = def.MakeWorker();
@@ -491,10 +592,141 @@ namespace BatshitTechnology.Showcases
                 ShowcaseLog.Cue("FAILED", def.defName);
                 Log.Error($"{ShowcaseLog.Prefix} {def.defName} could not set "
                     + $"up: {e}");
+                RestoreStoryteller();
                 return;
             }
 
+            stageHash = Fingerprint(map, "STAGEHASH");
             ShowcaseLog.Cue("READY", null);
+        }
+
+        /// <summary>
+        /// Fingerprints a map and logs it as a record cue. Never throws: a
+        /// failure is logged as a warning (the run is then not provable)
+        /// and gives null.
+        /// </summary>
+        /// <param name="map">The map, or null.</param>
+        /// <param name="cue">The cue word, MAPHASH or STAGEHASH.</param>
+        /// <returns>The fingerprint as hex, or null.</returns>
+        private static string Fingerprint(Map map, string cue)
+        {
+            if (map == null)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} no map to fingerprint for {cue}");
+                return null;
+            }
+
+            try
+            {
+                MapFingerprint print = ShowcaseFingerprint.Of(map);
+                ShowcaseLog.Cue(cue, ShowcaseFingerprint.CueDetail(print));
+                return print.Hex;
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not fingerprint the map "
+                    + $"for {cue}: {e}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Takes the storyteller's parts away, and drops any incident it
+        /// has queued, so no random incident (a raid, a manhunter pack)
+        /// lands in the showcase; logs a STORYTELLER cue. Does nothing if
+        /// they are already held. The parts belong to this game, so a game
+        /// left mid-showcase takes them along; a showcase game the viewer
+        /// saves rebuilds them on loading.
+        /// </summary>
+        private void QuietStoryteller()
+        {
+            Storyteller teller = game?.storyteller;
+            if (teller == null || heldStorytellerComps != null)
+            {
+                return;
+            }
+
+            heldStorytellerComps = teller.storytellerComps ?? new List<StorytellerComp>();
+            teller.storytellerComps = new List<StorytellerComp>();
+            int dropped = teller.incidentQueue?.Count ?? 0;
+            teller.incidentQueue?.Clear();
+            ShowcaseLog.Cue("STORYTELLER", $"quiet ({Parts(heldStorytellerComps.Count)} held"
+                + (dropped > 0 ? $", {dropped} queued incidents dropped)" : ")"));
+        }
+
+        /// <summary>A count of storyteller parts, for a cue.</summary>
+        /// <param name="n">The count.</param>
+        /// <returns>"1 part" or "n parts".</returns>
+        private static string Parts(int n) => n == 1 ? "1 part" : $"{n} parts";
+
+        /// <summary>
+        /// Gives the storyteller its parts back, if the showcase holds
+        /// them, and logs a STORYTELLER cue. If something rebuilt the
+        /// parts meanwhile (a change of storyteller or difficulty does),
+        /// the new ones stay.
+        /// </summary>
+        private void RestoreStoryteller()
+        {
+            if (heldStorytellerComps == null)
+            {
+                return;
+            }
+
+            Storyteller teller = game?.storyteller;
+            if (teller != null && (teller.storytellerComps == null
+                || teller.storytellerComps.Count == 0))
+            {
+                teller.storytellerComps = heldStorytellerComps;
+            }
+
+            heldStorytellerComps = null;
+            ShowcaseLog.Cue("STORYTELLER",
+                $"restored ({Parts(teller?.storytellerComps?.Count ?? 0)})");
+        }
+
+        /// <summary>
+        /// Pauses the game while the new map settles, so the worker is set
+        /// up before the game's first tick. Unpaused, the game would run
+        /// as many ticks in the settling frames as the frame rate allowed,
+        /// and the stage would differ from run to run however it was
+        /// seeded.
+        /// </summary>
+        private void HoldWhileSettling()
+        {
+            TickManager ticks = game?.tickManager;
+            if (ticks == null || settleHeld || ticks.CurTimeSpeed == TimeSpeed.Paused)
+            {
+                return;
+            }
+
+            speedBeforeSettle = ticks.CurTimeSpeed;
+            ticks.CurTimeSpeed = TimeSpeed.Paused;
+            settleHeld = ticks.CurTimeSpeed == TimeSpeed.Paused;
+            if (!settleHeld)
+            {
+                // The setter refuses while the player has no control.
+                Log.Warning($"{ShowcaseLog.Prefix} could not pause the game while "
+                    + "the map settles; the stage may not repeat for its seed");
+            }
+        }
+
+        /// <summary>
+        /// Lets the game run again after the settle hold, at its speed
+        /// before, unless the viewer has changed the speed meanwhile.
+        /// </summary>
+        private void ReleaseSettleHold()
+        {
+            if (!settleHeld)
+            {
+                return;
+            }
+
+            settleHeld = false;
+            TickManager ticks = game?.tickManager;
+            if (ticks != null && ticks.CurTimeSpeed == TimeSpeed.Paused)
+            {
+                ticks.CurTimeSpeed = speedBeforeSettle;
+            }
         }
 
         /// <summary>

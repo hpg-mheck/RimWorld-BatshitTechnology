@@ -375,6 +375,9 @@ namespace BatshitTechnology
             TestStoppedLineConfigError();
             TestForceOutsideDevMode();
             TestShowcaseGroups();
+            TestShowcaseSeeds();
+            TestGlobalReseed();
+            TestMapFingerprint(map);
             TestDirectorRun(map);
             TestFaultyScenes(map);
             TestDevButtonLoan(map);
@@ -1011,7 +1014,12 @@ namespace BatshitTechnology
             CameraDriver camera = Find.CameraDriver;
             camera.SetRootSize(45f);
             Find.Selector.ClearSelection();
+            (List<StorytellerComp> smokeParts, StorytellerComp lent) = LendStorytellerPart();
             showcaseSession.AdoptForTest(def, map);
+            bool quietWhileRunning = showcaseSession.StorytellerQuiet
+                && Find.Storyteller.storytellerComps.Count == 0;
+            string stageHash = showcaseSession.StageHash;
+            bool reseeded = showcaseSession.Reseeded;
             var director = showcaseSession.Worker as ShowcaseDirector;
             if (director == null || !showcaseSession.Running)
             {
@@ -1019,6 +1027,7 @@ namespace BatshitTechnology
                     $"worker {showcaseSession.Worker?.GetType().Name ?? "none"}, "
                     + $"running {showcaseSession.Running}");
                 showcaseSession.ReleaseForTest();
+                PutBackStoryteller(smokeParts);
                 return;
             }
 
@@ -1040,6 +1049,8 @@ namespace BatshitTechnology
                 $"'{director.Caption}'");
 
             Tick(5);
+            quietWhileRunning &= showcaseSession.StorytellerQuiet
+                && Find.Storyteller.storytellerComps.Count == 0;
             showcaseSession.Skip();
             Check("Skip ends the running scene as skipped and starts the next",
                 director.CurrentScene?.key == "timeout"
@@ -1097,7 +1108,9 @@ namespace BatshitTechnology
             Check("the directed run logs no Showcase API warning (camera moves, "
                     + "selection and the narration overlay all worked)",
                 warnings.Count == 0, string.Join(" | ", warnings));
+            CheckRecordCues(mark, lent, quietWhileRunning, stageHash, reseeded);
             showcaseSession.ReleaseForTest();
+            PutBackStoryteller(smokeParts);
         }
 
         /// <summary>
@@ -2104,6 +2117,7 @@ namespace BatshitTechnology
                 $"running {showcaseSession.Running}; state {stopRun?.State}; endings "
                     + $"{(stopRun == null ? "none" : Endings(stopRun))}; cues "
                     + $"{string.Join(" | ", cues)}; lines {string.Join(" | ", lines)}");
+            CheckStopRestoresStoryteller(mark);
 
             NarrationOverlay overlay = showcaseSession.Narration;
             Check("Stop clears the narration overlay at once: the stopped "
@@ -2260,11 +2274,16 @@ namespace BatshitTechnology
         /// <summary>
         /// The Showcase API's log cues since a message, without the prefix.
         /// Cues are plain messages; the API's errors and warnings share the
-        /// prefix but are not cues.
+        /// prefix but are not cues. The record cues (SEED, MAPHASH,
+        /// STAGEHASH, STORYTELLER: what a run was, not how it went) are
+        /// left out unless asked for, so a check of a run's flow names
+        /// only its flow.
         /// </summary>
         /// <param name="mark">The last message before; null for all.</param>
+        /// <param name="withRecords">Whether to keep the record cues.</param>
         /// <returns>The cues, in order.</returns>
-        private static List<string> ShowcaseCuesSince(LogMessage mark)
+        private static List<string> ShowcaseCuesSince(
+            LogMessage mark, bool withRecords = false)
         {
             IEnumerable<LogMessage> since = mark == null
                 ? Log.Messages
@@ -2274,6 +2293,7 @@ namespace BatshitTechnology
                 .Where(m => m.type == LogMessageType.Message && m.text != null
                     && m.text.StartsWith(prefix, StringComparison.Ordinal))
                 .Select(m => m.text.Substring(prefix.Length))
+                .Where(c => withRecords || !IsRecord(c))
                 .ToList();
         }
 
