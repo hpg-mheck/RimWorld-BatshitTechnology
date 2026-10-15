@@ -226,19 +226,34 @@
   verify, DLL 14:19:35); the scene now logs the grenadier's state every
   600 ticks while the throw is overdue. The tractor scene runs at about
   48 game ticks a second in verify runs (see docs/AI-TODO.txt).
-- Showcase seeds (slice 18000, 2026-10-14): a seed pins a showcase's
-  world, starting tile, colonists and settlement in any process, but not
-  its map: RimWorld 1.6's Map.NextGenSeed mixes System.HashCode's random
-  per-process seed into the Rand blocks of ancient shrines, ruins, junk
-  clusters, mechanoid remains, prefabs, layouts and unique weapons, and
-  the plants, rock chunks and animals placed after them shift with them.
-  So MAPHASH and STAGEHASH differ between launches of one seed, and so
-  does the stage built on the map (in one pair AnyRim found a site in one
-  run and none in the other). Terrain, rock, ores, geysers and roads
-  repeat. The proven fix is a second Harmony patch (a deterministic
-  NextGenSeed while a showcase's map generates), awaiting approval
-  (docs/AI-requests-for-humans.txt, item 22). Within one process the
-  same seed would repeat the map; trials run a process each.
+- Showcase seeds (slice 18000, 2026-10-14): the map seed's Harmony patch
+  (requests item 22, approved) makes a seed pin a showcase's map and
+  stage in any process, as well as its world, tile, colonists and
+  settlement. What it still cannot cover: a seed pins a map for one
+  RimWorld version and one mod list only (a mod that adds gen steps or
+  map features, or a game update that changes generation, gives another
+  map); the prefix copies the three inputs of 1.6.4871's
+  Map.NextGenSeed and checks at start-up only that the getter and its
+  counter (Map.generatedId) still exist, so a later version that
+  changed what the getter combines would need the prefix reviewed. A
+  -quicktest showcase's map is vanilla's and not pinned (its MAPSEED
+  cue says so).
+- Seed choice and starting hostiles (slice 18000 trials, 2026-10-14): a
+  pinned map keeps its starting hostiles too. Seed s18-a's map starts
+  with dark entities, and all three of its all-scene verify runs (two
+  from the command line, one from the def) failed the colonist-safety
+  facts, with different colonists hurt in different scenes; seed yam's
+  map starts with raiders, dark entities and insects, and one of its two
+  runs lost the stampede's volley (no volley fired, no boomalope
+  killed). s18-b (one mech) passed both runs. The best-of-32 choice
+  should prefer maps with no starting hostiles (the SUMMARY's
+  hostilesAtReady and hostileKinds).
+- Unexplained (slice 18000 final all-scene verify, seed green, two dark
+  entities at the start): during the raccoon scene three colonists at
+  the base, about 100 tiles from AnyRim, were shredded and died, two of
+  them while refuelling or beating out a fire; the scene's notes do not
+  say what did it. The run's folder is .local/tmp/mapseed-final-verify-
+  all2 (Player.log) and its seed, green, repeats the map and stage.
 - Even with the map and stage pinned, a tour after READY repeats only
   partly: the game draws on its one global random state from code that
   runs per frame (effects, sounds, the interface) as well as per tick,

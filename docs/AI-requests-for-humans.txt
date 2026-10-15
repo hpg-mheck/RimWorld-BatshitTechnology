@@ -129,24 +129,10 @@ Matt "Breakpoint" Heck:
     goodwill letters; recommended), or (b) AnyRim's own residents'
     faction, presented as visiting relatives. And should a tourist stand
     in for the grenade's volunteer, so no colonist is ever harmed?
-22. Showcase seeds (slice 18000, 2026-10-14): Matt "Breakpoint" Heck, a
-    seed now pins a showcase's world, starting tile, colonists and
-    settlement, but RimWorld 1.6 itself will not generate the same map
-    twice in two processes: Map.NextGenSeed is System.HashCode.Combine(
-    tile, counter, world seed), and System.HashCode mixes in a random
-    seed chosen once per process. Ancient shrines, ruins, junk clusters,
-    mechanoid remains and the like are seeded from it, and the plants,
-    rock chunks and animals placed after them shift too; so the map, and
-    the tour's stage on it, differ from launch to launch whatever the
-    seed. A diagnostic run proved it: with NextGenSeed made deterministic
-    (the same three inputs, combined with Gen.HashCombineInt), two
-    processes gave the same map and stage, gen step by gen step. Making
-    that the rule takes a second Harmony patch, a prefix on the
-    Map.NextGenSeed getter, active only while a showcase's game generates
-    its map (every other map stays exactly vanilla); Decision 1 keeps the
-    Showcase API patch-free but for the menu button. May it be added?
-    Recommended: yes; without it, "the best of 32 seeds" picks a world
-    and a starting place, not a map or a stage. The alternative without
-    Harmony is to leave those gen steps out of showcase maps (no ancient
-    shrines, ruins or junk clusters), which changes how a showcase's map
-    looks. Proposal and proof: docs/AI-DECISIONS.txt, slice 18000.
+22. (Resolved 2026-10-14: "Approve the patch." Built in slice 18000:
+    the mod's second Harmony patch, a prefix on the Map.NextGenSeed
+    getter, active only while a showcase's game generates its map and
+    bound to that game, so every other map stays exactly vanilla. A seed
+    now pins the map and the stage as well as the world, starting tile,
+    colonists and settlement; docs/SHOWCASE-API.md, "Seeds" and Decision
+    1, and docs/AI-DECISIONS.txt, slice 18000.)

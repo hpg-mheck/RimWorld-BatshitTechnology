@@ -79,7 +79,9 @@ development), then enable **Batshit Technology** in the mod list. It
 requires the **Harmony** mod (`brrainz.harmony`, Steam Workshop item
 2009463077), which must load before it; RimWorld's mod list says so if it
 is missing. Harmony supplies `0Harmony.dll`, which this mod never ships,
-for one patch only: the main menu's **Showcases** button.
+for two patches only: the main menu's **Showcases** button, and one that
+makes a showcase's map the same every time for the same seed, acting only
+while that map is generated.
 
 ## Showcases
 

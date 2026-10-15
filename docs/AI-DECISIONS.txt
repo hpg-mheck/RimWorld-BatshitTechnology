@@ -2054,3 +2054,117 @@ every scene's outcome, but a different MAPHASH and STAGEHASH and
 different starting hostiles, as the finding above says. No RimWorld of
 this session is left running; the operator's data folder was never
 used, and no -KeepOpen or plain -Showcase run was made.
+
+2026-10-14 Claude: Tractor Bomb slice 18000, the map seed's Harmony patch
+(requests item 22). Matt "Breakpoint" Heck answered item 22: "Approve the
+patch." Built for production from the proven experiment
+(.local/scratch/seeds18000/proposed-nextgenseed-patch.md). Decisions:
+- The prefix (Source/Showcases/ShowcaseMapSeed.cs) reads Map.NextGenSeed's
+  three inputs in vanilla's order (the tile's hash, or the map's id off
+  the planet; Map.generatedId, advanced as vanilla does through Harmony's
+  ___generatedId; the world's seed) and returns
+  Gen.HashCombineInt(Gen.HashCombineInt(place, counter), worldSeed), as
+  the experiment did, skipping vanilla's getter. Anything that would
+  throw in vanilla throws the same way; nothing is swallowed.
+- It acts only inside a window bound to one Game object (Core's
+  GenerationPin, unit tested: closed until armed, open for that very
+  object only, by reference, counted under one lock). The launcher opens
+  it on the long event's thread right after SetupForQuickTestPlay and
+  the biome's tile, before the map; the session closes it as the first
+  act of StartedNewGame for every new game (the end of
+  Game.InitNewGame, once the map exists) and logs MAPSEED with the
+  count. It is also closed, with a warning if found open, when the
+  set-up or the preparation throws, whenever the main menu is shown
+  (vanilla never draws it while a long event runs or waits:
+  UIRoot_Entry.ShouldDoMainMenu), when a game loads, and harmlessly at
+  set-up, Stop, FINISHED and a smoke test's reset. Binding to the Game
+  means a window some failure leaves open can never pin another game.
+  A bare flag was rejected for that reason.
+- Same Harmony instance and id as the menu button: ShowcaseMenuButton's
+  InstallPatches makes one Harmony(HarmonyId) and installs both patches
+  through it, each in its own try, so a failure of one (a renamed
+  getter or counter in a later RimWorld) is logged and leaves the other
+  working. The prefix itself names no Harmony type, so HarmonyLib stays
+  in one file, which the XML test enforces. The patch checks that
+  Map.generatedId is still an int before patching.
+- MAPSEED is a fifth record cue: "pinned (<n> seeds)", "not pinned
+  (quicktest map)" or "not pinned (no patch)", between GAME and
+  MAPHASH. The session's MapSeedsPinned and the SUMMARY's mapSeeds
+  (SUMMARY version 2) carry the count. OwnPatches lines now end with
+  the patch's owner in brackets, so the smoke check also proves both
+  patches share the id.
+- Checks: the XML test now allows exactly two Patch calls in the
+  button's file, one postfix on DrawOptionListing and one prefix
+  (ShowcaseMapSeed.Prefix) on the NextGenSeed getter, and no
+  transpiler, finalizer or bulk patching; a second XML test holds the
+  prefix to opening with its pass-through test. Smoke: the patch check
+  expects both lines; in the ordinary smoke game NextGenSeed equals
+  System.HashCode.Combine of its inputs in the same process (called by
+  reflection: the mod compiles against .NET Framework 4.7.2, which has
+  no System.HashCode) and counts as passed through, also with the
+  window open for another (uninitialised) Game; with the window open
+  for the smoke game it gives the pinned value, and closing it says one
+  seed. Both put the map's counter back. Verifier: at READY MAPSEED
+  says pinned with the session's count, every seed pinned in the
+  process was pinned in the window, and the window is closed; at the
+  end nothing more was pinned and it is still closed.
+- Not done: ROADMAP.md line 58 still calls the button "the mod's only
+  Harmony patch" (this step may not edit ROADMAP.md). The player-facing
+  About.xml description still says Harmony is required "for that
+  button", which stays true; its XML comment names both patches.
+Proof (DLL 20:31:58, Tools/tour-trials.ps1 -Parallel 4,
+.local/tmp/mapseed-trials1 and mapseed-trials2-yam): s18-a twice, MAPHASH
+0ca9bf0ea67aad73 and STAGEHASH c7de31d2c28b0aeb both times (37 seeds
+pinned); s18-b twice, 59717c88cd7267f3 and 9029f74f1f50188e (467); the
+same values the diagnostic build gave. -RandomRuns 1 drew "yam" (world
+"raccoon", tile 21692, 48 seeds, 8b628f88592cb98a, 3a590ec61704850a);
+yam passed back in gave the same. A temporary <seed>s18-a</seed> in
+BT_Showcase (never committed; restored from a copy and checked by
+SHA-256) gave seedSource def and the same MAPHASH and STAGEHASH as the
+command line (.local/tmp/mapseed-defseed). The new verifier facts
+passed in all seven runs. Tour outcomes: s18-b 18 of 18 twice, yam's
+rerun 18 of 18; s18-a's three runs (dark entities at the start) each
+failed the two colonist-safety facts, with different colonists hurt in
+different scenes, and yam's random run (raiders, dark entities and
+insects) lost the stampede's volley. Those are the known starting-
+hostiles issue and post-READY drift (docs/AI-KNOWN-ISSUES.txt), not the
+map seed: map and stage matched in every pair. For the best-of-32
+batch, prefer seeds whose SUMMARY shows no starting hostiles.
+Sabotage (.local/scratch/seeds18000/sabotage_mapseed.py, one build, DLL
+20:40:47): GenerationPin's rule inverted, so a closed window pins every
+game's seeds (left active outside showcases) and one open for a
+showcase's game pins every game but that one (never active for it).
+Unit tests 5 failed, 757 passed (the five GenerationPin tests). Smoke
+209 passed, 2 failed, exactly the two new map seed checks (in the
+ordinary game "closed False ... got 1563757315, vanilla -1956621380";
+with its own window "pins this game False"). A quick verify with s18-b
+(every scene declined) 14 passed, 4 failed: both new verifier facts
+("MAPSEED pinned (0 seeds) ... pins this game True"), plus the two that
+fail in every all-declined run; its map was another (fc3b0b9b..), the
+world and tile the same. Restored by copying the saved file back
+(SHA-256 matched; every other changed file matched its pre-sabotage
+hash), touched, rebuilt: DLL 20:42:42, Core 20:42:41.
+Final suite (DLL 20:43:56, Core 20:42:41, from the sources as committed;
+0 warnings, 0 errors, 0 Def problems): 762 unit and XML tests (was 756:
+five GenerationPin tests and the prefix's XML test; the Harmony test
+renamed and widened); Python 18 run, 8 skipped (Pillow is not installed
+in this shell's Python). Full smoke (.local/tmp/mapseed-final-smoke)
+211 passed, 0 failed (was 209: the two map seed checks; the first run on
+DLL 20:31:58 also gave 211 and 0). Default verify: the first run (random
+seed guts; two dark entities and two mechs at the start) 13 passed, 5
+failed: defence and grenade timed out, the stampede's volley never
+fired, three colonists died, and the grenade scene warned that it had no
+grenadier left, which the final log check counts; the rerun (wuland) 18
+passed, 0 failed. All-scene verify (-TourSkip ''): the first run (poverty;
+raiders on the map from the start) 17 passed, 1 failed (a colonist
+bitten while fleeing in the raccoon scene); the rerun (green; two dark
+entities) 15 passed, 3 failed: in the raccoon scene three colonists at
+the base, about 100 tiles from AnyRim, were shredded (two were
+refuelling or beating out a fire) and died, the grenade's surviving
+volunteer among them, and the tractor's protest beat was missed for want
+of a free colonist. The notes do not say what shredded them
+(.local/tmp/mapseed-final-verify-all2); it is logged in
+docs/AI-KNOWN-ISSUES.txt. Every failure was a tour fact on a random map;
+the map seed's two facts passed in all four runs. No RimWorld of this
+session is left running; the operator's data folder was never used, and
+no -KeepOpen or plain -Showcase run was made.

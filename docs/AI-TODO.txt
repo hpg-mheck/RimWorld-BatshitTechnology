@@ -619,13 +619,11 @@ Three review fixes have no automated check, for these reasons:
     Spawn a Fire thing directly there instead, in a stampede-only verify
     (-TourSkip with every other key).
 - [ ] Showcase seeds follow-ups (slice 18000, 2026-10-14):
-  - Requests item 22: if the operator approves, add the deterministic
-    Map.NextGenSeed prefix, acting only while a showcase's game generates
-    its map (.local/scratch/seeds18000/proposed-nextgenseed-patch.md has
-    the proven code), name it in the "only Harmony patch" XML test and
-    smoke check, and rerun Tools/tour-trials.ps1 with -Repeat 2 to show
-    MAPHASH and STAGEHASH repeat. Until then a seed pins the world, tile
-    and colonists only.
+  - [Done 2026-10-14: requests item 22 approved ("Approve the patch");
+    the Map.NextGenSeed prefix is built, acting only while a showcase's
+    game generates its map, named in the XML test and the smoke check,
+    and trials show MAPHASH and STAGEHASH repeat (docs/AI-DECISIONS.txt,
+    slice 18000, the map seed's patch).]
   - The lead's best-of-32 batch (Tools/tour-trials.ps1 -Count 32), then
     BT_Showcase's seed. Its SUMMARY fields are in
     docs/AI-TESTING-STRATEGY.txt ("Tour trials").

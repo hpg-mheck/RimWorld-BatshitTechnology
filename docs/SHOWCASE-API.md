@@ -120,12 +120,14 @@ Vanilla builds the main menu's buttons as a local list inside
 `MainMenuDrawer.DoMainMenuControls`, with no extension point, so adding a
 button takes a Harmony patch: a small postfix that adds one option. That
 is the case the Harmony policy allows ("acceptable if necessary"); it is
-the mod's first and only Harmony dependency. Everything else in the API
-needs no patches. The postfix sits on
-`OptionListingUtility.DrawOptionListing`, the method that list is handed
-to, and acts only on the main menu's own column; see "As Built". (The
-fallback considered if Harmony had been ruled out, opening the menus
-from the mod's settings page, was not needed.)
+the mod's first Harmony patch and its Harmony dependency. The postfix
+sits on `OptionListingUtility.DrawOptionListing`, the method that list
+is handed to, and acts only on the main menu's own column; see "As
+Built". (The fallback considered if Harmony had been ruled out, opening
+the menus from the mod's settings page, was not needed.) The API's one
+other patch, approved on 2026-10-14, pins the seeds a showcase's map is
+generated from, and only while it is generated ("Seeds"); everything
+else in the API needs no patches.
 
 ## Packaging
 
@@ -163,8 +165,10 @@ listed in `ROADMAP.md` for confirmation):
   draws it only for a list drawn in the Entry scene (never the in-game
   menu), holding no web links and no empty entries, whose last option's
   action is vanilla's `Root.Shutdown` itself (not a closure, as the
-  in-game Quit to OS is). It is the mod's only Harmony patch, under the
-  id `breakpoint8088.BatshitTechnology.Showcases`. Harmony comes from the
+  in-game Quit to OS is). It is one of the mod's two Harmony patches
+  (the other is the map seed's prefix, "Seeds"), both installed by
+  `ShowcaseMenuButton` through one Harmony instance under the id
+  `breakpoint8088.BatshitTechnology.Showcases`. Harmony comes from the
   Harmony mod (`brrainz.harmony`, a declared dependency); the mod never
   ships `0Harmony.dll`.
 - **No autosave in showcase games.** The session resets the autosaver's
@@ -375,8 +379,8 @@ own DEV buttons check `DebugSettings.ShowDevGizmos`, as vanilla's do.
   (250 cells, a random tile) and draws the main menu for a single frame
   on the way; the menu then leaves the command line alone, and the
   quick-test game adopts the showcase on its map as it is. The def's
-  `mapSize` and `biome` are not applied on this path (that would take a
-  second Harmony patch); `MAPSIZE` and `BIOME` cues say so. It is meant
+  `mapSize` and `biome` are not applied on this path (that would take
+  another Harmony patch); `MAPSIZE` and `BIOME` cues say so. It is meant
   for developer runs. (Starting a second generation from that one menu
   frame collided with vanilla's: "Could not generate starting map
   because there is no any player faction base", then an exception in
@@ -413,8 +417,9 @@ repeatable results." Built in slice 18000.
      `PageUtility.InitGameStart` itself, with its same two calls under
      this seed: the colonists' work priorities (which break ties at
      random) and the player's settlement (its name is random).
-  3. The map: vanilla seeds it from the world's seed and the starting
-     tile, so it follows from the two above.
+  3. The map: seeded from the world's seed and the starting tile, so it
+     follows from the two above, once the map seed's prefix has made
+     those seeds the same in every process ("The map's seeds", below).
   4. `stage`: the global random state, set afresh (as `Rand.Seed`
      would, through its private state, since the public setter logs an
      error unless something is pushed) just before the worker is set
@@ -434,31 +439,58 @@ repeatable results." Built in slice 18000.
   depends on thread timing. The launcher shuffles them first, on the
   main thread, as vanilla would (`LoadingTips.Prime`); nothing else on
   the loading screen draws on Rand (RimWorld 1.6.4871).
-- **What a seed pins.** The world, the starting tile, the colonists
-  (names, traits, gear, work priorities) and the settlement, in any
-  process; and, within one process, the whole map and the stage the
-  worker builds. Checked in slice 18000: two processes with the same
-  seed drew the same world seed string, tile and colonists, and every
-  Rand checkpoint matched, through the preparation and every gen step's
-  draws.
-- **What vanilla stops it pinning: the map's structures.** RimWorld
-  1.6.4871 cannot generate the same map twice in two processes.
+- **What a seed pins.** In any process, on the same game and mod list:
+  the world, the starting tile, the colonists (names, traits, gear,
+  work priorities), the settlement, the whole map, and the stage the
+  worker builds on it, so `MAPHASH` and `STAGEHASH` repeat. A seed
+  given in the def and the same seed given on the command line give the
+  same map. Checked in slice 18000 (`docs/AI-DECISIONS.txt`): two
+  processes with the same seed drew the same world seed string, tile
+  and colonists, every Rand checkpoint matched through the preparation
+  and every gen step's draws, and, with the map seed's prefix, every
+  gen step's result, `MAPHASH` and `STAGEHASH` matched too.
+- **The map's seeds: the second Harmony patch.** RimWorld 1.6.4871
+  alone cannot generate the same map twice in two processes.
   `Map.NextGenSeed` is `System.HashCode.Combine(tile, counter, world
   seed)`, and `System.HashCode` mixes in a random seed chosen once per
   process. BaseGen (every symbol: ancient shrines, ruins), the scatter
   groups (mechanoid remains, junk clusters), prefabs, layouts and
   unique weapons seed their Rand blocks from it, so those structures
-  differ from process to process, and every later gen step that walks
-  the map (plants, rock chunks, animals) shifts with them. Terrain,
-  rock, ores, geysers and roads repeat; the rest does not, so neither
-  do `MAPHASH` and `STAGEHASH`, nor the stage built on the map. A
-  diagnostic run proved the cause (`docs/AI-DECISIONS.txt`, slice
-  18000): with `NextGenSeed` made deterministic (the same three
-  inputs, combined with `Gen.HashCombineInt`), every gen step, the
-  `MAPHASH` and the `STAGEHASH` matched across processes. That takes a
-  Harmony patch, which Decision 1 rules out without the operator's
-  approval; it is asked in `docs/AI-requests-for-humans.txt` (item 22).
-- **What it cannot pin even then.** After `READY` the game draws on the same
+  differed from process to process, and every later gen step that walks
+  the map (plants, rock chunks, animals) shifted with them. Matt
+  "Breakpoint" Heck approved a second Harmony patch for it on
+  2026-10-14 (requests item 22; Decision 1): a prefix on the
+  `NextGenSeed` getter (`ShowcaseMapSeed.Prefix`) that reads the same
+  three inputs in vanilla's order (the tile's hash, or the map's id off
+  the planet; the counter, advanced as vanilla advances it; the
+  world's seed) and combines them with `Gen.HashCombineInt`, which is
+  the same in every process. It acts only inside a window:
+  - the launcher opens it for the showcase's new `Game` on the long
+    event's thread, once the world and the starting tile are drawn and
+    before the map is generated;
+  - the session closes it at the start of `StartedNewGame` (the end of
+    `Game.InitNewGame`, once the map exists), for every new game,
+    showcase or not, and logs how many seeds it pinned (`MAPSEED`);
+  - it is closed, with a warning if it was found open, if the set-up
+    or the map's preparation throws, whenever the main menu is shown
+    (which vanilla never draws while a long event runs), when a game is
+    loaded, and again, harmlessly, at the showcase's set-up, Stop and
+    end;
+  - the window is bound to that `Game` object (Core's `GenerationPin`),
+    so a window some failure left open can never pin another game's
+    seeds: the player's next real game is another object.
+
+  Outside the window the prefix returns at once and vanilla's getter
+  runs untouched, so every other map, in a showcase's game after its
+  start or in any other game, is vanilla's. A quick-test map
+  (`-quicktest -showcase=`) is generated by vanilla before the showcase
+  adopts it, so it is not pinned (`MAPSEED not pinned (quicktest
+  map)`). If Harmony is missing, or a later RimWorld renames the getter
+  or its private counter (`Map.generatedId`), the patch is not
+  installed, an error says so, and maps follow vanilla (`MAPSEED not
+  pinned (no patch)`); the menu button is installed on its own and
+  still works.
+- **What it cannot pin.** After `READY` the game draws on the same
   global random state from code that runs per frame rather than per
   tick (effects, motes, sounds and the interface draw on Rand), and how
   many ticks fall in each frame depends on the machine's load and the
@@ -524,10 +556,11 @@ them.
 
 Every API cue is one log message, `[BT-SHOWCASE] <CUE> <detail>`; the
 prefix carries the host mod's tag while the API lives in this mod. The
-API's errors and warnings carry the same prefix, but are not cues. Four
+API's errors and warnings carry the same prefix, but are not cues. Five
 are record cues (`ShowcaseLog.RecordCues`): they say what a run was
-(its seed, its fingerprints, the storyteller's state) rather than how it
-went, so tooling comparing a run's flow of cues can leave them out. A
+(its seed, whether its map's seeds were pinned, its fingerprints, the
+storyteller's state) rather than how it went, so tooling comparing a
+run's flow of cues can leave them out. A
 `ShowcaseLog.Cued` event lets capture tooling in the assembly listen
 for cues (the tour verifier's shots do).
 
@@ -541,6 +574,10 @@ for cues (the tour verifier's shots do).
 - `MAPSIZE <n> ignored; quicktest map is <m>`: the quick-test map cannot
   have the def's size.
 - `GAME <def>`: the new game's session adopted the showcase.
+- `MAPSEED pinned (<n> seeds)` (record): the map seed's window was open
+  while the map was generated, and pinned that many of its seeds; it
+  is closed by now. Or `MAPSEED not pinned (quicktest map)` or `...
+  (no patch)`.
 - `MAPHASH <hex> (<n> cells, <n> things, <n> pawns)` (record): the new
   map's fingerprint, before any tick.
 - `STORYTELLER quiet (<n> parts held)` (record): random incidents are
@@ -587,16 +624,20 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
 - **XML tests:** every `ShowcaseDef`'s fields (worker classes matched by
   exact namespace), the keyed text and the keys the code uses, preview
   images, the Harmony dependency, that no file but the button's uses
-  Harmony, that only the god-mode loan sets god mode and every DEV
+  Harmony and that it makes exactly two patches (the button's postfix
+  and the map seed's prefix, on their targets, under one Harmony id),
+  that the map seed's prefix opens with its pass-through test, that
+  only the god-mode loan sets god mode and every DEV
   button needs dev mode, and that the smoke runner's test showcases are
   never shipped. Narration scene keys are checked by the def's
   configuration check (no shipped def has narration yet). A def's
   `seed`, if any, must be well formed.
 - **Smoke** (`Source/SmokeTestShowcases.cs`, with test showcases made in
   code; details in `docs/AI-TESTING-STRATEGY.txt`):
-  - the button is the mod's only Harmony patch, vanilla's main menu gets
-    exactly one Showcases option while the in-game menu gets none, and
-    each of the column's gates works on its own;
+  - the button's postfix and the map seed's prefix are the mod's only
+    Harmony patches, both under the button's Harmony id; vanilla's main
+    menu gets exactly one Showcases option while the in-game menu gets
+    none, and each of the column's gates works on its own;
   - the three windows open, list Batshit Technology and its showcases,
     grey out one missing a mod with the reason, refuse a fatal flag while
     offering Force start (in dev mode and outside it), and honour Back
@@ -623,7 +664,12 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
     a configuration error; the global reseed repeats a seed's draws; the
     fingerprint is stable, draws no Rand and sees a stack come and go;
     the storyteller is held from a run's start and given back after
-    `FINISHED` and after Stop; `STAGEHASH` comes just before `READY`.
+    `FINISHED` and after Stop; `STAGEHASH` comes just before `READY`;
+    in the smoke run's ordinary game the map seed's window is closed
+    and `Map.NextGenSeed` gives vanilla's own value (computed through
+    `System.HashCode.Combine` in the same process), even with the window
+    open for another game, while with the window open for its own game
+    it gives the pinned value, and is vanilla's again once closed.
 - **Showcase run:** `Tools/smoke-test.ps1 -Showcase` starts BT_Showcase
   through the main menu with `-showcase=BT_Showcase` and waits for
   `[BT-SHOWCASE] READY`, failing on a `REFUSED` or `FAILED` cue or a mod
@@ -632,17 +678,24 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
 - **Tour verify run:** `Tools/smoke-test.ps1 -Showcase -Verify` checks
   Batshit Technology's tour to `FINISHED`, and, for the API, that the
   launch logged its seed from the source its precedence picks,
-  `MAPHASH` came before `START` and `STAGEHASH` just before `READY`, the
-  stage was set up at tick 0, and the storyteller was quiet until
-  `FINISHED` and given back after it (`docs/AI-TESTING-STRATEGY.txt`,
-  section 4). `Tools/tour-trials.ps1` runs it over many seeds.
+  `MAPSEED` said the map's seeds were pinned (as many as the session
+  holds, and every seed pinned in the process), with the window closed
+  at `READY` and still closed at the end, `MAPHASH` came before `START`
+  and `STAGEHASH` just before `READY`, the stage was set up at tick 0,
+  and the storyteller was quiet until `FINISHED` and given back after
+  it (`docs/AI-TESTING-STRATEGY.txt`, section 4).
+  `Tools/tour-trials.ps1` runs it over many seeds.
 
 ## Decisions
 
 Answered by Matt "Breakpoint" Heck on 2026-10-13:
 
 1. **Harmony** is approved for the main-menu button, the mod's first
-   patch. Everything else stays patch-free.
+   patch. Everything else stays patch-free. Amended on 2026-10-14
+   (requests item 22, "Approve the patch"): a second patch, the prefix
+   on `Map.NextGenSeed` that pins a showcase map's seeds while it is
+   generated ("Seeds"). These two are the mod's only patches; the XML
+   tests and the smoke run hold them to that.
 2. **Packaging:** inside Batshit Technology for now, under its own
    namespace and free of Batshit-specific code. It will "absolutely" be
    split out into a framework mod later.
@@ -682,8 +735,9 @@ Quiet Storyteller"):
 
 11. **Every showcase has a seed:** the command line's, the def's, or a
     fresh random one, logged so any run can be pinned. It pins the
-    world, tile, colonists and settlement; the map and stage wait on a
-    second Harmony patch (requests item 22).
+    world, tile, colonists and settlement, and, through the second
+    Harmony patch (approved 2026-10-14, requests item 22), the map and
+    the stage.
 12. **No random incidents during a showcase** (requests item 19, part
     one, the operator's default answer): the storyteller is held from
     the session's start and given back when the showcase finishes or

@@ -230,9 +230,11 @@ Last of all, the runner checks the Showcase API
 added to the def database under this mod beside BT_Showcase, and removed
 again afterwards; an XML test pins that none is ever shipped. Ticking
 inside the frame, it checks that under -quicktest the main menu left
--showcase= to the quick-test game; that the menu button is the mod's
-only Harmony patch (from Harmony's own patch listing, counting any patch
-under the mod's id or from its assemblies); that the main menu's column
+-showcase= to the quick-test game; that the menu button's postfix and
+the map seed's prefix (on Map.NextGenSeed) are the mod's only Harmony
+patches, both under the button's Harmony id (from Harmony's own patch
+listing, counting any patch under the mod's id or from its assemblies,
+with each patch's owner); that the main menu's column
 is recognised by each of its gates on its own (lists made in code, with
 a positive control); that the launcher refuses a missing showcase, any
 showcase from inside a game, and a fatal one from the menu's state,
@@ -300,6 +302,22 @@ does not reseed; and Stop gives the storyteller its parts back. The
 record cues are left out of the older checks' cue sequences. All seven
 failed against the slice's sabotage build (docs/AI-DECISIONS.txt).
 
+The map seed's patch (slice 18000, after requests item 22) added two,
+and the patch check above now expects both patches. In the smoke run's
+ordinary game (a quick test, never a showcase) the map seed's window is
+closed and the patched Map.NextGenSeed gives vanilla's own value,
+System.HashCode.Combine of the map's place, counter and world seed,
+computed through that same method by reflection in the same process
+(the mod compiles against .NET Framework 4.7.2, which lacks it); the
+counter advances by one, and the call counts as passed through. It
+stays vanilla with the window open for another game (an uninitialised
+Game object). With the window open for the smoke game itself, the
+getter gives ShowcaseMapSeed.Combine of the same inputs
+(Gen.HashCombineInt), counts one pin, and closing the window says one
+seed was pinned and makes the next call vanilla's again. Both put the
+map's counter back. The adopted run's record check also expects no
+MAPSEED cue.
+
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
 PowerNetManager.UpdatePowerNetsAndConnections_First). Destructive
@@ -363,7 +381,13 @@ line's when -Seed was passed, else the def's, else random); MAPHASH came
 before START and STAGEHASH just before READY, as the session holds them;
 and the stage was set up from the seed (reseeded) at tick 0, before the
 game's first tick. After the farewell: the storyteller stayed quiet until
-FINISHED and has its parts back, as many as were held.
+FINISHED and has its parts back, as many as were held. The map seed's
+patch added two: at READY, the patch is installed, MAPSEED comes right
+after GAME and before MAPHASH and says "pinned (<n> seeds)" with the
+session's count, at least one, every seed pinned in the process was
+pinned in that window, and the window is closed, so the prefix would
+pass this game's next seed through; after the farewell, no seed was
+pinned since READY and the window is still closed.
 
 The stampede's facts (Source/SmokeTestTour.Stampede.cs) use Core's
 Stampede rules but measure the world each tick rather than asking the
@@ -457,10 +481,13 @@ flattened: nested fields dotted, as scenes.home.tps, lists joined with
 whether its MAPHASH and STAGEHASH repeated. It exits 1 if any run left
 no SUMMARY.
 
-The SUMMARY's fields (Source/SmokeTestTour.Summary.cs; version 1):
+The SUMMARY's fields (Source/SmokeTestTour.Summary.cs; version 2,
+which added mapSeeds):
 
 - version; seed and seedSource (command line, def or random); worldSeed
-  (the world's seed string, drawn from the seed); mapHash and stageHash
+  (the world's seed string, drawn from the seed); mapSeeds (the map's
+  generation seeds the map seed's prefix pinned, the MAPSEED cue's
+  count; -1 if none were); mapHash and stageHash
   (the MAPHASH and STAGEHASH cues); biome, tile (the starting tile's
   id) and mapSize;
 - passed, failed (the verifier's counts, the final log check included)
@@ -509,14 +536,21 @@ an error.
 What the trials showed in slice 18000 (2026-10-14; details in
 docs/AI-DECISIONS.txt):
 
-- Repeatability. As built, two processes with one seed draw the same
-  world seed string, tile, colonists and settlement, but not the same
-  map: vanilla's Map.NextGenSeed is random per process
+- Repeatability. Without the map seed's patch, two processes with one
+  seed drew the same world seed string, tile, colonists and settlement,
+  but not the same map: vanilla's Map.NextGenSeed is random per process
   (docs/SHOWCASE-API.md, "Seeds"), so MAPHASH and STAGEHASH differed in
-  every pair (seeds s18-a and s18-b, twice each). With NextGenSeed made
-  deterministic in an uncommitted diagnostic build, both seeds repeated
-  MAPHASH and STAGEHASH exactly, and an unseeded run's logged seed
-  (cowboy), passed back in, gave its world, tile, map and stage again.
+  every pair (seeds s18-a and s18-b, twice each). With the patch (DLL
+  20:31:58, -Parallel 4), both seeds repeated MAPHASH and STAGEHASH
+  exactly (s18-a 0ca9bf0ea67aad73 and c7de31d2c28b0aeb, 37 seeds
+  pinned; s18-b 59717c88cd7267f3 and 9029f74f1f50188e, 467 pinned),
+  the same values the uncommitted diagnostic build had given; an
+  unseeded run's logged seed (yam), passed back in, gave its world
+  (raccoon), tile 21692, map (8b628f88592cb98a) and stage
+  (3a590ec61704850a) again; and s18-a written into a temporary copy of
+  BT_Showcase's def (seedSource def, never committed) gave the same map
+  and stage as -showcaseseed=s18-a. With the window sabotaged shut,
+  s18-b drew the same world and tile but another map (fc3b0b9b..).
 - How far a tour repeats once its map and stage do: every scene's
   outcome matched in two of three pairs (cowboy; s18-a's scenes all
   completed in both runs), but from the second scene on the details
@@ -529,7 +563,12 @@ docs/AI-DECISIONS.txt):
   pawns' renderers built on first draw, sounds), and how many ticks fall
   in each frame depends on load, so the draws a tick sees shift.
   Window size and camera matter for the same reason (only visible
-  sections are printed).
+  sections are printed). With the patch, the same held: s18-b passed
+  18 of 18 twice; s18-a, whose map starts with dark entities, failed
+  the colonist-safety facts in all three runs, hurting different
+  colonists in different scenes; yam (raiders, dark entities and
+  insects at the start) passed once and once lost the stampede's
+  volley.
 - Timing. A full ten-scene tour took about 175 s of wall time alone
   (cowboy: 146 s of scenes, 166 game ticks a second overall, Superfast's
   cap of about 288 in quiet scenes); at -Parallel 4 the same seed ran
