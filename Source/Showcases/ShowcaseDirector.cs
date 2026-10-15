@@ -13,6 +13,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BatshitTechnology.Core;
 using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
@@ -58,6 +59,13 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>The running scene's shot schedule, or null.</summary>
         private BeatSchedule beats;
+
+        /// <summary>
+        /// Gets the last camera move the director made, or null before
+        /// the first: for tests and capture tooling, which compare it with
+        /// where the camera really is.
+        /// </summary>
+        public ShowcaseFraming LastFraming { get; private set; }
 
         /// <summary>Gets the scenes as this run sees them.</summary>
         public IReadOnlyList<ShowcaseScene> Scenes => scenes;
@@ -159,7 +167,12 @@ namespace BatshitTechnology.Showcases
                     .ToList();
                 if (list.Count == 0)
                 {
-                    list.Add(new ShowcaseShot { atTick = 0, zoom = DefaultZoom });
+                    // A cut, so the scene opens on its own place as its
+                    // caption shows, never on the last scene's.
+                    list.Add(new ShowcaseShot
+                    {
+                        atTick = 0, zoom = DefaultZoom, pan = false,
+                    });
                 }
 
                 shots.Add(list);
@@ -414,7 +427,7 @@ namespace BatshitTechnology.Showcases
 
             if (shot != null)
             {
-                Frame(scene, shot);
+                Frame(scene, shot, moment);
             }
 
             Narrate(scene.key, moment, SafeLookTargets(scene));
@@ -455,14 +468,16 @@ namespace BatshitTechnology.Showcases
 
             foreach (int i in beats.TakeDue(sequencer.Elapsed(now)))
             {
-                Frame(scenes[index], shots[index][i]);
+                Frame(scenes[index], shots[index][i], beat: null);
             }
         }
 
         /// <summary>
         /// Moves the camera for one shot, if the viewer is looking at the
         /// showcase's map: a glide or a cut, to the scene's focus (or the
-        /// map's centre) plus the shot's offset, at the shot's zoom.
+        /// map's centre) plus the shot's offset, at the shot's zoom, moved
+        /// in from the map's edges if the shot keeps on the map. The move
+        /// is recorded as <see cref="LastFraming"/>.
         /// </summary>
         /// <remarks>
         /// A cut must also cancel any glide still running. CameraDriver
@@ -477,7 +492,8 @@ namespace BatshitTechnology.Showcases
         /// </remarks>
         /// <param name="scene">The scene.</param>
         /// <param name="shot">The shot.</param>
-        private void Frame(ShowcaseScene scene, ShowcaseShot shot)
+        /// <param name="beat">The beat's moment, or null for a timed shot.</param>
+        private void Frame(ShowcaseScene scene, ShowcaseShot shot, string beat)
         {
             Map map = Map;
             if (map == null || Find.CurrentMap != map
@@ -499,18 +515,31 @@ namespace BatshitTechnology.Showcases
                 CameraDriver camera = Find.CameraDriver;
                 FloatRange range = camera.config.sizeRange;
                 float zoom = Mathf.Clamp(shot.ZoomClamped, range.min, range.max);
-                if (shot.pan && shot.panSeconds > 0f)
+                Vector3 loc = cell.ToVector3Shifted();
+                if (shot.keepOnMap && UI.screenHeight > 0)
                 {
-                    camera.PanToMapLocAndSize(
-                        cell.ToVector3Shifted(), zoom, shot.panSeconds);
+                    Spot kept = ShotFraming.KeepOnMap(
+                        new Spot(loc.x, loc.z), zoom,
+                        (double)UI.screenWidth / UI.screenHeight,
+                        map.Size.x, map.Size.z);
+                    loc = new Vector3((float)kept.X, loc.y, (float)kept.Z);
+                }
+
+                bool cut = !(shot.pan && shot.panSeconds > 0f);
+                if (!cut)
+                {
+                    camera.PanToMapLocAndSize(loc, zoom, shot.panSeconds);
                 }
                 else
                 {
-                    Vector3 loc = cell.ToVector3Shifted();
                     camera.JumpToCurrentMapLoc(loc);
                     camera.SetRootSize(zoom);
                     camera.PanToMapLocAndSize(loc, zoom, CutPanSeconds);
                 }
+
+                LastFraming = new ShowcaseFraming(
+                    scene.key, beat, loc.x, loc.z, zoom, cut,
+                    Find.TickManager.TicksGame);
             }
             catch (Exception e)
             {

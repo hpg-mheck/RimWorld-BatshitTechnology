@@ -189,13 +189,32 @@ namespace BatshitTechnology
             return Beat(moment, shot, select);
         }
 
-        /// <summary>A camera move for a beat.</summary>
+        /// <summary>
+        /// A camera move for a beat: a glide, kept on the map, so a shot
+        /// near an edge never shows the black beyond it (slice 19000d).
+        /// </summary>
         /// <param name="zoom">The zoom.</param>
         /// <param name="x">Cells east of the focus.</param>
         /// <param name="z">Cells north of the focus.</param>
         /// <returns>The shot.</returns>
         protected static ShowcaseShot Shot(float zoom, int x = 0, int z = 0) =>
-            new ShowcaseShot { zoom = zoom, offset = new IntVec2(x, z) };
+            new ShowcaseShot
+            {
+                zoom = zoom, offset = new IntVec2(x, z), keepOnMap = true,
+            };
+
+        /// <summary>
+        /// A camera cut for a beat whose action is quick (a throw): kept on
+        /// the map, and there at once, so the moment is not spent gliding.
+        /// </summary>
+        /// <param name="zoom">The zoom.</param>
+        /// <returns>The shot.</returns>
+        protected static ShowcaseShot Cut(float zoom)
+        {
+            ShowcaseShot shot = Shot(zoom);
+            shot.pan = false;
+            return shot;
+        }
 
         /// <summary>
         /// Moves colonists within a radius of a danger back to the base.

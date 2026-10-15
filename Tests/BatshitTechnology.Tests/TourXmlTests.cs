@@ -122,6 +122,38 @@ public sealed class TourXmlTests
     }
 
     /// <summary>
+    /// Every scene opens with a cut, not a glide, so its caption and
+    /// opening line never show the last scene's place; and every shot
+    /// keeps on the map, so none shows the black beyond its edge (slice
+    /// 19000d).
+    /// </summary>
+    [Fact(DisplayName = "Every tour scene opens with a cut kept on the map")]
+    public void Scenes_should_open_with_a_cut_kept_on_the_map()
+    {
+        foreach (XElement scene in Scenes())
+        {
+            string key = Key(scene);
+            List<XElement> shots = scene.Element("shots")?.Elements("li").ToList()
+                ?? new List<XElement>();
+            Assert.True(
+                shots.Any(s => Int(s, "atTick", 0) == 0),
+                $"{key}: no opening shot");
+            foreach (XElement shot in shots)
+            {
+                Assert.True(
+                    shot.Element("keepOnMap")?.Value.Trim() == "true",
+                    $"{key}: a shot does not keep on the map");
+                if (Int(shot, "atTick", 0) == 0)
+                {
+                    Assert.True(
+                        shot.Element("pan")?.Value.Trim() == "false",
+                        $"{key}: its opening shot glides");
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// The menu's running time covers at least the scenes' shortest
     /// runs, so the estimate never undersells the tour.
     /// </summary>

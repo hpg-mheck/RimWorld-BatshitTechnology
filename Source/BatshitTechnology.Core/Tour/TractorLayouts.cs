@@ -229,3 +229,83 @@ public static class SingleTractorLayout
     public static Cell? PredictedPlant() =>
         TractorPlanting.PlantFrom(BarnDoor, Party, TourStop);
 }
+
+/// <summary>
+/// The junk the tour lays in its tractor yard (slice 19000d), as stacks
+/// at offsets from the yard's centre: for the single tractor, whose yard
+/// held only the barn and the party, so its pull looked sparse; and an
+/// outer ring for the twins, beyond the junkyard, so their pulls drag
+/// things in from afar. Each piece lies inside the yard, inside a pull
+/// and outside every blast (so it is seen to slide before the blast takes
+/// it), and clear of the robots' roads, the barn and the stray's way out.
+/// Chunks and crates count one; the stacks are bright metals and stone,
+/// which read against the yard's concrete where steel would not, and
+/// nothing that burns or goes off when hit. The smoke runner's junkyard
+/// (<see cref="TwinJunkyardLayout"/>) is unchanged.
+/// </summary>
+public static class TourYardJunk
+{
+    /// <summary>The slag chunk's def.</summary>
+    public const string Slag = TwinJunkyardLayout.SlagDef;
+
+    /// <summary>The rock chunk's def.</summary>
+    public const string Rock = TwinJunkyardLayout.RockDef;
+
+    /// <summary>The ancient crate's def (a building, torn down by a pull).</summary>
+    public const string Crate = TwinJunkyardLayout.CrateDef;
+
+    /// <summary>
+    /// The single tractor's yard: east of the party, south of the road,
+    /// and north-east of the stray, 13 to 31 tiles from where the robot
+    /// is predicted to plant, (9,0).
+    /// </summary>
+    public static readonly IReadOnlyList<LaidStack> Single = new[]
+    {
+        new LaidStack(Slag, new Cell(24, 6), 1),
+        new LaidStack(Slag, new Cell(29, -12), 1),
+        new LaidStack(Slag, new Cell(-6, -9), 1),
+        new LaidStack(Slag, new Cell(16, 11), 1),
+        new LaidStack(Slag, new Cell(-18, -7), 1),
+        new LaidStack(Slag, new Cell(31, 1), 1),
+        new LaidStack(Rock, new Cell(27, -4), 1),
+        new LaidStack(Rock, new Cell(6, -13), 1),
+        new LaidStack(Rock, new Cell(0, 11), 1),
+        new LaidStack(Rock, new Cell(-12, -12), 1),
+        new LaidStack(Rock, new Cell(26, 13), 1),
+        new LaidStack("Silver", new Cell(23, -10), 60),
+        new LaidStack("Gold", new Cell(14, -13), 20),
+        new LaidStack("Jade", new Cell(8, 14), 15),
+        new LaidStack("Uranium", new Cell(30, 10), 20),
+        new LaidStack("Plasteel", new Cell(-3, -14), 25),
+        new LaidStack("ComponentIndustrial", new Cell(0, -10), 8),
+        new LaidStack("Silver", new Cell(22, -1), 40),
+        new LaidStack("Jade", new Cell(-18, 10), 15),
+        new LaidStack(Crate, new Cell(20, -6), 1),
+        new LaidStack(Crate, new Cell(-10, -6), 1),
+        new LaidStack(Crate, new Cell(28, 5), 1),
+    };
+
+    /// <summary>
+    /// The twins' outer ring: north and south of the junkyard and at its
+    /// ends, 13 to 33 tiles from the nearer of the two predicted plants.
+    /// </summary>
+    public static readonly IReadOnlyList<LaidStack> TwinsOuter = new[]
+    {
+        new LaidStack(Slag, new Cell(-24, 12), 1),
+        new LaidStack(Rock, new Cell(-14, 13), 1),
+        new LaidStack("Silver", new Cell(-4, 13), 40),
+        new LaidStack(Slag, new Cell(6, 13), 1),
+        new LaidStack("Gold", new Cell(16, 12), 15),
+        new LaidStack(Rock, new Cell(26, 11), 1),
+        new LaidStack(Rock, new Cell(-26, -11), 1),
+        new LaidStack("Jade", new Cell(-16, -13), 15),
+        new LaidStack(Slag, new Cell(-2, -14), 1),
+        new LaidStack("Uranium", new Cell(10, -13), 20),
+        new LaidStack(Slag, new Cell(20, -12), 1),
+        new LaidStack("Plasteel", new Cell(28, -10), 25),
+        new LaidStack(Crate, new Cell(30, 6), 1),
+        new LaidStack(Slag, new Cell(31, -5), 1),
+        new LaidStack(Crate, new Cell(-30, 6), 1),
+        new LaidStack("Silver", new Cell(-31, -5), 40),
+    };
+}

@@ -65,8 +65,17 @@ namespace BatshitTechnology
         /// <summary>The zoom that holds Main Street end to end.</summary>
         public float streetZoom = 30f;
 
-        /// <summary>The zoom on the singularity.</summary>
+        /// <summary>
+        /// The closest zoom on the throw: the shot pulls back from it only
+        /// as far as Ned, the raccoon and the grenade need.
+        /// </summary>
         public float throwZoom = 20f;
+
+        /// <summary>The farthest the throw's shot pulls back.</summary>
+        public float throwMaxZoom = 34f;
+
+        /// <summary>Tiles kept round Ned, the raccoon and the grenade.</summary>
+        public float throwMargin = 4f;
 
         /// <summary>The zoom on the welcome sign for the census.</summary>
         public float signZoom = 16f;
@@ -357,10 +366,9 @@ namespace BatshitTechnology
                 if (GrenadeThrown())
                 {
                     thrownAt = Elapsed;
-                    look = raccoon.Spawned
-                        ? raccoon.Position
-                        : MapCell(RaccoonIncident.GuardPost);
-                    BeatOnce(TourScript.Thrown, Shot(throwZoom), select: false);
+                    (IntVec3 centre, float zoom) = ThrowFraming();
+                    look = centre;
+                    BeatOnce(TourScript.Thrown, Cut(zoom), select: false);
                 }
                 else if (Elapsed % OrderCheckTicks == 0)
                 {
@@ -637,6 +645,68 @@ namespace BatshitTechnology
             Log.Message($"{ShowcaseLog.Prefix} raccoon: still waiting for the "
                 + $"throw at scene tick {Elapsed}: raccoon {racc}; Ned {guard}; "
                 + apart);
+        }
+
+        /// <summary>
+        /// The things the throw's shot must show: Ned, the raccoon, and
+        /// Ned's grenade in the air and where it is going, each while it is
+        /// on the map. The tour verifier checks the same things.
+        /// </summary>
+        /// <returns>Their positions, in tiles (a cell's centre).</returns>
+        internal List<Spot> ThrowSubjects()
+        {
+            var spots = new List<Spot>();
+            if (Alive(ned))
+            {
+                spots.Add(new Spot(ned.DrawPos.x, ned.DrawPos.z));
+            }
+
+            if (Alive(raccoon))
+            {
+                spots.Add(new Spot(raccoon.DrawPos.x, raccoon.DrawPos.z));
+            }
+
+            foreach (Projectile p in Map.listerThings
+                .ThingsInGroup(ThingRequestGroup.Projectile).OfType<Projectile>()
+                .Where(p => p.def.defName == Showcase.GrenadeProjectileDef
+                    && ReferenceEquals(p.Launcher, ned)))
+            {
+                spots.Add(new Spot(p.ExactPosition.x, p.ExactPosition.z));
+                if (p.usedTarget.IsValid)
+                {
+                    UnityEngine.Vector3 to = p.usedTarget.CenterVector3;
+                    spots.Add(new Spot(to.x, to.z));
+                }
+            }
+
+            return spots;
+        }
+
+        /// <summary>
+        /// Where the throw's shot looks and how close: Ned, the raccoon and
+        /// the grenade all in the part of the screen the caption bar and
+        /// the narration leave clear (Core's <see cref="ShotFraming.Fit"/>;
+        /// slice 19000d: the shot had pulled back with all three under the
+        /// caption bar). With none of them on the map, the raccoon's last
+        /// place or the guard post, at the closest zoom.
+        /// </summary>
+        /// <returns>The cell to look at and the zoom.</returns>
+        private (IntVec3 Centre, float Zoom) ThrowFraming()
+        {
+            IntVec3 fallback = Alive(raccoon) ? raccoon.Position
+                : MapCell(RaccoonIncident.GuardPost);
+            List<Spot> spots = ThrowSubjects();
+            if (spots.Count == 0 || UI.screenHeight <= 0)
+            {
+                return (fallback, throwZoom);
+            }
+
+            (Spot centre, double zoom) = ShotFraming.Fit(
+                spots, (double)UI.screenWidth / UI.screenHeight, throwMargin,
+                throwZoom, System.Math.Max(throwZoom, throwMaxZoom));
+            var cell = new IntVec3((int)System.Math.Floor(centre.X), 0,
+                (int)System.Math.Floor(centre.Z));
+            return (cell.ClampInsideMap(Map), (float)zoom);
         }
 
         /// <summary>

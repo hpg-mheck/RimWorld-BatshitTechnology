@@ -303,6 +303,45 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// Lays the tour's junk round a yard's centre (Core's
+        /// <see cref="TourYardJunk"/>): each stack where it says, chunks
+        /// and items as one stack, a building (an ancient crate) as itself.
+        /// A cell that is off the map, not standable or already holding an
+        /// item or a building is skipped, as is a def the game lacks.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="centre">The yard's centre.</param>
+        /// <param name="junk">The stacks, as offsets from the centre.</param>
+        /// <returns>How many pieces were laid.</returns>
+        internal static int LayJunk(
+            Map map, IntVec3 centre, IEnumerable<LaidStack> junk)
+        {
+            int laid = 0;
+            foreach (LaidStack stack in junk ?? Enumerable.Empty<LaidStack>())
+            {
+                ThingDef def = DefDatabase<ThingDef>.GetNamedSilentFail(stack.DefName);
+                IntVec3 c = At(centre, stack.At);
+                if (def == null || !c.InBounds(map) || !c.Standable(map)
+                    || c.GetFirstItem(map) != null || c.GetFirstBuilding(map) != null)
+                {
+                    continue;
+                }
+
+                Thing thing = ThingMaker.MakeThing(
+                    def, def.MadeFromStuff ? GenStuff.DefaultStuffFor(def) : null);
+                if (def.category == ThingCategory.Item)
+                {
+                    thing.stackCount = Mathf.Clamp(stack.Count, 1, def.stackLimit);
+                }
+
+                GenSpawn.Spawn(thing, c, map);
+                laid++;
+            }
+
+            return laid;
+        }
+
+        /// <summary>
         /// Rids a fresh pawn of whatever ailments it was generated with (a
         /// bad back, a missing toe, frailty), so how far it runs in a
         /// countdown depends on its legs, not on luck. A sabotage-free

@@ -43,9 +43,9 @@ namespace BatshitTechnology
         /// cleared, unstagedHostiles, turnedHostile, screams and weather
         /// (slice 19000a's clean stage); 5 adds screen (slice 19000b's
         /// quiet screen) and presentation; 6 adds tourists (slice
-        /// 19000c's tour group).
+        /// 19000c's tour group); 7 adds camera (slice 19000d's framing).
         /// </summary>
-        private const int SummaryVersion = 6;
+        private const int SummaryVersion = 7;
 
         /// <summary>The cues the verifier takes a shot at.</summary>
         private static readonly HashSet<string> ShotCues =
@@ -116,15 +116,16 @@ namespace BatshitTechnology
             string what = cue == "BEAT" || cue == "END"
                 ? $"{cue}-{(parts.Length > 1 ? parts[1] : string.Empty)}"
                 : cue;
-            int delay = TourShotTiming.DelayTicks(
-                cue, cue == "BEAT" && parts.Length > 1 ? parts[1] : null);
+            string moment = cue == "BEAT" && parts.Length > 1 ? parts[1] : null;
+            int delay = TourShotTiming.DelayTicks(cue, scene, moment);
             int due = (Find.TickManager?.TicksGame ?? 0) + delay;
             lock (pendingShots)
             {
                 shotsNamed++;
                 pendingShots.Add(
                     $"{shotsNamed:00}-{FileSafe(scene)}-{FileSafe(what)}.png",
-                    due, Time.realtimeSinceStartup);
+                    due, Time.realtimeSinceStartup,
+                    TourShotTiming.LandingTicks(cue, moment));
             }
         }
 
@@ -143,6 +144,7 @@ namespace BatshitTechnology
                 return;
             }
 
+            NoteLandings();
             string name;
             lock (pendingShots)
             {
@@ -172,6 +174,47 @@ namespace BatshitTechnology
             {
                 Log.Message($"[BT-SMOKE] NOTE shot {name} failed: {e.Message}");
             }
+        }
+
+        /// <summary>
+        /// The mod's projectiles in flight on the current map when last
+        /// counted, or -1 before the first count.
+        /// </summary>
+        private static int boltsFlying = -1;
+
+        /// <summary>
+        /// Counts the mod's projectiles in flight (the volleys' bolts) and
+        /// tells the waiting shots when fewer fly than last frame: one has
+        /// landed, so a volley's frame is due a few ticks on
+        /// (<see cref="TourShotTiming.LandingTicks"/>).
+        /// </summary>
+        private static void NoteLandings()
+        {
+            Map map = Find.CurrentMap;
+            if (map == null || ShotsWaiting == 0)
+            {
+                boltsFlying = -1;
+                return;
+            }
+
+            int flying = 0;
+            foreach (Thing t in map.listerThings.ThingsInGroup(ThingRequestGroup.Projectile))
+            {
+                if (t.def.defName.StartsWith("BT_", StringComparison.Ordinal))
+                {
+                    flying++;
+                }
+            }
+
+            if (boltsFlying >= 0 && flying < boltsFlying)
+            {
+                lock (pendingShots)
+                {
+                    pendingShots.Landed(Find.TickManager?.TicksGame ?? 0);
+                }
+            }
+
+            boltsFlying = flying;
         }
 
         /// <summary>Gets how many shots wait to be taken.</summary>
@@ -455,6 +498,7 @@ namespace BatshitTechnology
                 AddCleanStageTo(summary);
                 AddQuietScreenTo(summary);
                 AddTouristsTo(summary);
+                AddCameraTo(summary);
                 summary.Add("storyteller", new JsonLine
                 {
                     { "held", StorytellerPartsHeld },

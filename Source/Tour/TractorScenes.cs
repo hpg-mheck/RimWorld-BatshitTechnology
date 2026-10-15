@@ -35,6 +35,25 @@ namespace BatshitTechnology
         /// <summary>Gets the yard's centre.</summary>
         protected IntVec3 Centre => Stage.YardCentre;
 
+        /// <summary>
+        /// Gets how many pieces of the tour's junk this run laid in the
+        /// yard, and how many it meant to (the tour verifier checks them).
+        /// </summary>
+        internal (int Laid, int Meant) Junk { get; private set; }
+
+        /// <summary>
+        /// Lays the tour's junk in the yard (Core's
+        /// <see cref="TourYardJunk"/>) and logs how much of it was laid.
+        /// </summary>
+        /// <param name="junk">The pieces, as offsets from the yard's centre.</param>
+        protected void LayJunk(IReadOnlyList<LaidStack> junk)
+        {
+            int laid = TractorStaging.LayJunk(Map, Centre, junk);
+            Junk = (laid, junk.Count);
+            Log.Message($"{ShowcaseLog.Prefix} {key}: {laid} of {junk.Count} "
+                + "pieces of junk laid in the yard");
+        }
+
         /// <summary>Gets the Tractor Bombs gone off in this run.</summary>
         protected int ExplosionsSinceStart =>
             Building_TractorBomb.Explosions - explosionsAtStart;
@@ -190,10 +209,18 @@ namespace BatshitTechnology
         public int strayRetreat = SingleTractorLayout.StrayRetreat;
 
         /// <summary>
-        /// The zoom of the pull shot: wide enough for the
-        /// 33.75-tile pull's ring (67.5 tiles across) with room round it.
+        /// The zoom of the pull shot: the 33.75-tile pull's ring (67.5
+        /// tiles across) just fits the view's 88 tiles, so the yard's junk
+        /// is big enough to be seen sliding (it was specks at 52; slice
+        /// 19000d).
         /// </summary>
-        public float pullZoom = 52f;
+        public float pullZoom = 44f;
+
+        /// <summary>
+        /// The zoom of the blast shot: the 12-tile blast and the yard
+        /// round it.
+        /// </summary>
+        public float blastZoom = 34f;
 
         /// <summary>The barn.</summary>
         [Unsaved]
@@ -273,10 +300,15 @@ namespace BatshitTechnology
             }
         }
 
-        /// <summary>Clears the yard; places the barn, the party and the stray.</summary>
+        /// <summary>
+        /// Clears the yard; lays its junk (Core's
+        /// <see cref="TourYardJunk.Single"/>), so the pull has something
+        /// to pull; places the barn, the party and the stray.
+        /// </summary>
         protected override void SetupScene()
         {
             PrepareYard();
+            LayJunk(TourYardJunk.Single);
             robot = null;
             straySent = false;
             barnAtEnd = "not ended";
@@ -354,7 +386,7 @@ namespace BatshitTechnology
 
             if (ExplosionsSinceStart > 0)
             {
-                BeatOnce("blast", Shot(45f), select: false);
+                BeatOnce("blast", Shot(blastZoom), select: false);
             }
         }
 
@@ -472,10 +504,21 @@ namespace BatshitTechnology
         public int implodeDelay = 150;
 
         /// <summary>
-        /// The zoom of the pull shot: wide enough for both 33.75-tile
-        /// pulls' rings (about 82 tiles across and 68 tall together).
+        /// The zoom of the pull shot: both 33.75-tile pulls' rings (about
+        /// 82 tiles across and 68 tall together) just fit the view's 88
+        /// tiles, so the junk is big enough to be seen sliding (slice
+        /// 19000d).
         /// </summary>
-        public float pullZoom = 52f;
+        public float pullZoom = 44f;
+
+        /// <summary>
+        /// The zoom of the planted shot: the junkyard and both bombs, close
+        /// enough for the junk to read as junk (it was specks at 30).
+        /// </summary>
+        public float plantedZoom = 22f;
+
+        /// <summary>The zoom of the blast shot: both 12-tile blasts.</summary>
+        public float blastZoom = 34f;
 
         /// <summary>The raiders.</summary>
         [Unsaved]
@@ -516,7 +559,11 @@ namespace BatshitTechnology
         public override IntVec3 FocusCell =>
             Centre.IsValid ? Centre : base.FocusCell;
 
-        /// <summary>Clears the yard; lays out the junk, the army and the robots.</summary>
+        /// <summary>
+        /// Clears the yard; lays out the junkyard, its outer ring of junk
+        /// (Core's <see cref="TourYardJunk.TwinsOuter"/>, for the pulls to
+        /// drag in from afar), the army and the robots.
+        /// </summary>
         protected override void SetupScene()
         {
             PrepareYard();
@@ -524,6 +571,7 @@ namespace BatshitTechnology
             imploded = false;
             bombs = new List<Building_TractorBomb>();
             TractorStaging.BuildJunkyard(Map, Centre);
+            LayJunk(TourYardJunk.TwinsOuter);
             army = TractorStaging.SpawnArmy(
                 Map, Centre, TwinJunkyardLayout.Army, armed: false,
                 stunned: true);
@@ -574,7 +622,7 @@ namespace BatshitTechnology
             {
                 plantedAt = Elapsed;
                 Release(army);
-                BeatOnce("planted", Shot(30f));
+                BeatOnce("planted", Shot(plantedZoom));
             }
 
             if (plantedAt >= 0 && !imploded && Elapsed >= plantedAt + implodeDelay)
@@ -595,7 +643,7 @@ namespace BatshitTechnology
 
             if (ExplosionsSinceStart > 0)
             {
-                BeatOnce("blast", Shot(45f), select: false);
+                BeatOnce("blast", Shot(blastZoom), select: false);
             }
         }
 

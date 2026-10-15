@@ -88,6 +88,7 @@ namespace BatshitTechnology
             if (!finished)
             {
                 tourWatch?.SampleScreenFrame();
+                tourWatch?.SampleCameraFrame();
             }
 
             if (finished)

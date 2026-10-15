@@ -163,6 +163,110 @@ public sealed class TractorLayoutTests
     }
 
     /// <summary>
+    /// The single yard's junk (slice 19000d) lies inside the yard, inside
+    /// the predicted plant's pull and outside its blast, so it is seen to
+    /// slide before the blast takes it; on cells of its own, none where
+    /// the party, the stray or the barn stand.
+    /// </summary>
+    [Fact(DisplayName = "The single yard's junk is in the pull, outside the blast")]
+    public void Single_junk_should_be_in_the_pull_outside_the_blast()
+    {
+        Cell plant = SingleTractorLayout.PredictedPlant()!.Value;
+        var cells = TourYardJunk.Single.Select(j => j.At).ToList();
+        Assert.True(cells.Count >= 20, $"{cells.Count} pieces");
+        Assert.Equal(cells.Count, cells.Distinct().Count());
+        Assert.All(cells, c =>
+        {
+            Assert.True(Yard.Contains(c), $"{c} outside the yard");
+            double d = plant.DistanceTo(c);
+            Assert.True(d > TourBlast && d <= TourPull, $"{c} at {d:F1} tiles");
+            Assert.DoesNotContain(c, SingleTractorLayout.Party);
+            Assert.False(new Box(-32, -2, -28, 2).Contains(c), $"{c} by the barn");
+        });
+        Assert.All(TourYardJunk.Single, j => Assert.InRange(j.Count, 1, 75));
+    }
+
+    /// <summary>
+    /// No piece of the single yard's junk lies within 3 tiles of the
+    /// robot's road (the barn's door to where it plants) or of the stray's
+    /// way out (its spot to its retreat), so neither has to go round it.
+    /// </summary>
+    [Fact(DisplayName = "The single yard's junk keeps off the road and the stray's way")]
+    public void Single_junk_should_keep_off_the_road_and_the_strays_way()
+    {
+        Cell plant = SingleTractorLayout.PredictedPlant()!.Value;
+        Cell stray = SingleTractorLayout.Stray;
+        Cell away = stray + new Cell(0, SingleTractorLayout.StrayRetreat);
+        Assert.All(TourYardJunk.Single, j =>
+        {
+            Assert.True(FromSegment(j.At, SingleTractorLayout.BarnDoor, plant) > 3,
+                $"{j.At} on the robot's road");
+            Assert.True(FromSegment(j.At, stray, away) > 3,
+                $"{j.At} on the stray's way out");
+        });
+    }
+
+    /// <summary>
+    /// The twins' outer ring lies inside the yard, inside a pull and
+    /// outside both blasts, off both robots' roads, and on cells the
+    /// junkyard itself leaves free.
+    /// </summary>
+    [Fact(DisplayName = "The twins' outer junk is in a pull, outside both blasts")]
+    public void Twins_outer_junk_should_be_in_a_pull_outside_the_blasts()
+    {
+        var plants = TwinJunkyardLayout.PredictedPlants().Select(p => p!.Value).ToList();
+        var used = TwinJunkyardLayout.AllOffsets().ToHashSet();
+        var cells = TourYardJunk.TwinsOuter.Select(j => j.At).ToList();
+        Assert.True(cells.Count >= 12, $"{cells.Count} pieces");
+        Assert.Equal(cells.Count, cells.Distinct().Count());
+        Assert.All(cells, c =>
+        {
+            Assert.True(Yard.Contains(c), $"{c} outside the yard");
+            Assert.DoesNotContain(c, used);
+            double nearest = plants.Min(p => p.DistanceTo(c));
+            Assert.True(nearest > TourBlast && nearest <= TourPull, $"{c} at {nearest:F1}");
+            for (int i = 0; i < plants.Count; i++)
+            {
+                Assert.True(FromSegment(c, TwinJunkyardLayout.DriveIn[i], plants[i]) > 3,
+                    $"{c} on robot {i}'s road");
+            }
+        });
+    }
+
+    /// <summary>
+    /// The junk is made of things that neither burn nor go off when hit,
+    /// so a pull and a blast in the yard start no fire beyond it.
+    /// </summary>
+    [Fact(DisplayName = "The tour's junk is nothing that burns or explodes")]
+    public void Junk_should_be_neither_flammable_nor_explosive()
+    {
+        string[] allowed =
+        {
+            TourYardJunk.Slag, TourYardJunk.Rock, TourYardJunk.Crate, "Silver",
+            "Gold", "Jade", "Uranium", "Plasteel", "ComponentIndustrial",
+        };
+        Assert.All(TourYardJunk.Single.Concat(TourYardJunk.TwinsOuter),
+            j => Assert.Contains(j.DefName, allowed));
+    }
+
+    /// <summary>The distance from a cell to a straight segment.</summary>
+    /// <param name="c">The cell.</param>
+    /// <param name="a">One end.</param>
+    /// <param name="b">The other end.</param>
+    /// <returns>The distance, in tiles.</returns>
+    private static double FromSegment(Cell c, Cell a, Cell b)
+    {
+        double dx = b.X - a.X;
+        double dz = b.Z - a.Z;
+        double length = (dx * dx) + (dz * dz);
+        double t = length == 0 ? 0
+            : System.Math.Clamp((((c.X - a.X) * dx) + ((c.Z - a.Z) * dz)) / length, 0, 1);
+        double px = a.X + (t * dx) - c.X;
+        double pz = a.Z + (t * dz) - c.Z;
+        return System.Math.Sqrt((px * px) + (pz * pz));
+    }
+
+    /// <summary>
     /// A robot that sees nothing plants nowhere; one already within its
     /// stop plants where it stands.
     /// </summary>

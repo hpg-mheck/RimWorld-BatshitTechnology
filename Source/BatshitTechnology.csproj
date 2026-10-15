@@ -95,6 +95,7 @@
     <Compile Include="SmokeTestShowcases.Seeds.cs" />
     <Compile Include="SmokeTestShowcases.Weather.cs" />
     <Compile Include="SmokeTestTour.cs" />
+    <Compile Include="SmokeTestTour.Camera.cs" />
     <Compile Include="SmokeTestTour.CleanStage.cs" />
     <Compile Include="SmokeTestTour.QuietScreen.cs" />
     <Compile Include="SmokeTestTour.Raccoon.cs" />

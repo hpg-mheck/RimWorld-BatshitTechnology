@@ -45,13 +45,18 @@
          (docs/SHOWCASE-API.md, "The Quiet Screen"). -->
     <quietScreen>true</quietScreen>
     <workerClass>BatshitTechnology.BatshitTourDirector</workerClass>
+    <!-- Each scene opens with a cut, not a glide, so its caption and
+         opening line never show the last scene's place; and every shot
+         keeps on the map, so none shows the black beyond its edge (the
+         stampede's herd enters at the east edge, the pads and the yard
+         lie near others). Slice 19000d. -->
     <scenes>
       <li Class="BatshitTechnology.DeviceParadeScene">
         <key>home</key>
         <title>The Home of Tomorrow</title>
         <minTicks>600</minTicks>
         <timeoutTicks>4000</timeoutTicks>
-        <shots><li><zoom>14</zoom></li></shots>
+        <shots><li><zoom>14</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
       <li Class="BatshitTechnology.BallistaVolleyScene">
         <key>defence</key>
@@ -59,7 +64,7 @@
         <minTicks>600</minTicks>
         <timeoutTicks>2700</timeoutTicks>
         <settleTicks>120</settleTicks>
-        <shots><li><zoom>14</zoom></li></shots>
+        <shots><li><zoom>14</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
       <!-- The herd enters over the first ticks; the volley waits for it
            to come within the range the grid can power (about 76 tiles). -->
@@ -71,7 +76,7 @@
         <settleTicks>120</settleTicks>
         <selectSubject>false</selectSubject>
         <herdSize>200</herdSize>
-        <shots><li><zoom>40</zoom></li></shots>
+        <shots><li><zoom>40</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
       <li Class="BatshitTechnology.SelfDestructScene">
         <key>retire-replicator</key>
@@ -80,7 +85,7 @@
         <minTicks>600</minTicks>
         <timeoutTicks>3200</timeoutTicks>
         <settleTicks>120</settleTicks>
-        <shots><li><zoom>22</zoom></li></shots>
+        <shots><li><zoom>22</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
       <li Class="BatshitTechnology.SelfDestructScene">
         <key>retire-reactor</key>
@@ -89,7 +94,7 @@
         <minTicks>600</minTicks>
         <timeoutTicks>3900</timeoutTicks>
         <settleTicks>120</settleTicks>
-        <shots><li><zoom>22</zoom></li></shots>
+        <shots><li><zoom>22</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
       <li Class="BatshitTechnology.AnyRimWalkScene">
         <key>anyrim</key>
@@ -97,7 +102,7 @@
         <minTicks>600</minTicks>
         <timeoutTicks>3200</timeoutTicks>
         <selectSubject>false</selectSubject>
-        <shots><li><zoom>30</zoom></li></shots>
+        <shots><li><zoom>30</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
       <li Class="BatshitTechnology.GrenadeScene">
         <key>grenade</key>
@@ -105,7 +110,7 @@
         <minTicks>600</minTicks>
         <timeoutTicks>2600</timeoutTicks>
         <settleTicks>180</settleTicks>
-        <shots><li><zoom>22</zoom></li></shots>
+        <shots><li><zoom>22</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
       <!-- AnyRim's guard and a manhunting raccoon (docs/SHOWCASE.md, "Reel
            9"). Declines without AnyRim, or when its scene was skipped. -->
@@ -115,7 +120,7 @@
         <minTicks>600</minTicks>
         <timeoutTicks>4400</timeoutTicks>
         <settleTicks>120</settleTicks>
-        <shots><li><zoom>20</zoom></li></shots>
+        <shots><li><zoom>20</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
       <li Class="BatshitTechnology.TractorBombScene">
         <key>tractor</key>
@@ -123,7 +128,7 @@
         <minTicks>600</minTicks>
         <timeoutTicks>5500</timeoutTicks>
         <settleTicks>240</settleTicks>
-        <shots><li><zoom>30</zoom></li></shots>
+        <shots><li><zoom>30</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
       <li Class="BatshitTechnology.TwinTractorsScene">
         <key>twins</key>
@@ -131,7 +136,9 @@
         <minTicks>600</minTicks>
         <timeoutTicks>4400</timeoutTicks>
         <settleTicks>300</settleTicks>
-        <shots><li><zoom>45</zoom></li></shots>
+        <!-- Close enough for the junk to read as junk (it was specks at
+             45); the robots drive in from the frame's edges. -->
+        <shots><li><zoom>28</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
       </li>
     </scenes>
     <narration>

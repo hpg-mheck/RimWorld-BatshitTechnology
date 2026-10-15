@@ -39,6 +39,15 @@ namespace BatshitTechnology.Showcases
         /// <summary>How long a glide takes, in real seconds.</summary>
         public float panSeconds = 0.6f;
 
+        /// <summary>
+        /// Keep the whole view on the map: a shot near an edge is moved in
+        /// until the view no longer shows the black beyond it (Core's
+        /// <c>ShotFraming.KeepOnMap</c>); a view bigger than the map is
+        /// centred on it. Off by default, so a shot frames exactly where
+        /// it says.
+        /// </summary>
+        public bool keepOnMap;
+
         /// <summary>The closest zoom the API allows.</summary>
         public const float MinZoom = 8f;
 
@@ -47,6 +56,55 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>Gets the zoom, clamped to what the camera can do.</summary>
         public float ZoomClamped => Mathf.Clamp(zoom, MinZoom, MaxZoom);
+    }
+
+    /// <summary>
+    /// One camera move the director made: for which scene and beat, where
+    /// to, how close, whether it cut, and when. Tests and capture tooling
+    /// compare it with where the camera really is.
+    /// </summary>
+    public sealed class ShowcaseFraming
+    {
+        /// <summary>Records a camera move.</summary>
+        /// <param name="scene">The scene's key.</param>
+        /// <param name="beat">The beat's moment, or null for a timed shot.</param>
+        /// <param name="x">Where the view is centred, in tiles east.</param>
+        /// <param name="z">Where the view is centred, in tiles north.</param>
+        /// <param name="zoom">The camera's root size.</param>
+        /// <param name="cut">Whether it cut rather than glided.</param>
+        /// <param name="tick">The game tick it was made on.</param>
+        public ShowcaseFraming(
+            string scene, string beat, float x, float z, float zoom, bool cut, int tick)
+        {
+            Scene = scene;
+            Beat = beat;
+            X = x;
+            Z = z;
+            Zoom = zoom;
+            Cut = cut;
+            Tick = tick;
+        }
+
+        /// <summary>Gets the scene's key.</summary>
+        public string Scene { get; }
+
+        /// <summary>Gets the beat's moment, or null for a timed shot.</summary>
+        public string Beat { get; }
+
+        /// <summary>Gets where the view is centred, in tiles east.</summary>
+        public float X { get; }
+
+        /// <summary>Gets where the view is centred, in tiles north.</summary>
+        public float Z { get; }
+
+        /// <summary>Gets the camera's root size.</summary>
+        public float Zoom { get; }
+
+        /// <summary>Gets whether it cut rather than glided.</summary>
+        public bool Cut { get; }
+
+        /// <summary>Gets the game tick it was made on.</summary>
+        public int Tick { get; }
     }
 
     /// <summary>

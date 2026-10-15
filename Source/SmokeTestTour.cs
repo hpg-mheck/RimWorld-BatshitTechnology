@@ -1193,7 +1193,9 @@ namespace BatshitTechnology
             /// <summary>
             /// The world facts at a scene's end: no bolt fired outside the
             /// volley; no colonist harmed; the clean stage's facts (no
-            /// unstaged hostile, no anima scream, the weather held); pads
+            /// unstaged hostile, no anima scream, the weather held); the
+            /// quiet screen's; the yard's junk laid; the camera's (the
+            /// opening cut landed, the view kept on the map); pads
             /// gone and the aftermath idle; 16 bolts spent; one more
             /// implosion; and the tractors' explosions (and superposed
             /// pulls for the twins).
@@ -1233,6 +1235,15 @@ namespace BatshitTechnology
 
                 CleanStageFacts(scene);
                 QuietScreenFacts(scene);
+                if (scene is TractorYardScene yard)
+                {
+                    // Slice 19000d: the yard's junk, for a busy pull.
+                    Fact(scene, $"the yard's junk was laid ({yard.Junk.Laid} of "
+                            + $"{yard.Junk.Meant})",
+                        yard.Junk.Meant > 0 && yard.Junk.Laid == yard.Junk.Meant);
+                }
+
+                CameraFacts(scene);
                 TouristFacts(scene);
 
                 switch (scene)
