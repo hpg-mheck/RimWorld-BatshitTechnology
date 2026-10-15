@@ -19,12 +19,22 @@
 # default 1), -Shots (each run saves its frames to <run>\shots\),
 # -TourSkip (scenes forced to decline; default none), -TimeoutSeconds (per
 # run, passed to smoke-test.ps1; default 1500), -OutDir (default a fresh
-# folder under .local\tmp).
+# folder under .local\tmp; a relative one is taken from the current
+# folder and made absolute, since RimWorld starts in its own folder).
+# A seed may appear once (compared ignoring case, as folder names are);
+# -Repeat runs it more than once.
 # A run that crashes, hangs or times out gets a row saying so; the others
-# carry on. Only games this script started (by the pid each run reports)
-# are ever stopped. Each run's folder keeps trial.json (its name, seed and
-# start) and exit.txt (its exit code and end), so -Collect can rebuild the
-# results. Exits 1 if any run left no SUMMARY, else 0.
+# carry on. Only games this script started (by the pid each run reports,
+# and that process's start time) are ever stopped. Each run's folder keeps
+# trial.json (its name, seed and start) and exit.txt (its exit code and
+# end), and problem.txt when the watcher stopped it, so -Collect can
+# rebuild the results; a run with no recorded end gets no wallSeconds.
+# Seeds whose maps hold layouts (ancient structures, ruins) are listed:
+# their rooms are not pinned, so their MAPHASH may differ between
+# processes (docs/SHOWCASE-API.md, "Seeds"); repeat them to see.
+# Exits 1 if any run left no SUMMARY, else 0.
+# Dot-sourced (. .\Tools\tour-trials.ps1) it only defines its functions,
+# for Tools\tests\test_trial_tools.py.
 # The CSV flattens the SUMMARY: nested fields are dotted (scenes.home.tps),
 # lists are joined with ';'. docs/AI-TESTING-STRATEGY.txt lists the fields.
 # Windows PowerShell 5.1 and PowerShell 7 both run it.
@@ -44,6 +54,15 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2
+
+# A path made absolute against the current folder, as PowerShell's own
+# cmdlets would take it, whether or not it exists yet. Paths go to other
+# processes (the hidden shells, and RimWorld, which starts in its own
+# folder and would resolve a relative one against that).
+function Resolve-FullPath([string]$path) {
+  if (-not $path) { return $path }
+  $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path)
+}
 
 # Starts one run: smoke-test.ps1 in a hidden shell of this edition, with
 # its output in <run>\smoke-test.out.txt. -EncodedCommand keeps an empty
@@ -75,12 +94,22 @@ function Start-Trial($run) {
   $null = $proc.Handle  # keeps ExitCode readable after the process ends
   [pscustomobject]@{
     Run = $run; Folder = $folder; Out = $out; Proc = $proc
-    Started = $started; GamePid = $null; GameStarted = $null
+    Started = $started; GamePid = $null; GameStarted = $null; GameGone = $false
   }
 }
 
+# A process's start time, or $null if it cannot be read (gone, or not
+# ours to read).
+function Get-StartTime($process) {
+  if (-not $process) { return $null }
+  try { $process.StartTime } catch { $null }
+}
+
 # The pid of the game a run started, from its "Started RimWorld (pid N)"
-# line, once it has one.
+# line, once it has one, with that process's start time. A pid whose
+# process is already gone, or is not RimWorld, or whose start time cannot
+# be read, is marked gone and never stopped: Windows may have given the
+# number to another process, a sibling trial's game or the operator's own.
 function Update-GamePid($active) {
   if ($active.GamePid -or -not (Test-Path $active.Out)) { return }
   $hit = Select-String -Path $active.Out -Pattern 'Started RimWorld \(pid (\d+)\)' `
@@ -88,17 +117,28 @@ function Update-GamePid($active) {
   if ($hit) {
     $active.GamePid = [int]$hit.Matches[0].Groups[1].Value
     $game = Get-Process -Id $active.GamePid -ErrorAction SilentlyContinue
-    if ($game) { $active.GameStarted = $game.StartTime }
+    $started = if ($game -and $game.ProcessName -eq 'RimWorldWin64') { Get-StartTime $game }
+    if ($started) { $active.GameStarted = $started } else { $active.GameGone = $true }
   }
+}
+
+# Whether a process is the game a run started: the pid it reported, still
+# RimWorld, and started at the time recorded for it. With no recorded
+# start time it is never taken for the run's game.
+function Test-OwnGame($process, $active) {
+  if (-not $process -or -not $active.GamePid -or $active.GameGone -or
+      -not $active.GameStarted) { return $false }
+  $started = Get-StartTime $process
+  [bool]($process.Id -eq $active.GamePid -and $process.ProcessName -eq 'RimWorldWin64' -and
+    $started -and $started -eq $active.GameStarted)
 }
 
 # Stops a run's game, only if that pid is still the RimWorld this run
 # started (a pid can be reused once a process has gone).
 function Stop-TrialGame($active) {
-  if (-not $active.GamePid) { return }
+  if (-not $active.GamePid -or $active.GameGone) { return }
   $game = Get-Process -Id $active.GamePid -ErrorAction SilentlyContinue
-  if ($game -and $game.ProcessName -eq 'RimWorldWin64' -and
-      (-not $active.GameStarted -or $game.StartTime -eq $active.GameStarted)) {
+  if (Test-OwnGame $game $active) {
     Stop-Process -Id $game.Id -Force -ErrorAction SilentlyContinue
   }
 }
@@ -141,20 +181,27 @@ function Get-LastMatch([string[]]$lines, [string]$pattern) {
 }
 
 # One run's row, from its folder: trial.json and exit.txt (its own
-# record), its game's log, and the problem the watcher saw, if any.
-function Get-TrialRow([string]$folder, [string]$problem, $exitCode) {
+# record), problem.txt (what the watcher saw when it stopped the run), its
+# game's log, and the problem the watcher saw now, if any. -Live, as the
+# watcher calls it for a run that has just ended, takes now as the end
+# when none is recorded; -Collect does not, and leaves wallSeconds empty.
+function Get-TrialRow([string]$folder, [string]$problem, $exitCode, [switch]$Live) {
   $trial = $null
   $trialFile = Join-Path $folder 'trial.json'
   if (Test-Path $trialFile) { $trial = Get-Content -Raw $trialFile | ConvertFrom-Json }
   $name = if ($trial) { $trial.name } else { Split-Path $folder -Leaf }
   $started = if ($trial) { ConvertTo-Time $trial.started } else { $null }
-  $ended = Get-Date
+  $ended = if ($Live) { Get-Date } else { $null }
   $exitFile = Join-Path $folder 'exit.txt'
   $exitRecorded = Test-Path $exitFile
   if ($exitRecorded) {
     $parts = (Get-Content -Raw $exitFile).Trim() -split ' ', 2
     if ($null -eq $exitCode) { $exitCode = [int]$parts[0] }
     if ($parts.Count -gt 1) { $ended = ConvertTo-Time $parts[1] }
+  }
+  $problemFile = Join-Path $folder 'problem.txt'
+  if (-not $problem -and (Test-Path $problemFile)) {
+    $problem = (Get-Content -Raw $problemFile).Trim()
   }
 
   $log = Join-Path $folder 'Player.log'
@@ -185,7 +232,7 @@ function Get-TrialRow([string]$folder, [string]$problem, $exitCode) {
     error = $problem
     passed = $(if ($done -and $done -match 'passed=(\d+)') { [int]$Matches[1] } else { $null })
     failed = $(if ($done -and $done -match 'failed=(\d+)') { [int]$Matches[1] } else { $null })
-    wallSeconds = $(if ($started) { [math]::Round(($ended - $started).TotalSeconds) } else { $null })
+    wallSeconds = $(if ($started -and $ended) { [math]::Round(($ended - $started).TotalSeconds) } else { $null })
     mapHash = $(if ($mapCue) { ($mapCue -split ' ')[2] } else { $null })
     stageHash = $(if ($stageCue) { ($stageCue -split ' ')[2] } else { $null })
     finished = $null
@@ -201,9 +248,25 @@ function Get-TrialRow([string]$folder, [string]$problem, $exitCode) {
   [pscustomobject]@{ Row = $row; Summary = $summary }
 }
 
+# How the runs of one seed compare on one fingerprint, from the values the
+# runs logged (a run that logged none adds nothing) and how many runs
+# there were: "same" only when at least two runs carry one and all agree
+# (compared exactly); runs without one are counted, never compared; with
+# fewer than two carrying one, "not compared".
+function Get-RepeatVerdict([object[]]$values, [int]$runs) {
+  $have = @($values | Where-Object { $_ })
+  $without = $runs - $have.Count
+  $distinct = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::Ordinal)
+  foreach ($v in $have) { $null = $distinct.Add([string]$v) }
+  $note = "$($have.Count) of $runs runs" + $(if ($without -gt 0) { "; $without without one" } else { '' })
+  if ($have.Count -lt 2) { return "not compared ($note)" }
+  if ($distinct.Count -eq 1) { return "same ($note)" }
+  "DIFFERS ($($distinct.Count) values in $note)"
+}
+
 # Writes results.json (each row with its SUMMARY whole) and results.csv
 # (the SUMMARY flattened, every row with the same columns), and prints
-# the table and the repeats.
+# the table, the repeats, and the runs whose maps hold layouts.
 function Write-Results($results) {
   $ordered = @($results | Sort-Object { $_.Row['run'] })
   $json = @($ordered | ForEach-Object {
@@ -238,24 +301,45 @@ function Write-Results($results) {
     }
   } | Format-Table -AutoSize | Out-String -Width 220
 
-  $repeated = @($ordered | Group-Object { $_.Row['seed'] } | Where-Object { $_.Count -gt 1 })
+  # Seeds are case-sensitive (Alpha and alpha are two seeds), so are their
+  # groups; a run with no seed at all is no repeat of anything.
+  $repeated = @($ordered | Where-Object { $_.Row['seed'] } |
+    Group-Object -CaseSensitive { $_.Row['seed'] } | Where-Object { $_.Count -gt 1 })
   if ($repeated.Count -gt 0) {
     '== Repeats of a seed'
     foreach ($g in $repeated) {
-      $maps = @($g.Group | ForEach-Object { $_.Row['mapHash'] } | Select-Object -Unique)
-      $stages = @($g.Group | ForEach-Object { $_.Row['stageHash'] } | Select-Object -Unique)
-      "  $($g.Name): $($g.Count) runs; MAPHASH " +
-        $(if ($maps.Count -eq 1) { 'same' } else { 'DIFFERS' }) + ', STAGEHASH ' +
-        $(if ($stages.Count -eq 1) { 'same' } else { 'DIFFERS' })
+      $maps = Get-RepeatVerdict @($g.Group | ForEach-Object { $_.Row['mapHash'] }) $g.Count
+      $stages = Get-RepeatVerdict @($g.Group | ForEach-Object { $_.Row['stageHash'] }) $g.Count
+      $starts = @($g.Group | ForEach-Object { $_.Row['startState'] } | Where-Object { $_ })
+      "  $($g.Name): $($g.Count) runs; MAPHASH $maps; STAGEHASH $stages" +
+        $(if ($starts.Count -gt 0) {
+            '; start state ' + (Get-RepeatVerdict $starts $g.Count)
+          } else { '' })
+    }
+  }
+
+  $layouts = @($ordered | Where-Object {
+      $_.Row.Contains('unpinnedLayouts') -and $_.Row['unpinnedLayouts'] -and
+      [int]$_.Row['unpinnedLayouts'] -gt 0 })
+  if ($layouts.Count -gt 0) {
+    '== Maps holding layouts, whose rooms a seed does not pin (MAPHASH may differ'
+    '   in another process; repeat the seed with -Repeat 2 to see)'
+    foreach ($res in $layouts) {
+      $r = $res.Row
+      "  $($r['run']) (seed $($r['seed'])): $($r['unpinnedLayouts']) layout(s)" +
+        $(if ($r.Contains('landmark') -and $r['landmark']) { "; landmark $($r['landmark'])" } else { '' })
     }
   }
   "Results: $(Join-Path $OutDir 'results.csv') and results.json"
   @($ordered | Where-Object { -not $_.Summary }).Count
 }
 
+# Dot-sourced, for the tests: the functions only.
+if ($MyInvocation.InvocationName -eq '.') { return }
+
 if ($Collect) {
   # Rebuilds the results from an existing trials folder's runs.
-  $OutDir = (Resolve-Path $Collect).Path
+  $OutDir = (Resolve-Path (Resolve-FullPath $Collect)).Path
   $results = New-Object System.Collections.Generic.List[object]
   foreach ($dir in Get-ChildItem $OutDir -Directory) {
     if ((Test-Path (Join-Path $dir.FullName 'trial.json')) -or
@@ -284,6 +368,15 @@ foreach ($s in $seedList) {
   }
 }
 for ($i = 1; $i -le $Count; $i++) { $seedList += ('tour-{0:00}' -f $i) }
+# A seed given twice, or two seeds that differ only in case, would put two
+# live games in one data folder (folder names ignore case on Windows).
+$seen = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+$twice = @($seedList | Where-Object { -not $seen.Add($_) })
+if ($twice.Count -gt 0) {
+  throw "Seeds repeat (compared ignoring case, as folder names are): " +
+    "$(($twice | Select-Object -Unique) -join ', '). Give each seed once; " +
+    "-Repeat runs a seed more than once."
+}
 $plan = New-Object System.Collections.Generic.List[object]
 foreach ($s in $seedList) {
   for ($r = 1; $r -le $Repeat; $r++) {
@@ -294,12 +387,21 @@ for ($i = 1; $i -le $RandomRuns; $i++) {
   $plan.Add([pscustomobject]@{ Name = ('random{0:00}' -f $i); Seed = ''; Repeat = 1 })
 }
 if ($plan.Count -eq 0) { throw 'Nothing to run: pass -Seeds, -Count or -RandomRuns.' }
+$names = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+foreach ($run in $plan) {
+  if (-not $names.Add($run.Name)) {
+    throw "Two runs would share the folder '$($run.Name)'; rename a seed."
+  }
+}
 
 $smoke = Join-Path $PSScriptRoot 'smoke-test.ps1'
 $shell = (Get-Process -Id $PID).Path
+$ModRoot = Resolve-FullPath $ModRoot
+$RimWorld = Resolve-FullPath $RimWorld
 if (-not $OutDir) {
   $OutDir = Join-Path $ModRoot ('.local\tmp\tour-trials-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 }
+$OutDir = Resolve-FullPath $OutDir
 if (Test-Path $OutDir) { throw "$OutDir exists already; trials need a fresh folder." }
 New-Item -ItemType Directory -Force $OutDir | Out-Null
 "Tour trials: $($plan.Count) runs, $Parallel at a time, into $OutDir"
@@ -326,14 +428,22 @@ try {
       if (-not $a.Proc.HasExited) {
         if (((Get-Date) - $a.Started) -lt $limit) { continue }
         $problem = "timed out after $([int]$limit.TotalSeconds) s; stopped"
-        Stop-TrialGame $a
         Stop-Process -Id $a.Proc.Id -Force -ErrorAction SilentlyContinue
         $a.Proc.WaitForExit(10000) | Out-Null
+        Stop-TrialGame $a
+        # The shell was stopped before it could record its end: the watcher
+        # records it, and why, so -Collect rebuilds the same row.
+        $code = if ($a.Proc.HasExited) { $a.Proc.ExitCode } else { -1 }
+        Set-Content -LiteralPath (Join-Path $a.Folder 'problem.txt') -Value $problem
+        if (-not (Test-Path (Join-Path $a.Folder 'exit.txt'))) {
+          Set-Content -LiteralPath (Join-Path $a.Folder 'exit.txt') `
+            -Value ("$code " + (Get-Date).ToString('o'))
+        }
       } else {
         Stop-TrialGame $a  # smoke-test.ps1 stops its own; this is belt and braces
       }
       $exit = if ($a.Proc.HasExited) { $a.Proc.ExitCode } else { $null }
-      $result = Get-TrialRow $a.Folder $problem $exit
+      $result = Get-TrialRow $a.Folder $problem $exit -Live
       $results.Add($result)
       $active.Remove($a) | Out-Null
       $r = $result.Row
@@ -343,9 +453,14 @@ try {
     }
   }
 } finally {
+  # On Ctrl+C or a failure: stop each run's shell first, so it starts no
+  # game, then read the pid of any game it did start (its line may have
+  # come since the last poll), then stop that game; stopping a shell does
+  # not stop the RimWorld it started.
   foreach ($a in $active.ToArray()) {
-    Stop-TrialGame $a
     if (-not $a.Proc.HasExited) { Stop-Process -Id $a.Proc.Id -Force -ErrorAction SilentlyContinue }
+    Update-GamePid $a
+    Stop-TrialGame $a
   }
 }
 

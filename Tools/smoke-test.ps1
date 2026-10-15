@@ -42,8 +42,12 @@
 # -KeepOpen) get a maximized window and 2x UI scale; test runs, -Verify
 # included, stay small and muted.
 # Defaults: the repository this script sits in, $env:RIMWORLD_DIR, and a
-# data folder under %TEMP%. The first run links the repository into
-# RimWorld's Mods folder (a directory junction).
+# data folder under %TEMP%. Relative paths are taken from the current
+# folder and made absolute first (RimWorld starts in its own folder, and
+# would resolve them against that); the data folder is printed. A game
+# that has written no log 120 s after it started is stopped, and the run
+# fails. The first run links the repository into RimWorld's Mods folder
+# (a directory junction).
 param(
   [string]$ModRoot = (Split-Path $PSScriptRoot -Parent),
   [string]$RimWorld = $env:RIMWORLD_DIR,
@@ -63,6 +67,18 @@ param(
   [switch]$Shots
 )
 $ErrorActionPreference = 'Stop'
+# Absolute paths, from the current folder, before anything uses them:
+# RimWorld is started in its own folder, and a relative -savedatafolder or
+# -logFile would land inside the RimWorld install.
+$fullPath = {
+  param($path)
+  if ($path) { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path) }
+  else { $path }
+}
+$ModRoot = & $fullPath $ModRoot
+$RimWorld = & $fullPath $RimWorld
+$DataFolder = & $fullPath $DataFolder
+"Data folder: $DataFolder"
 if ($Seed -and -not $Showcase) { throw '-Seed seeds a showcase; pass -Showcase too.' }
 if ($Seed -and $Seed -cnotmatch '^[A-Za-z0-9._-]{1,64}$') {
   throw "-Seed '$Seed' is not a usable seed: 1 to 64 of A-Z, a-z, 0-9, '.', '_' and '-'."
@@ -181,6 +197,17 @@ if ($KeepOpen) { $gameArgs += '-btsmoketestkeep' }
 $exe = Join-Path $RimWorld 'RimWorldWin64.exe'
 $proc = Start-Process $exe -ArgumentList $gameArgs -WorkingDirectory $RimWorld -PassThru
 "Started RimWorld (pid $($proc.Id)); log: $log"
+# RimWorld writes its log within seconds of starting; one that has written
+# none by then is writing it somewhere else, or not running at all.
+$logDeadline = (Get-Date).AddSeconds(120)
+
+# Stops the game and fails the run if it has written no log by the
+# deadline.
+function Assert-LogStarted {
+  if ((Test-Path $log) -or (Get-Date) -lt $logDeadline) { return }
+  if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+  throw "RimWorld (pid $($proc.Id)) wrote no log at $log within 120 s; stopped it."
+}
 
 # Errors: RimWorld logs errors and exceptions as plain lines; skip Unity's
 # stack-trace and file-location noise.
@@ -251,6 +278,7 @@ if ($watching) {
   $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
   while ((Get-Date) -lt $deadline -and -not $proc.HasExited) {
     Start-Sleep -Seconds 3
+    Assert-LogStarted
     if (-not (Test-Path $log)) { continue }
     $sofar = @(Get-Content $log)
     $end = $sofar | Select-String -Pattern '^\[BT-SHOWCASE\] (READY|REFUSED|FAILED)\b' |
@@ -278,6 +306,7 @@ $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 $done = $false
 while ((Get-Date) -lt $deadline -and -not $proc.HasExited) {
   Start-Sleep -Seconds 3
+  Assert-LogStarted
   if ((Test-Path $log) -and (Select-String -Path $log -SimpleMatch '[BT-SMOKE] DONE' -Quiet)) {
     $done = $true
     break
