@@ -381,6 +381,8 @@ namespace BatshitTechnology
 
             TestLaunchGuards();
             TestRequestBinding();
+            TestFailedLaunchDropsRequest();
+            TestSettleHoldOutlastsFade();
             TestShowcaseVerdicts();
             TestStoppedLineConfigError();
             TestForceOutsideDevMode();

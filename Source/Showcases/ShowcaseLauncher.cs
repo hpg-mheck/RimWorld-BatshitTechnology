@@ -43,14 +43,27 @@ namespace BatshitTechnology.Showcases
         /// The seed it was generated from, or null (a smoke test's planted
         /// request); the session then sets up without reseeding.
         /// </param>
+        /// <param name="quickTest">
+        /// Whether it adopts a quick-test map, which vanilla generated
+        /// before the showcase was asked for.
+        /// </param>
         public LaunchRequest(
-            ShowcaseDef def, Game game, bool forced, ResolvedSeed seed = null)
+            ShowcaseDef def, Game game, bool forced, ResolvedSeed seed = null,
+            bool quickTest = false)
         {
             Def = def ?? throw new ArgumentNullException(nameof(def));
             Game = game ?? throw new ArgumentNullException(nameof(game));
             Forced = forced;
             Seed = seed;
+            QuickTest = quickTest;
         }
+
+        /// <summary>
+        /// Gets a value indicating whether the request adopts a quick-test
+        /// map (<c>-quicktest -showcase=</c>), whose seeds the map seed's
+        /// window never pinned.
+        /// </summary>
+        public bool QuickTest { get; }
 
         /// <summary>Gets the seed the game was generated from, or null.</summary>
         public ResolvedSeed Seed { get; }
@@ -332,7 +345,27 @@ namespace BatshitTechnology.Showcases
             ResolvedSeed seed = ResolveSeed(def);
             ShowcaseLog.Cue("SEED", $"{seed.CueDetail}; quicktest map, not pinned");
             return new LaunchRequest(
-                def, Current.Game, verdict == CommandLineVerdict.LaunchForced, seed);
+                def, Current.Game, verdict == CommandLineVerdict.LaunchForced, seed,
+                quickTest: true);
+        }
+
+        /// <summary>
+        /// Gets the seed of the launch request waiting for exactly this
+        /// game, without taking it: the session's FinalizeInit draws the
+        /// rest of the game's start from it. Null when no request waits
+        /// for this game, or the request has no seed. Never drops a stale
+        /// request; <see cref="TakeRequestFor"/> does that.
+        /// </summary>
+        /// <param name="game">The game being started.</param>
+        /// <returns>The seed, or null.</returns>
+        internal static ResolvedSeed PendingSeedFor(Game game)
+        {
+            lock (Gate)
+            {
+                return pending != null && game != null && ReferenceEquals(pending.Game, game)
+                    ? pending.Seed
+                    : null;
+            }
         }
 
         /// <summary>
@@ -445,8 +478,9 @@ namespace BatshitTechnology.Showcases
         /// <see cref="LoadingTips"/>). Then it opens the map seed's window
         /// for the new game (<see cref="ShowcaseMapSeed"/>), which the
         /// session closes once the map is generated; if anything here
-        /// throws after that, it closes the window before the long event's
-        /// handler reports the error.
+        /// throws after that, it abandons the launch (closes the window and
+        /// drops the request) before the long event's handler reports the
+        /// error.
         /// </summary>
         /// <param name="def">The showcase.</param>
         /// <param name="forced">Whether it was forced.</param>
@@ -477,8 +511,42 @@ namespace BatshitTechnology.Showcases
             }
             catch
             {
-                ReleaseMapSeed("a failed generation");
+                AbandonLaunch("a failed generation");
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Abandons a launch whose generation or preparation threw: closes
+        /// the map seed's window (<see cref="ReleaseMapSeed"/>) and drops
+        /// the launch request, with a warning if one was waiting. Vanilla
+        /// only logs a failed preparation and loads the Play scene anyway,
+        /// whose Root_Play.Start runs Game.InitNewGame on the half-prepared
+        /// game; without its request that game starts as an ordinary game,
+        /// rather than as a showcase on a map its seed did not pin. Never
+        /// throws.
+        /// </summary>
+        /// <param name="where">What failed, for the warnings.</param>
+        internal static void AbandonLaunch(string where)
+        {
+            ReleaseMapSeed(where);
+            try
+            {
+                lock (Gate)
+                {
+                    if (pending != null)
+                    {
+                        Log.Warning($"{ShowcaseLog.Prefix} {where} dropped the launch "
+                            + $"request for {pending.Def.defName}; its game, if it "
+                            + "starts, is not a showcase");
+                        pending = null;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not drop the launch "
+                    + $"request: {e.Message}");
             }
         }
 
@@ -515,8 +583,9 @@ namespace BatshitTechnology.Showcases
         /// at random; the second founds the player's settlement, with a
         /// random name. The map that follows is seeded from the world's
         /// seed and the starting tile, pinned by the map seed's window; if
-        /// either call throws, the window is closed before the error goes
-        /// on to vanilla's handler.
+        /// either call throws, the launch is abandoned (the window closed
+        /// and the request dropped) before the error goes on to vanilla,
+        /// which logs it and starts the game anyway.
         /// </summary>
         /// <param name="seed">The launch's seed.</param>
         private static void InitGameStart(ResolvedSeed seed)
@@ -532,7 +601,7 @@ namespace BatshitTechnology.Showcases
                     }
                     catch
                     {
-                        ReleaseMapSeed("a failed preparation");
+                        AbandonLaunch("a failed preparation");
                         throw;
                     }
                     finally

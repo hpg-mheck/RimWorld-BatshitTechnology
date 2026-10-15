@@ -15,15 +15,19 @@
 // storyteller's parts are held from the session's start until the
 // showcase finishes or stops, then given back, since the closing line
 // hands the colony to the viewer. For repeatability (docs/SHOWCASE-API.md,
-// "Seeds"), the session closes the map seed's window the launcher opened
-// (ShowcaseMapSeed: the second Harmony patch pins Map.NextGenSeed only
-// while it is open) as soon as any new game starts, and says how many of
-// the map's seeds it pinned (MAPSEED), then logs the new map's
-// fingerprint (MAPHASH), holds the game paused while the map settles, so
-// no frame-timed ticks run before the worker, reseeds the global random
-// state from the launch's seed, and logs the stage's fingerprint
-// (STAGEHASH) before READY. The window is closed again, harmlessly, on
-// every later way out (set-up, Stop, FINISHED, a loaded game). Two
+// "Seeds"), the session draws the rest of a seeded game's start (once its
+// map is generated) from the launch's seed, closes the map seed's window
+// the launcher opened (ShowcaseMapSeed: the second Harmony patch pins
+// Map.NextGenSeed only while it is open) as soon as any new game starts,
+// and says how many of the map's seeds it pinned and what of the map it
+// could not (MAPSEED: layouts' rooms, the tile's landmark), then logs the
+// new map's fingerprint (MAPHASH), holds the game paused while the map
+// settles, so no frame-timed ticks run before the worker (counting the
+// settling frames only while the player has control, and retrying the
+// unpause if the game refuses it), reseeds the global random state from
+// the launch's seed, and logs the stage's fingerprint (STAGEHASH) before
+// READY. The window is closed again, harmlessly, on every later way out
+// (set-up, Stop, FINISHED, a loaded game). Two
 // internal seams, AdoptForTest and ReleaseForTest, let the smoke runner
 // (Source/SmokeTestShowcases.cs) run test showcases in its own game.
 
@@ -154,6 +158,37 @@ namespace BatshitTechnology.Showcases
         /// <summary>The game's speed before the settle hold.</summary>
         private TimeSpeed speedBeforeSettle = TimeSpeed.Normal;
 
+        /// <summary>
+        /// How many times the game refused to leave the settle hold (the
+        /// player had no control: the screen fading in, a cutscene).
+        /// </summary>
+        private int settleReleaseRefused;
+
+        /// <summary>
+        /// Whether the rest of the game's start, once its map was
+        /// generated, was drawn from the launch's seed (FinalizeInit).
+        /// </summary>
+        private bool startReseeded;
+
+        /// <summary>
+        /// The global random state as the session's StartedNewGame began,
+        /// after the rest of the game's start had drawn on it, as hex; or
+        /// null.
+        /// </summary>
+        private string startState;
+
+        /// <summary>The starting tile's landmark (its def's name), or null.</summary>
+        private string landmark;
+
+        /// <summary>The starting tile's mutators (their defs' names).</summary>
+        private List<string> mutators = new List<string>();
+
+        /// <summary>
+        /// Layouts on the new map whose rooms vanilla filled under a seed
+        /// random per process, or -1 before the game started.
+        /// </summary>
+        private int unpinnedLayouts = -1;
+
         /// <summary>Created by RimWorld for every game.</summary>
         /// <param name="game">The game.</param>
         public GameComponent_ShowcaseSession(Game game)
@@ -248,6 +283,43 @@ namespace BatshitTechnology.Showcases
         public int MapSeedsPinned => mapSeedsPinned;
 
         /// <summary>
+        /// Gets a value indicating whether the rest of the game's start,
+        /// once its map was generated, was drawn from the launch's seed.
+        /// </summary>
+        public bool StartReseeded => startReseeded;
+
+        /// <summary>
+        /// Gets the global random state as the game's start ended (the
+        /// session's StartedNewGame), as sixteen hex digits, or null. With
+        /// the start drawn from the seed, the same seed gives the same
+        /// state in every process.
+        /// </summary>
+        public string StartState => startState;
+
+        /// <summary>
+        /// Gets the starting tile's landmark (its def's name), or null:
+        /// none, or not a showcase game.
+        /// </summary>
+        public string Landmark => landmark;
+
+        /// <summary>Gets the starting tile's mutators (their defs' names).</summary>
+        public IReadOnlyList<string> Mutators => mutators;
+
+        /// <summary>
+        /// Gets how many layouts (ancient structures and ruins) the new map
+        /// holds whose rooms vanilla filled under
+        /// <c>System.HashCode.Combine</c>, random per process, so their
+        /// contents are not pinned by the seed; -1 before the game started.
+        /// </summary>
+        public int UnpinnedLayouts => unpinnedLayouts;
+
+        /// <summary>
+        /// Gets how many times the game refused to leave the settle hold
+        /// and the session tried again.
+        /// </summary>
+        public int SettleReleaseRefused => settleReleaseRefused;
+
+        /// <summary>
         /// Gets a value indicating whether the global random state was
         /// reseeded from the seed as the worker was set up.
         /// </summary>
@@ -266,21 +338,48 @@ namespace BatshitTechnology.Showcases
         public int StorytellerCompsHeld => heldStorytellerComps?.Count ?? -1;
 
         /// <summary>
+        /// Runs in Game.FinalizeInit, once the map is generated and before
+        /// the rest of the game's start (the scenario, the history and
+        /// every component's StartedNewGame), which draws on the global
+        /// random state and keeps what it drew: Anomaly's first harbinger
+        /// tree check, for one, which would otherwise draw again, and queue
+        /// an incident, at a tick that differs from process to process. For
+        /// a showcase's game generated from a seed, sets that state afresh
+        /// from the seed's <see cref="ShowcaseSeed.Start"/> purpose, so the
+        /// rest of the start draws the same in every process. Nothing is
+        /// pushed then (the map generator popped its own state) and the
+        /// main thread draws nothing during the long event
+        /// (<see cref="LoadingTips"/>). Does nothing for any other game, a
+        /// loaded one included.
+        /// </summary>
+        public override void FinalizeInit()
+        {
+            ResolvedSeed waiting = ShowcaseLauncher.PendingSeedFor(game);
+            if (waiting != null)
+            {
+                startReseeded = ShowcaseRandom.Reseed(waiting.Derive(ShowcaseSeed.Start));
+            }
+        }
+
+        /// <summary>
         /// Closes the map seed's window first, for every new game, since
-        /// its map is generated by now. Then takes the launcher's request
-        /// for this game, if there is one, says how many of the map's
-        /// seeds were pinned (MAPSEED), fingerprints the new map
-        /// (MAPHASH), quiets the storyteller, and holds the game paused
-        /// while the map settles. A game that is not a showcase gives back
-        /// any god mode an earlier showcase still held, and warns if it
-        /// found the window open (a showcase's generation that failed
-        /// left it so; it was bound to that game, so it pinned nothing
-        /// here). Runs at the end of Game.InitNewGame, inside the long
-        /// event, before the game's first tick.
+        /// its map is generated by now, and notes the global random state
+        /// the game's start left. Then takes the launcher's request for
+        /// this game, if there is one, notes what of the map a seed cannot
+        /// pin (layouts' rooms, the tile's landmark and mutators), says
+        /// how many of the map's seeds were pinned (MAPSEED), fingerprints
+        /// the new map (MAPHASH), quiets the storyteller, and holds the
+        /// game paused while the map settles. A game that is not a
+        /// showcase gives back any god mode an earlier showcase still held,
+        /// and warns if it found the window open (a showcase's generation
+        /// that failed left it so; it was bound to that game, so it pinned
+        /// nothing here). Runs at the end of Game.InitNewGame, inside the
+        /// long event, before the game's first tick.
         /// </summary>
         public override void StartedNewGame()
         {
             int pinned = ShowcaseMapSeed.Disarm();
+            ulong? state = ShowcaseRandom.Snapshot();
             LaunchRequest request = ShowcaseLauncher.TakeRequestFor(game)
                 ?? ShowcaseLauncher.TakeQuickTestRequest();
             if (request == null)
@@ -300,10 +399,14 @@ namespace BatshitTechnology.Showcases
             def = request.Def;
             forced = request.Forced;
             seed = request.Seed;
+            startState = state?.ToString("x16");
             mapSeedsPinned = ShowcaseMapSeed.Installed ? pinned : -1;
+            Map map = game.CurrentMap ?? game.Maps.FirstOrDefault();
+            NoteWhatSeedsCannotPin(map);
             ShowcaseLog.Cue("GAME", def.defName);
-            ShowcaseLog.Cue("MAPSEED", MapSeedCueDetail(pinned));
-            mapHash = Fingerprint(game.CurrentMap ?? game.Maps.FirstOrDefault(), "MAPHASH");
+            ShowcaseLog.Cue("MAPSEED", MapSeedCue.Detail(
+                ShowcaseMapSeed.Installed, pinned, request.QuickTest, unpinnedLayouts, landmark));
+            mapHash = Fingerprint(map, "MAPHASH");
             QuietStoryteller();
             HoldWhileSettling();
         }
@@ -326,6 +429,12 @@ namespace BatshitTechnology.Showcases
         /// <summary>
         /// Moves the narration overlay on, every frame, and sets the
         /// showcase up once the map has settled for a couple of seconds.
+        /// Settling frames count only while the player has control: while
+        /// the screen fades in after the map loads (Root_Play.Start queues
+        /// a half-second fade) or a cutscene plays, RimWorld silently
+        /// refuses any change of speed, so a set-up then could not unpause
+        /// the game. If the unpause was refused anyway, it is tried again
+        /// every frame until it takes.
         /// </summary>
         public override void GameComponentUpdate()
         {
@@ -335,9 +444,15 @@ namespace BatshitTechnology.Showcases
             }
 
             UpdateNarration();
+            if (begun && settleHeld)
+            {
+                ReleaseSettleHold();
+            }
+
             if (begun
                 || Verse.Current.ProgramState != ProgramState.Playing
-                || Find.CurrentMap == null)
+                || Find.CurrentMap == null
+                || !game.PlayerHasControl)
             {
                 return;
             }
@@ -568,6 +683,27 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
+        /// Smoke-test seam: holds the game paused, as a new showcase game
+        /// is held while its map settles. The game must be running.
+        /// </summary>
+        /// <returns>Whether the hold is on.</returns>
+        internal bool HoldForTest()
+        {
+            HoldWhileSettling();
+            return settleHeld;
+        }
+
+        /// <summary>
+        /// Smoke-test seam: tries to let the game run again, as the set-up
+        /// does and as every later frame does while a refused hold stays.
+        /// </summary>
+        /// <returns>True once the hold is released.</returns>
+        internal bool ReleaseHoldForTest() => ReleaseSettleHold();
+
+        /// <summary>Gets a value indicating whether the settle hold is on.</summary>
+        internal bool SettleHeld => settleHeld;
+
+        /// <summary>
         /// Forgets the showcase and everything about its run, giving back
         /// any god mode it borrowed, the storyteller's parts it held, and
         /// the game's speed if it was holding the game while the map
@@ -579,9 +715,16 @@ namespace BatshitTechnology.Showcases
             ShowcaseGodMode.Restore();
             RestoreStoryteller();
             ReleaseSettleHold();
+            settleHeld = false;
+            settleReleaseRefused = 0;
             seed = null;
             mapHash = null;
             mapSeedsPinned = -1;
+            startReseeded = false;
+            startState = null;
+            landmark = null;
+            mutators = new List<string>();
+            unpinnedLayouts = -1;
             stageHash = null;
             reseeded = false;
             def = null;
@@ -642,27 +785,49 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// The MAPSEED cue's detail: <c>pinned (n seeds)</c> when the map
-        /// seed's window was open while the map was generated; otherwise
-        /// <c>not pinned</c>, with why: no patch (Harmony missing, or the
-        /// getter changed), or a quick-test map, which vanilla generated
-        /// before the showcase adopted it.
+        /// Notes what of the new map its seed cannot pin, for the MAPSEED
+        /// cue and the tour's SUMMARY: the starting tile's landmark and
+        /// mutators, and how many layouts the map holds (Odyssey's ancient
+        /// garrison, warehouse, chemfuel refinery, infested settlement or
+        /// launch site, and other ruins). RimWorld 1.6.4871 fills every
+        /// layout's rooms inside <c>new RandBlock(HashCode.Combine(sketch
+        /// id, room))</c> (LayoutWorker.FillAllRooms), and System.HashCode
+        /// mixes in a seed random per process, so those rooms' loot,
+        /// furniture and hostiles, and the gen steps placed around them,
+        /// differ from process to process. Pinning them would take another
+        /// Harmony patch, which is not approved; the repeat check of
+        /// Tools/tour-trials.ps1 is the guard. Reading draws nothing from
+        /// Rand. Never throws: a failure is warned about and leaves the
+        /// count at -1.
         /// </summary>
-        /// <param name="pinned">
-        /// What closing the window returned: the seeds pinned, or -1 if it
-        /// was not open.
-        /// </param>
-        /// <returns>The detail.</returns>
-        private static string MapSeedCueDetail(int pinned)
+        /// <param name="map">The new map, or null.</param>
+        private void NoteWhatSeedsCannotPin(Map map)
         {
-            if (!ShowcaseMapSeed.Installed)
+            landmark = null;
+            mutators = new List<string>();
+            unpinnedLayouts = -1;
+            if (map == null)
             {
-                return "not pinned (no patch)";
+                return;
             }
 
-            return pinned < 0
-                ? "not pinned (quicktest map)"
-                : pinned == 1 ? "pinned (1 seed)" : $"pinned ({pinned} seeds)";
+            try
+            {
+                Tile tile = map.TileInfo;
+                landmark = tile?.Landmark?.def?.defName;
+                mutators = tile?.Mutators?
+                    .Where(m => m != null)
+                    .Select(m => m.defName)
+                    .ToList() ?? new List<string>();
+                unpinnedLayouts = map.layoutStructureSketches?.Count(s =>
+                    s?.structureLayout?.Rooms != null
+                    && s.structureLayout.Rooms.Count > 0) ?? 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not read the map's "
+                    + $"tile and layouts: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -778,20 +943,37 @@ namespace BatshitTechnology.Showcases
         /// <summary>
         /// Lets the game run again after the settle hold, at its speed
         /// before, unless the viewer has changed the speed meanwhile.
+        /// RimWorld's speed setter silently refuses while the player has no
+        /// control (TickManager.PlayerCanControl: the screen fading, a
+        /// cutscene, RimWorld 1.6.4871); the hold then stays on, counted,
+        /// and GameComponentUpdate tries again every frame until it takes,
+        /// rather than leaving the showcase paused at READY.
         /// </summary>
-        private void ReleaseSettleHold()
+        /// <returns>True once the hold is released (or there was none).</returns>
+        private bool ReleaseSettleHold()
         {
             if (!settleHeld)
             {
-                return;
+                return true;
+            }
+
+            TickManager ticks = game?.tickManager;
+            if (ticks == null || ticks.CurTimeSpeed != TimeSpeed.Paused
+                || speedBeforeSettle == TimeSpeed.Paused)
+            {
+                settleHeld = false;
+                return true;
+            }
+
+            ticks.CurTimeSpeed = speedBeforeSettle;
+            if (ticks.CurTimeSpeed == TimeSpeed.Paused)
+            {
+                settleReleaseRefused++;
+                return false;
             }
 
             settleHeld = false;
-            TickManager ticks = game?.tickManager;
-            if (ticks != null && ticks.CurTimeSpeed == TimeSpeed.Paused)
-            {
-                ticks.CurTimeSpeed = speedBeforeSettle;
-            }
+            return true;
         }
 
         /// <summary>

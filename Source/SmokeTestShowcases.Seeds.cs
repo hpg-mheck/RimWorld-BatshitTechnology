@@ -7,10 +7,13 @@
 // seen passing Map.NextGenSeed through to vanilla in this ordinary game
 // and pinning it only while its window is open for this very game, and
 // the directed test run is watched holding a harmless storyteller part
-// and giving it back. What only a launched game shows (the SEED, MAPSEED
-// and MAPHASH cues, the map seed's window opened by the launcher and
-// closed as the game starts, the settle hold, a seed from the command
-// line) the tour verifier checks (Source/SmokeTestTour.cs).
+// and giving it back. A launch that failed is seen abandoned (its
+// request dropped, its window closed), and the settle hold is seen to
+// outlast a screen fade, which makes the game refuse to unpause. What
+// only a launched game shows (the SEED, MAPSEED and MAPHASH cues, the map
+// seed's window opened by the launcher and closed as the game starts, the
+// start drawn from the seed, a seed from the command line) the tour
+// verifier checks (Source/SmokeTestTour.cs).
 
 using System;
 using System.Collections.Generic;
@@ -95,6 +98,115 @@ namespace BatshitTechnology
             Check("a malformed def seed is a configuration error",
                 errors.Count == 1 && errors[0].Contains("'two words' is not usable"),
                 $"[{string.Join(" | ", errors)}]");
+        }
+
+        /// <summary>
+        /// A launch whose generation or preparation threw is abandoned: the
+        /// map seed's window is closed and the launch request dropped, each
+        /// with a warning. Vanilla logs a failed preparation and loads the
+        /// Play scene anyway, so before, the half-prepared game took the
+        /// request and ran the showcase on a map its seed did not pin. Here
+        /// a request for this very game is planted and the window opened
+        /// for it, as the launcher does, and the launch abandoned.
+        /// </summary>
+        private void TestFailedLaunchDropsRequest()
+        {
+            const string Where = "a smoke test's failed preparation";
+            ShowcaseDef def = ShowcaseLibrary.Named(DirectorShowcase);
+            LogMessage mark = Log.Messages.LastOrDefault();
+            bool pendingBefore = false, pendingAfter = true, openAfter = true;
+            LaunchRequest taken = null;
+            string error = null;
+            try
+            {
+                ShowcaseLauncher.PlantForTest(new LaunchRequest(def, Current.Game, false));
+                ShowcaseMapSeed.Arm(Current.Game);
+                pendingBefore = ShowcaseLauncher.HasPendingForTest;
+                ShowcaseLauncher.AbandonLaunch(Where);
+                pendingAfter = ShowcaseLauncher.HasPendingForTest;
+                openAfter = ShowcaseMapSeed.Armed;
+                taken = ShowcaseLauncher.TakeRequestFor(Current.Game);
+            }
+            catch (Exception e)
+            {
+                error = e.ToString();
+            }
+            finally
+            {
+                ShowcaseLauncher.PlantForTest(null);
+                ShowcaseMapSeed.Disarm();
+            }
+
+            List<LogMessage> warned = MessagesSince(mark)
+                .Where(m => m.type == LogMessageType.Warning && m.text.Contains(Where))
+                .ToList();
+            ExpectLogs(warned);
+            Check("a failed launch drops its request and closes the map seed's "
+                    + "window, saying so",
+                error == null && pendingBefore && !pendingAfter && !openAfter
+                    && taken == null && warned.Count == 2,
+                $"pending before {pendingBefore}, after {pendingAfter}; window open "
+                    + $"after {openAfter}; handed to the game afterwards {taken != null}; "
+                    + $"warnings {warned.Count}"
+                    + (error == null ? string.Empty : $"; threw {error}"));
+        }
+
+        /// <summary>
+        /// The settle hold outlasts a screen fade. While the screen fades
+        /// (Root_Play.Start queues a half-second fade as a new game's map
+        /// appears) RimWorld silently refuses any change of speed; the
+        /// session's release must then keep the hold on, so a later frame
+        /// tries again, and take once the fade is over. Before, a refused
+        /// release cleared the hold, and the showcase stayed paused at
+        /// READY. The smoke game is held, a long fade to clear (invisible)
+        /// is started, the release is tried, the fade ended, and the
+        /// release tried again; the game's speed is put back.
+        /// </summary>
+        private void TestSettleHoldOutlastsFade()
+        {
+            TickManager ticks = Find.TickManager;
+            TimeSpeed before = ticks.CurTimeSpeed;
+            bool held = false, fading = false, releasedInFade = true;
+            bool heldInFade = false, pausedInFade = false;
+            bool releasedAfter = false, heldAfter = true, runningAfter = false;
+            string error = null;
+            try
+            {
+                ticks.CurTimeSpeed = TimeSpeed.Normal;
+                held = showcaseSession.HoldForTest() && ticks.CurTimeSpeed == TimeSpeed.Paused;
+                ScreenFader.StartFade(UnityEngine.Color.clear, 30f);
+                fading = ScreenFader.IsFading() && !Current.Game.PlayerHasControl;
+                releasedInFade = showcaseSession.ReleaseHoldForTest();
+                heldInFade = showcaseSession.SettleHeld;
+                pausedInFade = ticks.CurTimeSpeed == TimeSpeed.Paused;
+                ScreenFader.SetColor(UnityEngine.Color.clear);
+                releasedAfter = showcaseSession.ReleaseHoldForTest();
+                heldAfter = showcaseSession.SettleHeld;
+                runningAfter = ticks.CurTimeSpeed == TimeSpeed.Normal;
+            }
+            catch (Exception e)
+            {
+                error = e.ToString();
+            }
+            finally
+            {
+                ScreenFader.SetColor(UnityEngine.Color.clear);
+                if (!showcaseSession.ReleaseHoldForTest())
+                {
+                    showcaseSession.ReleaseForTest();
+                }
+
+                ticks.CurTimeSpeed = before;
+            }
+
+            Check("the settle hold outlasts a screen fade: a refused unpause "
+                    + "keeps the hold, and the next try takes",
+                error == null && held && fading && !releasedInFade && heldInFade
+                    && pausedInFade && releasedAfter && !heldAfter && runningAfter,
+                $"held {held}; fading {fading}; in the fade released {releasedInFade}, "
+                    + $"still held {heldInFade}, paused {pausedInFade}; after it "
+                    + $"released {releasedAfter}, still held {heldAfter}, running "
+                    + $"{runningAfter}" + (error == null ? string.Empty : $"; threw {error}"));
         }
 
         /// <summary>
