@@ -31,9 +31,10 @@ bomb when it finds them.
 - **Emplacement:** it permanently emplaces itself, becoming a fixed bomb
   that cannot move again. The tires flip out flat over about half a second
   (built).
-- **Protest:** if a colonist is inside its pull radius when it is ready to
-  emplace, it beeps and flashes in protest. After three extra seconds,
-  too bad: it emplaces anyway.
+- **Protest:** if a colonist (or, since slice 19000c, a friendly guest)
+  is inside its pull radius when it is ready to emplace, it beeps and
+  flashes in protest. After three extra seconds, too bad: it emplaces
+  anyway.
   - The flashing is a lamp on the tractor blinking red and yellow.
   - The beeps use a vanilla sound until the mod's sound pipeline exists
     (built, with vanilla's `TrapArm` click).
@@ -237,7 +238,14 @@ build settled a detail, it is recorded here; the decisions log
     no longer matters, so a planted bomb has none; the robot's inspect
     pane says how far it stops.
   - **Protest:** decided once, when it is ready: a colonist (free or
-    enslaved) inside its pull radius. Three seconds of a beep every half
+    enslaved) or a friendly guest inside its pull radius (Core's
+    `TractorBombProtest`). A guest is a humanlike of another faction that
+    is neither hostile to the colony nor its prisoner: visitors, traders,
+    allies, AnyRim's residents and the showcase's tourists. Slice 19000c
+    added guests (2026-10-15): a guest pulled in costs goodwill in a real
+    game, so the warning is as useful as a colonist's, and the tour's
+    stray is a tourist (`docs/SHOWCASE.md`, "Tourists"). Its message and
+    status say "a colonist or guest". Three seconds of a beep every half
     second (vanilla's `TrapArm` click, for now) and a lamp on its control
     box blinking red and yellow six times a second, then it emplaces.
   - **Emplacing** takes the robot off the map for good, as a Gauranlen
@@ -265,6 +273,16 @@ build settled a detail, it is recorded here; the decisions log
     merge wait just outside, about 2 tiles out, and the blast (7.5 tiles
     at Firework; 3 at Birthday Cake still reaches them) catches them. The
     smoke test stages eleven such stacks.
+  - **Tumbling into the pile** (slice 19000c, 2026-10-15): a stack
+    under a single pull, within a tile and a half of the gather radius,
+    whose every step is blocked tumbles over the pile into the free cell
+    within the gather radius nearest to it, if there is one. A step goes
+    only strictly nearer the centre, so before, a stack behind a full
+    side of the pile waited for good beside free cells on its far side:
+    the smoke flake in which a silver stack stuck at (0, 2), about half
+    of all full runs, as the pile's fill order turns on the pull's
+    flicker. Under superposed pulls nothing tumbles, and a full pile
+    still keeps its extra stacks waiting outside.
   - **It cannot be stopped, only hurried** (decided after the core
     build): a hit that harms (a bullet, a blast, fire) before its pull
     starts, while its tyres flip or it counts down, starts the pull on

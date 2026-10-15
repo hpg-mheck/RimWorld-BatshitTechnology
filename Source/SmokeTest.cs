@@ -233,6 +233,7 @@ namespace BatshitTechnology
             TestSingularityGrenade(map, center);
             QuietTheMap(map);
             TestImplosionGathers(map, center);
+            TestImplosionClimbsAFullPile(map, center);
             TestTractorBomb(map, center);
             TestDeathBlasts(map, center);
         }
@@ -1848,7 +1849,8 @@ namespace BatshitTechnology
             Check("an implosion drags everything within 10 tiles to within 1.5",
                 gatheredAt >= 0 && stragglers.Count == 0,
                 $"gathered at tick {gatheredAt}; outside 1.5 tiles: "
-                    + string.Join(", ", stragglers));
+                    + string.Join(", ", stragglers) + "; the pile: "
+                    + PileNote(map, implosion));
             Check("an implosion reports everything gathered early, then settles",
                 sawOutstanding && gatheredAt >= 0
                     && gatheredAt < implosion.PullTicks
@@ -1877,6 +1879,82 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// An item blocked behind a pile with room on its far side tumbles
+        /// into it, deterministically: seven stacks fill every cell within
+        /// 1.5 tiles but the two back corners, (-1, -1) and (1, -1), none of
+        /// them able to step nearer the centre, and a silver stack waits at
+        /// (0, 2), every step of it full. Before the tumble (slice 19000c)
+        /// the silver waited there for good, as in the "drags everything
+        /// within 10 tiles" flake of about half of all full runs. Nothing
+        /// moves away from the centre.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The middle of the test area.</param>
+        private void TestImplosionClimbsAFullPile(Map map, IntVec3 center)
+        {
+            IntVec3 at = Clamp(map, center + new IntVec3(45, 0, -20));
+            TractorStaging.LevelGround(map, CellRect.CenteredOn(at, 6));
+            foreach (Thing t in GenRadial.RadialDistinctThingsAround(at, map, 10f, true)
+                .Where(t => t.def.category == ThingCategory.Item).ToList())
+            {
+                t.Destroy(DestroyMode.Vanish);
+            }
+
+            var row = new List<Thing>();
+            foreach (var (def, x, z) in new[]
+            {
+                (ThingDefOf.Steel, -1, 1), (ThingDefOf.WoodLog, 0, 1),
+                (ThingDefOf.Plasteel, 1, 1), (ThingDefOf.Gold, 0, 0),
+                (ThingDefOf.ComponentIndustrial, -1, 0), (ThingDefOf.Uranium, 1, 0),
+                (ThingDefOf.Cloth, 0, -1),
+            })
+            {
+                Thing item = ThingMaker.MakeThing(def);
+                item.stackCount = 10;
+                row.Add(GenSpawn.Spawn(item, at + new IntVec3(x, 0, z), map));
+            }
+
+            Thing silver = ThingMaker.MakeThing(ThingDefOf.Silver);
+            silver.stackCount = 10;
+            silver = GenSpawn.Spawn(silver, at + new IntVec3(0, 0, 2), map);
+            var implosion = new Implosion(at, new ImplosionSettings
+            {
+                gatherRadius = 1.5f,
+                pullTicks = 300,
+            });
+            int cap = implosion.PullTicks * 3 / 2;
+            int inAt = -1;
+            float farthest = 0f;
+            while (implosion.ElapsedTicks < cap && inAt < 0)
+            {
+                Tick(1);
+                implosion.Tick(map);
+                if (silver.Spawned && silver.Position.InHorDistOf(at, 1.5f))
+                {
+                    inAt = implosion.ElapsedTicks;
+                }
+
+                farthest = Mathf.Max(farthest, row.Concat(new[] { silver })
+                    .Where(t => t.Spawned)
+                    .Select(t => t.Position.DistanceTo(at)).DefaultIfEmpty(0f).Max());
+            }
+
+            Check("an item blocked behind a pile with room tumbles into it",
+                inAt >= 0 && farthest <= 2.01f
+                    && row.All(t => t.Spawned && t.Position.InHorDistOf(at, 1.5f)),
+                $"silver in at tick {inAt}, at "
+                    + $"({silver.Position.x - at.x}, {silver.Position.z - at.z}); "
+                    + $"farthest {farthest:F2}; row "
+                    + string.Join(", ", row.Select(t =>
+                        $"{t.def.defName} ({t.Position.x - at.x}, {t.Position.z - at.z})")));
+            for (int i = 0; i < 120 && !implosion.Closed; i++)
+            {
+                Tick(1);
+                implosion.Tick(map);
+            }
+        }
+
+        /// <summary>
         /// The pawns and items within an implosion's reach that lie outside
         /// its gather radius, described for a failure message.
         /// </summary>
@@ -1893,6 +1971,30 @@ namespace BatshitTechnology
                 .Select(t => $"{t.LabelShort} "
                     + $"({t.Position.x - c.x}, {t.Position.z - c.z})")
                 .ToList();
+        }
+
+        /// <summary>
+        /// What fills each cell within an implosion's gather radius, for a
+        /// failure message: its items (or "free"), as offsets from the
+        /// centre.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="implosion">The implosion.</param>
+        /// <returns>One entry a cell.</returns>
+        private static string PileNote(Map map, Implosion implosion)
+        {
+            IntVec3 c = implosion.Center;
+            return string.Join(", ", GenRadial.RadialCellsAround(
+                    c, implosion.GatherRadius, true)
+                .Where(cell => cell.InBounds(map))
+                .Select(cell =>
+                {
+                    List<string> items = cell.GetThingList(map)
+                        .Where(t => t.def.category == ThingCategory.Item)
+                        .Select(t => t.def.defName).ToList();
+                    return $"({cell.x - c.x}, {cell.z - c.z}) "
+                        + (items.Count == 0 ? "free" : string.Join("+", items));
+                }));
         }
 
         /// <summary>The pawns and items within an implosion's reach.</summary>

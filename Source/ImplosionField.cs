@@ -382,7 +382,7 @@ namespace BatshitTechnology
             }
             else
             {
-                moved = MoveItem(t, steps);
+                moved = MoveItem(t, steps, acting.Count == 1 ? strongest : null);
                 if (moved)
                 {
                     foreach (Implosion i in acting)
@@ -456,16 +456,22 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Steps an item one allowed cell: into a cell with room for another
-        /// item, or onto a matching stack there, which absorbs it. Otherwise
-        /// it waits. (Spawning an item into a full cell makes RimWorld shove
-        /// the cell's item aside, or destroy it if there's no room: that
-        /// churned items back and forth in a line beside the singularity.)
+        /// item, or onto a matching stack there, which absorbs it. If every
+        /// step is blocked it may tumble into the pile (<see cref="Tumble"/>).
+        /// Otherwise it waits. (Spawning an item into a full cell makes
+        /// RimWorld shove the cell's item aside, or destroy it if there's no
+        /// room: that churned items back and forth in a line beside the
+        /// singularity.)
         /// </summary>
         /// <param name="item">The item.</param>
         /// <param name="steps">The allowed steps, best first.</param>
+        /// <param name="single">
+        /// The one implosion pulling the item, or null under superposed
+        /// pulls, where it never tumbles.
+        /// </param>
         /// <returns>True if it moved or merged, even in part.</returns>
         private bool MoveItem(
-            Thing item, IReadOnlyList<(int Dx, int Dz)> steps)
+            Thing item, IReadOnlyList<(int Dx, int Dz)> steps, Implosion single)
         {
             IntVec3 from = item.Position;
             foreach (var (dx, dz) in steps)
@@ -496,7 +502,72 @@ namespace BatshitTechnology
                 }
             }
 
-            return false;
+            return Tumble(item, single);
+        }
+
+        /// <summary>
+        /// How far beyond the gather radius a blocked item may be and still
+        /// tumble into the pile, in tiles: about one cell.
+        /// </summary>
+        private const float TumbleReach = 1.5f;
+
+        /// <summary>
+        /// Lets an item whose every step is blocked, beside a pile that
+        /// still has room, tumble over the pile into the free cell within
+        /// the gather radius nearest to it. Only under a single pull, and
+        /// only from within <see cref="TumbleReach"/> of the gather radius.
+        /// A step goes only strictly nearer the centre, so a stack behind a
+        /// full side of the pile waited for good beside free cells on the
+        /// far side: the smoke flake of slices 13000 to 19000b, a silver
+        /// stack stuck at (0, 2) in about half of all full runs (the pile's
+        /// fill order turns on the pull's random flicker).
+        /// </summary>
+        /// <param name="item">The blocked item.</param>
+        /// <param name="single">The one implosion pulling it, or null.</param>
+        /// <returns>True if it tumbled.</returns>
+        private bool Tumble(Thing item, Implosion single)
+        {
+            if (single == null)
+            {
+                return false;
+            }
+
+            IntVec3 centre = single.Center;
+            IntVec3 from = item.Position;
+            float gather = single.GatherRadius;
+            float here = from.DistanceTo(centre);
+            if (here <= gather || here > gather + TumbleReach)
+            {
+                return false;
+            }
+
+            IntVec3 best = IntVec3.Invalid;
+            float bestDistance = float.MaxValue;
+            foreach (IntVec3 c in GenRadial.RadialCellsAround(centre, gather, true))
+            {
+                if (!c.InBounds(map) || !c.Walkable(map)
+                    || c.DistanceTo(centre) >= here
+                    || c.GetItemCount(map) >= c.GetMaxItemsAllowedInCell(map))
+                {
+                    continue;
+                }
+
+                float d = c.DistanceTo(from);
+                if (d < bestDistance)
+                {
+                    best = c;
+                    bestDistance = d;
+                }
+            }
+
+            if (!best.IsValid)
+            {
+                return false;
+            }
+
+            item.DeSpawn();
+            GenSpawn.Spawn(item, best, map);
+            return true;
         }
 
         /// <summary>Whether a thing hosts a running implosion.</summary>
