@@ -35,7 +35,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 | 2000 | AnyRim | `trunk` | Done |
 | 3000 | Tractor Bomb | `trunk` | Done |
 | 4000 | Showcase API | `trunk` | Done |
-| 5000 | Sound pipeline | `feature/audio` | Next |
+| 5000 | Sound pipeline | `feature/audio` | **Now** (slice 1000) |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
 | 7000 | Mirror Mirror | `feature/mirror-mirror` | Planned |
 | 8000 | The Drag Show | `feature/drag-show` | Planned |
@@ -76,8 +76,31 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
   and 24 of `docs/AI-requests-for-humans.txt` are open from its last
   night.
 
-Nothing is in progress. Phase 5000 is next once its specification's
-questions are answered.
+## Now: Phase 5000, Sound Pipeline
+
+Branch: `feature/audio`, cut from `trunk` at the Phase 3000 merge.
+Specification: `docs/SOUND-PIPELINE.md` (drafted 2026-10-14 for sounds
+synthesized from code, with 13 open questions).
+
+On 2026-10-15 the operator opened the phase, widening its sources:
+"We're going to work with what we've got right now. Merge and proceed to
+Phase 5000. Now, we have both sound effect and music needs. For the
+music, since we're not doing dynamic composition during actual gameplay,
+I'm open to either real-time synthesis, or, and probably preferable,
+AI-guided composition resulting in high-quality output. I'm open to using
+a service for this. So, slice 1000 here is a research task. Present me
+with some options. Take some time. Budget, though, is $50 across the
+whole thing, sound effects and music, if possible." The $50 is for
+services, not for Claude's own use.
+
+### Slices
+
+| Slice | Work | State |
+|---|---|---|
+| 1000 | Research: sources for music and effects | Now |
+
+The slices after 1000 are planned once the operator has chosen among the
+options.
 
 ## Phase 3000, Tractor Bomb (Done)
 
