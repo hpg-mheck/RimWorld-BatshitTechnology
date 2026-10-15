@@ -3,7 +3,11 @@
 # real field (recursing into nested objects, honoring [LoadAlias]), enum
 # values must parse, classes must resolve, Def references must exist in
 # vanilla Data or the mod, and texture paths must exist in the mod's
-# Textures/ or the game's texture list. Exits 1 when it finds problems.
+# Textures/ or the game's texture list. Patches/ too: each operation's
+# class must be a PatchOperation with real fields, its XPath must select
+# something in the defs as the game merges them (vanilla Data and the
+# mod), and what it adds must load into the fields it lands in. Exits 1
+# when it finds problems.
 #
 # Run with Windows PowerShell 5.1 (it reflects over .NET Framework DLLs),
 # after building the mod:
@@ -68,12 +72,37 @@ $unparsed = 0
 $defFiles = @(Get-ChildItem (Join-Path $RimWorld 'Data') -Recurse -Filter *.xml |
     ? FullName -match '\\Defs\\') +
   @(Get-ChildItem (Join-Path $ModRoot 'Defs') -Recurse -Filter *.xml)
+
+# The mod's patches, and the def types their XPaths start from
+# ("Defs/ThinkTreeDef[...]"); an XPath that names none needs every def.
+$patchDir = Join-Path $ModRoot 'Patches'
+$patchFiles = @(if (Test-Path $patchDir) {
+    Get-ChildItem $patchDir -Recurse -Filter *.xml })
+$patchTags = @{}
+$patchNeedsAll = $false
+foreach ($pf in $patchFiles) {
+  try { $px = Load-Xml $pf.FullName } catch { continue }
+  foreach ($xp in $px.SelectNodes('//xpath')) {
+    if ($xp.InnerText -match '^\s*/?\s*Defs\s*/\s*([A-Za-z_][\w.]*)') {
+      $patchTags[$Matches[1]] = $true
+    } else { $patchNeedsAll = $true }
+  }
+}
+
+# The defs those patches can reach, merged under one <Defs> root as the
+# game merges every mod's defs before it applies patches.
+$merged = New-Object Xml.XmlDocument
+$mergedRoot = $merged.AppendChild($merged.CreateElement('Defs'))
+
 $defFiles | % {
   try { $x = Load-Xml $_.FullName } catch { $unparsed++; return }
   foreach ($d in $x.DocumentElement.ChildNodes) {
     if ($d.NodeType -ne 'Element') { continue }
     $n = $d.SelectSingleNode('defName')
     if ($n) { $knownDefs["$($d.LocalName)/$($n.InnerText.Trim())"] = $true }
+    if ($patchNeedsAll -or $patchTags.ContainsKey($d.LocalName)) {
+      [void]$mergedRoot.AppendChild($merged.ImportNode($d, $true))
+    }
   }
 }
 
@@ -162,14 +191,20 @@ Finds the field an XML element loads into: by name, or via the
 [LoadAlias("name")] attribute the loader also honors.
 #>
 function Find-Field([Type]$type, [string]$name) {
-  $f = $type.GetField($name, $fieldFlags)
-  if ($f) { return $f }
-  return $type.GetFields($fieldFlags) | ? {
-    $_.CustomAttributes | ? {
-      $_.AttributeType.Name -eq 'LoadAliasAttribute' -and
-        $_.ConstructorArguments[0].Value -eq $name
-    }
-  } | Select-Object -First 1
+  # Walk up the hierarchy: GetField does not return a base class's private
+  # fields (PatchOperation.success), but the game's loader sets them.
+  for ($t = $type; $t; $t = $t.BaseType) {
+    $f = $t.GetField($name, $fieldFlags)
+    if ($f) { return $f }
+    $f = $t.GetFields($fieldFlags) | ? {
+      $_.CustomAttributes | ? {
+        $_.AttributeType.Name -eq 'LoadAliasAttribute' -and
+          $_.ConstructorArguments[0].Value -eq $name
+      }
+    } | Select-Object -First 1
+    if ($f) { return $f }
+  }
+  return $null
 }
 
 <#
@@ -237,6 +272,151 @@ Get-ChildItem (Join-Path $ModRoot 'Defs') -Recurse -Filter *.xml | % {
     $t = Resolve-Type $d.LocalName
     if (-not $t) { Fail "unknown def type $($d.LocalName)"; continue }
     Check-Object $t $d $d.SelectSingleNode('defName').InnerText
+  }
+}
+
+$patchBase = $game.GetType('Verse.PatchOperation')
+$patchAdd = $game.GetType('Verse.PatchOperationAdd')
+$patchInsert = $game.GetType('Verse.PatchOperationInsert')
+
+<#
+.SYNOPSIS
+The type a node of the merged defs loads into, found by walking down from
+its def: a field's type, a list's element type for <li>, or the class a
+Class attribute names. Null when the path leaves the known types.
+#>
+function Node-Type([Xml.XmlNode]$node) {
+  if (-not $node -or $node -isnot [Xml.XmlElement]) { return $null }
+  $parent = $node.ParentNode
+  if ($parent -eq $mergedRoot) { return Resolve-Type $node.LocalName }
+  $parentType = Node-Type $parent
+  if (-not $parentType) { return $null }
+  $cls = $node.GetAttribute('Class')
+  if ($cls) { return Resolve-Type $cls }
+  if ($node.LocalName -eq 'li') {
+    if ($parentType.IsGenericType) {
+      return $parentType.GetGenericArguments()[0]
+    }
+    return $null
+  }
+  $f = Find-Field $parentType $node.LocalName
+  if ($f) { return $f.FieldType }
+  return $null
+}
+
+<#
+.SYNOPSIS
+Checks the elements an Add or Insert puts into a container node: each must
+load into it, a Class must name a subclass of what the container holds,
+and its fields must be real.
+#>
+function Check-Added([Xml.XmlNode]$value, [Xml.XmlNode]$container,
+    [string]$path) {
+  $ct = Node-Type $container
+  if (-not $ct) {
+    Fail "$path adds to <$($container.LocalName)>, whose type is unknown"
+    return
+  }
+  foreach ($child in $value.ChildNodes) {
+    if ($child.NodeType -ne 'Element') { continue }
+    if ($child.LocalName -eq 'li') {
+      if (-not $ct.IsGenericType) {
+        Fail "$path adds <li> to $($container.LocalName), not a list"
+        continue
+      }
+      $et = $ct.GetGenericArguments()[0]
+      $cls = $child.GetAttribute('Class')
+      if ($cls) {
+        $lt = Resolve-Type $cls
+        if (-not $lt) { Fail "$path/li Class '$cls' not found"; continue }
+        if (-not $et.IsAssignableFrom($lt)) {
+          Fail "$path/li Class '$cls' is not a $($et.Name)"; continue
+        }
+        Check-Object $lt $child "$path/li[$cls]"
+      } else { Check-Value $et $child "$path/li" }
+    } else {
+      $f = Find-Field $ct $child.LocalName
+      if (-not $f) {
+        Fail "$path/<$($child.LocalName)> is not a field of $($ct.Name)"
+      } else { Check-Value $f.FieldType $child "$path/$($child.LocalName)" }
+    }
+  }
+}
+
+<#
+.SYNOPSIS
+Checks one patch operation: a PatchOperation class, real fields, nested
+operations in turn, an XPath that parses and selects something (unless
+its success mode says a miss is fine), and what an Add or Insert adds.
+#>
+function Check-Operation([Xml.XmlElement]$op, [string]$path) {
+  $cls = $op.GetAttribute('Class')
+  $t = if ($cls) { Resolve-Type $cls } else { $null }
+  if (-not $t) { Fail "$path Class '$cls' not found"; return }
+  if (-not $patchBase.IsAssignableFrom($t)) {
+    Fail "$path Class '$cls' is not a PatchOperation"; return
+  }
+  $value = $null
+  foreach ($child in $op.ChildNodes) {
+    if ($child.NodeType -ne 'Element') { continue }
+    $cp = "$path/$($child.LocalName)"
+    $f = Find-Field $t $child.LocalName
+    if (-not $f) {
+      Fail "$path/<$($child.LocalName)> is not a field of $($t.Name)"
+      continue
+    }
+    $ft = $f.FieldType
+    if ($ft.Name -eq 'XmlContainer') { $value = $child }
+    elseif ($child.LocalName -eq 'xpath') { }
+    elseif ($patchBase.IsAssignableFrom($ft)) { Check-Operation $child $cp }
+    elseif ($ft.IsGenericType -and
+        $patchBase.IsAssignableFrom($ft.GetGenericArguments()[0])) {
+      foreach ($li in $child.ChildNodes) {
+        if ($li.NodeType -eq 'Element') { Check-Operation $li "$cp/li" }
+      }
+    }
+    else { Check-Value $ft $child $cp }
+  }
+  $xpath = $op.SelectSingleNode('xpath')
+  if (-not $xpath) { return }
+  try { $targets = @($merged.SelectNodes($xpath.InnerText)) }
+  catch { Fail "$path xpath does not parse: $($_.Exception.Message)"; return }
+  $success = $op.SelectSingleNode('success')
+  $mayMiss = $success -and $success.InnerText.Trim() -in 'Always', 'Invert'
+  $shown = ($xpath.InnerText -replace '\s+', '')
+  if ($targets.Count -eq 0 -and -not $mayMiss) {
+    Fail "$path xpath selects nothing: $shown"
+  }
+  "  $($t.Name): $($targets.Count) match(es) for $shown"
+  if (-not $value) { return }
+  foreach ($target in $targets) {
+    if ($patchAdd.IsAssignableFrom($t)) {
+      Check-Added $value $target $path
+    } elseif ($patchInsert.IsAssignableFrom($t)) {
+      Check-Added $value $target.ParentNode $path
+    }
+  }
+}
+
+foreach ($pf in $patchFiles) {
+  # -MSBuild names the file in each problem, so blame this patch file,
+  # not the last Defs file the loops above checked.
+  $script:currentFile = $pf.FullName
+  if (-not $MSBuild) { "$($pf.FullName.Substring($ModRoot.Length + 1))" }
+  try { $px = Load-Xml $pf.FullName }
+  catch { Fail "$($pf.Name) does not parse: $($_.Exception.Message)"; continue }
+  if ($px.DocumentElement.LocalName -ne 'Patch') {
+    Fail "$($pf.Name) root is <$($px.DocumentElement.LocalName)>, not <Patch>"
+    continue
+  }
+  $i = 0
+  foreach ($op in $px.DocumentElement.ChildNodes) {
+    if ($op.NodeType -ne 'Element') { continue }
+    $i++
+    if ($op.LocalName -ne 'Operation') {
+      Fail "$($pf.Name) <$($op.LocalName)> is not an <Operation>"; continue
+    }
+    Check-Operation $op "$($pf.Name) operation $i"
   }
 }
 

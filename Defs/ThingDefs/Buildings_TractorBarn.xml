@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- The Tractor Barn (docs/TRACTOR-BOMB.md, "The Tractor Barn";
+       Source/TractorBarn.cs): builds tractor bombs on ordinary bills with
+       no crafter, and repairs the damaged ones that come home. Its
+       thingClass is vanilla's autonomous work table (Biotech's mech
+       gestator pattern, whose code is in the base game): haulers carry a
+       bill's parts into it (BT_DoBillsTractorBarn, Hauling), and it builds
+       the robot by itself. The repair hopper is a vanilla CompRefuelable
+       that holds steel; a work table with one will not take bills while
+       it is empty, so haulers always keep it stocked (no toggle, no
+       target slider). -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>BT_TractorBarn</defName>
+    <label>tractor barn</label>
+    <description>A steel barn that builds tractor bombs by itself and patches up the ones that come home. Give it bills like any workbench: "Do X times", or "Do until you have X", which counts your tractor bombs on the map, planted ones included. Haulers carry in 60 steel, 3 components and 5 batshittium per bomb and throw the switch; about an hour later a new tractor bomb drives out of the door. No crafter is needed, or wanted.\n\nA tractor bomb below half health with nothing to chase comes home, parks at the door and is mended here, a little steel at a time from the barn's repair hopper. Haulers keep the hopper stocked; while it is empty, the barn starts no new bomb and mends nothing.\n\nIt is a barn full of bombs. Build it somewhere you would not miss.</description>
+    <thingClass>BatshitTechnology.Building_TractorBarn</thingClass>
+    <graphicData>
+      <texPath>Things/Building/Production/BT_TractorBarn</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(3,3)</drawSize>
+    </graphicData>
+    <size>(3,3)</size>
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>Impassable</passability>
+    <fillPercent>1</fillPercent> <!-- impassable: must block shots fully -->
+    <castEdgeShadows>true</castEdgeShadows>
+    <hasInteractionCell>true</hasInteractionCell>
+    <!-- The door: haulers load here, robots leave and park here -->
+    <interactionCellOffset>(0,0,-2)</interactionCellOffset>
+    <tickerType>Normal</tickerType>
+    <designationCategory>Production</designationCategory>
+    <terrainAffordanceNeeded>Medium</terrainAffordanceNeeded>
+    <costList>
+      <Steel>250</Steel>
+      <ComponentIndustrial>8</ComponentIndustrial>
+      <BT_Batshittium>20</BT_Batshittium>
+    </costList>
+    <statBases>
+      <MaxHitPoints>400</MaxHitPoints>
+      <WorkToBuild>6000</WorkToBuild>
+      <Flammability>0.5</Flammability>
+      <Beauty>-10</Beauty>
+    </statBases>
+    <inspectorTabs>
+      <li>ITab_Bills</li>
+    </inspectorTabs>
+    <building>
+      <spawnedConceptLearnOpportunity>BillsTab</spawnedConceptLearnOpportunity>
+      <buildingTags>
+        <li>Production</li>
+      </buildingTags>
+    </building>
+    <recipes>
+      <li>BT_BuildTractorBomb</li>
+    </recipes>
+    <researchPrerequisites>
+      <li>BT_Research_TractorBomb</li>
+    </researchPrerequisites>
+    <placeWorkers>
+      <li>PlaceWorker_PreventInteractionSpotOverlap</li>
+    </placeWorkers>
+    <comps>
+      <!-- The repair hopper: steel the barn spends mending robots
+           (Core's TractorBarnRepair: a unit per five hit points, two per
+           refitted part). Nothing burns it while idle. -->
+      <li Class="CompProperties_Refuelable">
+        <fuelCapacity>20</fuelCapacity>
+        <fuelConsumptionRate>0</fuelConsumptionRate>
+        <consumeFuelOnlyWhenUsed>true</consumeFuelOnlyWhenUsed> <!-- the barn spends it -->
+        <autoRefuelPercent>0.75</autoRefuelPercent>
+        <fuelFilter>
+          <thingDefs>
+            <li>Steel</li>
+          </thingDefs>
+        </fuelFilter>
+        <fuelLabel>Repair steel</fuelLabel>
+        <fuelGizmoLabel>Repair steel</fuelGizmoLabel>
+        <outOfFuelMessage>Needs repair steel</outOfFuelMessage>
+        <showFuelGizmo>true</showFuelGizmo>
+        <showAllowAutoRefuelToggle>false</showAllowAutoRefuelToggle>
+        <targetFuelLevelConfigurable>false</targetFuelLevelConfigurable>
+      </li>
+      <!-- Destroyed by damage: its doors blow off and its spare tyres
+           stampede out -->
+      <li Class="BatshitTechnology.CompProperties_DeathBlast">
+        <radius>3.9</radius>
+        <blast Class="BatshitTechnology.Detonation_TyreStampede">
+          <damageDef>Bomb</damageDef>
+          <damage>25</damage>
+          <tyreProjectile>BT_Projectile_TractorBarnTyre</tyreProjectile>
+          <tyres>6~10</tyres>
+          <throwRadius>14</throwRadius>
+        </blast>
+      </li>
+    </comps>
+  </ThingDef>
+
+  <!-- A spare tyre flung out of a destroyed Tractor Barn: it arcs over
+       walls, as a bouncing tyre would, and bowls over what it lands on. -->
+  <ThingDef ParentName="BaseBullet">
+    <defName>BT_Projectile_TractorBarnTyre</defName>
+    <label>spare tyre</label>
+    <graphicData>
+      <texPath>Things/Projectile/BT_TractorBarnTyre</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+    </graphicData>
+    <projectile>
+      <damageDef>Blunt</damageDef>
+      <damageAmountBase>12</damageAmountBase>
+      <stoppingPower>1.5</stoppingPower>
+      <speed>22</speed>
+      <flyOverhead>true</flyOverhead>
+    </projectile>
+  </ThingDef>
+</Defs>

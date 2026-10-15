@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using BatshitTechnology.Core;
 using Xunit;
 
 namespace BatshitTechnology.Tests;
@@ -14,7 +15,7 @@ namespace BatshitTechnology.Tests;
 /// RimWorld 1.6) and the cross-references between them, and run without the
 /// game binaries present.
 /// </summary>
-public sealed class XmlDefinitionTests
+public sealed partial class XmlDefinitionTests
 {
     private const string ReplicatorCompClass =
         "BatshitTechnology.CompProperties_RandomReplicator";
@@ -251,6 +252,11 @@ public sealed class XmlDefinitionTests
             .Select(int.Parse).ToList();
         Assert.Equal(325, ranges.Max());
         Assert.DoesNotContain(ranges, r => r >= 80 && r < 90); // ring cap ~79.8
+        // Raiders' avoid grid spans a dangerous turret's range plus 4, which
+        // must stay under the engine's radial limit (~79.8): a 325-tile
+        // Ballista logged "Not enough squares to get to radius 329".
+        Assert.Equal("false", ballista.Element("building")
+            ?.Element("ai_combatDangerous")?.Value);
         Assert.Equal(256, ListValues(ballista.Descendants("countPresets").Single())
             .Select(int.Parse).Max());
 
@@ -320,8 +326,221 @@ public sealed class XmlDefinitionTests
             .Select(r => $"{r.Element("researchViewX")?.Value},{r.Element("researchViewY")?.Value}")
             .ToList();
 
-        Assert.Equal(12, spots.Count);
+        Assert.Equal(14, spots.Count);
         Assert.Equal(spots.Count, spots.Distinct().Count());
+    }
+
+    /// <summary>
+    /// The Tractor Bomb's projects (docs/TRACTOR-BOMB.md): Tractor Bomb
+    /// after the Ergonomic Singularity Grenade, and Dial-A-Yield after it,
+    /// both on the Batshit Technology tab with a cost and a tech level.
+    /// </summary>
+    [Fact(DisplayName = "Tractor Bomb research follows the grenade")]
+    public void TractorBombResearch_should_follow_the_grenade()
+    {
+        var bomb = SingleDef("ResearchProjectDef", "BT_Research_TractorBomb");
+        var dial = SingleDef(
+            "ResearchProjectDef", "BT_Research_TractorBombDialAYield");
+        Assert.Equal(new[] { "BT_Research_SingularityGrenade" },
+            ListValues(bomb.Element("prerequisites")));
+        Assert.Equal(new[] { "BT_Research_TractorBomb" },
+            ListValues(dial.Element("prerequisites")));
+        foreach (var project in new[] { bomb, dial })
+        {
+            Assert.Equal("BT_BatshitTechnology", project.Element("tab")?.Value);
+            Assert.Equal("Neolithic", project.Element("techLevel")?.Value);
+            Assert.True(
+                int.Parse(project.Element("baseCost")?.Value ?? "0") >= 1000);
+            Assert.Contains("Tractor Bomb", project.Element("label")?.Value);
+        }
+
+        // Each sits to the right of the one it follows.
+        static double X(XElement p) => double.Parse(
+            p.Element("researchViewX")?.Value ?? "0",
+            CultureInfo.InvariantCulture);
+        var grenade = SingleDef(
+            "ResearchProjectDef", "BT_Research_SingularityGrenade");
+        Assert.True(X(bomb) > X(grenade) && X(dial) > X(bomb));
+    }
+
+    /// <summary>
+    /// The robot is a pawn of its own race, not a mechanoid (so Biotech's
+    /// mechanitor rules never apply): its own, inorganic flesh type, no
+    /// needs (no food, no rest; ToolUser, so no mood), no corpse, its own
+    /// think trees, a wrecking death and no death letter, a health tab, and
+    /// four wheels it drives on.
+    /// </summary>
+    [Fact(DisplayName = "Tractor Bomb robot is its own needless race")]
+    public void TractorBombRobot_should_be_its_own_race()
+    {
+        var robot = ThingDef("BT_TractorBomb");
+        var race = robot.Element("race")
+            ?? throw new InvalidOperationException("no race");
+        Assert.Equal("BT_TractorSteel", race.Element("fleshType")?.Value);
+        Assert.Equal("false",
+            SingleDef("FleshTypeDef", "BT_TractorSteel")
+                .Element("isOrganic")?.Value);
+        Assert.Equal("ToolUser", race.Element("intelligence")?.Value);
+        Assert.Equal("None", race.Element("foodType")?.Value);
+        Assert.Equal("false", race.Element("needsRest")?.Value);
+        Assert.Equal("false", race.Element("hasCorpse")?.Value);
+        Assert.Equal("BT_TractorBomb", race.Element("thinkTreeMain")?.Value);
+        Assert.Equal("BT_TractorBombConstant",
+            race.Element("thinkTreeConstant")?.Value);
+        Assert.Contains("ITab_Pawn_Health",
+            ListValues(robot.Element("inspectorTabs")));
+        Assert.Equal("False",
+            robot.Element("inspectorTabs")?.Attribute("Inherit")?.Value);
+
+        var comp = robot.Element("comps")?.Elements("li").Single(c =>
+            c.Attribute("Class")?.Value
+                == "BatshitTechnology.CompProperties_TractorBomb");
+        Assert.Equal("15", comp?.Element("emplaceRange")?.Value);
+        Assert.Equal("BT_TractorBombEmplaced",
+            comp?.Element("emplacedDef")?.Value);
+        Assert.Equal("BT_TractorBombDeathVortex",
+            comp?.Element("deathVortexDef")?.Value);
+
+        var kind = SingleDef("PawnKindDef", "BT_TractorBomb");
+        Assert.Equal("BT_TractorBomb", kind.Element("race")?.Value);
+        Assert.Equal("true", kind.Element("forceDeathOnDowned")?.Value);
+        Assert.Equal("true", kind.Element("forceNoDeathNotification")?.Value);
+        Assert.Equal("Graphic_Multi",
+            kind.Descendants("graphicClass").Single().Value);
+
+        var body = SingleDef("BodyDef", "BT_TractorBody");
+        Assert.Equal(4, body.Descendants("def")
+            .Count(d => d.Value == "BT_TractorWheel"));
+        Assert.Contains("MovingLimbCore", ListValues(
+            SingleDef("BodyPartDef", "BT_TractorWheel").Element("tags")));
+    }
+
+    /// <summary>
+    /// The robot's think trees hunt first, then go home for repairs, then
+    /// patrol; the constant tree hunts and sends a damaged robot home, but
+    /// only interrupts. Its jobs exist with the drivers the code expects,
+    /// and emplacing cannot be interrupted.
+    /// </summary>
+    [Fact(DisplayName = "Tractor Bomb think trees hunt, repair, then patrol")]
+    public void TractorBombMind_should_hunt_then_patrol()
+    {
+        var main = SingleDef("ThinkTreeDef", "BT_TractorBomb");
+        var givers = main.Descendants("li")
+            .Select(e => e.Attribute("Class")?.Value ?? "")
+            .ToList();
+        int hunt = givers.IndexOf(
+            "BatshitTechnology.JobGiver_TractorBombHunt");
+        int repair = givers.IndexOf(
+            "BatshitTechnology.JobGiver_TractorBombRepair");
+        int patrol = givers.IndexOf(
+            "BatshitTechnology.JobGiver_TractorBombPatrol");
+        Assert.True(hunt >= 0 && repair > hunt && patrol > repair,
+            string.Join(", ", givers));
+
+        var constant = SingleDef("ThinkTreeDef", "BT_TractorBombConstant");
+        var constantGivers = constant.Descendants("li")
+            .Where(e => e.Attribute("Class")?.Value?.StartsWith(
+                "BatshitTechnology.", StringComparison.Ordinal) == true)
+            .ToList();
+        Assert.Equal(
+            new[]
+            {
+                "BatshitTechnology.JobGiver_TractorBombHunt",
+                "BatshitTechnology.JobGiver_TractorBombRepair",
+            },
+            constantGivers.Select(e => e.Attribute("Class")?.Value));
+        Assert.All(constantGivers, e =>
+            Assert.Equal("true", e.Element("interruptOnly")?.Value));
+
+        Assert.Equal("JobDriver_Goto",
+            SingleDef("JobDef", "BT_TractorBombPatrol")
+                .Element("driverClass")?.Value);
+        Assert.Equal("BatshitTechnology.JobDriver_TractorBombApproach",
+            SingleDef("JobDef", "BT_TractorBombApproach")
+                .Element("driverClass")?.Value);
+        var emplace = SingleDef("JobDef", "BT_TractorBombEmplace");
+        Assert.Equal("BatshitTechnology.JobDriver_TractorBombEmplace",
+            emplace.Element("driverClass")?.Value);
+        Assert.Equal("false", emplace.Element("playerInterruptible")?.Value);
+        Assert.Equal("Never",
+            emplace.Element("checkOverrideOnDamage")?.Value);
+    }
+
+    /// <summary>
+    /// The emplaced bomb hosts an implosion that gathers to 1.5 tiles and
+    /// runs 2 to 8 seconds (120 to 480 ticks, as Core's TractorBombTiming
+    /// says), counts down 3 to 5 seconds, flips its tyres in half a second, is
+    /// drawn every frame (the flip and the vortex), has no hit points (a
+    /// hit only hurries it along; Source/TractorBombEmplaced.cs), and
+    /// cannot be deconstructed or claimed. Its death vortex is a drawn
+    /// ethereal.
+    /// </summary>
+    [Fact(DisplayName = "Emplaced Tractor Bomb is wired up as specified")]
+    public void TractorBombEmplaced_should_match_spec()
+    {
+        var bomb = ThingDef("BT_TractorBombEmplaced");
+        Assert.Equal("BatshitTechnology.Building_TractorBomb",
+            bomb.Element("thingClass")?.Value);
+        Assert.Equal("RealtimeOnly", bomb.Element("drawerType")?.Value);
+        Assert.Equal("false", bomb.Element("useHitPoints")?.Value);
+        Assert.Null(bomb.Element("designationCategory"));
+        var building = bomb.Element("building");
+        Assert.Equal("false", building?.Element("deconstructible")?.Value);
+        Assert.Equal("false", building?.Element("claimable")?.Value);
+
+        var settings = bomb.Descendants("li").Single(e =>
+            e.Attribute("Class")?.Value
+                == "BatshitTechnology.TractorBombExtension");
+        Assert.Equal("1.5", settings.Element("implosion")
+            ?.Element("gatherRadius")?.Value);
+        Assert.Null(settings.Element("implosion")?.Element("pullRadius"));
+        Assert.Equal(
+            TractorBombTiming.MinImplosionTicks.ToString(
+                CultureInfo.InvariantCulture),
+            settings.Element("implosion")?.Element("minDurationTicks")?.Value);
+        Assert.Equal(
+            TractorBombTiming.MaxImplosionTicks.ToString(
+                CultureInfo.InvariantCulture),
+            settings.Element("implosion")?.Element("maxDurationTicks")?.Value);
+        Assert.Equal("3~5", settings.Element("countdownSeconds")?.Value);
+        Assert.Equal("30", settings.Element("deployTicks")?.Value);
+
+        var vortex = ThingDef("BT_TractorBombDeathVortex");
+        Assert.Equal("BatshitTechnology.TractorBombDeathVortex",
+            vortex.Element("thingClass")?.Value);
+        Assert.Equal("Ethereal", vortex.Element("category")?.Value);
+        Assert.Equal("RealtimeOnly", vortex.Element("drawerType")?.Value);
+    }
+
+    /// <summary>
+    /// The Tractor Bomb's textures that code loads by path, not a Def: the
+    /// flip frames, the parts its death vortex sucks in, the protest lamp
+    /// the named settings' button icons and the Tractor Barn's "Apply to
+    /// every tractor" icon (Source/TractorBomb.cs, BT_TractorBombAssets).
+    /// </summary>
+    /// <param name="path">The texture path.</param>
+    [Theory(DisplayName = "Tractor Bomb textures loaded by code exist")]
+    [InlineData("Things/Building/Security/BT_TractorBombEmplaced_Flip1")]
+    [InlineData("Things/Building/Security/BT_TractorBombEmplaced_Flip2")]
+    [InlineData("Things/Building/Security/BT_TractorBombEmplaced_Flip3")]
+    [InlineData("Things/Mote/BT_TractorBombPart_Wheel")]
+    [InlineData("Things/Mote/BT_TractorBombPart_Hood")]
+    [InlineData("Things/Mote/BT_TractorBombPart_Emitter")]
+    [InlineData("Things/Mote/BT_TractorBombLamp")]
+    [InlineData("UI/Commands/BT_ProximityTimid")]
+    [InlineData("UI/Commands/BT_ProximityPrudent")]
+    [InlineData("UI/Commands/BT_ProximityNosy")]
+    [InlineData("UI/Commands/BT_PullIntimate")]
+    [InlineData("UI/Commands/BT_PullNeighborly")]
+    [InlineData("UI/Commands/BT_PullPopular")]
+    [InlineData("UI/Commands/BT_BlastBirthdayCake")]
+    [InlineData("UI/Commands/BT_BlastFirework")]
+    [InlineData("UI/Commands/BT_BlastBlockParty")]
+    [InlineData("UI/Commands/BT_ApplyToEveryTractor")]
+    public void TractorBombCodeTextures_should_exist(string path)
+    {
+        Assert.True(File.Exists(Path.Combine(
+            FixturesDirectory, "Textures", path + ".png")), path);
     }
 
     /// <summary>
@@ -370,7 +589,7 @@ public sealed class XmlDefinitionTests
         var devices = AllThingDefs()
             .Where(d => d.Element("designationCategory") != null)
             .ToList();
-        Assert.Equal(7, devices.Count);
+        Assert.Equal(8, devices.Count);
 
         var blasts = new List<string>();
         foreach (var device in devices)
@@ -390,8 +609,8 @@ public sealed class XmlDefinitionTests
             }
         }
 
-        Assert.Equal(5, blasts.Count);
-        Assert.Equal(4, blasts.Distinct().Count()); // Ballista and Magazine share the cook-off
+        Assert.Equal(6, blasts.Count);
+        Assert.Equal(5, blasts.Distinct().Count()); // Ballista and Magazine share the cook-off
     }
 
     /// <summary>
@@ -596,7 +815,9 @@ public sealed class XmlDefinitionTests
 
     /// <summary>
     /// Verifies every texture path that names a mod asset (a BT_ file) has
-    /// a PNG in Textures/. Vanilla paths cannot be checked without the game.
+    /// a PNG in Textures/: one file, or for a Graphic_Multi (a pawn), one
+    /// per facing RimWorld needs (north, east and south; west mirrors
+    /// east). Vanilla paths cannot be checked without the game.
     /// </summary>
     [Fact(DisplayName = "Every mod texture path has a PNG")]
     public void Defs_should_have_textures_for_mod_texture_paths()
@@ -611,8 +832,11 @@ public sealed class XmlDefinitionTests
             .ToList();
 
         Assert.NotEmpty(texturePaths);
-        var missing = texturePaths.Where(path => !File.Exists(
-            Path.Combine(FixturesDirectory, "Textures", path + ".png")));
+        static bool Exists(string file) => File.Exists(
+            Path.Combine(FixturesDirectory, "Textures", file + ".png"));
+        var missing = texturePaths.Where(path => !Exists(path)
+            && !new[] { "_north", "_east", "_south" }
+                .All(facing => Exists(path + facing)));
         Assert.Empty(missing);
     }
 

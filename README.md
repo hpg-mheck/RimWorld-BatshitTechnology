@@ -79,12 +79,15 @@ development), then enable **Batshit Technology** in the mod list. It
 requires the **Harmony** mod (`brrainz.harmony`, Steam Workshop item
 2009463077), which must load before it; RimWorld's mod list says so if it
 is missing. Harmony supplies `0Harmony.dll`, which this mod never ships,
-for one patch only: the main menu's **Showcases** button.
+for two patches only: the main menu's **Showcases** button, and one that
+makes a showcase's map the same every time for the same seed, acting only
+while that map is generated.
 
 ## Showcases
 
 To see everything at once, choose **Showcases** at the bottom of the main
-menu, then **Batshit Technology**, then **Demo base**, then **Start**. The
+menu, then **Batshit Technology**, then **Living better with
+batshittium**, then **Start**. The
 showcase runs in a fresh, throwaway colony that never autosaves, so your
 saves are untouched unless you save it yourself. A bar at the top of the
 screen offers **Stop**, which ends the showcase and leaves the colony,
@@ -94,28 +97,63 @@ For development, `.\Tools\smoke-test.ps1 -Showcase` (PowerShell, after
 building) does the same without touching your own saves, options or mod
 list: it starts RimWorld with an isolated data folder and
 `-showcase=BT_Showcase`, which the main menu acts on as if Start had been
-pressed, generating a quick-test-style map (it needs Harmony too). It
+pressed, generating a quick-test-style map (it needs Harmony too), with dev
+mode and the Learning helper off in its own prefs. It
 exits with an error if the showcase is refused or fails, or if the mod
-logs an error before the demo is ready. The showcase builds a
-working demo base: reactor, stocked replicator, Transmogrifier with a bill,
-a colonist in the Brain Squeezer, the Artificer, and a Ballista firing
-explosive volleys from chained magazines. The camera starts on a lone
-replicator in the most open far corner, which arms its self-destruct five
-seconds in, well clear of the base; a lone reactor in the next corner
-follows twenty seconds later, and then a colonist throws an Ergonomic
-Singularity Grenade at a junk pile west of the base. Last, the camera
-visits **AnyRim**, a small test town in the north-west built from Nevada
-Test Site history: one Main Street, three model homes in wood, brick and
-steel, a five-and-dime selling singularity grenades, a funeral home with
-a reserved plot for everyone, a bank vault, a town hall, Public Works
-with the Batshit equipment, and eight residents whose names suggest they
-are not long for this world. Blow it up as you please; its residents
-belong to no one who will mind. The script's window opens maximized at
-2x UI scale. In dev mode the devices' DEV buttons show during the
-showcase, and only then. In your own dev-mode games, the Actions menu's
-"Mods" section can build AnyRim at a click, at the best site, or remove
-it again. See docs/SHOWCASE.md, and docs/SHOWCASE-API.md for how other
-mods can offer showcases of their own.
+logs an error before the demo is ready. While the tour plays, vanilla's
+alerts, letters and top-left messages are kept off the screen, and given
+back when it ends. The showcase is a directed
+tour, a 1950s public information film in ten scenes, each captioned
+("4 of 10: When Devices Retire") and narrated in the mod's deadpan voice,
+with the camera moving for every beat:
+
+1. **The Home of Tomorrow:** the reactor, the stocked Random Replicator,
+   the Transmogrifier and the Brain Squeezer, one at a time.
+2. **Home Defence:** the Artificer, and the Batshittium Ballista firing a
+   16-bolt explosive volley from chained magazines.
+3. **Uninvited Guests:** two hundred manhunting boomalopes stampede in
+   from the east, in the rain, and the Ballista meets them with one
+   256-bolt volley.
+4. **When Devices Retire:** a lone replicator's self-destruct, in a far
+   corner well clear of the base.
+5. **When Reactors Retire:** a lone reactor's, in another corner.
+6. **A Typical Rim Community:** a walk through AnyRim.
+7. **Comfort Is a Weapon:** a colonist throws an Ergonomic Singularity
+   Grenade at a junk pile, with a volunteer inside it.
+8. **The Raccoon Incident:** AnyRim's bank guard, Ned "Overkill" Lessly,
+   deals with a rabid raccoon on Main Street, with the same grenade, and
+   the census is revised.
+9. **The Tractor of Tomorrow:** a Tractor Bomb robot finds a party of
+   raiders, protests at a guest too close, emplaces, and implodes.
+10. **Two Tractors:** two robots in a junkyard, their pulls overlapping,
+    and the byline.
+
+The narrator speaks one line at a time, large and silent, in the lower
+third of the screen; each line is read in full and gone a couple of
+seconds before the next, so each scene opens on its title line before the
+action starts, and the whole tour runs about eight minutes. Colonists are
+held clear of every blast, barrage, pull and herd until it is over, and
+are never in harm's way. A small tour group of three to five visitors, of
+a hidden faction made for the occasion, is shown round at closer range:
+sightseers at the stampede's line and beside the self-destructs, the
+grenade's volunteer in the junk pile, and a stray in the tractor's pull.
+What becomes of them is the world's; they go home, standing or not, when
+the tour ends, is stopped or fails, or when a game saved during the tour
+is loaded.
+A scene this map cannot stage (no clear corner, no room for the tractor yard)
+is skipped, and the captions count only the scenes that run. The bar's
+**Skip** ends the current scene. **AnyRim** is a small test town in the
+north-west built from Nevada Test Site history: one Main Street, three model
+homes in wood, brick and steel, a five-and-dime selling singularity grenades,
+a funeral home with a reserved plot for everyone, a bank vault, a town hall,
+Public Works with the Batshit equipment, and nine residents whose names
+suggest they are not long for this world. Blow it up as you please; its
+residents belong to no one who will mind. The script's window opens maximized
+at 2x UI scale. The tour shows no DEV buttons, even in dev mode, unless you
+turn god mode on yourself. In your own dev-mode games, the Actions menu's
+"Mods" section can build AnyRim at a click, at the best site, or remove it
+again. See docs/SHOWCASE.md, and docs/SHOWCASE-API.md for how other mods
+can offer showcases of their own.
 
 ## Research
 
@@ -382,7 +420,9 @@ The grenade's singularity is set by the `SingularityExtension` on
 (12, cells per second), `ripTicks` (120), `explosionDamageDef` (Bomb),
 `explosionRadius` (5.9), `explosionDamage` (65), `survivorDelayTicks` (30)
 and `survivorThought`. The 25 quips are in
-`Defs/Misc/BT_SingularityGrenade.xml`.
+`Defs/Misc/BT_SingularityGrenade.xml`. The pull itself is the shared
+implosion (`Source/Implosion.cs`, set by `ImplosionSettings` in the Core
+library), which the Tractor Bomb and the Colony Bomb reuse.
 
 ## Textures
 

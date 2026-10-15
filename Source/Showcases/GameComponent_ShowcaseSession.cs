@@ -3,17 +3,43 @@
 // the game was generated for a showcase (ShowcaseLauncher), or started
 // with -quicktest and -showcase=. Then, once the new map has settled, it
 // makes the showcase's worker, sets it up, ticks it, draws the caption bar
-// with Skip and Stop, writes the [BT-SHOWCASE] log cues capture tooling
-// waits on, and keeps the game from autosaving, so a showcase never
-// overwrites the player's autosave slots. Nothing about the session is
-// saved: a showcase game the player chooses to save loads as an ordinary
-// game. God mode a showcase borrowed for its developer buttons
-// (ShowcaseGodMode) is given back when the showcase stops or finishes,
-// and again whenever a game that is not a showcase starts or loads. Two
+// with Skip and Stop and the narration overlay (one line at a time, in the
+// lower third, silent; NarrationOverlayDrawer), writes the [BT-SHOWCASE]
+// log cues capture tooling waits on, and keeps the game from autosaving,
+// so a showcase never overwrites the player's autosave slots. Nothing
+// about the session is saved: a showcase game the player chooses to save
+// loads as an ordinary game. God mode a showcase borrowed for its
+// developer buttons (ShowcaseGodMode) is given back when the showcase
+// stops or finishes, and again whenever a game that is not a showcase
+// starts or loads. Random incidents are off while a showcase runs: the
+// storyteller's parts are held from the session's start until the
+// showcase finishes or stops, then given back, since the closing line
+// hands the colony to the viewer. For repeatability (docs/SHOWCASE-API.md,
+// "Seeds"), the session draws the rest of a seeded game's start (once its
+// map is generated) from the launch's seed, closes the map seed's window
+// the launcher opened (ShowcaseMapSeed: the second Harmony patch pins
+// Map.NextGenSeed only while it is open) as soon as any new game starts,
+// and says how many of the map's seeds it pinned and what of the map it
+// could not (MAPSEED: layouts' rooms, the tile's landmark), then logs the
+// new map's fingerprint (MAPHASH), holds the game paused while the map
+// settles, so no frame-timed ticks run before the worker (counting the
+// settling frames only while the player has control, and retrying the
+// unpause if the game refuses it), reseeds the global random state from
+// the launch's seed, and logs the stage's fingerprint (STAGEHASH) before
+// READY. The window is closed again, harmlessly, on every later way out
+// (set-up, Stop, FINISHED, a loaded game). A def's holdWeather is held
+// from the set-up until the showcase finishes or stops (a scene may
+// borrow the weather for its run), then the weather from before is given
+// back (docs/SHOWCASE-API.md, "The Held Weather"). A def's quietScreen
+// keeps vanilla's alerts, letters, messages and Learning helper off the
+// film from the set-up until the showcase finishes or stops
+// (ShowcaseScreen; docs/SHOWCASE-API.md, "The Quiet Screen"); what it
+// borrowed is given back on every way out, as god mode is. Two
 // internal seams, AdoptForTest and ReleaseForTest, let the smoke runner
 // (Source/SmokeTestShowcases.cs) run test showcases in its own game.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using RimWorld;
@@ -91,6 +117,119 @@ namespace BatshitTechnology.Showcases
         /// <summary>The tick the closing message was shown on, or -1.</summary>
         private int farewellTick = -1;
 
+        /// <summary>
+        /// What the narration overlay shows. It belongs to this game, so
+        /// leaving the game takes it along.
+        /// </summary>
+        private readonly NarrationOverlay narration = new NarrationOverlay();
+
+        /// <summary>Whether the overlay failed; it then stops.</summary>
+        private bool narrationFailed;
+
+        /// <summary>How many frames the overlay has drawn text in.</summary>
+        private int narrationFrames;
+
+        /// <summary>The seed the game was generated from, or null.</summary>
+        private ResolvedSeed seed;
+
+        /// <summary>The new map's fingerprint, as hex, or null.</summary>
+        private string mapHash;
+
+        /// <summary>
+        /// How many of the map's generation seeds the map seed's window
+        /// pinned, or -1 when it was not open for this game.
+        /// </summary>
+        private int mapSeedsPinned = -1;
+
+        /// <summary>The stage's fingerprint at READY, as hex, or null.</summary>
+        private string stageHash;
+
+        /// <summary>
+        /// Whether the global random state was reseeded from the seed as
+        /// the worker was set up.
+        /// </summary>
+        private bool reseeded;
+
+        /// <summary>
+        /// The storyteller's parts while the showcase holds them, or null
+        /// when it does not: random incidents are off while it does.
+        /// </summary>
+        private List<StorytellerComp> heldStorytellerComps;
+
+        /// <summary>
+        /// The weather the showcase holds, or null when it holds none.
+        /// </summary>
+        private WeatherDef heldWeather;
+
+        /// <summary>The map whose weather is held, or null.</summary>
+        private Map heldWeatherMap;
+
+        /// <summary>
+        /// The weather as the hold began (current, last, and the current
+        /// one's age), given back when it ends.
+        /// </summary>
+        private (WeatherDef Current, WeatherDef Last, int Age) weatherBefore;
+
+        /// <summary>
+        /// Who has the weather to itself for now (a scene with weather of
+        /// its own), or null: the hold stands aside while one does.
+        /// </summary>
+        private object weatherLender;
+
+        /// <summary>
+        /// How many times the hold found another weather and replaced it.
+        /// </summary>
+        private int weatherRestarts;
+
+        /// <summary>
+        /// The tick the quiet screen began (letters that arrive from then
+        /// on are taken off), or -1 while the screen is not kept quiet.
+        /// </summary>
+        private int quietSince = -1;
+
+        /// <summary>Set when keeping the screen quiet threw, so it is logged once.</summary>
+        private bool quietFailed;
+
+        /// <summary>
+        /// Whether the session paused the game while the map settles, and
+        /// so must unpause it when it sets the worker up.
+        /// </summary>
+        private bool settleHeld;
+
+        /// <summary>The game's speed before the settle hold.</summary>
+        private TimeSpeed speedBeforeSettle = TimeSpeed.Normal;
+
+        /// <summary>
+        /// How many times the game refused to leave the settle hold (the
+        /// player had no control: the screen fading in, a cutscene).
+        /// </summary>
+        private int settleReleaseRefused;
+
+        /// <summary>
+        /// Whether the rest of the game's start, once its map was
+        /// generated, was drawn from the launch's seed (FinalizeInit).
+        /// </summary>
+        private bool startReseeded;
+
+        /// <summary>
+        /// The global random state as the session's StartedNewGame began,
+        /// after the rest of the game's start had drawn on it, as hex; or
+        /// null.
+        /// </summary>
+        private string startState;
+
+        /// <summary>The starting tile's landmark (its def's name), or null.</summary>
+        private string landmark;
+
+        /// <summary>The starting tile's mutators (their defs' names).</summary>
+        private List<string> mutators = new List<string>();
+
+        /// <summary>
+        /// Layouts on the new map whose rooms vanilla filled under a seed
+        /// random per process, or -1 before the game started.
+        /// </summary>
+        private int unpinnedLayouts = -1;
+
         /// <summary>Created by RimWorld for every game.</summary>
         /// <param name="game">The game.</param>
         public GameComponent_ShowcaseSession(Game game)
@@ -134,29 +273,241 @@ namespace BatshitTechnology.Showcases
         public bool CaptionBarFailed => guiFailed;
 
         /// <summary>
-        /// Gets the tick the closing message was shown on, or -1 if it has
-        /// not been shown (or showing it failed).
+        /// Gets the tick the closing message was handed to the narration
+        /// overlay on (it appears once the last line has been read), or -1
+        /// if it has not been.
         /// </summary>
         public int FarewellTick => farewellTick;
 
         /// <summary>
-        /// Takes the launcher's request for this game, if there is one. A
-        /// game that is not a showcase gives back any god mode an earlier
-        /// showcase still held.
+        /// Gets how many frames the narration overlay has drawn text in,
+        /// for the smoke runner.
+        /// </summary>
+        public int NarrationFrames => narrationFrames;
+
+        /// <summary>
+        /// Gets a value indicating whether the narration overlay failed
+        /// and was hidden.
+        /// </summary>
+        public bool NarrationFailed => narrationFailed;
+
+        /// <summary>
+        /// Gets the narration overlay's state, for the smoke runner and
+        /// capture tooling.
+        /// </summary>
+        internal NarrationOverlay Narration => narration;
+
+        /// <summary>
+        /// Gets the seed this game was generated from, or null for a game
+        /// the smoke runner adopted.
+        /// </summary>
+        public ResolvedSeed Seed => seed;
+
+        /// <summary>
+        /// Gets the new map's fingerprint (the MAPHASH cue's), as hex, or
+        /// null before the game started.
+        /// </summary>
+        public string MapHash => mapHash;
+
+        /// <summary>
+        /// Gets the stage's fingerprint at READY (the STAGEHASH cue's), as
+        /// hex, or null before READY.
+        /// </summary>
+        public string StageHash => stageHash;
+
+        /// <summary>
+        /// Gets how many of the map's generation seeds were pinned while
+        /// the map was generated (the MAPSEED cue's), or -1 when they were
+        /// not: a game the smoke runner adopted, a quick-test map, or no
+        /// patch.
+        /// </summary>
+        public int MapSeedsPinned => mapSeedsPinned;
+
+        /// <summary>
+        /// Gets a value indicating whether the rest of the game's start,
+        /// once its map was generated, was drawn from the launch's seed.
+        /// </summary>
+        public bool StartReseeded => startReseeded;
+
+        /// <summary>
+        /// Gets the global random state as the game's start ended (the
+        /// session's StartedNewGame), as sixteen hex digits, or null. With
+        /// the start drawn from the seed, the same seed gives the same
+        /// state in every process.
+        /// </summary>
+        public string StartState => startState;
+
+        /// <summary>
+        /// Gets the starting tile's landmark (its def's name), or null:
+        /// none, or not a showcase game.
+        /// </summary>
+        public string Landmark => landmark;
+
+        /// <summary>Gets the starting tile's mutators (their defs' names).</summary>
+        public IReadOnlyList<string> Mutators => mutators;
+
+        /// <summary>
+        /// Gets how many layouts (ancient structures and ruins) the new map
+        /// holds whose rooms vanilla filled under
+        /// <c>System.HashCode.Combine</c>, random per process, so their
+        /// contents are not pinned by the seed; -1 before the game started.
+        /// </summary>
+        public int UnpinnedLayouts => unpinnedLayouts;
+
+        /// <summary>
+        /// Gets how many times the game refused to leave the settle hold
+        /// and the session tried again.
+        /// </summary>
+        public int SettleReleaseRefused => settleReleaseRefused;
+
+        /// <summary>
+        /// Gets a value indicating whether the global random state was
+        /// reseeded from the seed as the worker was set up.
+        /// </summary>
+        public bool Reseeded => reseeded;
+
+        /// <summary>
+        /// Gets a value indicating whether the showcase holds the
+        /// storyteller's parts, so no random incident comes.
+        /// </summary>
+        public bool StorytellerQuiet => heldStorytellerComps != null;
+
+        /// <summary>
+        /// Gets how many storyteller parts the showcase holds, or -1 when
+        /// it holds none.
+        /// </summary>
+        public int StorytellerCompsHeld => heldStorytellerComps?.Count ?? -1;
+
+        /// <summary>
+        /// Gets the weather the showcase holds, or null when it holds none
+        /// (no <c>holdWeather</c>, or the showcase has finished or
+        /// stopped).
+        /// </summary>
+        public WeatherDef HeldWeather => heldWeather;
+
+        /// <summary>
+        /// Gets a value indicating whether a scene has borrowed the
+        /// weather, so the hold stands aside.
+        /// </summary>
+        public bool WeatherLent => heldWeather != null && weatherLender != null;
+
+        /// <summary>
+        /// Gets how many times the hold found another weather and replaced
+        /// it (never while a scene has the weather).
+        /// </summary>
+        public int WeatherRestarts => weatherRestarts;
+
+        /// <summary>
+        /// Gets a value indicating whether the screen is kept quiet now:
+        /// the showcase asks for it (<see cref="ShowcaseDef.quietScreen"/>)
+        /// and is running (docs/SHOWCASE-API.md, "The Quiet Screen").
+        /// </summary>
+        public bool ScreenQuiet => Running && quietSince >= 0;
+
+        /// <summary>
+        /// Lends the weather to a scene that wants weather of its own (the
+        /// tour's stampede brings rain): the hold stands aside until the
+        /// same borrower gives it back with <see cref="ReclaimWeather"/>.
+        /// A scene that is no longer its director's current scene gives it
+        /// back by itself, so a scene that fails in its end cannot keep
+        /// it. Does nothing when no weather is held.
+        /// </summary>
+        /// <param name="borrower">The borrower, usually the scene.</param>
+        public void YieldWeather(object borrower)
+        {
+            if (heldWeather != null && borrower != null)
+            {
+                weatherLender = borrower;
+            }
+        }
+
+        /// <summary>
+        /// Takes the weather back from its borrower: from the next tick
+        /// the hold applies again, settling any transition the borrower
+        /// left. Does nothing for anyone else.
+        /// </summary>
+        /// <param name="borrower">The borrower that had it.</param>
+        public void ReclaimWeather(object borrower)
+        {
+            if (borrower != null && ReferenceEquals(weatherLender, borrower))
+            {
+                weatherLender = null;
+            }
+        }
+
+        /// <summary>
+        /// Runs in Game.FinalizeInit, once the map is generated and before
+        /// the rest of the game's start (the scenario, the history and
+        /// every component's StartedNewGame), which draws on the global
+        /// random state and keeps what it drew: Anomaly's first harbinger
+        /// tree check, for one, which would otherwise draw again, and queue
+        /// an incident, at a tick that differs from process to process. For
+        /// a showcase's game generated from a seed, sets that state afresh
+        /// from the seed's <see cref="ShowcaseSeed.Start"/> purpose, so the
+        /// rest of the start draws the same in every process. Nothing is
+        /// pushed then (the map generator popped its own state) and the
+        /// main thread draws nothing during the long event
+        /// (<see cref="LoadingTips"/>). Does nothing for any other game, a
+        /// loaded one included.
+        /// </summary>
+        public override void FinalizeInit()
+        {
+            ResolvedSeed waiting = ShowcaseLauncher.PendingSeedFor(game);
+            if (waiting != null)
+            {
+                startReseeded = ShowcaseRandom.Reseed(waiting.Derive(ShowcaseSeed.Start));
+            }
+        }
+
+        /// <summary>
+        /// Closes the map seed's window first, for every new game, since
+        /// its map is generated by now, and notes the global random state
+        /// the game's start left. Then takes the launcher's request for
+        /// this game, if there is one, notes what of the map a seed cannot
+        /// pin (layouts' rooms, the tile's landmark and mutators), says
+        /// how many of the map's seeds were pinned (MAPSEED), fingerprints
+        /// the new map (MAPHASH), quiets the storyteller, and holds the
+        /// game paused while the map settles. A game that is not a
+        /// showcase gives back any god mode an earlier showcase still held,
+        /// and warns if it found the window open (a showcase's generation
+        /// that failed left it so; it was bound to that game, so it pinned
+        /// nothing here). Runs at the end of Game.InitNewGame, inside the
+        /// long event, before the game's first tick.
         /// </summary>
         public override void StartedNewGame()
         {
+            int pinned = ShowcaseMapSeed.Disarm();
+            ShowcaseScreen.Restore();
+            ulong? state = ShowcaseRandom.Snapshot();
             LaunchRequest request = ShowcaseLauncher.TakeRequestFor(game)
                 ?? ShowcaseLauncher.TakeQuickTestRequest();
             if (request == null)
             {
+                if (pinned >= 0)
+                {
+                    Log.Warning($"{ShowcaseLog.Prefix} closed the showcase map "
+                        + "seed's window, left open by a showcase that never "
+                        + $"started, as another game started ({pinned} seeds "
+                        + "pinned for it)");
+                }
+
                 ShowcaseGodMode.Restore();
                 return;
             }
 
             def = request.Def;
             forced = request.Forced;
+            seed = request.Seed;
+            startState = state?.ToString("x16");
+            mapSeedsPinned = ShowcaseMapSeed.Installed ? pinned : -1;
+            Map map = game.CurrentMap ?? game.Maps.FirstOrDefault();
+            NoteWhatSeedsCannotPin(map);
             ShowcaseLog.Cue("GAME", def.defName);
+            ShowcaseLog.Cue("MAPSEED", MapSeedCue.Detail(
+                ShowcaseMapSeed.Installed, pinned, request.QuickTest, unpinnedLayouts, landmark));
+            mapHash = Fingerprint(map, "MAPHASH");
+            QuietStoryteller();
+            HoldWhileSettling();
         }
 
         /// <summary>
@@ -169,19 +520,44 @@ namespace BatshitTechnology.Showcases
         /// </summary>
         public override void LoadedGame()
         {
+            ShowcaseLauncher.ReleaseMapSeed("a loaded game");
             ShowcaseLauncher.TakeRequestFor(game);
             ShowcaseGodMode.Restore();
+            ShowcaseScreen.Restore();
         }
 
         /// <summary>
-        /// Sets the showcase up once the map has settled for a couple of
-        /// seconds.
+        /// Moves the narration overlay on, every frame, and sets the
+        /// showcase up once the map has settled for a couple of seconds.
+        /// Settling frames count only while the player has control: while
+        /// the screen fades in after the map loads (Root_Play.Start queues
+        /// a half-second fade) or a cutscene plays, RimWorld silently
+        /// refuses any change of speed, so a set-up then could not unpause
+        /// the game. If the unpause was refused anyway, it is tried again
+        /// every frame until it takes.
         /// </summary>
         public override void GameComponentUpdate()
         {
-            if (def == null || begun
+            if (def == null)
+            {
+                return;
+            }
+
+            UpdateNarration();
+            if (ScreenQuiet)
+            {
+                KeepScreenQuiet();
+            }
+
+            if (begun && settleHeld)
+            {
+                ReleaseSettleHold();
+            }
+
+            if (begun
                 || Verse.Current.ProgramState != ProgramState.Playing
-                || Find.CurrentMap == null)
+                || Find.CurrentMap == null
+                || !game.PlayerHasControl)
             {
                 return;
             }
@@ -229,6 +605,7 @@ namespace BatshitTechnology.Showcases
                 return;
             }
 
+            KeepWeather();
             bool finished;
             try
             {
@@ -246,14 +623,20 @@ namespace BatshitTechnology.Showcases
             {
                 ended = true;
                 farewellPending = true;
+                ShowcaseLauncher.ReleaseMapSeed("the showcase's end");
                 ShowcaseGodMode.Restore();
                 ShowcaseLog.Cue("FINISHED", def.defName);
+                RestoreStoryteller();
+                GiveBackWeather();
+                QuietScreenEnds();
                 SayFarewellWhenQuiet();
             }
         }
 
         /// <summary>
-        /// Draws the caption bar while the showcase plays out: its caption
+        /// Draws the narration overlay whenever it has a line (after the
+        /// showcase ends too, for its last lines and the closing message),
+        /// and the caption bar while the showcase plays out: its caption
         /// and the Skip and Stop buttons, centred below the colonist bar.
         /// IMGUI calls this on every event, not once a frame: the buttons
         /// take part in every event, as vanilla's do, so their control ids
@@ -268,9 +651,15 @@ namespace BatshitTechnology.Showcases
         /// </summary>
         public override void GameComponentOnGUI()
         {
-            if (guiFailed || !Running || Event.current == null
+            if (def == null || Event.current == null
                 || Find.CurrentMap == null || !WorldRendererUtility.DrawingMap
                 || Find.UIRoot?.screenshotMode?.FiltersCurrentEvent == true)
+            {
+                return;
+            }
+
+            DrawNarration();
+            if (guiFailed || !Running)
             {
                 return;
             }
@@ -322,7 +711,11 @@ namespace BatshitTechnology.Showcases
         /// <summary>
         /// Stops the showcase for good. The game keeps running; the camera
         /// and the colony are the viewer's, and any god mode the showcase
-        /// borrowed is given back.
+        /// borrowed is given back. The narration overlay is cleared at
+        /// once; a scene's own "stopped" line, said as the worker stops,
+        /// then shows on it. The viewer's Stop is confirmed with a silent
+        /// vanilla message: it answers a click, as a refusal does, and is
+        /// not the narrator speaking.
         /// </summary>
         /// <param name="byViewer">Whether the viewer asked for it.</param>
         public void StopShowcase(bool byViewer)
@@ -334,6 +727,7 @@ namespace BatshitTechnology.Showcases
 
             ended = true;
             farewellPending = false;
+            narration.Clear();
             try
             {
                 worker.Stop();
@@ -344,8 +738,12 @@ namespace BatshitTechnology.Showcases
                     + $"stopping: {e}");
             }
 
+            ShowcaseLauncher.ReleaseMapSeed("Stop");
             ShowcaseGodMode.Restore();
             ShowcaseLog.Cue("STOPPED", def.defName);
+            RestoreStoryteller();
+            GiveBackWeather();
+            QuietScreenEnds();
             if (byViewer)
             {
                 Message("BT_Showcases_Stopped".Translate());
@@ -395,12 +793,54 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
+        /// Smoke-test seam: holds the game paused, as a new showcase game
+        /// is held while its map settles. The game must be running.
+        /// </summary>
+        /// <returns>Whether the hold is on.</returns>
+        internal bool HoldForTest()
+        {
+            HoldWhileSettling();
+            return settleHeld;
+        }
+
+        /// <summary>
+        /// Smoke-test seam: tries to let the game run again, as the set-up
+        /// does and as every later frame does while a refused hold stays.
+        /// </summary>
+        /// <returns>True once the hold is released.</returns>
+        internal bool ReleaseHoldForTest() => ReleaseSettleHold();
+
+        /// <summary>Gets a value indicating whether the settle hold is on.</summary>
+        internal bool SettleHeld => settleHeld;
+
+        /// <summary>
         /// Forgets the showcase and everything about its run, giving back
-        /// any god mode it borrowed.
+        /// any god mode it borrowed, the storyteller's parts it held, and
+        /// the game's speed if it was holding the game while the map
+        /// settled.
         /// </summary>
         private void ResetRun()
         {
+            ShowcaseLauncher.ReleaseMapSeed("a smoke test's reset");
             ShowcaseGodMode.Restore();
+            RestoreStoryteller();
+            GiveBackWeather();
+            QuietScreenEnds();
+            quietFailed = false;
+            weatherRestarts = 0;
+            ReleaseSettleHold();
+            settleHeld = false;
+            settleReleaseRefused = 0;
+            seed = null;
+            mapHash = null;
+            mapSeedsPinned = -1;
+            startReseeded = false;
+            startState = null;
+            landmark = null;
+            mutators = new List<string>();
+            unpinnedLayouts = -1;
+            stageHash = null;
+            reseeded = false;
             def = null;
             forced = false;
             worker = null;
@@ -411,22 +851,40 @@ namespace BatshitTechnology.Showcases
             guiFailed = false;
             captionFrames = 0;
             farewellTick = -1;
+            narration.Clear();
+            narrationFailed = false;
+            narrationFrames = 0;
         }
 
         /// <summary>
-        /// Makes the worker and sets it up on the map, then logs READY,
-        /// the cue capture tooling waits on before maximizing the window.
-        /// A set-up that throws is logged and ends the showcase; the game
-        /// stays open.
+        /// Makes the worker and sets it up on the map, then logs the
+        /// stage's fingerprint (STAGEHASH) and READY, the cue capture
+        /// tooling waits on before maximizing the window. Before the set
+        /// up it lets the game run again (it was held paused while the map
+        /// settled), quiets the storyteller if a test adopted the game,
+        /// holds the def's weather if it names one, quiets the screen if
+        /// the def asks (so letters from the set-up never show), and
+        /// reseeds the global random state from the launch's seed, so
+        /// the same seed stages the same things in the same places. A set
+        /// up that throws is logged and ends the showcase; the game stays
+        /// open, with its storyteller back.
         /// </summary>
         /// <param name="map">The showcase's map.</param>
         private void Begin(Map map)
         {
             begun = true;
+            ShowcaseLauncher.ReleaseMapSeed("the showcase's set-up");
             ShowcaseLog.Cue("START", forced ? $"{def.defName} forced" : def.defName);
+            ReleaseSettleHold();
+            QuietStoryteller();
+            HoldWeather(map);
+            QuietScreenBegins();
+            reseeded = seed != null
+                && ShowcaseRandom.Reseed(seed.Derive(ShowcaseSeed.Stage));
             try
             {
                 worker = def.MakeWorker();
+                worker.Overlay = narration;
                 worker.Begin(map);
             }
             catch (Exception e)
@@ -436,15 +894,366 @@ namespace BatshitTechnology.Showcases
                 ShowcaseLog.Cue("FAILED", def.defName);
                 Log.Error($"{ShowcaseLog.Prefix} {def.defName} could not set "
                     + $"up: {e}");
+                RestoreStoryteller();
+                GiveBackWeather();
+                QuietScreenEnds();
                 return;
             }
 
+            stageHash = Fingerprint(map, "STAGEHASH");
             ShowcaseLog.Cue("READY", null);
         }
 
         /// <summary>
+        /// Notes what of the new map its seed cannot pin, for the MAPSEED
+        /// cue and the tour's SUMMARY: the starting tile's landmark and
+        /// mutators, and how many layouts the map holds (Odyssey's ancient
+        /// garrison, warehouse, chemfuel refinery, infested settlement or
+        /// launch site, and other ruins). RimWorld 1.6.4871 fills every
+        /// layout's rooms inside <c>new RandBlock(HashCode.Combine(sketch
+        /// id, room))</c> (LayoutWorker.FillAllRooms), and System.HashCode
+        /// mixes in a seed random per process, so those rooms' loot,
+        /// furniture and hostiles, and the gen steps placed around them,
+        /// differ from process to process. Pinning them would take another
+        /// Harmony patch, which is not approved; the repeat check of
+        /// Tools/tour-trials.ps1 is the guard. Reading draws nothing from
+        /// Rand. Never throws: a failure is warned about and leaves the
+        /// count at -1.
+        /// </summary>
+        /// <param name="map">The new map, or null.</param>
+        private void NoteWhatSeedsCannotPin(Map map)
+        {
+            landmark = null;
+            mutators = new List<string>();
+            unpinnedLayouts = -1;
+            if (map == null)
+            {
+                return;
+            }
+
+            try
+            {
+                Tile tile = map.TileInfo;
+                landmark = tile?.Landmark?.def?.defName;
+                mutators = tile?.Mutators?
+                    .Where(m => m != null)
+                    .Select(m => m.defName)
+                    .ToList() ?? new List<string>();
+                unpinnedLayouts = map.layoutStructureSketches?.Count(s =>
+                    s?.structureLayout?.Rooms != null
+                    && s.structureLayout.Rooms.Count > 0) ?? 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not read the map's "
+                    + $"tile and layouts: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Fingerprints a map and logs it as a record cue. Never throws: a
+        /// failure is logged as a warning (the run is then not provable)
+        /// and gives null.
+        /// </summary>
+        /// <param name="map">The map, or null.</param>
+        /// <param name="cue">The cue word, MAPHASH or STAGEHASH.</param>
+        /// <returns>The fingerprint as hex, or null.</returns>
+        private static string Fingerprint(Map map, string cue)
+        {
+            if (map == null)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} no map to fingerprint for {cue}");
+                return null;
+            }
+
+            try
+            {
+                MapFingerprint print = ShowcaseFingerprint.Of(map);
+                ShowcaseLog.Cue(cue, ShowcaseFingerprint.CueDetail(print));
+                return print.Hex;
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not fingerprint the map "
+                    + $"for {cue}: {e}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Takes the storyteller's parts away, and drops any incident it
+        /// has queued, so no random incident (a raid, a manhunter pack)
+        /// lands in the showcase; logs a STORYTELLER cue. Does nothing if
+        /// they are already held. The parts belong to this game, so a game
+        /// left mid-showcase takes them along; a showcase game the viewer
+        /// saves rebuilds them on loading.
+        /// </summary>
+        private void QuietStoryteller()
+        {
+            Storyteller teller = game?.storyteller;
+            if (teller == null || heldStorytellerComps != null)
+            {
+                return;
+            }
+
+            heldStorytellerComps = teller.storytellerComps ?? new List<StorytellerComp>();
+            teller.storytellerComps = new List<StorytellerComp>();
+            int dropped = teller.incidentQueue?.Count ?? 0;
+            teller.incidentQueue?.Clear();
+            ShowcaseLog.Cue("STORYTELLER", $"quiet ({Parts(heldStorytellerComps.Count)} held"
+                + (dropped > 0 ? $", {dropped} queued incidents dropped)" : ")"));
+        }
+
+        /// <summary>A count of storyteller parts, for a cue.</summary>
+        /// <param name="n">The count.</param>
+        /// <returns>"1 part" or "n parts".</returns>
+        private static string Parts(int n) => n == 1 ? "1 part" : $"{n} parts";
+
+        /// <summary>
+        /// Gives the storyteller its parts back, if the showcase holds
+        /// them, and logs a STORYTELLER cue. If something rebuilt the
+        /// parts meanwhile (a change of storyteller or difficulty does),
+        /// the new ones stay.
+        /// </summary>
+        private void RestoreStoryteller()
+        {
+            if (heldStorytellerComps == null)
+            {
+                return;
+            }
+
+            Storyteller teller = game?.storyteller;
+            if (teller != null && (teller.storytellerComps == null
+                || teller.storytellerComps.Count == 0))
+            {
+                teller.storytellerComps = heldStorytellerComps;
+            }
+
+            heldStorytellerComps = null;
+            ShowcaseLog.Cue("STORYTELLER",
+                $"restored ({Parts(teller?.storytellerComps?.Count ?? 0)})");
+        }
+
+        /// <summary>
+        /// Starts holding the def's weather, if it names one: notes the
+        /// weather as it is, makes the held weather both the current and
+        /// the last one at once, and logs a WEATHER cue. Does nothing
+        /// without a held weather or a map, or if a hold is already on.
+        /// Never throws: a failure is warned about and leaves the weather
+        /// to the map.
+        /// </summary>
+        /// <param name="map">The showcase's map.</param>
+        private void HoldWeather(Map map)
+        {
+            WeatherManager weather = map?.weatherManager;
+            if (def?.holdWeather == null || weather == null || heldWeather != null)
+            {
+                return;
+            }
+
+            try
+            {
+                weatherBefore = (weather.curWeather, weather.lastWeather,
+                    weather.curWeatherAge);
+                heldWeather = def.holdWeather;
+                heldWeatherMap = map;
+                weatherLender = null;
+                weatherRestarts = 0;
+                Apply(weather, WeatherHoldStep.Restart);
+                ShowcaseLog.Cue("WEATHER", $"held {heldWeather.defName} (was "
+                    + $"{weatherBefore.Current?.defName ?? "none"})");
+            }
+            catch (Exception e)
+            {
+                heldWeather = null;
+                heldWeatherMap = null;
+                Log.Warning($"{ShowcaseLog.Prefix} could not hold the weather: "
+                    + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Keeps the held weather, once a tick while the showcase runs,
+        /// after the map's weather has ticked: unless a scene has borrowed
+        /// it, applies Core's <see cref="WeatherHold.Next"/>. A borrower
+        /// that is a scene no longer running gives the weather back first.
+        /// Never throws: a failure is warned about and ends the hold
+        /// without giving the old weather back.
+        /// </summary>
+        private void KeepWeather()
+        {
+            if (heldWeather == null)
+            {
+                return;
+            }
+
+            if (weatherLender is ShowcaseScene scene
+                && !ReferenceEquals((worker as ShowcaseDirector)?.CurrentScene, scene))
+            {
+                weatherLender = null;
+            }
+
+            WeatherManager weather = heldWeatherMap?.weatherManager;
+            if (weatherLender != null || weather == null)
+            {
+                return;
+            }
+
+            try
+            {
+                WeatherHoldStep step = WeatherHold.Next(
+                    heldWeather.defName, weather.curWeather?.defName,
+                    weather.lastWeather?.defName, weather.curWeatherAge);
+                if (step == WeatherHoldStep.Restart)
+                {
+                    weatherRestarts++;
+                }
+
+                Apply(weather, step);
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not keep the weather, "
+                    + $"and stopped holding it: {e.Message}");
+                heldWeather = null;
+                heldWeatherMap = null;
+                weatherLender = null;
+            }
+        }
+
+        /// <summary>
+        /// Applies one step of the hold to a map's weather: the held
+        /// weather as both the current and the last (with the sky's cached
+        /// blend reset), or as the last only, or the age set back to 0.
+        /// </summary>
+        /// <param name="weather">The map's weather.</param>
+        /// <param name="step">The step.</param>
+        private void Apply(WeatherManager weather, WeatherHoldStep step)
+        {
+            switch (step)
+            {
+                case WeatherHoldStep.Restart:
+                    weather.curWeather = heldWeather;
+                    weather.lastWeather = heldWeather;
+                    weather.curWeatherAge = 0;
+                    weather.ResetSkyTargetLerpCache();
+                    break;
+                case WeatherHoldStep.SettleLast:
+                    weather.lastWeather = heldWeather;
+                    weather.curWeatherAge = 0;
+                    weather.ResetSkyTargetLerpCache();
+                    break;
+                case WeatherHoldStep.ResetAge:
+                    weather.curWeatherAge = 0;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Ends the hold, if one is on, and gives back the weather from
+        /// before it (current, last and age), with a WEATHER cue; the
+        /// weather decider carries on from there. Never throws.
+        /// </summary>
+        private void GiveBackWeather()
+        {
+            if (heldWeather == null)
+            {
+                return;
+            }
+
+            WeatherManager weather = heldWeatherMap?.weatherManager;
+            heldWeather = null;
+            heldWeatherMap = null;
+            weatherLender = null;
+            try
+            {
+                if (weather != null && weatherBefore.Current != null
+                    && weatherBefore.Last != null)
+                {
+                    weather.curWeather = weatherBefore.Current;
+                    weather.lastWeather = weatherBefore.Last;
+                    weather.curWeatherAge = weatherBefore.Age;
+                    weather.ResetSkyTargetLerpCache();
+                }
+
+                ShowcaseLog.Cue("WEATHER", "given back ("
+                    + $"{weatherBefore.Current?.defName ?? "none"})");
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not give the weather "
+                    + $"back: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Pauses the game while the new map settles, so the worker is set
+        /// up before the game's first tick. Unpaused, the game would run
+        /// as many ticks in the settling frames as the frame rate allowed,
+        /// and the stage would differ from run to run however it was
+        /// seeded.
+        /// </summary>
+        private void HoldWhileSettling()
+        {
+            TickManager ticks = game?.tickManager;
+            if (ticks == null || settleHeld || ticks.CurTimeSpeed == TimeSpeed.Paused)
+            {
+                return;
+            }
+
+            speedBeforeSettle = ticks.CurTimeSpeed;
+            ticks.CurTimeSpeed = TimeSpeed.Paused;
+            settleHeld = ticks.CurTimeSpeed == TimeSpeed.Paused;
+            if (!settleHeld)
+            {
+                // The setter refuses while the player has no control.
+                Log.Warning($"{ShowcaseLog.Prefix} could not pause the game while "
+                    + "the map settles; the stage may not repeat for its seed");
+            }
+        }
+
+        /// <summary>
+        /// Lets the game run again after the settle hold, at its speed
+        /// before, unless the viewer has changed the speed meanwhile.
+        /// RimWorld's speed setter silently refuses while the player has no
+        /// control (TickManager.PlayerCanControl: the screen fading, a
+        /// cutscene, RimWorld 1.6.4871); the hold then stays on, counted,
+        /// and GameComponentUpdate tries again every frame until it takes,
+        /// rather than leaving the showcase paused at READY.
+        /// </summary>
+        /// <returns>True once the hold is released (or there was none).</returns>
+        private bool ReleaseSettleHold()
+        {
+            if (!settleHeld)
+            {
+                return true;
+            }
+
+            TickManager ticks = game?.tickManager;
+            if (ticks == null || ticks.CurTimeSpeed != TimeSpeed.Paused
+                || speedBeforeSettle == TimeSpeed.Paused)
+            {
+                settleHeld = false;
+                return true;
+            }
+
+            ticks.CurTimeSpeed = speedBeforeSettle;
+            if (ticks.CurTimeSpeed == TimeSpeed.Paused)
+            {
+                settleReleaseRefused++;
+                return false;
+            }
+
+            settleHeld = false;
+            return true;
+        }
+
+        /// <summary>
         /// After the showcase finishes: says any narration still queued
-        /// as it comes due, then the closing message, once.
+        /// as it comes due, then hands the closing message to the
+        /// narration overlay, once. It is patient: it appears only when the
+        /// last line has had its whole reading time, and fades like any
+        /// other line, leaving the overlay empty.
         /// </summary>
         private void SayFarewellWhenQuiet()
         {
@@ -463,10 +1272,150 @@ namespace BatshitTechnology.Showcases
             }
 
             farewellPending = false;
-            if (Message("BT_Showcases_Finished".Translate()))
+            try
             {
+                narration.Say(
+                    "BT_Showcases_Finished".Translate(),
+                    NarrationOverlayDrawer.Now,
+                    patient: true);
                 farewellTick = Find.TickManager.TicksGame;
             }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not show the closing "
+                    + $"message: {e.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Moves the narration overlay on to now, telling it when the next
+        /// queued line is due (converted to real seconds at the game's
+        /// speed). A failure is logged once and hides the overlay.
+        /// </summary>
+        private void UpdateNarration()
+        {
+            if (narrationFailed || (narration.IsEmpty && worker == null))
+            {
+                return;
+            }
+
+            try
+            {
+                double now = NarrationOverlayDrawer.Now;
+                int? next = worker?.NextQueuedTick;
+                TickManager ticks = Find.TickManager;
+                double? seconds = next.HasValue && ticks != null
+                    ? NarrationTiming.SecondsUntil(
+                        next.Value - ticks.TicksGame, ticks.TickRateMultiplier)
+                    : (double?)null;
+                narration.SetNextLineIn(seconds, now);
+                narration.Advance(now);
+            }
+            catch (Exception e)
+            {
+                narrationFailed = true;
+                Log.Error($"{ShowcaseLog.Prefix} the narration overlay failed "
+                    + $"and is hidden for this game: {e}");
+            }
+        }
+
+        /// <summary>
+        /// Draws the narration overlay, if it has a line: below the caption
+        /// bar while that shows, and never taking a click. Guarded like
+        /// the caption bar: one failure is logged and the overlay hidden,
+        /// and the colour state is always restored.
+        /// </summary>
+        private void DrawNarration()
+        {
+            if (narrationFailed || narration.IsEmpty)
+            {
+                return;
+            }
+
+            Color color = GUI.color;
+            try
+            {
+                float top = CaptionTop() + CaptionBarLayout.Margin
+                    + (Running && !guiFailed ? CaptionBarLayout.Height : 0f);
+                double now = NarrationOverlayDrawer.Now;
+                narration.Advance(now);
+                if (NarrationOverlayDrawer.Draw(narration, now, top))
+                {
+                    narrationFrames++;
+                }
+            }
+            catch (Exception e)
+            {
+                narrationFailed = true;
+                Log.Error($"{ShowcaseLog.Prefix} the narration overlay failed "
+                    + $"and is hidden for this game: {e}");
+            }
+            finally
+            {
+                GUI.color = color;
+            }
+        }
+
+        /// <summary>
+        /// Starts the quiet screen if the def asks for it: lends the
+        /// storyteller def's alert and adaptive-training flags and notes
+        /// the tick, from which arriving letters are taken off. Never
+        /// throws: a failure is logged and leaves the screen as it is.
+        /// </summary>
+        private void QuietScreenBegins()
+        {
+            if (def == null || !def.quietScreen)
+            {
+                return;
+            }
+
+            try
+            {
+                quietSince = Find.TickManager?.TicksGame ?? 0;
+                ShowcaseScreen.Lend(game?.storyteller?.def);
+            }
+            catch (Exception e)
+            {
+                quietSince = -1;
+                Log.Error($"{ShowcaseLog.Prefix} could not quiet the screen for "
+                    + $"{def.defName}: {e}");
+            }
+        }
+
+        /// <summary>
+        /// Keeps the screen quiet for this frame (ShowcaseScreen.Keep).
+        /// Guarded: one failure is logged and the screen is left alone for
+        /// the rest of the run, with the flags given back.
+        /// </summary>
+        private void KeepScreenQuiet()
+        {
+            try
+            {
+                ShowcaseScreen.Keep(quietSince);
+            }
+            catch (Exception e)
+            {
+                if (!quietFailed)
+                {
+                    quietFailed = true;
+                    Log.Error($"{ShowcaseLog.Prefix} could not keep the screen "
+                        + $"quiet, and leaves it alone: {e}");
+                }
+
+                QuietScreenEnds();
+            }
+        }
+
+        /// <summary>
+        /// Ends the quiet screen: the storyteller def's flags are given
+        /// back and letters are left to arrive. Does nothing but forget
+        /// the start when the screen was not quiet, so every way out
+        /// calls it.
+        /// </summary>
+        private void QuietScreenEnds()
+        {
+            quietSince = -1;
+            ShowcaseScreen.Restore();
         }
 
         /// <summary>
@@ -579,7 +1528,8 @@ namespace BatshitTechnology.Showcases
             new Rect(box.X, box.Y, box.Width, box.Height);
 
         /// <summary>
-        /// Shows a session message, never throwing.
+        /// Shows a session message, silently (the viewer's click has
+        /// already sounded), never throwing.
         /// </summary>
         /// <param name="text">The text.</param>
         /// <returns>
@@ -590,7 +1540,7 @@ namespace BatshitTechnology.Showcases
         {
             try
             {
-                Messages.Message(text, MessageTypeDefOf.NeutralEvent, false);
+                Messages.Message(text, MessageTypeDefOf.SilentInput, false);
                 return true;
             }
             catch (Exception e)

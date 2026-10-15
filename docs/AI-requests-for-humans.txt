@@ -36,19 +36,35 @@ Matt "Breakpoint" Heck:
    wandering prevailing wind direction (vanilla has none); the warp's
    hit rate (60% proposed); world-map flight; and how the blimp is built
    and researched.
-8. The Tractor Bomb (docs/TRACTOR-BOMB.md, "Open Questions"): its
-   research prerequisite; a safety interlock near colonists or not;
-   Dial-A-Yield ranges; the barn's bills-based autonomy; costs; and
-   whether patrols stay inside the home area.
+8. The Tractor Bomb: all answered on 2026-10-13 (docs/TRACTOR-BOMB.md,
+   "Decisions", and ROADMAP.md): a per-bomb Disposition (Cautious,
+   Moderate, Nosy) for how close it drives; planted bombs damageable,
+   going off when hit; the machining-table stopgap kept until the barn;
+   and each hostile reacting individually (a third each: flee, hesitate
+   about 2 s, or ignore it), while everyone else bails.
 9. Mirror Mirror (docs/MIRROR-MIRROR.md, "Open Questions"): duplicates
    belong to an enemy faction, but which (its own, proposed, or an
    existing one); is the trait-inversion
    table right in spirit; Agonizer numbers; research and cost; and
    should the duplicate's name be marked?
-
-(Items 10 to 13 are on feature/tractor-bomb; these are numbered after
-them so the two lists merge cleanly.)
-
+10. The Drag Show: all answered on 2026-10-13 (docs/DRAG-SHOW.md). The
+    remaining proposals (costs, the Brain Squeezer as the research
+    prerequisite, the show bonus) stand unless changed.
+11. The Stand-Up Comedy Showcase: answered on 2026-10-13
+    (docs/STAND-UP-COMEDY.md), except whether it shares the Drag Show's
+    stage and seating, which is proposed and stands unless changed.
+12. The Interstellar Delivery Locker and Drone (docs/DELIVERY-LOCKER.md,
+    "Open Questions"): visit and delivery rhythm and cost; what each item
+    does; the drone's blast; research.
+13. Tractor Bomb multi-bomb physics (built 2026-10-14; docs/TRACTOR-BOMB.md,
+    "As Built"): the proposals stand unless changed. Matt "Breakpoint"
+    Heck, please confirm or retune: 2 s minimum and 8 s maximum per
+    pull; the jitter (a persistent 6-degree turn and a per-thing
+    preference among pulls 4 per cent apart, plus a 3-degree, 1 per
+    cent flicker per step); and the optional stretching, which was
+    built: none below 6 cells a second of opposing pull, then a point
+    per 6, at most 4 a second, leaving a "stretch mark" ("{0} has been
+    spaghettified.").
 14. Showcase API, the first showcase runs (2026-10-14, slice 5000): one
     -showcase=BT_Showcase run logged "[BT-SHOWCASE] STOPPED BT_Showcase"
     about twenty seconds after READY, and then the game closed. Did you
@@ -71,3 +87,83 @@ them so the two lists merge cleanly.)
     by hand. Do you want an automated end-to-end run to FINISHED now (an
     opt-in switch such as -Showcase -UntilFinished), or with the directed
     tour (Tractor Bomb slice 12000)?
+
+17. (Resolved 2026-10-14: keep the reordered story as built.)
+18. (Resolved 2026-10-14: "test both". The junk-pile grenade scene stays,
+    and the Raccoon Incident is built as its own scene; ROADMAP.md,
+    phase 3000, slice 15000.)
+19. (Resolved. Part one 2026-10-14 by the operator's default answer, yes:
+    random incidents are off from a showcase's start until it finishes
+    or stops, then the storyteller is given back; built in slice 18000,
+    docs/SHOWCASE-API.md, "The Quiet Storyteller". Part two 2026-10-15,
+    under the approved plan to finish phase 3000 ("Fine, finish Phase
+    3000."): the pinned seed did not cover it, since tour-04's temple hive
+    woke when the stage cleared the fog; the tour's stage now removes the
+    map's own hostiles before that, built in slice 19000a,
+    docs/SHOWCASE.md, "A Clean Stage".) Showcase games run the quick
+    test's storyteller, so raids and dark entities can arrive mid-tour;
+    in four of six verify runs in
+    slice 15000 (2026-10-14) they did, killing colonists the tour did not
+    and, once, timing out the grenade scene under a raid. Should a
+    showcase's game have random incidents switched off while the
+    showcase runs (a Showcase API change, for every showcase), and should
+    the tour's stage builder clear the hostiles a map starts with (dark
+    entities, a mechhive), which killed colonists near the base in later
+    runs? Recommended: yes to both.
+20. The tour's pacing on the overlay (review step, 2026-10-14): every
+    line is now read in full and gone two seconds before the next, and
+    each scene holds its action until its start line has cleared, as
+    you asked ("out a few seconds before the next one starts"). Each
+    scene now opens with about 12 to 16 seconds of the previous scene's
+    outcome and its own title line before the action (21 s before the
+    Tractor Barn, after the raccoon's two-line verdict), and the tour
+    runs about eight minutes (its scenes 6.6 minutes, against 4.2 before;
+    the menu said 7). Watch it in slice 17000:
+    if the openings drag, the 2-second gap (NarrationTiming.LeadSeconds)
+    can go to 1 second, which saves about 10 seconds a scene; or say
+    which scenes may start their action under their title line.
+21. (Resolved 2026-10-15: "Fine, finish Phase 3000", to the plan that
+    proposed (a), a faction made for the showcase only, and a tourist as
+    the grenade's volunteer. Built in slice 19000c: three to five
+    tourists of BT_ShowcaseTourists, a hidden faction (no goodwill, no
+    letters, no leader), arrive with the stage and stand where the
+    scenes can reach them; the grenade's volunteer and the tractor's
+    stray are tourists, never colonists; and the verifier fails any
+    colonist harmed, with no volunteer exception; docs/SHOWCASE.md,
+    "Tourists".)
+22. (Resolved 2026-10-14: "Approve the patch." Built in slice 18000:
+    the mod's second Harmony patch, a prefix on the Map.NextGenSeed
+    getter, active only while a showcase's game generates its map and
+    bound to that game, so every other map stays exactly vanilla. A seed
+    now pins the map and the stage as well as the world, starting tile,
+    colonists and settlement; docs/SHOWCASE-API.md, "Seeds" and Decision
+    1, and docs/AI-DECISIONS.txt, slice 18000.)
+23. The Tractor Bomb's Proximity after the pulls went up by half (slice
+    18500, 2026-10-15). Built as asked: Intimate 9, Neighborly 22.5,
+    Popular 33.75 tiles. Timid's 15 tiles (the robot's emplacing range)
+    and Nosy's 3 are distances of their own, so they stayed; Prudent,
+    "15 tiles or one inside its pull, whichever is nearer", now stops at
+    15 at Neighborly and Popular, the same as Timid (8 at Intimate). The
+    menu therefore reads "Timid, stops 15 tiles out" and "Prudent, stops
+    15 tiles out" at the default pull. Before, the two differed by one
+    tile there. Keep it so (the robot drives as before and its bigger
+    beam catches more; recommended), or raise the emplacing range by
+    half as well (Timid 22.5, Prudent 21.5 at the default, as the old
+    pattern had it, though then the beam catches no more than before)?
+    Also for your eye: the tour's single tractor is now Nosy, not
+    Prudent, because from the barn's door a Prudent robot would plant
+    within its 33.75-tile pull of the barn (docs/SHOWCASE.md).
+24. The tour's sequence (slice 19000d, 2026-10-15). After the viewing in
+    slice 17000 you said: "Pretty sweet. Needs work on the sequence, but
+    the general capability definitely works." What should change? Slice
+    19000 fixed only what the seed trials showed (each scene now opens
+    with a cut to its own place, no shot shows the black beyond the
+    map, the raccoon's throw is framed clear of the caption bar, the
+    tractor yard has junk, and the twins are framed closer); nothing in
+    the order or pacing was changed on a guess. For example: the order
+    of the ten scenes (home, defence, stampede, the replicator's pad,
+    the reactor's pad, AnyRim, grenade, raccoon, tractor, twins); a
+    scene to drop or merge (the two pads; the grenade and the raccoon);
+    the time between scenes (each opens with about 12 to 16 seconds of
+    the last scene's outcome and its own title line, request 20); or
+    the shots within a scene.

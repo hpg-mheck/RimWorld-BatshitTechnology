@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- The Tractor Bomb's mind (Source/TractorBombAI.cs): hunt, else go
+       home to its barn for repairs if badly damaged (TractorBarn.cs), else
+       patrol its allowed area. It has no needs, no mood and no fight in it
+       beyond the one it was built for. -->
+  <ThinkTreeDef>
+    <defName>BT_TractorBomb</defName>
+    <thinkRoot Class="ThinkNode_Priority">
+      <subNodes>
+        <li Class="ThinkNode_Subtree">
+          <treeDef>Despawned</treeDef>
+        </li>
+        <!-- Its pawn kind wrecks it when it cannot move, but should it ever
+             be left downed, it idles instead of trying to drive -->
+        <li Class="ThinkNode_Subtree">
+          <treeDef>Downed</treeDef>
+        </li>
+        <!-- A hostile it can see: emplace if in range, else close in -->
+        <li Class="BatshitTechnology.JobGiver_TractorBombHunt" />
+        <!-- Nobody about and below half health: home to the barn -->
+        <li Class="BatshitTechnology.JobGiver_TractorBombRepair" />
+        <!-- Nobody about: patrol -->
+        <li Class="ThinkNode_Tagger">
+          <tagToGive>Idle</tagToGive>
+          <subNodes>
+            <li Class="BatshitTechnology.JobGiver_TractorBombPatrol" />
+          </subNodes>
+        </li>
+        <li Class="JobGiver_IdleError" />
+      </subNodes>
+    </thinkRoot>
+  </ThinkTreeDef>
+
+  <!-- Checked every half second: break off a patrol (or a repair) the
+       moment a hostile comes into view, and a patrol the moment the robot
+       is damaged enough to go home. Never interrupts an approach (it
+       retargets itself) or an emplacement. -->
+  <ThinkTreeDef>
+    <defName>BT_TractorBombConstant</defName>
+    <thinkRoot Class="ThinkNode_Priority">
+      <subNodes>
+        <li Class="ThinkNode_Subtree">
+          <treeDef>Despawned</treeDef>
+        </li>
+        <li Class="ThinkNode_ConditionalCanDoConstantThinkTreeJobNow">
+          <subNodes>
+            <li Class="BatshitTechnology.JobGiver_TractorBombHunt">
+              <interruptOnly>true</interruptOnly>
+            </li>
+            <li Class="BatshitTechnology.JobGiver_TractorBombRepair">
+              <interruptOnly>true</interruptOnly>
+            </li>
+          </subNodes>
+        </li>
+      </subNodes>
+    </thinkRoot>
+  </ThinkTreeDef>
+</Defs>

@@ -94,6 +94,7 @@ namespace BatshitTechnology
         private int selectedCount = -1;
         private ThingDef ammoDef;
         private int burstTicksLeft;
+        private bool autoTargetHeld;
         private int lastPowerMessageTick = -99999; // powerComp is inherited
         private static readonly Color MagazineLinkColor = new Color(0.85f, 0.6f, 1f);
 
@@ -105,6 +106,18 @@ namespace BatshitTechnology
 
         /// <summary>Volleys held for lack of power this session (smoke test).</summary>
         internal static int VolleysHeldForPower;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the Ballista picks no
+        /// target of its own (the showcase tour): it fires only when
+        /// ordered. Its least range alone does not hold it, because the
+        /// verb still reaches hostiles from 5.9 tiles out.
+        /// </summary>
+        internal bool AutoTargetHeld
+        {
+            get => autoTargetHeld;
+            set => autoTargetHeld = value;
+        }
 
         /// <summary>Creates the Ballista with an empty internal magazine.</summary>
         public Building_BatshittiumBallista()
@@ -140,6 +153,63 @@ namespace BatshitTechnology
 
         /// <summary>The internal magazine's bolts.</summary>
         internal BoltStorage InternalMagazine => storage;
+
+        /// <summary>
+        /// Gets the ticks until the Ballista may fire again; zero once its
+        /// five-second cooldown is over (the tour's stampede times its
+        /// cleanup volleys by it).
+        /// </summary>
+        internal int CooldownTicksLeft => Math.Max(0, burstCooldownTicksLeft);
+
+        /// <summary>
+        /// Gets the speed of the selected bolt's projectile, in tiles a
+        /// tick, or zero if the bolt names no projectile.
+        /// </summary>
+        internal float BoltTilesPerTick =>
+            AmmoDef.GetModExtension<BoltExtension>()?.projectile?.projectile
+                ?.SpeedTilesPerTick ?? 0f;
+
+        /// <summary>
+        /// The watts the grid can give a firing burst with no stored energy:
+        /// the net's surplus now, plus this Ballista's own standby draw,
+        /// which the burst replaces. Zero off the grid or unpowered.
+        /// </summary>
+        /// <returns>The watts.</returns>
+        internal float GridWattsForBurst()
+        {
+            PowerNet net = powerComp?.PowerNet;
+            if (net == null || !powerComp.PowerOn)
+            {
+                return 0f;
+            }
+
+            return (net.CurrentEnergyGainRate() / CompPower.WattsToWattDaysPerTick)
+                + StandbyWatts;
+        }
+
+        /// <summary>
+        /// The watts the powered magazines connected to this Ballista draw
+        /// while they feed a volley.
+        /// </summary>
+        /// <returns>The watts.</returns>
+        internal float MagazineFeedingWatts() =>
+            ConnectedMagazines().Sum(m => m.FeedingWatts);
+
+        /// <summary>
+        /// The bolts of a type this Ballista can draw: its own and its
+        /// connected magazines', counting only powered magazines unless
+        /// asked for the whole stock (a fresh map's grid has not ticked,
+        /// so nothing on it is powered yet).
+        /// </summary>
+        /// <param name="bolt">The bolt type, or null for the selected one.</param>
+        /// <param name="unpoweredToo">Whether to count unpowered magazines.</param>
+        /// <returns>The bolts.</returns>
+        internal int BoltsAvailable(ThingDef bolt = null, bool unpoweredToo = false)
+        {
+            ThingDef def = bolt ?? AmmoDef;
+            return storage.CountOf(def)
+                + ConnectedMagazines(!unpoweredToo).Sum(m => m.Storage.CountOf(def));
+        }
 
         // ===== Storage (internal magazine) =====
 
@@ -228,7 +298,16 @@ namespace BatshitTechnology
             Scribe_Values.Look(ref selectedCount, "selectedCount", -1);
             Scribe_Defs.Look(ref ammoDef, "ammoDef");
             Scribe_Values.Look(ref burstTicksLeft, "burstTicksLeft", 0);
+            Scribe_Values.Look(ref autoTargetHeld, "autoTargetHeld", false);
         }
+
+        /// <summary>
+        /// Finds no target while <see cref="AutoTargetHeld"/> is set; an
+        /// ordered target never comes here, so orders still fire.
+        /// </summary>
+        /// <returns>Invalid while held, else vanilla's choice.</returns>
+        public override LocalTargetInfo TryFindNewTarget() =>
+            autoTargetHeld ? LocalTargetInfo.Invalid : base.TryFindNewTarget();
 
         /// <summary>Counts down the burst and keeps the power draw current.</summary>
         protected override void Tick()
@@ -385,12 +464,22 @@ namespace BatshitTechnology
         /// it or with another connected magazine (Core.MagazineNetwork).
         /// </summary>
         /// <returns>The magazines, nearest links first.</returns>
-        internal List<Building_BallistaMagazine> ConnectedMagazines()
+        internal List<Building_BallistaMagazine> ConnectedMagazines() =>
+            ConnectedMagazines(poweredOnly: true);
+
+        /// <summary>
+        /// Magazines connected to this Ballista by shared edges, directly
+        /// or through other connected magazines (Core.MagazineNetwork).
+        /// </summary>
+        /// <param name="poweredOnly">Whether to leave out unpowered ones.</param>
+        /// <returns>The magazines, nearest links first.</returns>
+        internal List<Building_BallistaMagazine> ConnectedMagazines(bool poweredOnly)
         {
             var byCell = new Dictionary<(int x, int z), Building_BallistaMagazine>();
             foreach (Thing t in Map.listerThings.ThingsOfDef(BT_BallistaDefOf.BT_BallistaMagazine))
             {
-                if (t is Building_BallistaMagazine magazine && magazine.CanFeed
+                if (t is Building_BallistaMagazine magazine
+                    && (magazine.CanFeed || !poweredOnly)
                     && magazine.Faction == Faction)
                 {
                     byCell[(t.Position.x, t.Position.z)] = magazine;
@@ -553,6 +642,9 @@ namespace BatshitTechnology
         /// <summary>True while feeding a volley.</summary>
         public bool IsFeeding => feedingTicksLeft > 0;
 
+        /// <summary>Gets the watts this magazine draws while feeding.</summary>
+        internal float FeedingWatts => PowerSettings.feedingWatts;
+
         /// <summary>The XML power settings.</summary>
         private MagazinePowerExtension PowerSettings =>
             def.GetModExtension<MagazinePowerExtension>() ?? new MagazinePowerExtension();
@@ -712,7 +804,11 @@ namespace BatshitTechnology
     /// <summary>
     /// The Ballista's verb: one cast fires a whole volley. Each bolt flies
     /// to its own random cell around the target, inside a scatter radius
-    /// that grows with distance.
+    /// that grows with distance. As it leaves, the wild birds within reach
+    /// of where it can land are sent off the map (<see cref="WildFliers"/>),
+    /// as vanilla would on the first blast, before up to 256 blasts in a
+    /// few ticks could restart their flight more than ten times in one
+    /// tick, which RimWorld logs as an error.
     /// </summary>
     public class Verb_BallistaVolley : Verb_LaunchProjectile
     {
@@ -753,6 +849,14 @@ namespace BatshitTechnology
                 projectile.Launch(
                     caster, caster.DrawPos, cell, currentTarget, ProjectileHitFlags.All,
                     false, EquipmentSource);
+            }
+
+            float reach = scatter + WildFliers.NoticeReach(projectileDef);
+            int birds = WildFliers.SendOff(map, target, reach);
+            if (birds > 0 && Prefs.DevMode)
+            {
+                Log.Message($"[BT] Ballista volley at ({target.x}, {target.z}): {birds} "
+                    + $"wild bird(s) within {reach:0} tiles sent off the map first");
             }
 
             lastShotTick = Find.TickManager.TicksGame;

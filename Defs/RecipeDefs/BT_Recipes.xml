@@ -31,4 +31,57 @@
       <BT_Batshittium>1</BT_Batshittium>
     </products>
   </RecipeDef>
+
+  <!-- The Tractor Barn's one recipe (docs/TRACTOR-BOMB.md, "The Tractor
+       Barn"; Source/TractorBarn.cs). formingTicks makes it an autonomous
+       bill (vanilla's Bill_Autonomous, which needs no DLC): a hauler
+       carries the parts into the barn and throws the switch (workAmount),
+       then the barn builds the robot on its own over formingTicks and
+       drives it out. It makes no item, so it lists no products; "Do until
+       you have X" counts the barn owner's robots and planted bombs on the
+       map (RecipeWorkerCounter_TractorBombs). -->
+  <RecipeDef>
+    <defName>BT_BuildTractorBomb</defName>
+    <label>build tractor bomb</label>
+    <description>Build one tractor bomb from 60 steel, 3 components and 5 batshittium. Haulers bring the parts into the barn; the barn builds the robot by itself in about an hour and lets it out of the door, already looking for someone to drive at.</description>
+    <jobString>Loading the tractor barn.</jobString>
+    <workAmount>60</workAmount> <!-- the hauler throws the switch -->
+    <formingTicks>2500</formingTicks> <!-- one in-game hour, no crafter -->
+    <workerCounterClass>BatshitTechnology.RecipeWorkerCounter_TractorBombs</workerCounterClass>
+    <uiIconThing>BT_TractorBomb</uiIconThing>
+    <researchPrerequisite>BT_Research_TractorBomb</researchPrerequisite>
+    <ingredients>
+      <li>
+        <filter>
+          <thingDefs>
+            <li>Steel</li>
+          </thingDefs>
+        </filter>
+        <count>60</count>
+      </li>
+      <li>
+        <filter>
+          <thingDefs>
+            <li>ComponentIndustrial</li>
+          </thingDefs>
+        </filter>
+        <count>3</count>
+      </li>
+      <li>
+        <filter>
+          <thingDefs>
+            <li>BT_Batshittium</li>
+          </thingDefs>
+        </filter>
+        <count>5</count>
+      </li>
+    </ingredients>
+    <fixedIngredientFilter>
+      <thingDefs>
+        <li>Steel</li>
+        <li>ComponentIndustrial</li>
+        <li>BT_Batshittium</li>
+      </thingDefs>
+    </fixedIngredientFilter>
+  </RecipeDef>
 </Defs>

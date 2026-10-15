@@ -27,6 +27,29 @@ namespace BatshitTechnology.Showcases
         /// </summary>
         public const string Prefix = "[BT-SHOWCASE]";
 
+        /// <summary>
+        /// The record cues: what a run was (its seed, whether its map's
+        /// seeds were pinned, its fingerprints, the storyteller's state,
+        /// the held weather), rather than how it went. Tooling comparing a
+        /// run's flow of cues can leave them out.
+        /// </summary>
+        public static readonly IReadOnlyCollection<string> RecordCues =
+            new HashSet<string>
+            {
+                "SEED", "MAPSEED", "MAPHASH", "STAGEHASH", "STORYTELLER",
+                "WEATHER",
+            };
+
+        /// <summary>
+        /// Raised after each cue is logged, on the thread that logged it
+        /// (the generation's cues come from the long event's worker
+        /// thread), with the cue word and its detail. A handler that throws
+        /// is logged as a warning and does not stop the cue. Capture
+        /// tooling in this assembly, such as the tour verifier's shots,
+        /// listens here rather than reading the log back.
+        /// </summary>
+        internal static event Action<string, string> Cued;
+
         /// <summary>Writes one cue: the prefix, a word, and details.</summary>
         /// <param name="cue">The cue word, such as SCENE or END.</param>
         /// <param name="detail">What it concerns; may be empty.</param>
@@ -35,12 +58,20 @@ namespace BatshitTechnology.Showcases
             Log.Message(detail.NullOrEmpty()
                 ? $"{Prefix} {cue}"
                 : $"{Prefix} {cue} {detail}");
+            try
+            {
+                Cued?.Invoke(cue, detail);
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{Prefix} a listener to the {cue} cue failed: {e.Message}");
+            }
         }
     }
 
     /// <summary>
-    /// One narration line as it was said: when, what, and where it
-    /// pointed. Kept for tests and capture tooling.
+    /// One narration line as it was said: when, what, and what it was
+    /// about. Kept for tests and capture tooling.
     /// </summary>
     public sealed class NarrationRecord
     {
@@ -48,7 +79,7 @@ namespace BatshitTechnology.Showcases
         /// <param name="tick">The game tick it was said on.</param>
         /// <param name="scene">The scene or beat it belonged to.</param>
         /// <param name="text">The words.</param>
-        /// <param name="targets">Where the message pointed; may be null.</param>
+        /// <param name="targets">What it was about; may be null.</param>
         public NarrationRecord(
             int tick, string scene, string text, LookTargets targets)
         {
@@ -67,7 +98,11 @@ namespace BatshitTechnology.Showcases
         /// <summary>Gets the words.</summary>
         public string Text { get; }
 
-        /// <summary>Gets where the message pointed, or null.</summary>
+        /// <summary>
+        /// Gets what the line was about, or null. The narration overlay
+        /// does not use it (the director frames the camera); it is kept
+        /// for tests and tooling.
+        /// </summary>
         public LookTargets Targets { get; }
     }
 
@@ -125,6 +160,21 @@ namespace BatshitTechnology.Showcases
         /// last scene ended).
         /// </summary>
         internal bool HasQueuedNarration => queued.Count > 0;
+
+        /// <summary>
+        /// Gets the game tick the next queued line is due, or null when
+        /// none is queued; the overlay fades the line showing out a little
+        /// before it.
+        /// </summary>
+        internal int? NextQueuedTick =>
+            queued.Count == 0 ? (int?)null : queued.Min(q => q.Due);
+
+        /// <summary>
+        /// Gets or sets the narration overlay lines are shown on; set by
+        /// the session before <see cref="Setup"/>. Null shows nothing (the
+        /// lines are still recorded).
+        /// </summary>
+        internal NarrationOverlay Overlay { get; set; }
 
         /// <summary>
         /// Starts the worker on a map. Called by the API; mods override
@@ -216,12 +266,11 @@ namespace BatshitTechnology.Showcases
         /// <summary>
         /// Queues the def's narration lines for a scene and moment (see
         /// <see cref="ShowcaseNarrationLine"/>), each said after its delay
-        /// as a vanilla message that jumps to <paramref name="targets"/>
-        /// when clicked.
+        /// on the narration overlay (see <see cref="Say"/>).
         /// </summary>
         /// <param name="scene">The scene's key, or a beat name.</param>
         /// <param name="when">The moment; null means the start.</param>
-        /// <param name="targets">Where the messages point; may be null.</param>
+        /// <param name="targets">What the lines are about; may be null.</param>
         /// <returns>How many lines were queued.</returns>
         public int Narrate(string scene, string when, LookTargets targets)
         {
@@ -243,12 +292,15 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Says one line at once, as a vanilla message, and records it.
-        /// For workers whose words are computed rather than declared.
+        /// Says one line at once and records it. For workers whose words
+        /// are computed rather than declared. The line goes to the
+        /// session's narration overlay, one line at a time, silently; it
+        /// never goes to vanilla's messages (docs/SHOWCASE-API.md, "The
+        /// Narration Overlay").
         /// </summary>
         /// <param name="scene">The scene or beat it belongs to.</param>
         /// <param name="text">The words.</param>
-        /// <param name="targets">Where the message points; may be null.</param>
+        /// <param name="targets">What the line is about; may be null.</param>
         public void Say(string scene, string text, LookTargets targets)
         {
             if (Stopped || text.NullOrEmpty())
@@ -258,15 +310,7 @@ namespace BatshitTechnology.Showcases
 
             try
             {
-                if (targets != null && targets.IsValid)
-                {
-                    Messages.Message(
-                        text, targets, MessageTypeDefOf.NeutralEvent);
-                }
-                else
-                {
-                    Messages.Message(text, MessageTypeDefOf.NeutralEvent);
-                }
+                Overlay?.Say(text, NarrationOverlayDrawer.Now);
             }
             catch (Exception e)
             {

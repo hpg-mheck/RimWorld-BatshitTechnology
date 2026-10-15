@@ -16,6 +16,16 @@
 - Fire counts as damage, so a burning self-destruct device rolls its 5%
   trigger on every fire tick and will almost certainly go off. That is
   probably the most batshit outcome, but worth watching in play.
+- Multi-bomb physics (2026-10-14): pulls of constant strength cancel all
+  along the line between two equal centres, so things in an overlap
+  gather on that line and creep along it at a few per cent of the rate;
+  both bombs then run to their 8 s maximum. A bomb planted within
+  another's reach makes its own pile a balance point too: a thing at its
+  centre leaves it only if the other pull is the one it favours. Both
+  are the physics as specified, and worth watching in play.
+- Stretching acts on any pawn under more than one strong pull, colonists
+  included; three points a second between two bombs head on will hurt
+  but rarely kill in eight seconds. Tune in play.
 - The singularity moves pawns by teleporting them a cell at a time (with
   the draw position tweened), and holds every pawn in reach stunned from
   the moment it opens; there is no true physics, and natural rock is never
@@ -25,6 +35,87 @@
   automatic targeting of real raiders is vanilla code but untested here.
 - The Ballista holds fire under a roof (its bolts arc overhead), as vanilla
   mortars do.
+- Smoke flakes seen on 2026-10-13 while building the implosion, each on
+  one random quick-test map, and what became of them while building the
+  Tractor Bomb:
+  - "Not enough squares to get to radius 329" was a real bug, now fixed:
+    raiders path round ai_combatDangerous turrets on an avoid grid out
+    to the turret's range plus 4, past the engine's radial limit of about
+    79.8 for a Ballista set beyond 75 tiles. It showed whenever raiders
+    pathed while a Ballista was set long (the smoke test sets 325 for
+    700 ticks), so in play it would have logged during every raid. The
+    Ballista is no longer combatDangerous; a smoke check regenerates the
+    avoid grid with a 325-tile Ballista, and failed with this error
+    before the fix.
+  - The Artificer's "+0 bolts" was map noise in the test: haulers carry
+    the bolts off as they appear (one carrying a merged stack of twenty
+    at the check reads as +0), and the Ballista spends painful bolts on
+    any hostile in range. The count now includes carried and pocketed
+    bolts and bolts fired.
+  - "then settles" was map noise: pawns walking into the reach of a pull
+    on a burning map. The runner now puts out every fire and drafts the
+    colonists first.
+  - The runner also silences the storyteller for the whole run, so no
+    raid or other incident lands mid-check, and notes any hostiles
+    present at the start (none so far).
+- Smoke flakes still unexplained (the checks now report more when they
+  fail):
+  - "AnyRim's devices and lamps are powered": one to five standing lamps
+    on a power net with 0 W surplus, cut off from the town reactor. Seen
+    once before the Tractor Barn work, then three times in about thirty
+    runs during it, at sites where it passed on other runs, so it is not
+    the site alone. The check now names the nets: the reactor was
+    producing 250 kW and the town's consumers sat on two nets, one of
+    them with no generator. It also lists conduits lost since the build
+    and fires in the town, to tell a broken plan from a conduit
+    destroyed after it (not yet seen with those). AnyRim runs before any
+    Tractor Bomb code.
+  - "the colonist sat in the squeezer": the colonist's job ended before
+    it reached the chair, twelve tiles off, before any Tractor Bomb code
+    ran. Once more (2026-10-13) it sat but left before the 600 ticks its
+    effects need; the check now feeds and rests the colonist first and
+    reports how long it sat.
+  - Seen again while building the multi-bomb physics (about twenty
+    runs on 2026-10-14): the AnyRim lamp check three times, and once the
+    Artificer's "it works the next unit on its own" (bolts +4, 28 fired,
+    none carried), both before any implosion code runs.
+  - The Random Replicator was gone, with nothing logged, when its
+    detonation test began, after AnyRim, and the runner crashed (once in
+    about thirty runs). The runner now fails a check saying how it went
+    (destroyed, held, hit points, fires near it) and carries on with a
+    fresh replicator.
+- "AnyRim builds at a scored site" failed once (2026-10-13) on a map
+  with an insect hive and eight hostile insects: the site rules keep the
+  town away from hostiles, and with the map's edges, geysers and a void
+  monolith no site anywhere qualified. That is the site search working
+  as designed on an unlucky map, not a fault; rerun.
+- The Tractor Bomb (docs/TRACTOR-BOMB.md, "As Built"):
+  - A Timid robot stops 15 tiles from its target, so with an Intimate
+    (9-tile) pull a target that stands still escapes; at Neighborly
+    (22.5) and Popular (33.75) it is well inside. Since the pulls were
+    raised by half (slice 18500), Prudent, the default, stops at 15 tiles
+    there too, the same as Timid; it differs only at Intimate (8 tiles).
+    Request 23 asks whether Timid should move out.
+  - A planted bomb cannot be stopped: a hit only starts its pull, or sets
+    off its blast, at once.
+  - The protest beep is vanilla's TrapArm click until the sound pipeline
+    exists.
+  - Robots appear in no vanilla list (colonist bar, animals or mechs
+    tab): find them on the map.
+  - The Tractor Barn takes no new bill while its repair hopper is empty
+    (a vanilla work table with a refuelable comp refuses bills then), so
+    the hopper always refills and cannot be switched off. A build
+    already under way finishes.
+  - One robot docks at a barn at a time; another below half health keeps
+    patrolling and tries again after each patrol leg.
+  - A pawn that has run past a bomb's reach may wander back into it
+    before the pull (a muffalo did, in the smoke test); it runs again on
+    its next think if it can see the bomb.
+  - A hostile that rolls "ignore" keeps attacking even inside the blast
+    radius, and the pull takes it if it is in reach: by design.
+  - Its sprites are top-down like the mod's buildings, not the
+    three-quarter view of vanilla pawns, so a tractor turning east shows
+    its side from above.
 - Showcases: with -quicktest -showcase=<def>, the showcase runs on
   vanilla's 250-cell quick-test map, ignoring the def's mapSize and biome
   (a MAPSIZE or BIOME cue says so). Applying them would need a second
@@ -38,9 +129,253 @@
 - Showcases: a showcase's DEV buttons disappear from the throwaway colony
   when it stops or finishes, because god mode is given back then; turn
   god mode on from the dev toolbar to keep using them.
+- Showcases (2026-10-14): the narration overlay is not clickable, so a
+  line no longer jumps the camera to what it is about, as a vanilla
+  message did; the director frames it already. Lines said less than
+  2.5 s apart queue and show in turn, so a burst of lines lags the
+  action by up to 2.5 s a line (the tour verifier's pacing NOTE gives
+  the longest wait at normal speed). The overlay has been checked by the
+  smoke runner in a small window, not yet by eye at 2x UI scale on 4K.
+- Tour, the stampede (2026-10-14, slice 14000): the scene declines on a
+  map whose east edge has too little open ground that reaches the base,
+  even after widening the band and sliding it north (it never slides
+  south, toward the tractor yard); one sabotage run declined so, before
+  the slides were added. The Ballista fires
+  only once the herd is within 76 tiles, the most the demo base's one
+  reactor powers for 256 bolts, so the herd walks about 13 s at normal
+  speed first. The tick the volley lands costs 120 to 310 ms (one
+  visible hitch); a herd packed tight round a target cost 785 ms in one
+  sabotage run. The cleanup volleys and the "stragglers" line have
+  played in one clean run (a 128-bolt volley at 51 stragglers) and in
+  the sabotage runs; elsewhere the first volley killed all 200. One of
+  fourteen verify runs of the stampede alone (g3-only3, map with AnyRim
+  at (59,170)) fired nothing: the herd never came within reach in
+  2,160 ticks and never reached the keep-away, so the scene gave up and
+  sent it home, and the verifier failed the 256-bolt and 90 per cent
+  facts. Not reproduced in the twelve stampede-only runs and three
+  tour runs since; the cause (slow ground, a herd that did not advance, a
+  grid that did not power the Ballista, or another session using the
+  same data folder at the time) is not known. Its log shows one game,
+  without errors. The scene now logs, every 600 ticks while the
+  volley waits, the herd's centre, distance, pace, mental states and
+  jobs, and the grid's numbers, so the next one will say which.
+- Smoke flake (2026-10-14, slice 13000): "an implosion drags everything
+  within 10 tiles to within 1.5" and its companion "reports everything
+  gathered early, then settles" failed together in two of four full
+  runs on the data folder %TEMP%\BT-smoke-tour2, each time with one
+  silver stack stuck at (0, 2) and nothing else moving; the other two
+  runs passed. The change being tested (the narration overlay) shares
+  no code with the implosion. It resembles the queue outside the
+  1.5-tile pile that the sideways slip fixed on 2026-10-13 (silver and a
+  component stuck at (0, 2) and (0, 3)); not yet explained. Seen again
+  once in slice 18000, in three of seven full runs of slice 18500
+  (2026-10-15; the step changed no implosion code), and in three of the
+  six full runs of slice 19000a (one of them a sabotage build), each
+  time the same silver stack at (0, 2), on a random quick-test map.
+  Traced in slice 19000c (2026-10-15), by reading the code: an
+  implosion fault, not the check's set-up. An item steps only to a
+  neighbour strictly nearer the centre, so a stack at (0, 2) moves only
+  into (-1, 1), (0, 1) or (1, 1); when those are full, and the stacks in
+  them cannot step nearer either, it waits for good, though the pile's
+  far side may still have room (seven to eight stacks share the nine
+  cells within 1.5 tiles, as the two steels may or may not merge).
+  Which cells fill first turns on the pull's random flicker, hence about
+  half the runs. Fixed: a blocked stack within a tile and a half of the
+  pile now tumbles into the pile's free cell nearest to it
+  (ImplosionField.Tumble; docs/TRACTOR-BOMB.md, "Tumbling into the
+  pile"), and a deterministic smoke check stages such a pile ("an item
+  blocked behind a pile with room tumbles into it"; a first layout,
+  three stacks in a row, was unsound: its stacks moved on and freed the
+  way, so it passed with the fix disabled). The failure's message now
+  lists what fills the pile. The exact pile of a failing run was never
+  captured, so watch the next full runs to confirm. Watched (review
+  fixes, 2026-10-15): every full smoke since the fix passed both checks,
+  seven in a row (two in 19000c, one in 19000d, and four in the review
+  fixes, p3k-fixer-smoke1, -sab-smoke, -final-smoke and -final2-smoke,
+  the sabotage build touching nothing of the implosion), where three of
+  seven and three of six had failed before it. At the old rate of about
+  one in two, seven clean runs by chance is under one in a hundred:
+  taken as fixed. Reopen if it is seen again.
 - Smoke-test flakes on some random maps, not yet explained: "AnyRim's
   devices and lamps are powered" fails when two or three of AnyRim's 23
   consumers sit on a power net with no generator ("connected; net
-  surplus 0 W"; 2 of 6 runs on 2026-10-14, and once in slice 7000), and
-  "the colonist sat in the squeezer" fails when the colonist never sits
-  (twice in slice 6000). Both passed on the other maps.
+  surplus 0 W"; 2 of 6 runs on 2026-10-14, once in slice 7000, and once
+  in slice 19000a, 3 of 23 on 2 nets), and "the colonist sat in the
+  squeezer" fails when the colonist never sits (twice in slice 6000;
+  once in 19000b; once in the review fixes' sabotage smoke,
+  p3k-fixer-sab-smoke, with "can reach False": the colonist 10 tiles
+  from the squeezer on that random map could not path to it, so its
+  four companions failed with it). Both passed on the other maps. Not
+  chased, as the lead asked: they run before any showcase check.
+- Tour verifier (review fixes, 2026-10-15, fixed): on tour-17 a
+  sightseer hurt at the replicator's pad died as the reactor's scene
+  began, so the guestsLost line was said before that scene's start line
+  and "narration follows the cues" failed (25 and 1,
+  p3k-fixer-tour17). Outcomes after the stage vary from run to run, so
+  earlier tour-17 runs had their losses later. Core's GuestLossCue now
+  holds a loss in the intro until the intro ends (docs/SHOWCASE.md,
+  "Tourists"); the next tour-17 run passed 26 and 0.
+- Smoke flake (slice 19000a, 2026-10-15): "fires survive the shockwave
+  out to its edge" failed once, on a quick-test map with only 65
+  burnable cells beyond half the replicator's blast radius: 11 fires
+  survived there against the 13 the check wants (a fifth of them),
+  21 in the radius in all (.local/tmp/p3k-19000a-final2-smoke). The
+  check runs early in the smoke sequence, before any showcase check,
+  and nothing the slice changed runs outside a showcase; it passed in
+  every other recorded run. Rain on that map would explain it, but the
+  log does not record the weather.
+- Tour (BT_Showcase): on some random maps colonists die. The step 5
+  verifier (smoke-test.ps1 -Showcase -Verify) caught it twice on
+  2026-10-14: one colonist died during the tractor scene on one map,
+  and all three died during the first scene on another, after which
+  "Home Defence" timed out. Two other verify runs lost nobody. Causes
+  not yet proved; see docs/AI-TODO.txt. The likeliest cause of the
+  second, the Ballista firing at a hostile inside its least range, is
+  fixed (it now picks no target of its own during the tour), and a
+  surviving volunteer is healed so the grenade cannot kill off camera.
+  A viewer may still see a death until verify runs show it is gone.
+  It happened again on 2026-10-14 (slice 14000, verify run of all nine
+  scenes, DLL 11:32:04): a colonist died during retire-reactor,
+  "HaulToCell, at (143, 58)", shredded, with a missing part and blood
+  loss. The reactor's scene moves colonists clear to 78 tiles (its
+  70-tile blast plus 8) when it sets up and arms, but not again during
+  the countdown and barrage, so a hauler can walk back in; that spot is
+  about 58 tiles from the south-east corner pad. The rerun on the same
+  DLL lost nobody. Whether the stampede's undrafted colonists made it
+  likelier is not known.
+- Tour (BT_Showcase), slice 15000 (2026-10-14): the storyteller's own
+  incidents reach the tour. In four of six all-scene verify runs hostile
+  pawns were on the map during the tour (each scene's start now notes
+  them): "Dark entities" (Anomaly) from the first scene on two maps, and
+  raids during the grenade and raccoon scenes on two more. Colonists were
+  shredded near the base (FleeAndCower, bomb wounds) and one run's grenade
+  scene timed out under a raid. In one run AnyRim lost seven of its nine
+  residents before the raccoon scene, Ned among them, cause unseen (the
+  hostiles note came later); the raccoon scene then stood down. Showcase
+  games run the quick test's storyteller; a showcase with no random
+  incidents is proposed in docs/AI-TODO.txt and asked in
+  docs/AI-requests-for-humans.txt (item 19). The tour verifier now
+  silences the storyteller at READY, as the smoke run does, so verify
+  runs meet only the hostiles a map starts with (read the "begins:"
+  notes); a viewer's tour still gets the storyteller's incidents. Those
+  starting hostiles are the bigger part: of eleven later all-scene runs,
+  maps with "Dark entities" (two to five) or a mechhive (one to three)
+  lost colonists near the base in three, and on one mechhive map all
+  three colonists died during the stampede, so its volley never fired
+  and the grenade had no one to throw it. On two other dark-entity maps
+  the grenade scene timed out with no throw and no warning (the order
+  was taken; the grenadier never threw). One run missed the tractor's
+  "protest" beat. None of these involved AnyRim or the raccoon scene.
+- Tour (BT_Showcase), review step after slice 16000 (2026-10-14): the
+  hauler who walked back into the reactor's barrage (above) should not
+  recur: every dangerous scene now holds the colonists clear, drafted,
+  until it ends, and moves back any who come in. The verifier now fails
+  any colonist hurt, downed or killed in any scene but the volunteer's,
+  so a map's starting hostiles (dark entities, a mechhive) can fail a
+  verify run that the tour did not; harm beside one of them is excused
+  and noted, but harm they cause from farther off is not. The grenade
+  scene timed out unthrown on a dark-entity map a third time (all-scene
+  verify, DLL 14:19:35); the scene now logs the grenadier's state every
+  600 ticks while the throw is overdue. The tractor scene usually runs
+  at about 48 game ticks a second in verify runs, vanilla's forced
+  normal speed (see docs/AI-TODO.txt); with every colonist dead it ran
+  at 562 (nothing happening: 12x). The SUMMARY's tps is a speed-mode
+  figure, not a measure of performance (docs/AI-TESTING-STRATEGY.txt).
+- Showcase seeds (slice 18000, 2026-10-14): the map seed's Harmony patch
+  (requests item 22, approved) makes a seed pin a showcase's map and
+  stage in any process, as well as its world, tile, colonists and
+  settlement. What it still cannot cover: a seed pins a map for one
+  RimWorld version and one mod list only (a mod that adds gen steps or
+  map features, or a game update that changes generation, gives another
+  map); the prefix copies the three inputs of 1.6.4871's
+  Map.NextGenSeed and checks at start-up only that the getter and its
+  counter (Map.generatedId) still exist, so a later version that
+  changed what the getter combines would need the prefix reviewed. A
+  -quicktest showcase's map is vanilla's and not pinned (its MAPSEED
+  cue says so).
+- Showcase seeds and layouts (review of slice 18000, 2026-10-14): a seed
+  does not pin the rooms of a layout. RimWorld 1.6.4871 fills every
+  layout's rooms (LayoutWorker.FillAllRooms) under
+  System.HashCode.Combine(sketch id, room), random per process; the map
+  seed's prefix pins only the sketch. A starting tile with one of
+  Odyssey's ancient-structure landmarks (garrison, warehouse, chemfuel
+  refinery, infested settlement, launch site; 0.2 each) or ruins gets a
+  map whose rooms' loot, furniture and hostiles, and the gen steps
+  placed after them, differ from process to process, so its MAPHASH
+  and STAGEHASH do not repeat. Pinning them would take a third Harmony
+  patch, not approved. The MAPSEED cue, the verifier's NOTE and the
+  SUMMARY (landmark, mutators, unpinnedLayouts) name such maps, and
+  Tools/tour-trials.ps1 lists them; a seed chosen for a showcase should
+  have none, and should repeat its MAPHASH and STAGEHASH in two
+  processes (-Repeat 2). Layouts a gen step spawns without adding them
+  to the map's list (Map.layoutStructureSketches) would not be counted.
+- Wild birds and the Ballista (review of slice 18000, 2026-10-14):
+  vanilla restarts a wild flier's ExitMapFlying job on every blast of
+  radius 3.5 or more within its radius plus 7 tiles (and, at 40 per
+  cent, every bullet within 12), and guards a Flee job against restarts
+  in one tick but not that one, so more than ten blasts near a bird in
+  one tick log "<bird> started 10 jobs in one tick" as an error (seed
+  tour-22's quail, thirteen times, during the stampede's 256-bolt
+  volley; Odyssey's small birds fly off on every scare). The Ballista
+  now sends the wild birds within reach of its volley's landing zone
+  off the map, with vanilla's own job, as the volley leaves. The
+  reactor's barrage and the cook-offs do not: their bolts spread over a
+  70-tile ring and many ticks, so eleven blasts within 11 tiles of one
+  bird in one tick are unlikely, but not impossible; none was seen.
+- Seed choice and starting hostiles (slice 18000 trials, 2026-10-14): a
+  pinned map keeps its starting hostiles too. Seed s18-a's map starts
+  with dark entities, and all three of its all-scene verify runs (two
+  from the command line, one from the def) failed the colonist-safety
+  facts, with different colonists hurt in different scenes; seed yam's
+  map starts with raiders, dark entities and insects, and one of its two
+  runs lost the stampede's volley (no volley fired, no boomalope
+  killed). s18-b (one mech) passed both runs. The best-of-32 choice
+  should prefer maps with no starting hostiles (the SUMMARY's
+  hostilesAtReady and hostileKinds).
+- Unexplained (slice 18000 final all-scene verify, seed green, two dark
+  entities at the start): during the raccoon scene three colonists at
+  the base, about 100 tiles from AnyRim, were shredded and died, two of
+  them while refuelling or beating out a fire; the scene's notes do not
+  say what did it. The run's folder is .local/tmp/mapseed-final-verify-
+  all2 (Player.log) and its seed, green, repeats the map and stage.
+- Even with the map and stage pinned, a tour after READY repeats only
+  partly: the game draws on its one global random state from code that
+  runs per frame (effects, sounds, the interface) as well as per tick,
+  and how many ticks fall in each frame depends on the machine's load.
+  docs/AI-TESTING-STRATEGY.txt ("Tour trials") records how far the
+  verify runs repeated.
+- The verifier no longer silences the storyteller at READY: the Showcase
+  API holds it quiet for every showcase until FINISHED, then gives it
+  back, so a raid in the farewell is possible; a colonist lost after
+  FINISHED is noted, not failed.
+- Tour (BT_Showcase), slice 19000a (2026-10-15): on tour-17 the tractor
+  scene's colonist stray, Bowman, started at (72,64), was sent north at
+  the protest, and was still inside the 33.75-tile pull when it began:
+  pulled in with the four raiders (the SUMMARY's pullsPawns 5, against 4
+  in the run before), bitten and stabbed by them, and killed by the
+  blast (.local/tmp/p3k-19000a-v2-tour17). One of the slice's tour-17
+  runs; the other passed, and so did every tour-04 run. The stray's
+  layout is slice 18500's; the tour after READY repeats only partly
+  (below), so its flight differs from run to run. Step 19000c replaces
+  the colonist stray with a tourist, or starts it outside the pull.
+- Showcases, the quiet screen (slice 19000b, 2026-10-15): letters and
+  top-left messages are taken off before they are drawn, but their
+  arrival sounds still play, and a letter still pauses the game if the
+  player's pause preference covers it (the mod's own letters are not sent
+  at all while the screen is quiet; vanilla's big threats come only from
+  the storyteller, which a showcase holds). The letters stay in the
+  History tab.
+- smoke-test.ps1 viewing runs (slice 19000b, 2026-10-15): with dev mode
+  off, RimWorld 1.6 refuses an effective resolution under 1024 by 768,
+  so the 1600 by 900 window at 2x (an effective 800 by 450) logs
+  "Resolution too small (800x450), resetting UI scale to 2." once, before
+  the window is maximized; the recommended scale on a 4K screen is 2, so
+  nothing changes. Not the mod's error, so the run still passes.
+  -Presentation uses a 1920 by 1080 window at 1x instead.
+- Smoke flake (slice 19000b, 2026-10-15): "it works the next unit on its
+  own" failed once in seven smokes: the Artificer spent its second unit,
+  but only 4 of its 20 bolts were counted, none carried by a pawn and
+  none fired (.local/tmp/p3k-19000b-smoke1). The check runs early, before
+  any showcase check, and nothing the slice changed runs outside a
+  showcase; it passed in every other recorded run. Unexplained: a stack
+  hauled somewhere TotalBolts does not look is the likeliest cause.

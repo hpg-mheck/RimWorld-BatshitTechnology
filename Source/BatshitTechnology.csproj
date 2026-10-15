@@ -56,6 +56,11 @@
       <HintPath>$(RimWorldManaged)\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- ScreenCapture, for the tour verifier's shots (-btshots). -->
+    <Reference Include="UnityEngine.ScreenCaptureModule">
+      <HintPath>$(RimWorldManaged)\UnityEngine.ScreenCaptureModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="System"/>
     <Reference Include="System.Core"/>
     <Reference Include="System.Xml"/>
@@ -65,20 +70,55 @@
     <Compile Include="AnyRimResidents.cs" />
     <Compile Include="Artificer.cs" />
     <Compile Include="Ballista.cs" />
-    <Compile Include="BatshitShowcaseWorker.cs" />
     <Compile Include="BatshittiumReactor.cs" />
     <Compile Include="BoltStorage.cs" />
     <Compile Include="BrainSqueezer.cs" />
     <Compile Include="Building_RandomReplicator.cs" />
     <Compile Include="CompRandomReplicator.cs" />
+    <Compile Include="CountdownWarning.cs" />
     <Compile Include="Detonations.cs" />
+    <Compile Include="Implosion.cs" />
+    <Compile Include="ImplosionField.cs" />
     <Compile Include="MapComponent_AnyRim.cs" />
     <Compile Include="SelfDestruct.cs" />
     <Compile Include="SelfDestructAftermath.cs" />
     <Compile Include="Showcase.cs" />
     <Compile Include="SingularityGrenade.cs" />
     <Compile Include="SmokeTest.cs" />
+    <Compile Include="SmokeTest.TractorBarn.cs" />
+    <Compile Include="SmokeTest.TractorBombHits.cs" />
+    <Compile Include="SmokeTest.TractorBombHostiles.cs" />
+    <Compile Include="SmokeTest.TractorBombTwins.cs" />
+    <Compile Include="SmokeTest.Tourists.cs" />
     <Compile Include="SmokeTestShowcases.cs" />
+    <Compile Include="SmokeTestShowcases.QuietScreen.cs" />
+    <Compile Include="SmokeTestShowcases.Seeds.cs" />
+    <Compile Include="SmokeTestShowcases.Weather.cs" />
+    <Compile Include="SmokeTestTour.cs" />
+    <Compile Include="SmokeTestTour.Camera.cs" />
+    <Compile Include="SmokeTestTour.CleanStage.cs" />
+    <Compile Include="SmokeTestTour.QuietScreen.cs" />
+    <Compile Include="SmokeTestTour.Raccoon.cs" />
+    <Compile Include="SmokeTestTour.Stampede.cs" />
+    <Compile Include="SmokeTestTour.Summary.cs" />
+    <Compile Include="SmokeTestTour.Tourists.cs" />
+    <Compile Include="Tour\BatshitTourDirector.cs" />
+    <Compile Include="Tour\RaccoonScene.cs" />
+    <Compile Include="Tour\StageClearing.cs" />
+    <Compile Include="Tour\StampedeScene.cs" />
+    <Compile Include="Tour\TourGroup.cs" />
+    <Compile Include="Tour\TourScenes.cs" />
+    <Compile Include="Tour\TourStage.cs" />
+    <Compile Include="Tour\TractorScenes.cs" />
+    <Compile Include="TractorBarn.cs" />
+    <Compile Include="TractorBomb.cs" />
+    <Compile Include="TractorBombAI.cs" />
+    <Compile Include="TractorBombDeath.cs" />
+    <Compile Include="TractorBombEmplaced.cs" />
+    <Compile Include="TractorBombFlee.cs" />
+    <Compile Include="TractorBombGizmos.cs" />
+    <Compile Include="TractorStaging.cs" />
+    <Compile Include="WildFliers.cs" />
   </ItemGroup>
   <!-- The Showcase API (docs/SHOWCASE-API.md): its own namespace,
        BatshitTechnology.Showcases, free of Batshit-specific code so it
@@ -88,13 +128,17 @@
     <Compile Include="Showcases\Dialog_ShowcaseDetails.cs" />
     <Compile Include="Showcases\Dialog_ShowcaseMods.cs" />
     <Compile Include="Showcases\GameComponent_ShowcaseSession.cs" />
+    <Compile Include="Showcases\NarrationOverlayDrawer.cs" />
     <Compile Include="Showcases\ShowcaseDef.cs" />
+    <Compile Include="Showcases\ShowcaseDeterminism.cs" />
     <Compile Include="Showcases\ShowcaseDirector.cs" />
     <Compile Include="Showcases\ShowcaseGodMode.cs" />
     <Compile Include="Showcases\ShowcaseLauncher.cs" />
     <Compile Include="Showcases\ShowcaseLibrary.cs" />
+    <Compile Include="Showcases\ShowcaseMapSeed.cs" />
     <Compile Include="Showcases\ShowcaseMenuButton.cs" />
     <Compile Include="Showcases\ShowcaseScene.cs" />
+    <Compile Include="Showcases\ShowcaseScreen.cs" />
     <Compile Include="Showcases\ShowcaseTexts.cs" />
     <Compile Include="Showcases\ShowcaseWindow.cs" />
     <Compile Include="Showcases\ShowcaseWorker.cs" />
@@ -104,11 +148,13 @@
         Include="BatshitTechnology.Core\BatshitTechnology.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Harmony, for the Showcases main-menu button only (the mod's one
-         patch; docs/SHOWCASE-API.md). Compile-time only: runtime assets
-         are excluded, so 0Harmony.dll is never copied to Assemblies/. The
-         Harmony mod (brrainz.harmony, a declared dependency) supplies it
-         at run time. 2.4.3 matches that mod's 1.6 build. -->
+    <!-- Harmony, for the mod's two patches only, both installed by
+         Showcases\ShowcaseMenuButton.cs: the main menu's Showcases button
+         and the showcase map's seed (docs/SHOWCASE-API.md, Decision 1).
+         Compile-time only: runtime assets are excluded, so 0Harmony.dll
+         is never copied to Assemblies/. The Harmony mod (brrainz.harmony,
+         a declared dependency) supplies it at run time. 2.4.3 matches
+         that mod's 1.6 build. -->
     <PackageReference Include="Lib.Harmony" Version="2.4.3">
       <ExcludeAssets>runtime</ExcludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -126,6 +172,10 @@
     </None>
     <None Include="..\Languages\**\*.*">
       <Link>Languages\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Patches\**\*.*">
+      <Link>Patches\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
     <None Include="..\Textures\**\*.*">

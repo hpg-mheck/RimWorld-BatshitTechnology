@@ -1,5 +1,5 @@
 // Batshit Technology - AnyRim's residents.
-// Eight townsfolk on RimWorld's hidden, neutral Ancients faction, so
+// Nine townsfolk on RimWorld's hidden, neutral Ancients faction, so
 // blowing them up costs no goodwill and sends no letters. Each household
 // gets its own lord (LordJob_AnyRimResident), whose duty
 // (BT_AnyRimResident, Defs/Misc/BT_AnyRim.xml) has no combat in it:
@@ -8,7 +8,10 @@
 // Without a lord a non-colonist walks off the map, and vanilla lords drop
 // downed pawns, so this one keeps them. The civic composure hediff blocks
 // mental breaks, pins mood and stops hunger, and residents never flee when
-// hurt. See docs/SHOWCASE.md, "Residents".
+// hurt. Only Ned, the bank's guard, is armed: he carries an Ergonomic
+// Singularity Grenade, and the duty's lack of combat keeps it in his hand
+// until the tour's raccoon scene orders the throw. See docs/SHOWCASE.md,
+// "Residents".
 
 using System;
 using System.Collections.Generic;
@@ -470,9 +473,10 @@ namespace BatshitTechnology
         /// <summary>
         /// Generates a resident: an adult of the planned name, gender and
         /// biological age, in industrial clothes with the planned apparel
-        /// on top, unarmed, untitled, a baseliner where Biotech is active,
-        /// with survival meals in their pockets, civic composure, and no
-        /// urge to flee.
+        /// on top, holding the planned weapon or none (an armed resident is
+        /// generated capable of violence, so he can use it), untitled, a
+        /// baseliner where Biotech is active, with survival meals in their
+        /// pockets, civic composure, and no urge to flee.
         /// </summary>
         /// <param name="map">The map (for the tile).</param>
         /// <param name="resident">The resident's plan.</param>
@@ -485,6 +489,7 @@ namespace BatshitTechnology
             var request = new PawnGenerationRequest(
                 BT_AnyRimDefOf.BT_AnyRimResidentKind, faction, PawnGenerationContext.NonPlayer,
                 tile: map.Tile, forceGenerateNewPawn: true, canGeneratePawnRelations: false,
+                mustBeCapableOfViolence: resident.Weapon != null,
                 colonistRelationChanceFactor: 0f, forceAddFreeWarmLayerIfNeeded: true,
                 allowPregnant: false, allowFood: true, allowAddictions: false,
                 fixedBiologicalAge: resident.Age,
@@ -499,6 +504,7 @@ namespace BatshitTechnology
             pawn.Name = new NameTriple(
                 resident.First ?? resident.Key, resident.Nick, resident.Last ?? resident.Key);
             pawn.equipment?.DestroyAllEquipment();
+            Arm(pawn, resident, report);
             Dress(pawn, resident, report);
             FillPockets(pawn);
             pawn.health.AddHediff(BT_AnyRimDefOf.BT_AnyRimComposure);
@@ -508,6 +514,36 @@ namespace BatshitTechnology
             }
 
             return pawn;
+        }
+
+        /// <summary>
+        /// Puts the planned weapon, if any, in the resident's hands.
+        /// </summary>
+        /// <param name="pawn">The unspawned resident, holding nothing.</param>
+        /// <param name="resident">The resident's plan.</param>
+        /// <param name="report">Collects failures.</param>
+        private static void Arm(Pawn pawn, ResidentPlan resident, AnyRimBuildReport report)
+        {
+            if (resident.Weapon == null)
+            {
+                return;
+            }
+
+            ThingDef def = DefDatabase<ThingDef>.GetNamedSilentFail(resident.Weapon);
+            if (def == null || !def.IsWeapon || pawn.equipment == null)
+            {
+                report.Fail($"resident {resident.Key}: cannot carry {resident.Weapon}");
+                return;
+            }
+
+            ThingDef stuff = def.MadeFromStuff ? GenStuff.DefaultStuffFor(def) : null;
+            if (!(ThingMaker.MakeThing(def, stuff) is ThingWithComps weapon))
+            {
+                report.Fail($"resident {resident.Key}: {resident.Weapon} is not equipment");
+                return;
+            }
+
+            pawn.equipment.AddEquipment(weapon);
         }
 
         /// <summary>

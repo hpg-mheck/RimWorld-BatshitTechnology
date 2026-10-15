@@ -39,6 +39,15 @@ namespace BatshitTechnology.Showcases
         /// <summary>How long a glide takes, in real seconds.</summary>
         public float panSeconds = 0.6f;
 
+        /// <summary>
+        /// Keep the whole view on the map: a shot near an edge is moved in
+        /// until the view no longer shows the black beyond it (Core's
+        /// <c>ShotFraming.KeepOnMap</c>); a view bigger than the map is
+        /// centred on it. Off by default, so a shot frames exactly where
+        /// it says.
+        /// </summary>
+        public bool keepOnMap;
+
         /// <summary>The closest zoom the API allows.</summary>
         public const float MinZoom = 8f;
 
@@ -47,6 +56,55 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>Gets the zoom, clamped to what the camera can do.</summary>
         public float ZoomClamped => Mathf.Clamp(zoom, MinZoom, MaxZoom);
+    }
+
+    /// <summary>
+    /// One camera move the director made: for which scene and beat, where
+    /// to, how close, whether it cut, and when. Tests and capture tooling
+    /// compare it with where the camera really is.
+    /// </summary>
+    public sealed class ShowcaseFraming
+    {
+        /// <summary>Records a camera move.</summary>
+        /// <param name="scene">The scene's key.</param>
+        /// <param name="beat">The beat's moment, or null for a timed shot.</param>
+        /// <param name="x">Where the view is centred, in tiles east.</param>
+        /// <param name="z">Where the view is centred, in tiles north.</param>
+        /// <param name="zoom">The camera's root size.</param>
+        /// <param name="cut">Whether it cut rather than glided.</param>
+        /// <param name="tick">The game tick it was made on.</param>
+        public ShowcaseFraming(
+            string scene, string beat, float x, float z, float zoom, bool cut, int tick)
+        {
+            Scene = scene;
+            Beat = beat;
+            X = x;
+            Z = z;
+            Zoom = zoom;
+            Cut = cut;
+            Tick = tick;
+        }
+
+        /// <summary>Gets the scene's key.</summary>
+        public string Scene { get; }
+
+        /// <summary>Gets the beat's moment, or null for a timed shot.</summary>
+        public string Beat { get; }
+
+        /// <summary>Gets where the view is centred, in tiles east.</summary>
+        public float X { get; }
+
+        /// <summary>Gets where the view is centred, in tiles north.</summary>
+        public float Z { get; }
+
+        /// <summary>Gets the camera's root size.</summary>
+        public float Zoom { get; }
+
+        /// <summary>Gets whether it cut rather than glided.</summary>
+        public bool Cut { get; }
+
+        /// <summary>Gets the game tick it was made on.</summary>
+        public int Tick { get; }
     }
 
     /// <summary>
@@ -160,6 +218,16 @@ namespace BatshitTechnology.Showcases
             }
         }
 
+        /// <summary>
+        /// Gets why the scene cannot run on this map ("no hostile
+        /// faction"), or null when it can. The director asks once, after
+        /// attaching the scene and before the tour starts; a declined
+        /// scene is dropped with a SKIPPED cue (a message, not an error)
+        /// and is not counted in the caption's "2 of 8". The base scene
+        /// always runs.
+        /// </summary>
+        public virtual string UnavailableReason => null;
+
         /// <summary>Gets the scene's timing, for the sequencer.</summary>
         public SceneTiming Timing =>
             new SceneTiming(minTicks, timeoutTicks, settleTicks);
@@ -200,6 +268,23 @@ namespace BatshitTechnology.Showcases
         /// </summary>
         /// <returns>True when the scene may end.</returns>
         public virtual bool IsDone() => true;
+
+        /// <summary>
+        /// Plays a beat: a moment the scene reaches through an event
+        /// rather than a fixed tick (the bomb is planted, the volley
+        /// begins). The director logs "BEAT key moment", selects the
+        /// subject, frames <paramref name="shot"/> from the focus as it
+        /// is now (its <c>atTick</c> is ignored), and says the def's lines
+        /// for that moment. Nothing happens once the tour has stopped or
+        /// while this scene is not the one running.
+        /// </summary>
+        /// <param name="moment">The narration moment, such as "blast".</param>
+        /// <param name="shot">The camera move, or null to leave it.</param>
+        /// <param name="select">Whether to select the subject.</param>
+        /// <returns>True if the beat played.</returns>
+        protected bool Beat(
+            string moment, ShowcaseShot shot = null, bool select = true) =>
+            director != null && director.RunBeat(this, moment, shot, select);
 
         /// <summary>
         /// Called once when the scene ends, however it ended.

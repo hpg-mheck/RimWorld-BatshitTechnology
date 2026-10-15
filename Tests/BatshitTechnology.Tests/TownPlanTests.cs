@@ -698,6 +698,7 @@ public sealed class TownPlanTests
     [InlineData("Barry", "Six Feet", "Graves", false, 58, "W4", "Apparel_Duster,Apparel_BowlerHat")]
     [InlineData("Bea", "Right Back", "Shortly", true, 29, "W1", "")]
     [InlineData("Morty", "Two Weeks", "Tallis", false, 64, "E1", "Apparel_SimpleHelmet")]
+    [InlineData("Ned", "Overkill", "Lessly", false, 44, "E4", "Apparel_FlakVest")]
     public void Residents_should_match_the_cast(
         string key, string nick, string last, bool female, int age, string home, string apparel)
     {
@@ -707,15 +708,31 @@ public sealed class TownPlanTests
     }
 
     /// <summary>
-    /// Eight residents with unique keys and short nicknames, each with a
+    /// Only Ned, the Savings and Loan's guard, is armed, with the
+    /// Ergonomic Singularity Grenade "for emergencies"; the def is the
+    /// mod's own and is catalogued.
+    /// </summary>
+    [Fact(DisplayName = "Only the bank's guard is armed, with the grenade")]
+    public void Only_the_guard_should_be_armed()
+    {
+        ResidentPlan armed = Assert.Single(Plan.Residents, r => r.Weapon != null);
+        Assert.Equal(("Ned", "E4", "BT_ErgonomicSingularityGrenade"),
+            (armed.Key, armed.HomeKey, armed.Weapon));
+        Assert.True(TownDefs.All.ContainsKey(armed.Weapon!), armed.Weapon);
+        Assert.Equal(RaccoonIncident.GuardKey, armed.Key);
+        Assert.Equal(RaccoonIncident.GrenadeDef, armed.Weapon);
+    }
+
+    /// <summary>
+    /// Nine residents with unique keys and short nicknames, each with a
     /// home that exists, a duty spot just inside its front door, a bed
     /// reserved in it and a reserved grave.
     /// </summary>
     [Fact(DisplayName = "Residents have homes, duty spots, beds and graves")]
     public void Residents_should_have_homes_beds_and_graves()
     {
-        Assert.Equal(8, Plan.Residents.Count);
-        Assert.Equal(8, Plan.Residents.Select(r => r.Key).Distinct().Count());
+        Assert.Equal(9, Plan.Residents.Count);
+        Assert.Equal(9, Plan.Residents.Select(r => r.Key).Distinct().Count());
         Dictionary<Cell, Placement> built = BuildingCells(Plan);
         foreach (ResidentPlan r in Plan.Residents)
         {
@@ -735,7 +752,7 @@ public sealed class TownPlanTests
         var graves = Plan.Placements.Where(p => p.Def == "Grave").ToList();
         Assert.Equal(10, graves.Count);
         Assert.All(graves, g => Assert.Equal(2, g.Occupied.Area));
-        Assert.Equal(2, graves.Count(g => g.ReservedFor == null));
+        Assert.Equal(1, graves.Count(g => g.ReservedFor == null));
         Assert.Empty(Plan.Placements.Where(p => p.ReservedFor != null
             && !Plan.Residents.Any(r => r.Key == p.ReservedFor)));
     }
@@ -974,7 +991,7 @@ public sealed class TownPlanTests
         Assert.DoesNotContain(reduced.Placements, p => p.BuildingKey == "W2");
         Assert.DoesNotContain(reduced.Roofs, r => r.BuildingKey == "W2");
         Assert.DoesNotContain(reduced.Terrain, t => t.BuildingKey == "W2");
-        Assert.Equal(new[] { "Barry", "Bea", "Constance", "Hugh", "Morty", "Shirley" },
+        Assert.Equal(new[] { "Barry", "Bea", "Constance", "Hugh", "Morty", "Ned", "Shirley" },
             reduced.Residents.Select(r => r.Key).OrderBy(k => k));
         Assert.DoesNotContain(reduced.Placements, p => p.ReservedFor is "Wendy" or "Ernest");
         Assert.Equal(10, reduced.Placements.Count(p => p.Def == "Grave"));
@@ -1006,7 +1023,7 @@ public sealed class TownPlanTests
     {
         TownPlan reduced = Plan.Avoiding(new[] { new Box(4, 32, 4, 32), new Box(0, 20, 0, 21) });
         Assert.Equal(Plan.Buildings.Count, reduced.Buildings.Count);
-        Assert.Equal(8, reduced.Residents.Count);
+        Assert.Equal(9, reduced.Residents.Count);
         Assert.Equal(Plan.Placements.Count - 1, reduced.Placements.Count);
         Assert.DoesNotContain(reduced.Placements, p => p.At == new Cell(4, 32));
         Assert.Equal(Plan.Terrain.Count - 2, reduced.Terrain.Count);

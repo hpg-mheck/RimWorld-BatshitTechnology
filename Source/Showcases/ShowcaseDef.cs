@@ -68,6 +68,43 @@ namespace BatshitTechnology.Showcases
         public BiomeDef biome;
 
         /// <summary>
+        /// The seed the showcase's game is generated from, like a world
+        /// seed: the same seed gives the same world, starting tile,
+        /// colonists and map, and the worker sets up under a random state
+        /// drawn from it. Blank means a fresh random seed each launch
+        /// (logged, so a run can be pinned later); a
+        /// <c>-showcaseseed=&lt;text&gt;</c> command line overrides it.
+        /// 1 to 64 ASCII letters, digits, '-', '_' or '.'
+        /// (docs/SHOWCASE-API.md, "Seeds").
+        /// </summary>
+        [NoTranslate]
+        public string seed;
+
+        /// <summary>
+        /// The weather to hold from the showcase's start until it finishes
+        /// or stops, or null (the default) to leave the weather to the
+        /// map. The session keeps it as both the current and the last
+        /// weather, so no transition shows, and keeps its age under the
+        /// weather decider's shortest turn, so no other weather starts; a
+        /// scene that wants weather of its own borrows it for its run
+        /// (<see cref="GameComponent_ShowcaseSession.YieldWeather"/>). The
+        /// weather from before is given back at the end
+        /// (docs/SHOWCASE-API.md, "The Held Weather").
+        /// </summary>
+        public WeatherDef holdWeather;
+
+        /// <summary>
+        /// Whether to keep the screen clear of vanilla's clutter while the
+        /// showcase runs (false by default): no alerts and no Learning
+        /// helper (the storyteller def's <c>disableAlerts</c> and
+        /// <c>disableAdaptiveTraining</c>, lent and given back), no letter
+        /// that arrives after the showcase begins, and no top-left message,
+        /// each taken off before it is drawn. Nothing a player set is
+        /// changed (docs/SHOWCASE-API.md, "The Quiet Screen").
+        /// </summary>
+        public bool quietScreen;
+
+        /// <summary>
         /// The code that runs the showcase: a <see cref="ShowcaseWorker"/>
         /// subclass. The default, <see cref="ShowcaseDirector"/>, runs
         /// <see cref="scenes"/>.
@@ -229,6 +266,13 @@ namespace BatshitTechnology.Showcases
             if (estimatedMinutes <= 0f)
             {
                 yield return "estimatedMinutes must be positive";
+            }
+
+            string pinned = ShowcaseSeed.Normalize(seed);
+            if (pinned != null && !ShowcaseSeed.IsWellFormed(pinned))
+            {
+                yield return $"seed '{pinned}' is not usable: "
+                    + ShowcaseSeed.WhyMalformed(pinned);
             }
 
             foreach (string id in requiredMods ?? new List<string>())

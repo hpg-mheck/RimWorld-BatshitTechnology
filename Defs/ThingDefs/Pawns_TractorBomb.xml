@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- The Tractor Bomb (docs/TRACTOR-BOMB.md): a player-owned robot of its
+       own race. Not a mechanoid: its flesh type is its own
+       (BT_TractorSteel, Defs/Misc/BT_TractorBomb.xml), so
+       RaceProperties.IsMechanoid is false and Biotech's mechanitor,
+       bandwidth and overseer rules never apply. ToolUser intelligence, as
+       Odyssey's drones and the mechanoids have, with no needs: it eats
+       nothing, never rests and has no mood. It leaves no corpse; its death
+       is its own (BT_TractorBombDeathVortex). -->
+  <ThingDef ParentName="BasePawn">
+    <defName>BT_TractorBomb</defName>
+    <label>tractor bomb</label>
+    <description>A little steel farm tractor with a batshittium tractor-beam emitter where the exhaust stack should be. It patrols its allowed area, drives at the nearest hostile it can see, and plants itself: its tyres flip out flat, it counts down three to five seconds, drags everything within 22.5 tiles into a heap at its feet, and explodes over 7.5 tiles. Its proximity decides how close it drives: Timid stops 15 tiles out, Prudent the same or one tile inside its tractor beam if that is nearer, and Nosy right up close. With Tractor Bomb Dial-A-Yield, its pull and blast can be set as well; a Tractor Barn's own settings go with every robot it builds.\n\nIf a colonist or guest is inside its tractor beam when it is ready, it protests for three seconds, beeping and flashing, and then plants itself anyway. It does not refuel, rest or complain. Badly damaged, it drives home to its Tractor Barn for repairs; otherwise, it is not coming back.</description>
+    <soundImpactDefault>BulletImpact_Metal</soundImpactDefault>
+    <statBases>
+      <MoveSpeed>3.6</MoveSpeed>
+      <MarketValue>450</MarketValue>
+      <Mass>80</Mass>
+      <Flammability>0</Flammability>
+      <PsychicSensitivity>0</PsychicSensitivity>
+      <ToxicResistance>1</ToxicResistance>
+      <ToxicEnvironmentResistance>1</ToxicEnvironmentResistance>
+      <ComfyTemperatureMin>-100</ComfyTemperatureMin>
+      <ComfyTemperatureMax>250</ComfyTemperatureMax>
+      <MeatAmount>0</MeatAmount>
+      <ArmorRating_Blunt>0.15</ArmorRating_Blunt>
+      <ArmorRating_Sharp>0.35</ArmorRating_Sharp>
+      <ArmorRating_Heat>1</ArmorRating_Heat>
+      <VacuumResistance MayRequire="Ludeon.RimWorld.Odyssey">1</VacuumResistance>
+    </statBases>
+    <tradeability>None</tradeability>
+    <race>
+      <intelligence>ToolUser</intelligence>
+      <fleshType>BT_TractorSteel</fleshType>
+      <body>BT_TractorBody</body>
+      <thinkTreeMain>BT_TractorBomb</thinkTreeMain>
+      <thinkTreeConstant>BT_TractorBombConstant</thinkTreeConstant>
+      <needsRest>false</needsRest>
+      <alwaysAwake>true</alwaysAwake>
+      <hasGenders>false</hasGenders>
+      <hasCorpse>false</hasCorpse>
+      <hasMeat>false</hasMeat>
+      <foodType>None</foodType>
+      <bloodDef>Filth_MachineBits</bloodDef>
+      <lifeExpectancy>2500</lifeExpectancy>
+      <baseBodySize>0.8</baseBodySize>
+      <baseHealthScale>0.8</baseHealthScale>
+      <trainability>None</trainability>
+      <hideTrainingTab>true</hideTrainingTab>
+      <showTrainables>false</showTrainables>
+      <disableIgniteVerb>true</disableIgniteVerb>
+      <allowedOnCaravan>false</allowedOnCaravan>
+      <canReleaseToWild>false</canReleaseToWild>
+      <playerCanChangeMaster>false</playerCanChangeMaster>
+      <neverIncludeInQuests>true</neverIncludeInQuests>
+      <soundMeleeHitPawn>Pawn_Melee_MechanoidBash_HitPawn</soundMeleeHitPawn>
+      <soundMeleeHitBuilding>Pawn_Melee_MechanoidBash_HitBuilding</soundMeleeHitBuilding>
+      <soundMeleeMiss>Pawn_Melee_MechanoidBash_Miss</soundMeleeMiss>
+      <lifeStageAges>
+        <li>
+          <def>MechanoidFullyFormed</def>
+          <minAge>0</minAge>
+        </li>
+      </lifeStageAges>
+    </race>
+    <!-- It never picks a fight; this is only so it has a melee verb, as
+         every pawn should. -->
+    <tools>
+      <li>
+        <label>front bumper</label>
+        <capacities>
+          <li>Blunt</li>
+        </capacities>
+        <power>5</power>
+        <cooldownTime>2</cooldownTime>
+      </li>
+    </tools>
+    <inspectorTabs Inherit="False">
+      <li>ITab_Pawn_Health</li>
+      <li>ITab_Pawn_Log</li>
+    </inspectorTabs>
+    <comps>
+      <li Class="BatshitTechnology.CompProperties_TractorBomb">
+        <sightRadius>45</sightRadius>
+        <emplaceRange>15</emplaceRange>
+        <patrolLegRadius>30</patrolLegRadius>
+        <emplacedDef>BT_TractorBombEmplaced</emplacedDef>
+        <deathVortexDef>BT_TractorBombDeathVortex</deathVortexDef>
+        <!-- A vanilla click until the mod's sound pipeline exists -->
+        <protestSound>TrapArm</protestSound>
+        <beepIntervalTicks>30</beepIntervalTicks>
+        <lampHalfPeriodTicks>10</lampHalfPeriodTicks>
+      </li>
+    </comps>
+  </ThingDef>
+
+  <PawnKindDef>
+    <defName>BT_TractorBomb</defName>
+    <label>tractor bomb</label>
+    <race>BT_TractorBomb</race>
+    <combatPower>40</combatPower>
+    <!-- Wheels shot off: it cannot move, so it is wrecked, with its own
+         death; no "Death" letter for an expendable robot. -->
+    <forceDeathOnDowned>true</forceDeathOnDowned>
+    <forceNoDeathNotification>true</forceNoDeathNotification>
+    <destroyGearOnDrop>true</destroyGearOnDrop>
+    <canStrip>false</canStrip>
+    <lifeStages>
+      <li>
+        <bodyGraphicData>
+          <texPath>Things/Pawn/Robot/BT_TractorBomb</texPath>
+          <graphicClass>Graphic_Multi</graphicClass>
+          <drawSize>2</drawSize>
+          <shadowData>
+            <volume>(0.45, 0.3, 0.6)</volume>
+          </shadowData>
+        </bodyGraphicData>
+      </li>
+    </lifeStages>
+  </PawnKindDef>
+</Defs>

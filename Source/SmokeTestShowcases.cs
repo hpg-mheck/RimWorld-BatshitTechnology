@@ -2,13 +2,15 @@
 // (docs/SHOWCASE-API.md; phase 4000, slices 6000 and 8000). Part of the
 // -btsmoketest runner (Source/SmokeTest.cs); runs after the device tests,
 // in two parts. First, checks that tick the game inside one frame, as the
-// device tests do: the Harmony patch and the menu column's gates, the
+// device tests do: the two Harmony patches and the menu column's gates, the
 // launcher's guards, launch verdicts against Core's, a directed test
-// showcase run through Skip, a timeout and its closing message, scenes
-// that throw, the god mode a showcase borrows, and the autosave and
-// save-file rules. Then a few real frames, for what only drawing can
-// show: the caption bar, a cut that follows a glide, the main menu's
-// button, the three menu windows with Back and Escape, Stop, and the save
+// showcase run through Skip, a timeout and its closing message (narration
+// on the overlay, never in vanilla's messages), scenes that throw, the god
+// mode a showcase borrows, and the autosave and save-file rules. Then a
+// few real frames, for what only drawing can show: the caption bar, the
+// narration overlay replacing one line with the next in real time, a cut
+// that follows a glide, the main menu's button, the three menu windows
+// with Back and Escape, Stop (which clears the overlay), and the save
 // folder afterwards. The test showcases are made here in code, never
 // shipped in XML, and removed again before the runner's final log check.
 
@@ -19,6 +21,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Xml;
+using BatshitTechnology.Core;
 using BatshitTechnology.Showcases;
 using LudeonTK;
 using RimWorld;
@@ -58,8 +61,28 @@ namespace BatshitTechnology
         /// <summary>Whether <see cref="End"/> throws.</summary>
         public bool throwInEnd;
 
+        /// <summary>
+        /// Why the scene declines to run, or null (it runs).
+        /// </summary>
+        public string unavailableReason;
+
+        /// <summary>
+        /// The scene's own tick on which it plays the beat
+        /// <see cref="beatMoment"/>; negative for none.
+        /// </summary>
+        public int beatAtTick = -1;
+
+        /// <summary>The moment of the beat it plays, if any.</summary>
+        public string beatMoment;
+
+        /// <summary>How many of its own ticks this run has had.</summary>
+        private int ticksRun;
+
         /// <summary>Gets the thing the scene is about, or null.</summary>
         public override Thing Subject => subject;
+
+        /// <summary>Gets why the scene declines to run, or null.</summary>
+        public override string UnavailableReason => unavailableReason;
 
         /// <summary>Sets the scene up, or throws if told to.</summary>
         /// <exception cref="InvalidOperationException">
@@ -67,16 +90,25 @@ namespace BatshitTechnology
         /// </exception>
         public override void Setup()
         {
+            ticksRun = 0;
             ThrowIf(throwInSetup, "Setup");
         }
 
-        /// <summary>Runs a tick, or throws if told to.</summary>
+        /// <summary>
+        /// Runs a tick, playing the beat when its tick comes, or throws if
+        /// told to.
+        /// </summary>
         /// <exception cref="InvalidOperationException">
         /// Thrown when <see cref="throwInTick"/> is set.
         /// </exception>
         public override void Tick()
         {
             ThrowIf(throwInTick, "Tick");
+            ticksRun++;
+            if (ticksRun == beatAtTick && !beatMoment.NullOrEmpty())
+            {
+                Beat(beatMoment);
+            }
         }
 
         /// <summary>Whether the scene's action has played out.</summary>
@@ -117,8 +149,9 @@ namespace BatshitTechnology
     }
 
     /// <summary>
-    /// A smoke-test worker that asks for its devices' DEV buttons, as
-    /// BatshitShowcaseWorker does, and never finishes on its own.
+    /// A smoke-test worker that asks for its devices' DEV buttons, as a
+    /// showcase may (the tour no longer does), and never finishes on its
+    /// own.
     /// </summary>
     internal class SmokeDevButtonsWorker : ShowcaseWorker
     {
@@ -213,16 +246,53 @@ namespace BatshitTechnology
         /// <summary>The note on every test flag, looked for in the text.</summary>
         private const string FlagNote = "smoke test flag";
 
-        /// <summary>The one patch the mod may hold, as Harmony reports it.</summary>
-        private const string ExpectedPatch =
+        /// <summary>
+        /// The two patches the mod may hold, as Harmony reports them
+        /// (ShowcaseMenuButton.OwnPatches, sorted): the map seed's prefix
+        /// and the button's postfix, both under the button's Harmony id.
+        /// </summary>
+        private static readonly string[] ExpectedPatches =
+        {
+            "Verse.Map.get_NextGenSeed: prefix "
+                + "BatshitTechnology.Showcases.ShowcaseMapSeed.Prefix "
+                + $"[{ShowcaseMenuButton.HarmonyId}]",
             "Verse.OptionListingUtility.DrawOptionListing: postfix "
-            + "BatshitTechnology.Showcases.ShowcaseMenuButton.Postfix";
+                + "BatshitTechnology.Showcases.ShowcaseMenuButton.Postfix "
+                + $"[{ShowcaseMenuButton.HarmonyId}]",
+        };
 
         /// <summary>How long the frame-driven checks may take, in seconds.</summary>
         private const float ShowcaseFramesTimeout = 120f;
 
         /// <summary>The zoom of the director test's cut shot.</summary>
         private const float CutShotZoom = 30f;
+
+        /// <summary>
+        /// The overlay test's first line: long, so its full reading time
+        /// (7 s and more) is far longer than the base time after which the
+        /// next line replaces it.
+        /// </summary>
+        private const string OverlayLongLine = "Smoke narration: a long line "
+            + "for the overlay, replaced by the next one after its base time.";
+
+        /// <summary>The overlay test's second line, which must replace it.</summary>
+        private const string OverlayNextLine = "Smoke narration: the line after.";
+
+        /// <summary>
+        /// How long the overlay test's second line may take to appear, in
+        /// real seconds: two base times (the stop run's opening line, then
+        /// the long line) and some slack, well short of the long line's
+        /// full reading time.
+        /// </summary>
+        private const float OverlayReplaceSeconds = 7f;
+
+        /// <summary>
+        /// Vanilla's live messages (Verse.Messages.liveMessages, private in
+        /// RimWorld 1.6.4871), read to check narration never reaches them.
+        /// </summary>
+        private static readonly FieldInfo LiveMessagesField =
+            typeof(Messages).GetField(
+                "liveMessages", BindingFlags.Static | BindingFlags.NonPublic);
 
         /// <summary>The test showcases, while registered.</summary>
         private List<ShowcaseDef> testShowcases;
@@ -235,6 +305,12 @@ namespace BatshitTechnology
 
         /// <summary>The second test run, stopped during the frame checks.</summary>
         private ShowcaseDirector stopRun;
+
+        /// <summary>
+        /// The smoke game's own weather before a held-weather test, put
+        /// back after it.
+        /// </summary>
+        private (WeatherDef Current, WeatherDef Last, int Age) smokeWeather;
 
         /// <summary>The save folder's files before the showcase checks.</summary>
         private Dictionary<string, string> savesBefore;
@@ -259,6 +335,12 @@ namespace BatshitTechnology
 
         /// <summary>Frames drawn since the camera test framed its shots.</summary>
         private int cutFrames;
+
+        /// <summary>When the overlay test said its lines, in real seconds.</summary>
+        private float overlaySaidAt;
+
+        /// <summary>The overlay's painted frames before the overlay test.</summary>
+        private int overlayFramesBefore;
 
         /// <summary>The frame-driven steps, in order; null when none remain.</summary>
         private List<FrameStep> frameSteps;
@@ -306,13 +388,21 @@ namespace BatshitTechnology
 
             TestLaunchGuards();
             TestRequestBinding();
+            TestFailedLaunchDropsRequest();
+            TestSettleHoldOutlastsFade();
             TestShowcaseVerdicts();
             TestStoppedLineConfigError();
             TestForceOutsideDevMode();
             TestShowcaseGroups();
+            TestShowcaseSeeds();
+            TestGlobalReseed();
+            TestMapFingerprint(map);
+            TestMapSeedPassesThrough(map);
+            TestMapSeedPins(map);
             TestDirectorRun(map);
             TestFaultyScenes(map);
             TestDevButtonLoan(map);
+            TestQuietScreen(map);
             BeginStopRun(map);
 
             Find.TickManager.CurTimeSpeed = TimeSpeed.Paused;
@@ -322,17 +412,21 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// The Showcases button is the mod's only Harmony patch: one
-        /// postfix, on the method vanilla's menus draw their options with.
+        /// The mod holds exactly two Harmony patches, both installed under
+        /// the button's Harmony id: the Showcases button's postfix, on the
+        /// method vanilla's menus draw their options with, and the
+        /// showcase map seed's prefix, on the Map.NextGenSeed getter.
         /// </summary>
         private void TestShowcasePatch()
         {
             List<string> patches = ShowcaseMenuButton.OwnPatches();
-            Check("the Showcases button is the mod's only Harmony patch, a "
-                    + "postfix on the menu method",
-                ShowcaseMenuButton.Installed
-                    && patches.Count == 1 && patches[0] == ExpectedPatch,
-                $"installed {ShowcaseMenuButton.Installed}; patches: "
+            Check("the mod's only Harmony patches are the Showcases button's "
+                    + "postfix on the menu method and the map seed's prefix on "
+                    + "Map.NextGenSeed",
+                ShowcaseMenuButton.Installed && ShowcaseMapSeed.Installed
+                    && patches.SequenceEqual(ExpectedPatches),
+                $"installed: button {ShowcaseMenuButton.Installed}, map seed "
+                    + $"{ShowcaseMapSeed.Installed}; patches: "
                     + (patches.Count == 0 ? "none" : string.Join("; ", patches)));
         }
 
@@ -696,10 +790,13 @@ namespace BatshitTechnology
         /// <summary>
         /// Makes the directed test showcase: "opening" completes after 30
         /// ticks, with a cut shot; "waiting" never finishes, so it is
-        /// skipped, and it selects the subject; "timeout" never finishes
-        /// and times out after 40 ticks; "closing" completes after 20 ticks
-        /// and says its last line 30 ticks later. Narration covers each
-        /// outcome, including lines that must never be said.
+        /// skipped, and it selects the subject and plays the beat "poke" on
+        /// its second tick; "timeout" never finishes and times out after
+        /// 40 ticks; "unavailable" declines to run (gap G1), so it is
+        /// dropped and the caption counts four scenes, not five; "closing"
+        /// completes after 20 ticks and says its last line 30 ticks later.
+        /// Narration covers each outcome, including lines that must never
+        /// be said.
         /// </summary>
         /// <param name="pack">The mod it is listed under.</param>
         /// <returns>The def.</returns>
@@ -707,6 +804,7 @@ namespace BatshitTechnology
         {
             ShowcaseDef def = MakeTestShowcase(DirectorShowcase, "smoke director", pack, 900);
             def.workerClass = typeof(ShowcaseDirector);
+            def.holdWeather = WeatherDefOf.Clear;
             var opening = new ShowcaseScene
             {
                 key = "opening",
@@ -723,6 +821,8 @@ namespace BatshitTechnology
                 timeoutTicks = 600,
                 neverDone = true,
                 subject = showcaseSubject,
+                beatAtTick = 2,
+                beatMoment = "poke",
             };
             waiting.shots.Add(new ShowcaseShot { atTick = 0, zoom = CutShotZoom, pan = false });
             var timeout = new SmokeShowcaseScene
@@ -734,6 +834,15 @@ namespace BatshitTechnology
                 neverDone = true,
                 selectSubject = false,
             };
+            var unavailable = new SmokeShowcaseScene
+            {
+                key = "unavailable",
+                title = "Unavailable scene",
+                minTicks = 0,
+                timeoutTicks = 600,
+                unavailableReason = "smoke",
+                selectSubject = false,
+            };
             var closing = new ShowcaseScene
             {
                 key = "closing",
@@ -742,7 +851,8 @@ namespace BatshitTechnology
                 timeoutTicks = 600,
                 selectSubject = false,
             };
-            def.scenes.AddRange(new[] { opening, waiting, timeout, closing });
+            def.scenes.AddRange(
+                new[] { opening, waiting, timeout, unavailable, closing });
             def.narration.AddRange(new[]
             {
                 Line("opening", "start", 0, "Smoke narration: opening."),
@@ -750,9 +860,11 @@ namespace BatshitTechnology
                 Line("opening", "stopped", 0, "Smoke narration: opening stopped."),
                 Line("opening", "stopped", 10, "Smoke narration: queued at the stop, never said."),
                 Line("waiting", "start", 0, "Smoke narration: waiting."),
+                Line("waiting", "poke", 0, "Smoke narration: waiting poked."),
                 Line("waiting", "skipped", 0, "Smoke narration: waiting skipped."),
                 Line("waiting", "completed", 0, "Smoke narration: waiting never completes."),
                 Line("timeout", "timedOut", 0, "Smoke narration: timeout timed out."),
+                Line("unavailable", "start", 0, "Smoke narration: never said."),
                 Line("closing", "completed", 30, "Smoke narration: closing, said late."),
             });
             return def;
@@ -924,10 +1036,19 @@ namespace BatshitTechnology
         {
             ShowcaseDef def = ShowcaseLibrary.Named(DirectorShowcase);
             LogMessage mark = Log.Messages.LastOrDefault();
+            List<Message> liveBefore = LiveMessages();
+            int handedBefore = showcaseSession.Narration.LinesSaid;
             CameraDriver camera = Find.CameraDriver;
             camera.SetRootSize(45f);
             Find.Selector.ClearSelection();
+            (List<StorytellerComp> smokeParts, StorytellerComp lent) = LendStorytellerPart();
+            WeatherDef fog = SetSmokeWeather(map, "Fog");
             showcaseSession.AdoptForTest(def, map);
+            bool quietWhileRunning = showcaseSession.StorytellerQuiet
+                && Find.Storyteller.storytellerComps.Count == 0;
+            string heldAtStart = HeldWeatherNote(map);
+            string stageHash = showcaseSession.StageHash;
+            bool reseeded = showcaseSession.Reseeded;
             var director = showcaseSession.Worker as ShowcaseDirector;
             if (director == null || !showcaseSession.Running)
             {
@@ -935,10 +1056,13 @@ namespace BatshitTechnology
                     $"worker {showcaseSession.Worker?.GetType().Name ?? "none"}, "
                     + $"running {showcaseSession.Running}");
                 showcaseSession.ReleaseForTest();
+                PutBackStoryteller(smokeParts);
+                PutBackSmokeWeather(map);
                 return;
             }
 
             Tick(1);
+            CheckWeatherHeldAtStart(map, fog, heldAtStart);
             Check("the director frames a scene's cut shot at its zoom",
                 director.CurrentScene?.key == "opening"
                     && Mathf.Abs(camera.RootSize - CutShotZoom) < 0.01f,
@@ -950,17 +1074,22 @@ namespace BatshitTechnology
                 showcaseSubject == null
                     ? "no subject could be placed"
                     : $"selected: {string.Join(", ", Find.Selector.SelectedObjects)}");
-            Check("the caption reads 2 of 4: Waiting scene",
+            Check("the caption reads 2 of 4: Waiting scene (a declined "
+                    + "scene is not counted)",
                 director.Caption == "2 of 4: Waiting scene",
                 $"'{director.Caption}'");
 
             Tick(5);
+            quietWhileRunning &= showcaseSession.StorytellerQuiet
+                && Find.Storyteller.storytellerComps.Count == 0;
+            bool lentWeatherStays = LendWeatherToScene(map, director.CurrentScene);
             showcaseSession.Skip();
             Check("Skip ends the running scene as skipped and starts the next",
                 director.CurrentScene?.key == "timeout"
                     && director.Endings.SequenceEqual(
                         new[] { SceneEnd.Completed, SceneEnd.Skipped }),
                 $"scene {director.CurrentScene?.key}; endings {Endings(director)}");
+            CheckLentWeatherReturns(map, lentWeatherStays);
 
             int timeoutStart = Find.TickManager.TicksGame;
             TickUntil(() => director.CurrentScene?.key != "timeout", 200);
@@ -973,15 +1102,18 @@ namespace BatshitTechnology
             List<string> cues = ShowcaseCuesSince(mark);
             var expectedCues = new[]
             {
-                "GAME " + DirectorShowcase, "START " + DirectorShowcase, "READY",
+                "GAME " + DirectorShowcase, "START " + DirectorShowcase,
+                "SKIPPED unavailable: smoke", "READY",
                 "SCENE opening", "END opening completed",
-                "SCENE waiting", "SKIP " + DirectorShowcase, "END waiting skipped",
+                "SCENE waiting", "BEAT waiting poke",
+                "SKIP " + DirectorShowcase, "END waiting skipped",
                 "SCENE timeout", "END timeout timedOut",
                 "SCENE closing", "END closing completed",
                 "FINISHED " + DirectorShowcase,
             };
             Check("the director runs its scenes to FINISHED, logging each cue "
-                    + "in order",
+                    + "in order: a declined scene is SKIPPED before READY, "
+                    + "and a beat logs BEAT",
                 cues.SequenceEqual(expectedCues), string.Join(" | ", cues));
 
             List<NarrationRecord> said = director.NarrationLog.ToList();
@@ -990,24 +1122,80 @@ namespace BatshitTechnology
                 "Smoke narration: opening.",
                 "Smoke narration: opening completed.",
                 "Smoke narration: waiting.",
+                "Smoke narration: waiting poked.",
                 "Smoke narration: waiting skipped.",
                 "Smoke narration: timeout timed out.",
                 "Smoke narration: closing, said late.",
             };
             int lastLine = said.Count > 0 ? said[said.Count - 1].Tick : -1;
-            Check("narration says each scene's lines for how it ended, then "
-                    + "the closing message",
+            Check("narration says each scene's lines for how it ended and "
+                    + "for its beat, then the closing message",
                 said.Select(r => r.Text).SequenceEqual(expectedLines)
                     && showcaseSession.FarewellTick > lastLine,
                 $"said: {string.Join(" | ", said.Select(r => $"{r.Tick}: {r.Text}"))}; "
                     + $"closing message at {showcaseSession.FarewellTick}");
+            CheckNarrationNotInMessages(
+                liveBefore, handedBefore, said.Select(r => r.Text).ToList());
 
             List<string> warnings = ShowcaseWarningsSince(mark);
             Check("the directed run logs no Showcase API warning (camera moves, "
-                    + "selection, look targets and messages all worked)",
+                    + "selection and the narration overlay all worked)",
                 warnings.Count == 0, string.Join(" | ", warnings));
+            CheckRecordCues(mark, lent, quietWhileRunning, stageHash, reseeded);
+            CheckWeatherGivenBack(map, fog, "finishes");
             showcaseSession.ReleaseForTest();
+            PutBackStoryteller(smokeParts);
+            PutBackSmokeWeather(map);
         }
+
+        /// <summary>
+        /// Narration and the closing message go to the overlay, never to
+        /// vanilla's messages: the run added no live message and archived
+        /// none with a narration line's words, and the overlay was handed
+        /// every line said and then the closing message.
+        /// </summary>
+        /// <param name="liveBefore">The live messages before the run.</param>
+        /// <param name="handedBefore">Lines handed to the overlay before it.</param>
+        /// <param name="said">The lines the run said.</param>
+        private void CheckNarrationNotInMessages(
+            List<Message> liveBefore, int handedBefore, List<string> said)
+        {
+            string farewell = "BT_Showcases_Finished".Translate();
+            var words = new HashSet<string>(
+                said.Append(farewell), StringComparer.OrdinalIgnoreCase);
+            List<string> added = LiveMessages()
+                .Where(m => !liveBefore.Contains(m))
+                .Select(m => m.text)
+                .ToList();
+            List<string> archived = (Find.Archive?.ArchivablesListForReading
+                    ?? new List<IArchivable>())
+                .OfType<Message>()
+                .Where(m => m.text != null && words.Contains(m.text))
+                .Select(m => m.text)
+                .ToList();
+            NarrationOverlay overlay = showcaseSession.Narration;
+            int handed = overlay.LinesSaid - handedBefore;
+            Check("narration and the closing message go to the overlay, never "
+                    + "to vanilla's messages or the archive",
+                LiveMessagesField != null && added.Count == 0
+                    && archived.Count == 0 && handed == said.Count + 1
+                    && overlay.LastLine == farewell,
+                (LiveMessagesField == null
+                    ? "Messages.liveMessages not found; "
+                    : $"live messages added: {string.Join(" | ", added)}; ")
+                    + $"archived: {string.Join(" | ", archived)}; overlay "
+                    + $"handed {handed} of {said.Count + 1} lines, the last "
+                    + $"'{overlay.LastLine}'");
+        }
+
+        /// <summary>
+        /// Vanilla's live messages now (a copy), or an empty list if they
+        /// cannot be read.
+        /// </summary>
+        /// <returns>The messages.</returns>
+        private static List<Message> LiveMessages() =>
+            (LiveMessagesField?.GetValue(null) as List<Message>)?.ToList()
+                ?? new List<Message>();
 
         /// <summary>
         /// A directed showcase whose scenes throw keeps going: a scene whose
@@ -1233,6 +1421,7 @@ namespace BatshitTechnology
         /// <param name="map">The map.</param>
         private void BeginStopRun(Map map)
         {
+            SetSmokeWeather(map, "Fog");
             showcaseSession.AdoptForTest(ShowcaseLibrary.Named(DirectorShowcase), map);
             stopRun = showcaseSession.Worker as ShowcaseDirector;
             Tick(2);
@@ -1338,6 +1527,9 @@ namespace BatshitTechnology
         {
             WaitFrames("caption bar paints", 5),
             new FrameStep("caption bar check", false, CheckCaptionBar),
+            new FrameStep("narration lines", false, SayOverlayLines),
+            new FrameStep("narration replaced", false, CheckOverlayReplaced),
+            new FrameStep("narration fits at 4K", true, CheckNarrationFits),
             new FrameStep("glide then cut", false, StartGlideThenCut),
             new FrameStep("cut holds", false, CheckCutHolds),
             new FrameStep("main menu draw", true, CheckMenuButtonDraws),
@@ -1437,6 +1629,120 @@ namespace BatshitTechnology
                 $"running {showcaseSession.Running}; painted "
                     + $"{showcaseSession.CaptionBarFrames} frames; failed "
                     + showcaseSession.CaptionBarFailed);
+            return true;
+        }
+
+        /// <summary>
+        /// Starts the overlay test: the second run, still playing (paused),
+        /// says a long line and then a short one through the worker.
+        /// </summary>
+        /// <returns>True: the step is complete.</returns>
+        private bool SayOverlayLines()
+        {
+            overlaySaidAt = Time.realtimeSinceStartup;
+            overlayFramesBefore = showcaseSession.NarrationFrames;
+            stopRun?.Say("smoke", OverlayLongLine, null);
+            stopRun?.Say("smoke", OverlayNextLine, null);
+            return true;
+        }
+
+        /// <summary>
+        /// Waits, in real frames, for the overlay to show the last line
+        /// said: each line replaces the one before after its base time
+        /// (2.5 s), not its full reading time, and is painted. Gives up
+        /// after <see cref="OverlayReplaceSeconds"/>.
+        /// </summary>
+        /// <returns>True once the line shows or the time is up.</returns>
+        private bool CheckOverlayReplaced()
+        {
+            NarrationOverlay overlay = showcaseSession.Narration;
+            string last = stopRun?.NarrationLog.LastOrDefault()?.Text;
+            float waited = Time.realtimeSinceStartup - overlaySaidAt;
+            bool shows = last != null && overlay.CurrentLine == last
+                && overlay.Alpha(NarrationOverlayDrawer.Now) > 0.5;
+            if (!shows && waited < OverlayReplaceSeconds)
+            {
+                return false;
+            }
+
+            int painted = showcaseSession.NarrationFrames - overlayFramesBefore;
+            Log.Message($"[BT-SMOKE] NOTE narration overlay: font size "
+                + $"{NarrationOverlayDrawer.LastFontSize} (Medium "
+                + $"{NarrationOverlayDrawer.MediumSize}); the last line showed "
+                + $"{waited:0.0} s after it was said; {painted} frames painted");
+            Check("the narration overlay's current line is the last line said, "
+                    + "replacing the one before after its base time, painted in "
+                    + "real frames",
+                shows && last == OverlayNextLine && painted > 0
+                    && !showcaseSession.NarrationFailed,
+                $"current '{overlay.CurrentLine}', last said '{last}', after "
+                    + $"{waited:0.0} s; waiting "
+                    + $"{string.Join(" | ", overlay.WaitingLines)}; painted "
+                    + $"{painted} frames; failed {showcaseSession.NarrationFailed}");
+            return true;
+        }
+
+        /// <summary>
+        /// The screen the narration overlay is checked for, in UI units: a
+        /// 3840 by 2160 screen at 2x UI scale (the operator's).
+        /// </summary>
+        private const float FourKAt2xWidth = 3840f / 2f;
+
+        /// <summary>
+        /// Every narration line of every showcase, measured inside a repaint
+        /// as the overlay draws it on a 3840-pixel screen at 2x UI scale:
+        /// each must wrap to at most two lines at the Medium size or more,
+        /// and the font must have a glyph for each of its characters (the
+        /// em dash among them). Logs the stampede's volley line's size.
+        /// </summary>
+        /// <returns>True: the check runs in one frame.</returns>
+        private bool CheckNarrationFits()
+        {
+            var problems = new List<string>();
+            int lines = 0;
+            int smallest = int.MaxValue;
+            foreach (ShowcaseDef def in DefDatabase<ShowcaseDef>.AllDefs)
+            {
+                foreach (ShowcaseNarrationLine line in def.narration
+                    ?? new List<ShowcaseNarrationLine>())
+                {
+                    if (line?.text == null)
+                    {
+                        continue;
+                    }
+
+                    (int size, int wraps, string missing) =
+                        NarrationOverlayDrawer.Probe(line.text, FourKAt2xWidth);
+                    lines++;
+                    smallest = Math.Min(smallest, size);
+                    if (wraps > NarrationOverlayLayout.MaxLines
+                        || size < NarrationOverlayDrawer.MediumSize
+                        || missing.Length > 0)
+                    {
+                        problems.Add($"{def.defName} {line.scene}/{line.when}: "
+                            + $"{wraps} lines at size {size}"
+                            + (missing.Length > 0
+                                ? $", no glyph for [{missing}]"
+                                : string.Empty));
+                    }
+
+                    if (line.scene == TourScript.Stampede && line.when == "volley")
+                    {
+                        Log.Message("[BT-SMOKE] NOTE narration at 3840x2160, 2x: "
+                            + $"the stampede's volley line ({line.text.Length} "
+                            + $"characters) fits {wraps} lines at size {size} "
+                            + $"(Medium {NarrationOverlayDrawer.MediumSize}), "
+                            + $"glyphs missing [{missing}]");
+                    }
+                }
+            }
+
+            Check("every narration line fits the overlay in two lines at "
+                    + "3840x2160 and 2x UI scale, with a glyph for every character",
+                lines > 0 && problems.Count == 0,
+                $"{lines} lines measured, smallest size "
+                    + $"{(lines > 0 ? smallest : 0)}; "
+                    + string.Join("; ", problems));
             return true;
         }
 
@@ -1818,7 +2124,9 @@ namespace BatshitTechnology
         /// <summary>
         /// Stops the second run, as the Stop button does: its scene ends as
         /// stopped, no later scene runs, and only the stop's own line is
-        /// said. A stopped showcase game still never autosaves; released
+        /// said. The overlay is cleared at once, so that line shows alone,
+        /// with nothing fading out under it. A stopped showcase game still
+        /// never autosaves; released
         /// to an ordinary game, it autosaves as usual, and the player's
         /// autosave setting is unchanged. Then removes the test showcases.
         /// </summary>
@@ -1845,6 +2153,21 @@ namespace BatshitTechnology
                 $"running {showcaseSession.Running}; state {stopRun?.State}; endings "
                     + $"{(stopRun == null ? "none" : Endings(stopRun))}; cues "
                     + $"{string.Join(" | ", cues)}; lines {string.Join(" | ", lines)}");
+            CheckStopRestoresStoryteller(mark);
+            Map stopMap = stopRun?.Map ?? Find.CurrentMap;
+            CheckWeatherGivenBack(
+                stopMap, DefDatabase<WeatherDef>.GetNamedSilentFail("Fog"), "is stopped");
+            PutBackSmokeWeather(stopMap);
+
+            NarrationOverlay overlay = showcaseSession.Narration;
+            Check("Stop clears the narration overlay at once: the stopped "
+                    + "scene's own line shows alone",
+                overlay.CurrentLine == "Smoke narration: opening stopped."
+                    && overlay.OutgoingLine == null
+                    && overlay.WaitingLines.Count == 0,
+                $"current '{overlay.CurrentLine}', outgoing "
+                    + $"'{overlay.OutgoingLine}', waiting "
+                    + string.Join(" | ", overlay.WaitingLines));
 
             CheckAutosaveSuppressed("a stopped showcase game still never reaches "
                 + "its autosave");
@@ -1991,11 +2314,16 @@ namespace BatshitTechnology
         /// <summary>
         /// The Showcase API's log cues since a message, without the prefix.
         /// Cues are plain messages; the API's errors and warnings share the
-        /// prefix but are not cues.
+        /// prefix but are not cues. The record cues (SEED, MAPHASH,
+        /// STAGEHASH, STORYTELLER: what a run was, not how it went) are
+        /// left out unless asked for, so a check of a run's flow names
+        /// only its flow.
         /// </summary>
         /// <param name="mark">The last message before; null for all.</param>
+        /// <param name="withRecords">Whether to keep the record cues.</param>
         /// <returns>The cues, in order.</returns>
-        private static List<string> ShowcaseCuesSince(LogMessage mark)
+        private static List<string> ShowcaseCuesSince(
+            LogMessage mark, bool withRecords = false)
         {
             IEnumerable<LogMessage> since = mark == null
                 ? Log.Messages
@@ -2005,6 +2333,7 @@ namespace BatshitTechnology
                 .Where(m => m.type == LogMessageType.Message && m.text != null
                     && m.text.StartsWith(prefix, StringComparison.Ordinal))
                 .Select(m => m.text.Substring(prefix.Length))
+                .Where(c => withRecords || !IsRecord(c))
                 .ToList();
         }
 

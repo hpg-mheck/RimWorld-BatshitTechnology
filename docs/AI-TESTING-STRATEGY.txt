@@ -8,12 +8,67 @@ run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
     dotnet test Tests/BatshitTechnology.Tests/BatshitTechnology.Tests.csproj
 
 - Core library logic: WeightedSelector, ReactorHeat, and whatever else
-  moves into BatshitTechnology.Core.
+  moves into BatshitTechnology.Core, including the multi-bomb physics
+  (PullSuperposition, with property-style tests over many seeds through
+  its seedable SeededUnitRandom), and the directed tour's script, stage
+  planner and tractor layouts (TourScriptTests, TourStagePlannerTests,
+  TractorLayoutTests: the yard and pads keep their distances, the twin
+  pulls overlap, the barn stands beyond the tour's Popular pull and
+  Block Party blast with the scene's Nosy robot, a Prudent one would
+  reach it, and the stray stands in the pull, outside the blast, and
+  retreats clear in time), and the Tractor Bomb's named settings
+  (TractorBombYieldTests, TractorBombProximityTests,
+  TractorBombDialsTests: the operator's names and radii, the defaults
+  before Dial-A-Yield, older saves' numbers and Dispositions snapping to
+  stops, the menu entries and the pane's summary).
+- XML tests for the directed tour (TourXmlTests): BT_Showcase runs on
+  BatshitTourDirector; its scene keys are Core's TourScript, in order,
+  each with a class declared in Source/, a short title, sane timing and
+  zooms; every script moment and outcome has a line, no line names an
+  unknown one, and every line keeps The Story's voice (one line, at most
+  96 characters, no "!", no player, mod, game, showcase or click); the
+  film ends on the twins' line and the byline; and Core's robot sight
+  matches the robot's def.
 - XML regression tests over Defs/, About and Textures/: the corrected v0.2
   values (so those bugs cannot return), research, recipes, the reactor,
   every BT_ cross-reference, every mod texture path, and two RimWorld
   config rules found by the smoke test (impassable buildable buildings need
   fillPercent 1; minifiable buildings need a thing category).
+- XML tests for the Tractor Barn: its cost, research, size, Bills tab
+  and one autonomous recipe (60 steel, 3 components, 5 batshittium, a
+  forming time, the bomb counter, no products), the Hauling bill giver,
+  the steel repair hopper with no toggle, the dock job, its tyre
+  stampede, and that the machining-table stopgap is gone.
+- XML tests over Patches/ and the specs where text must match: the
+  Tractor Bomb's twenty "making peace" lines are unique, lowercase and
+  the same as docs/TRACTOR-BOMB.md's list; the flee patch prepends its
+  job giver inside the mental-state gate of exactly the humanlike,
+  animal and insect constant trees. Where RimWorld is installed
+  (RIMWORLD_DIR or the default Steam path), the patch is applied to the
+  game's own think trees, and every Core and DLC pawn or critter race is
+  checked to run one of the patched trees.
+
+Python tests (python -m unittest discover -s Tools/tests): the texture
+generator and the Ubersight status writer, and, from the review fixes of
+slice 18000, the trial tools (test_trial_tools.py), which drive
+Tools/tour-trials.ps1 and Tools/smoke-test.ps1 under every PowerShell
+edition found (pwsh and Windows PowerShell 5.1) without starting
+RimWorld: -Collect over trial folders made by the test (a seed's runs
+compared only where two or more logged a hash, runs without one counted;
+seeds that differ in case are two seeds; no wallSeconds without a
+recorded end; a stopped run's problem.txt read back; maps holding
+layouts listed), duplicate seeds refused before any run starts, a
+relative -OutDir and -DataFolder made absolute, and, dot-sourced, a
+game never taken for a run's own without its recorded start time.
+Slice 19000b added -Presentation's checks there (refused without
+-Verify; against a fake RimWorld, the prefs it writes: no dev mode, no
+Learning helper, 1920 by 1080 at 1x, muted, where a plain verify run
+keeps dev mode at 1280 by 720) and test_contact_sheet.py, which makes
+small PNG frames with zlib and runs Tools/contact-sheet.ps1 under both
+editions: a sheet per scene (READY's frame opening the first, a
+hyphenated scene key kept whole), -PerSheet's fixed counts, frames
+scaled to the tile width, the default sheets folder beside shots, and a
+folder without frames failing.
 
 ## 2. Def validation against the game assembly (under a minute)
 
@@ -22,7 +77,12 @@ run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
 A static stand-in for RimWorld's XML loader. Every element must map to a
 real field of the 1.6 game types (nested objects and [LoadAlias] included),
 enum values must parse, classes must resolve, Def references must exist in
-vanilla or the mod, and texture paths must resolve. Exits 1 on problems.
+vanilla or the mod, and texture paths must resolve. Patches/ too: each
+operation's class and fields, each XPath against vanilla's and the mod's
+defs merged as the game merges them (it must select something), and
+whatever an Add or Insert adds, against the field it lands in (a
+non-ThinkNode added to a think tree's subNodes fails). Exits 1 on
+problems.
 It cannot run RimWorld's own ConfigErrors logic; layer 3 covers that.
 
 ## 3. In-game smoke test (about three minutes)
@@ -46,28 +106,134 @@ the surviving colonist gets the memory), and each device's pulverization
 blast (rock spewed, colonist stunned, bolts cooked off and
 none spilled, half-made bolts sprayed). It also packs up (minifies) every
 device and ticks the packages, watching RimWorld's log queue for errors,
-and checks a singularity's pull shoves no item away and loses none. The
-script counts an error as the mod's when its line or its stack trace
-mentions the mod or carries the Showcase API's [BT-SHOWCASE] prefix;
-RimWorld 1.6 puts a "[Ref 9E9A3C82]"-style line between an error and its
-trace, which the script reads as part of the trace. As its last check the
-runner reads RimWorld's own log queue and fails on any error (or any
-warning about the mod, about statically held assets, or carrying the
-Showcase API's [BT-SHOWCASE] prefix, which reports swallowed failures)
-logged during the run, since Player.log does not mark errors as errors.
-The only exceptions are messages a check provokes on purpose (scenes made
-to throw, a stale launch request): the runner records them, announces
-each as "[BT-SMOKE] EXPECTED <first line>", and the script leaves exactly
-those lines out of its own Player.log scan. Before the
-destructive tests the runner removes the other devices with
-DestroyMode.Vanish, so a random 5% damage trigger cannot set one off
-mid-test. The script reports those lines plus every error in the game log
-and exits 1 on any failure or mod error. Use -KeepOpen to look around
-afterwards, or -Showcase to skip the tests and start the BT_Showcase
-showcase through the Showcase API instead (-showcase=BT_Showcase: the demo
-base of Source/Showcase.cs), with sound on. -Showcase waits for
-[BT-SHOWCASE] READY and leaves the game running; it exits 1 at once on a
-REFUSED or FAILED cue, and also if the mod logged an error before READY.
+and checks a singularity's pull shoves no item away and loses none. It
+also hosts the shared implosion (Source/Implosion.cs) directly, as the
+Tractor Bomb will: everything within 10 tiles ends within 1.5 of its
+centre, some of it by slipping sideways into the pile; it reports itself
+gathered before its time is up, then settled; nothing is shoved away or
+lost. The Tractor Bomb (TestTractorBomb, with the destructive tests)
+runs on a stage cleared at the map's middle, with fires out, hostiles
+gone and every colonist drafted well away: the robot is its own race
+(not a mechanoid, no needs or mood, an allowed area, a sensible inspect
+pane naming its settings, only its Proximity button before
+Dial-A-Yield, which keeps Pull and Blast at the defaults whatever is
+set); it patrols inside a 15 by 15
+area; the temporary recipe drives one out; a robot spots a stunned
+raider 37 tiles off, emplaces within 15 tiles at once, and its bomb is
+armed only once its 3-5 s countdown starts, pulls eleven unmergeable
+stacks and a second raider to within 1.5 tiles or into the blast,
+leaves steel 28 tiles off alone, and explodes over 7.5 tiles (the
+defaults, Neighborly at 22.5 tiles and Firework); a colonist four tiles
+off delays
+emplacing by three seconds, then it emplaces anyway; Dial-A-Yield gives
+Pull and Blast buttons whose menus name each stop with its size, two
+robots' buttons group and one choice sets both, Intimate and Birthday
+Cake (9 and 3 tiles) change what is caught, and the planted bomb names
+its settings and keeps its buttons only until it pulls; the barn's
+settings go with its new robots, its own buttons set them, and "Apply
+to every tractor" reaches robots and bombs not yet pulling but not one
+already pulling, and its own count of each matches the robots and
+not-yet-pulling bombs counted independently; with two barns selected
+"Apply to every tractor" is disabled with its reason and never runs
+once per barn; older saves (a Disposition, dialled radii) load as
+named stops through RimWorld's own loader (a dialled pull snapping
+against the old stops, 6, 15 and 22.5, and then pulling at today's
+radius), the planted bomb through
+its own ExposeData (so Thing's "def" and "id" and the bomb's legacy
+loader all run); and a killed
+robot's vortex pops without touching anything, as does one that loses
+its wheels. Everyone else runs (TestTractorBombFlee, on freshly made,
+undrafted, healthy pawns, with the countdown held at 5 s): a colonist
+20 tiles and a muffalo 21 tiles from an armed bomb sprint past 30.5
+tiles before its pull starts; a colonist 3 tiles off freezes where it
+stands with one of the twenty "making peace" lines, unchanged, until the pull
+seizes it and
+its freeze ends; a berserk colonist and a manhunting muffalo in plain
+sight neither run nor freeze; a muffalo seized mid-run by a pull started
+early (ImplodeNow) is released from its flee and given nothing while
+the pull runs; and none of it logs an error. Each proximity stops at
+its own distance from a raider standing still 37 tiles off (Timid 15,
+Prudent 14, Nosy 3), set through the Proximity button's menu, and a new
+robot is Prudent.
+Hostiles react individually (SmokeTest.TractorBombHostiles.cs): in a
+seeded run, fifteen raiders in sight of an armed bomb each keep the roll
+Core's TractorBombHostiles gives them and act on it (flee on the think
+they notice it, hesitate two to two and a half seconds, or never react),
+at least four of each, and no roll changes; a colonist among them bails
+at once without rolling.
+Twin bombs (SmokeTest.TractorBombTwins.cs, seeded): in a junkyard of
+slag, rock chunks, loose stacks, shelves of items and ancient crates,
+fourteen armed raiders hold position (stunned until both robots plant,
+then reacting as they roll) while two Nosy robots drive in from either
+side and plant 14 tiles apart; both pulls start on the same tick. Watched
+every tick: both bombs go off; each pull keeps to its 2 s minimum and 8 s
+maximum; the junk's totals never fall without a blast; no move goes
+against the net pull (under one pull it must be strictly closer, under
+two the unjittered potential may rise no more than the jitter allows)
+and nothing is shoved; a pawn any pull holds stays held; things that were
+in the overlap end merged, tipped off to one bomb, in a pile, at a
+balance point or blocked, at least one at a balance point; and a raider
+held between the pulls is stretched, none that never was. Then two
+superposed bombs four tiles apart: one is hit and goes off within two
+ticks, its pull closes and leaves the drag at the next tick, its blast
+sets off the other while it pulls, and no pull outlives its bomb.
+Shooting planted bombs (SmokeTest.TractorBombHits.cs): a revolver bullet
+striking a bomb in its countdown starts its pull within two ticks; a
+second, striking it while it pulls, sets off its blast within two ticks,
+before it has gathered anything; that blast sets off a bomb planted 4
+tiles off, which the pull never moved; and no hit leaves a death
+vortex.
+The Tractor Barn
+(SmokeTest.TractorBarn.cs): "Build one now" adds a "Do 1 times" bill; a
+colonist who may only haul loads that bill's parts into the barn and is
+then removed, and the barn builds the robot alone in about an hour,
+drives it out of its door, uses up the parts and closes the bill; with a
+patrolling robot and a bomb planted far off, a "Do until you have X"
+bill set one above that count builds exactly one robot and then stays
+idle with a second set of parts lying ready; and a robot with a wheel
+off and under half health drives home, docks at the door and is mended
+and refitted for exactly the steel and time Core's TractorBarnRepair
+predicts, then drives off on patrol. A destroyed barn flings its spare
+tyres (TestDeathBlasts). Unit tests cover its pure logic
+(TractorBombYield, TractorBombTiming, DeathVortexMath, TractorBombFlee,
+TractorBarnRepair, TractorBombApproach, TractorBombHostiles,
+ImplosionMath.IsOver, PullSuperposition: one jittered pull never moves
+anything away from its centre and gathers it in as many steps as ever,
+over many seeds and positions; two equal pulls cancel along the line
+between them without jitter, and with it a thing at the midpoint tips
+off at once toward the pull its bias favours; net directions round to
+grid steps; the durations' minimum and maximum; the jitter's bounds and
+seedability; tension and stretching damage). Each new check was proved
+by a run that broke its behaviour first.
+
+The runner silences the storyteller at the start, so no raid lands in
+the middle of a check (one raid sent pirates round a long-range Ballista
+and probably spent the Artificer's bolts), and quiets the map (fires
+out, hostiles gone, colonists drafted) before the implosion check. It
+counts bolts in pawns' hands and pockets, and bolts fired, when it
+checks the Artificer, and regenerates the raiders' avoid grid with a
+325-tile Ballista to catch the radial-limit error.
+
+The script counts an error as the mod's when its line or its stack trace
+mentions the mod or carries the Showcase API's [BT-SHOWCASE] prefix; RimWorld
+1.6 puts a "[Ref 9E9A3C82]"-style line between an error and its trace, which
+the script reads as part of the trace. As its last check the runner reads
+RimWorld's own log queue and fails on any error (or any warning about the mod,
+about statically held assets, or carrying the Showcase API's [BT-SHOWCASE]
+prefix, which reports swallowed failures) logged during the run, since
+Player.log does not mark errors as errors. The only exceptions are messages a
+check provokes on purpose (scenes made to throw, a stale launch request): the
+runner records them, announces each as "[BT-SMOKE] EXPECTED <first line>", and
+the script leaves exactly those lines out of its own Player.log scan. Before
+the destructive tests the runner removes the other devices with
+DestroyMode.Vanish, so a random 5% damage trigger cannot set one off mid-test.
+The script reports those lines plus every error in the game log and exits 1 on
+any failure or mod error. Use -KeepOpen to look around afterwards, or
+-Showcase to skip the tests and start the BT_Showcase showcase through the
+Showcase API instead (-showcase=BT_Showcase: the demo base of
+Source/Showcase.cs), with sound on. -Showcase waits for [BT-SHOWCASE] READY
+and leaves the game running; it exits 1 at once on a REFUSED or FAILED cue,
+and also if the mod logged an error before READY.
 Both are for a person to watch, so the game window is maximized (once the
 runner reports DONE or the showcase logs READY) and the UI is scaled 2x;
 plain test runs stay small and muted.
@@ -75,20 +241,27 @@ plain test runs stay small and muted.
 The runner also builds AnyRim, the showcase's test town, after the
 non-destructive tests: it checks the build report, every placement,
 enclosed and reachable rooms, roofs, the firebreak, power, the reactor's
-heat ring, the eight residents and their lords, the census, and a clean
-demolition, then takes the town down before the destructive tests, whose
+heat ring, the nine residents and their lords (Ned, the bank's guard,
+holding his grenade, nobody else armed, and the grenade still in his hand
+600 ticks later), the census, and a clean demolition, then takes the town
+down before the destructive tests, whose
 blasts would reach it. The town's geometry is unit tested in Core
 (TownPlanTests, TownSiteTests and others), including a catalogue check
 against RimWorld's own Defs where the game is installed.
+
+If the Random Replicator has gone before its detonation test, a check
+fails saying how, and a fresh one stands in so the run continues.
 
 Last of all, the runner checks the Showcase API
 (Source/SmokeTestShowcases.cs). Its test showcases are made in code,
 added to the def database under this mod beside BT_Showcase, and removed
 again afterwards; an XML test pins that none is ever shipped. Ticking
 inside the frame, it checks that under -quicktest the main menu left
--showcase= to the quick-test game; that the menu button is the mod's
-only Harmony patch (from Harmony's own patch listing, counting any patch
-under the mod's id or from its assemblies); that the main menu's column
+-showcase= to the quick-test game; that the menu button's postfix and
+the map seed's prefix (on Map.NextGenSeed) are the mod's only Harmony
+patches, both under the button's Harmony id (from Harmony's own patch
+listing, counting any patch under the mod's id or from its assemblies,
+with each patch's owner); that the main menu's column
 is recognised by each of its gates on its own (lists made in code, with
 a positive control); that the launcher refuses a missing showcase, any
 showcase from inside a game, and a fatal one from the menu's state,
@@ -102,15 +275,28 @@ that a four-scene director showcase, run through the game's own session,
 frames a cut shot, selects its subject, captions "2 of 4", obeys Skip,
 times out a scene that never ends, logs its cues in order to FINISHED,
 says each outcome's narration before the closing message, and logs no
-[BT-SHOWCASE] warning; that scenes throwing in Setup, Tick, IsDone and
-End log one error each while the tour goes on (a set-up fault never
-begins, Tick and IsDone faults end Failed, with the right cues, endings
-and narration); that god mode is lent only in dev mode, a developer's
+[BT-SHOWCASE] warning; that its narration and closing message go to the
+narration overlay and never to vanilla's messages (no live message
+added, none archived with a narration line's words, and the overlay
+handed every line and then the closing message); that scenes throwing
+in Setup, Tick, IsDone and End log one error each while the tour goes
+on (a set-up fault never begins, Tick and IsDone faults end Failed,
+with the right cues, endings and narration); that god mode is lent only in dev mode, a developer's
 own is kept, and it is given back by Stop, at FINISHED, at the main
 menu, and by a loaded or new game; that the session writes nothing into
 a save (its scribed output is an empty element); and that a showcase
 game never reaches its autosave. Then it runs a few real frames, for
-what only drawing and input show: the caption bar paints; a cut right
+what only drawing and input show: the caption bar paints; the
+narration overlay, given a long line and then a short one, shows the
+short one, the last said, within 7 seconds (each replaces the line
+before after its 2.5-second base time, not its full reading time) and
+paints it, logging a NOTE with the font size and the wait; every
+narration line of every showcase, measured inside a repaint as the
+overlay draws it on a 3840 by 2160 screen at 2x UI scale (1,920 UI units
+wide, so 1,100 to wrap in), wraps to two lines or fewer at the Medium
+size or larger, with a glyph in the font for each character (slice
+14000, for the operator's 115-character volley line and its em dashes;
+a NOTE gives that line's size); a cut right
 after a glide still holds after half a second of frames; vanilla's main
 menu, drawn off screen with the program state set to Entry for that one
 call, gets exactly one Showcases button with its keyed text loaded, and
@@ -119,12 +305,87 @@ which list the mod and its showcases, grey out the missing-mod showcase
 with its reason, refuse the fatal one while offering Force start, and
 honour Back and Escape (a real key-down event is made current while the
 window stack handles the cancel key); Stop ends a run with no later
-scene; a stopped showcase game still never autosaves, an ordinary one
-does, and the autosave setting is unchanged; and, 30 frames later, when
+scene, and clears the overlay at once, leaving the stopped scene's own
+line alone on it; a stopped showcase game still never autosaves, an
+ordinary one does, and the autosave setting is unchanged; and, 30 frames later, when
 a queued autosave would have been written, the save folder has gained
 and changed no files. DONE waits for these frame steps, for 120 seconds
 at most. Every one of these checks was seen to fail against a sabotaged
-build (docs/AI-DECISIONS.txt, 2026-10-14, slices 6000 and 8000).
+build (docs/AI-DECISIONS.txt, 2026-10-14, slices 6000 and 8000; the
+overlay's three, Tractor Bomb slice 13000), except the 4K narration
+check, which was not sabotaged.
+
+Slice 18000 added seven (Source/SmokeTestShowcases.Seeds.cs): a launch's
+seed is the def's, else a fresh random one each launch, and the smoke
+run passes none on the command line; a malformed def seed is a
+configuration error; reseeding the global random state repeats a seed's
+draws and another seed draws differently (the run's own state is put
+back); the map fingerprint is stable, draws nothing from Rand, sees a
+stack of steel come and go, and covers every cell and pawn; the directed
+test run holds a harmless storyteller part from its start and gives it
+back just after FINISHED; STAGEHASH comes just before READY with the
+session's fingerprint, and an adopted run logs no SEED or MAPHASH and
+does not reseed; and Stop gives the storyteller its parts back. The
+record cues are left out of the older checks' cue sequences. All seven
+failed against the slice's sabotage build (docs/AI-DECISIONS.txt).
+
+The map seed's patch (slice 18000, after requests item 22) added two,
+and the patch check above now expects both patches. In the smoke run's
+ordinary game (a quick test, never a showcase) the map seed's window is
+closed and the patched Map.NextGenSeed gives vanilla's own value,
+System.HashCode.Combine of the map's place, counter and world seed,
+computed through that same method by reflection in the same process
+(the mod compiles against .NET Framework 4.7.2, which lacks it); the
+counter advances by one, and the call counts as passed through. It
+stays vanilla with the window open for another game (an uninitialised
+Game object). With the window open for the smoke game itself, the
+getter gives ShowcaseMapSeed.Combine of the same inputs
+(Gen.HashCombineInt), counts one pin, and closing the window says one
+seed was pinned and makes the next call vanilla's again. Both put the
+map's counter back. The adopted run's record check also expects no
+MAPSEED cue.
+
+The review fixes of slice 18000 added three. A failed launch drops its
+request and closes the map seed's window, saying so: a request for the
+smoke game is planted, the window opened for it, and the launch
+abandoned as a failed preparation would (two warnings, expected).
+The settle hold outlasts a screen fade: the smoke game is held, a 30 s
+fade to clear started (RimWorld then refuses any change of speed), the
+release tried (it must keep the hold, still paused), the fade ended and
+the release tried again (it must take). A Ballista volley sends wild
+birds near its target off the map before its bolts land: a wild quail
+(Odyssey) is put down within 4 tiles of the Ballista's target and four
+explosive bolts fired; at the tick the volley leaves the quail must
+already be on vanilla's ExitMapFlying job (vanilla alone sends it only
+as the first bolt lands, and restarts the job on every blast after,
+which past ten in one tick logs "started 10 jobs in one tick"), and it
+must leave unhurt, with no error logged. Without Odyssey's quail the
+check is skipped with a note.
+
+Slice 19000a added five for the Showcase API's held weather
+(Source/SmokeTestShowcases.Weather.cs). The directed test showcase holds
+Clear, and the smoke game's weather is set to fog before each run: the
+hold replaces the fog at once as the run begins; it undoes another
+weather (rain, its age set to 5,000) on the next tick, with the age back
+under WeatherHold.MaxHeldAge and one restart counted; a scene that
+borrows the weather keeps its rain while it runs and the hold takes it
+back by itself once that scene is skipped; and the fog is given back
+when the run finishes and when the second run is stopped. The smoke
+game's own weather is put back after each.
+
+Slice 19000b added seven for the quiet screen
+(Source/SmokeTestShowcases.QuietScreen.cs; docs/SHOWCASE-API.md, "The
+Quiet Screen"), with test showcases adopted in the smoke game: a showcase
+that asks lends the storyteller def's alert and adaptive-training flags
+(no alerts, no Learning helper) and leaves the player's preferences
+alone; at the next update a letter that arrived and every top-left
+message are gone while a letter from before stays; the flags follow a
+change of storyteller (the new def's lent, the old def's given back);
+Stop gives them back and letters arrive again; a showcase that finishes
+gives them back; leaving the game (the main menu, a loaded game, a new
+game) gives them back; and a showcase that does not ask leaves the
+screen alone. The session's update is called by hand there, since the
+runner's ticks run without frames.
 
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
@@ -133,6 +394,442 @@ scenarios go last. Checks that need drawing or input run as frame steps
 (FrameStep in Source/SmokeTestShowcases.cs), each in a frame update or
 in a repaint event: GUI calls need a repaint event, and Event.Use()
 belongs on input events only, never on a repaint or layout event.
+
+## 4. The tour verifier (a few minutes)
+
+    .\Tools\smoke-test.ps1 -Showcase -Verify
+
+starts BT_Showcase through the Showcase API, as -Showcase does (the API
+quiets the storyteller for every showcase, so no raid lands mid-tour;
+hostiles the map starts with stay), and adds -bttourverify and
+-bttourskip=anyrim (-TourSkip changes the list; pass -TourSkip '' to
+run all ten scenes). -Seed <text> generates from that seed
+(-showcaseseed=), and -Shots saves the game's own frame (Unity's
+ScreenCapture, so windows over the game do not matter) for READY and
+each SCENE, BEAT and END cue, one a frame, to
+<DataFolder>\shots\NN-<scene>-<cue>.png (about 50 shots and 56 MB for
+an all-scene tour). Since slice 19000b each frame is taken a few ticks
+after its cue, so the action is in it (Core's TourShotTiming): READY and
+END at once, SCENE after 20 ticks, a beat after 30 unless its kind needs
+more or less (a pull 60, things on the move; the herd 45; a blast 15,
+the fireball spreading, but the replicator's 45 and the reactor's
+barrage 100; a throw 10, the grenade in the air). Since slice 19000d a
+volley's frame (the defence's, the stampede's and its stragglers') is
+taken 8 ticks after the first of the mod's bolts in flight is seen to
+land, or at 300 ticks if none is. Frames are taken in the order their
+cues came (a later one waits for an earlier), any frame is taken after
+8 s of real time if its tick does not come, and the game quits only
+once every frame asked for is saved.
+Tools\contact-sheet.ps1 -Path <DataFolder> tiles them into
+<DataFolder>\sheets\NN-<scene>.png, one sheet per scene with each
+frame labelled by its name (-PerSheet N for a fixed count instead);
+read the sheets, not the frames. -Presentation (with -Verify) makes the
+run a presentation: the verifier leaves the tour at its own speed
+(-btpresentation; normal speed, about eight minutes for all ten
+scenes, so the timeout defaults to 2400 s), with no dev mode and no
+Learning helper, muted, in a 1920 by 1080 window at 1x UI: the layout a
+viewer sees in the maximized 2x window on a 4K screen (an effective
+1920 by about 1050), so -Shots frames show what a viewer sees. (1600 by
+900 at 2x, the viewing run's window before it is maximized, is an
+effective 800 by 450, which RimWorld 1.6 refuses outside dev mode: it
+logs "Resolution too small" and resets the scale.) The raccoon scene
+needs the town
+shown first, so it declines whenever the AnyRim scene is forced to, and
+the default run skips both. The verifier
+(Source/SmokeTestTour.cs, part of the smoke runner) forces the listed
+scenes to decline, waits for READY, switches to Superfast and watches
+every tick: the scene running and its caption, the counters as each scene
+begins, the world facts as each ends, and colonists' deaths. After
+FINISHED and the farewell it checks that:
+
+1. FINISHED was reached, with SCENE and END cues in TourScript order,
+   less any SKIPPED, and every forced skip declined; and every unforced
+   decline is justified by the stage itself (no yard in the planner's
+   plan, no pad device, no AnyRim, no able colonist, no Ned on duty),
+   judged without asking the scene;
+2. every scene ended Completed, with its world facts: the Ballista fired
+   no bolt outside the volley and the stampede; the pad device destroyed
+   and the aftermath idle; at least 16 bolts spent; the stampede's facts
+   (below); one more implosion for the grenade and for the raccoon, and
+   the raccoon's facts (below); tractor explosions up by 1 with the
+   Tractor Barn still standing after the pull, then by 2;
+   superposed pulls up for the twins; and every completed scene played
+   its beats (the parade's planned devices, else
+   TourScript.RequiredMoments, which leaves out only the tractor's
+   "doom" and the stampede's "stragglers", and lets "thrownAlone" stand
+   for "thrown");
+3. the captions read "i of N: title", worked out without the director:
+   the script's order less the forced and the declined, with the def's
+   titles (8 with AnyRim, and so the raccoon, skipped);
+4. the narration log holds every line the def gives for each SCENE,
+   BEAT and END cue, in cue order, under its scene, with a target;
+5. no colonist died but the grenade's volunteer (a death after
+   FINISHED, when the storyteller is back and the colony the viewer's,
+   is noted, not failed);
+6. nothing logged an error or a mod warning (the smoke runner's own
+   final check).
+
+Slice 18000 added the Showcase API's records. At READY: the storyteller
+is quiet (no part, nothing queued, parts held); the launch logged its
+seed in a SEED cue, from the source its precedence picks (the command
+line's when -Seed was passed, else the def's, else random); MAPHASH came
+before START and STAGEHASH just before READY, as the session holds them;
+and the stage was set up from the seed (reseeded) at tick 0, before the
+game's first tick. After the farewell: the storyteller stayed quiet until
+FINISHED and has its parts back, as many as were held. The map seed's
+patch added two: at READY, the patch is installed, MAPSEED comes right
+after GAME and before MAPHASH and says "pinned (<n> seeds)" with the
+session's count, at least one, every seed pinned in the process was
+pinned in that window, and the window is closed, so the prefix would
+pass this game's next seed through; after the farewell, no seed was
+pinned since READY and the window is still closed. The review fixes
+added one: at READY, the rest of the game's start, after its map, was
+drawn from the seed (the session reseeded in FinalizeInit and read the
+state the start left). MAPSEED's expected text now comes from Core's
+MapSeedCue with the layouts and landmark the session read, and a NOTE
+names the tile's landmark, its mutators and the map's layouts whose
+rooms the seed does not pin.
+
+Slice 19000a added the clean stage's checks
+(Source/SmokeTestTour.CleanStage.cs; docs/SHOWCASE.md, "A Clean Stage").
+At READY: no map hostile is left, dormant ones counted (hives, asleep or
+awake; hostile pawns, inactive or dormant ones included; pawns in the
+map's ancient caskets), no anima tree stands and no tree stands in the
+volleys' zone, which exists; and the def's weather is held and showing.
+Every tick until FINISHED it classifies each hostile pawn as it first
+appears: one a scene staged (TourScene.StagedHostiles: the herd, the
+raccoon, the raiders), one already on the map at READY that turned
+hostile (noted, not failed: a provoked wild animal), or one that
+appeared unstaged; and it counts the ticks on which the held weather did
+not show while no scene had borrowed it. At each scene's end three more
+world facts: no hostile appeared that the tour did not stage; no anima
+tree screamed (the colonists' AnimaScream memories did not grow); and
+the weather held (for a scene that borrowed it, the stampede, that it
+was given back by its end). After the farewell: no tick showed another
+weather, the session holds none, and a WEATHER cue gave it back after
+FINISHED. The SUMMARY (version 4) adds cleared, unstagedHostiles,
+turnedHostile, screams and weather.
+
+Slice 19000b added the quiet screen's checks
+(Source/SmokeTestTour.QuietScreen.cs). At READY: the def asks for a
+quiet screen, the session keeps it, the storyteller def's alerts and
+adaptive training are off (so no alert and no Learning helper), and no
+DEV button shows (the tour lends no god mode). Every tick while the
+showcase runs it counts ticks on which any of that was not so; every
+frame until FINISHED it notes any letter that arrived after READY, and
+any top-left message, still on screen a frame later (two consecutive
+frames' samples, so it does not matter whether it runs before or after
+the session's own update). At each scene's end one more world fact: the
+screen stayed quiet. After the farewell: nothing is lent and the
+storyteller def's alerts and adaptive training are on again. The
+SUMMARY (version 5) adds screen (frames sampled, lettersTakenOff,
+messagesSeen, stale, loudTicks) and presentation.
+
+Slice 19000d added the camera's checks (Source/SmokeTestTour.Camera.cs;
+docs/SHOWCASE.md, "Camera and Framing"). Every frame until FINISHED,
+while a scene runs, it measures how far the camera's view reaches beyond
+the map's edge (the camera's real position and root size, and the
+screen's aspect ratio; Core's ShotFraming.Overhang). One frame after the
+director frames a scene's opening shot (ShowcaseDirector.LastFraming),
+the camera must be within 2 tiles of it and at its zoom, having cut
+there; a glide from the last scene's place is still far off. One frame
+after the raccoon's thrown beat, Ned, the raccoon and the grenade (in
+the air, and where it is going) must each be on screen and clear of the
+caption bar and the narration (ShotFraming.InClearView). At each
+scene's end up to three more world facts: the camera cut to the
+scene's place as it opened; it kept on the map (no frame more than 1.5
+tiles beyond its edge); and, for the raccoon, the throw's shot. The
+SUMMARY (version 7) adds camera.
+
+Slice 19000c added the tour group's checks
+(Source/SmokeTestTour.Tourists.cs; docs/SHOWCASE.md, "Tourists"). At
+READY: three to five tourists of the hidden tourist faction (no
+goodwill, not hostile, never made with a world), none a colonist, wait
+near the base's rest spot, with a volunteer and a stray. Every tick
+until FINISHED it counts each tourist first seen downed, dead or gone,
+under the scene showing. At each scene's end: the grenade's volunteer
+was a tourist; the tractor's stray was a tourist; and a scene that
+narrates its losses (the stampede, the pads, the tractor) and lost one
+played its guestsLost beat. After the farewell: the group went home,
+every tourist accounted for (standing, downed, dead or gone), nothing
+of it (tourist, corpse or clothes) left on the map, its faction never
+hostile, and every tourist it lost seen lost by the verifier. The
+colonist checks lost their volunteer exception: no colonist may be
+hurt, downed or killed in any scene. The SUMMARY (version 6) adds
+tourists. The smoke runner (Source/SmokeTest.Tourists.cs) runs the same
+group on its own map: it arrives as above; a Timid robot protests about
+a tourist in its pull with no colonist near (the guest protest); a
+tourist killed and another hurt by a colonist change no goodwill or
+relation and send no letter; dismissal counts every tourist and
+leaves nothing behind, twice over; and (review of slice 19000, Fixer) a
+second group, one dead and one downed, is gone after the game's own
+GameComponent_TourGroupSweep runs its LoadedGame, as after loading a
+game saved mid-tour: no pawn, corpse or lord of theirs left, and a
+second sweep finds nothing. The runner never saves and reloads its
+game, so the lord's own save and load are not exercised (AI-TODO). A
+unit test (ShowcaseXmlTests) holds the sweep to LoadedGame, waiting
+for the load's long event, since loading runs off the main thread.
+The tour's yard junk (Core's TourYardJunk) is checked against the
+loaded game's defs, which a unit test cannot read: every def it uses
+exists, has zero flammability and no explosive part ("the tour's yard
+junk neither burns nor explodes", at the end of the Tractor Bomb's
+checks). The unit test holds the layout to TourYardJunk.InertDefs.
+
+The stampede's facts (Source/SmokeTestTour.Stampede.cs) use Core's
+Stampede rules but measure the world each tick rather than asking the
+scene: a herd of at least 150; a 256-bolt volley (the Ballista's bolt
+counter, which a volley moves in one tick); at most three volleys; 90
+per cent of the herd dead when the first live boomalope comes within 25
+tiles of the base's square (and by the scene's end if none does); no
+colonist downed, dead or with an injury it lacked when the scene began;
+everything of the stage that stood at the start (the base's devices, the
+Ballista, the pads' devices) still standing; and no fire left burning.
+Two sabotage runs in slice 14000 failed the 256-bolt, 90 per cent,
+harm, stage and fire facts in turn (docs/AI-DECISIONS.txt); the
+herd-size and three-volley facts were not sabotaged.
+
+The raccoon's facts (Source/SmokeTestTour.Raccoon.cs) are measured
+from the world each tick: Ned threw the grenade (the projectile in the
+air, its thrower found by his planned name); the END cue's outcome
+matches the raccoon's fate (dead or destroyed is raccoonLost, as Core's
+TourScript.RaccoonOutcome says); the census line equals
+AnyRimText.CensusReport of AnyRim's population as the scene began and at
+the tick the line was said; no AnyRim census message entered vanilla's
+message stack (the narrator reads it); and no colonist was hurt, downed
+or killed within the incident's reach (Main Street from the raccoon's
+entry to the bank, grown by the throw and the pull, 23 tiles, or within
+5 tiles of the raccoon). A colonist hurt elsewhere during the scene is
+logged as a NOTE with where, doing what, and the injuries: the colony is
+about 100 tiles away, so the incident cannot have done it. As each scene
+begins, the verifier also notes AnyRim's population and the map's
+hostile pawns by faction, so deaths the tour did not cause (a raid, a
+map's own dark entities) can be told from its own.
+
+It also logs a NOTE for each scene's clock (game ticks against real time
+and frames, and the longest real gap between two ticks, with the scene
+tick it ended on), and a NOTE on how the narration would pace on the
+overlay if watched at normal speed: the lines said, at their ticks,
+replayed through Core's rules (the verifier itself runs at Superfast,
+where the overlay's real-time rules do not show), with the longest wait
+and how many lines would be replaced before their full reading time.
+
+The review of slices 13000 to 16000 (2026-10-14) added these to the
+verifier. Every completed scene: no colonist hurt, downed or killed
+during it (fresh injuries against a snapshot at its start), but the
+grenade's volunteer during the grenade; harm with one of the map's
+starting hostiles within 12 tiles is logged as excused instead. The
+grenade and raccoon scenes: no singularity field and no implosion
+still ticking at the scene's end. The stampede: no new fire inside
+the base's 25-tile keep-away at any tick of the scene (the count
+after it, renamed "no fire left after the scene's clean-up", shows
+only that End put the rest out); no singularity grenade thrown or
+field opened; the drafted colonists never on Fire At Will; and a NOTE
+of the most fires on the map and of volleys refused for safety.
+Unforced declines are judged without the scenes' own helpers: the
+stampede's open ground by the verifier's own walk over Core's bands,
+reaching each cell from the base rather than the other way round,
+and the raccoon's guard found among the map's pawns by the plan's
+names, with his weapon compared to the plan's. The raccoon's census
+fact fails, with a reason, when vanilla's message list cannot be read.
+The smoke run's AnyRim check now also expects the census message to
+post when no showcase narrates (the counterpart of the raccoon fact).
+Unit tests: Core's TourPacing (clear ticks, intros, spacing) and the
+stampede's SafeAim and Footprint; TourXmlTests hold the def's delays
+to the pacing rules (start lines after the previous outcome clears, a
+cue's lines spaced, timeouts covering the intro) and the closing
+message to the narration rules; XmlDefinitionTests hold the robot's
+and the research's descriptions to the named settings' sizes.
+
+It then logs one "[BT-TOUR] SUMMARY {json}" line (below), then
+"[BT-SMOKE] DONE", and quits, and the script reports as a smoke run
+does, printing the SUMMARY too. A tour that never finishes fails at a
+deadline: the sum of the scenes' timeouts plus 3,000 ticks.
+
+### Tour trials
+
+    .\Tools\tour-trials.ps1 -Count 32               # tour-01 .. tour-32
+    .\Tools\tour-trials.ps1 -Seeds alpha,beta -Repeat 2 -RandomRuns 1
+
+runs the verifier (smoke-test.ps1 -Showcase -Verify, every scene unless
+-TourSkip says otherwise) over a list of seeds, -Parallel games at once
+(default 4), -Repeat runs a seed (default 1), each in its own data
+folder under a fresh .local\tmp\tour-trials-<stamp>\ (or -OutDir; a
+relative one is taken from the current folder and made absolute, as
+smoke-test.ps1 does with -DataFolder, since RimWorld starts in its own
+folder and would otherwise write the run inside its install), with
+-Shots passed on if given. A seed may be given once (compared ignoring
+case, as folder names are; -Repeat runs it again); a list that repeats
+one is refused before any game starts. -RandomRuns adds unseeded runs;
+each logs its random seed, which can then be passed back in. A run that
+crashes, hangs or times out (-TimeoutSeconds, default 1500, plus a 240 s
+margin) gets a row with the error and the others carry on; only games
+the script started, by the pid each run reports and that process's
+start time, are ever stopped (a pid whose start time cannot be read is
+never stopped), including on Ctrl+C. A run the watcher stops gets
+problem.txt (why) and exit.txt (when) written for it, so -Collect
+rebuilds the same row; a run with no recorded end gets no wallSeconds
+from -Collect. smoke-test.ps1 itself stops a game that has written no
+log 120 s after it started. It writes results.json (each run's row,
+with its SUMMARY whole) and results.csv (one row a run: run, seed,
+seedSource, repeat, exitCode, error, passed, failed, wallSeconds,
+mapHash, stageHash, then the SUMMARY flattened: nested fields dotted, as
+scenes.home.tps, lists joined with ';'), prints a table, and for every
+seed run more than once (seeds compared exactly, case included) says
+whether its MAPHASH, STAGEHASH and start state repeated: "same" only
+when at least two runs logged one and all agree, "DIFFERS" when they
+disagree, "not compared" when fewer than two logged one, each with how
+many runs had none. It then lists the runs whose maps hold layouts
+(unpinnedLayouts above zero), whose rooms a seed does not pin: repeat
+such a seed with -Repeat 2 before trusting it. It exits 1 if any run
+left no SUMMARY.
+
+The SUMMARY's fields (Source/SmokeTestTour.Summary.cs; version 3: 2
+added mapSeeds; 3 added landmark, mutators, unpinnedLayouts,
+startReseeded, startState and settleRetries, and made killedFirstVolley
+null without a volley):
+
+- version; seed and seedSource (command line, def or random); worldSeed
+  (the world's seed string, drawn from the seed); mapSeeds (the map's
+  generation seeds the map seed's prefix pinned, the MAPSEED cue's
+  count; -1 if none were); landmark (the starting tile's, or null) and
+  mutators (the tile's, by def name); unpinnedLayouts (layouts on the
+  map, ancient structures or ruins, whose rooms vanilla fills under a
+  seed random per process, so a seed does not pin them; 0 for a map a
+  seed pins whole); startReseeded and startState (whether the rest of
+  the game's start was drawn from the seed, and the global random state
+  it left, as hex: the same for a seed in every process); settleRetries
+  (how often the game refused to leave the settle hold); mapHash and
+  stageHash (the MAPHASH and STAGEHASH cues); biome, tile (the starting
+  tile's id) and mapSize;
+- passed, failed (the verifier's counts, the final log check included)
+  and finished (FINISHED was reached); skipForced (the -TourSkip keys);
+  shots (frames saved);
+- hostilesAtReady and hostileKinds ("Fingerspike x1"): hostile pawns on
+  the map as the tour began, the map's own dark entities or mechs;
+- readyTick, finishedTick and totalTicks (READY to the end of watching);
+- scenes, by key in script order: outcome (the END cue's word, such as
+  completed, timedOut or raccoonLost; or declined, with why from its
+  SKIPPED cue; or notRun), ending (the director's SceneEnd), ticks,
+  seconds (real), tps (average game ticks a real second) and
+  longestTickMs (the longest real gap between two ticks, a shot's
+  capture included when -Shots is on). tps is a speed-mode and load
+  figure, not a score of the map's performance or smoothness: at
+  Superfast RimWorld 1.6 aims at 60 ticks a second while hostiles near
+  colonists force normal speed (TickManager.TickRateMultiplier 1), 360
+  as a rule (6) and 720 when nothing is happening in the game (12; every
+  colonist dead, say), as far as the machine keeps up, and under
+  -Parallel the other games' load counts too. A ranking that rewarded
+  high tps would favour runs where the colonists died;
+- colonists (at READY), harmed (colonist harm not excused, each with its
+  scene), excused (harm beside a starting hostile; before version 6
+  also the volunteer's), deaths and deathsAfterTour;
+- volunteer: name, grenadeOutcome (the grenade's END word) and atEnd
+  (alive, downed, dead or gone);
+- stampede: herd, killedFirstVolley (the herd's dead as the second
+  volley left; after a single volley, the dead at the scene's end, an
+  upper bound, since fire, chain blasts and colonists kill too; null
+  when no volley left, so a lost volley is never credited), volleys,
+  volleyBolts (each volley's bolts), killed (dead at the end),
+  deadAtFirstEntry (dead when the first live boomalope reached the
+  keep-away, or null), peakFires (on the map at once), firesNearBase
+  (new fires inside the keep-away at once) and firstVolleyTick (scene
+  tick);
+- grenade: thrown, and ticksToThrow (from the scene's start);
+- anyRim: placed, site (the crossroads, "x,z") and residents (at READY);
+- raccoon: outcome, ned (alive, downed, dead, gone or missing), thrower,
+  censusBefore and censusAfter (AnyRim's population as the scene began
+  and as the census line was said);
+- tractor and twins: pulls (implosions begun in the scene), pullsPawns
+  (pawns each pull caught), pullsItemMoves (item moves each made),
+  pullsFixtures (fixtures each uninstalled or tore down) and
+  hostilesStretched (hostiles newly stretch-marked); the tractor also
+  protest (its protest beat played) and stray (the tourist placed in
+  the robot's pull and why, or why none; a colonist before version 6);
+- narration: said, shown, cutShort and longestWaitSeconds, replayed at
+  normal speed (as the overlay-pacing NOTE);
+- tourists (version 6): arrived, lost, standing, downed, dead and gone
+  (as the group was dismissed), lostByScene, volunteer and stray (their
+  fates), dismissed, accounted (every tourist counted once) and
+  leftOnMap (tourists, corpses or clothes still on the map after
+  dismissal);
+- storyteller: held (parts held at READY), awakeTicks (ticks before
+  FINISHED with parts) and restored;
+- camera (version 7): openingsMissed (scenes whose opening shot the
+  camera was not at a frame later, with what it was), offMapFrames and
+  framesSampled (frames, while a scene ran, whose view reached more
+  than 1.5 tiles beyond the map), worstOverhang (tiles), and
+  throwFramed (whether the raccoon's throw was framed clear of the
+  overlays; null when it was not played).
+
+A SUMMARY that fails to build still comes, with the counts and a
+summaryError; a tour that never became READY gives the run's records and
+an error.
+
+What the trials showed in slice 18000 (2026-10-14; details in
+docs/AI-DECISIONS.txt):
+
+- Repeatability. Without the map seed's patch, two processes with one
+  seed drew the same world seed string, tile, colonists and settlement,
+  but not the same map: vanilla's Map.NextGenSeed is random per process
+  (docs/SHOWCASE-API.md, "Seeds"), so MAPHASH and STAGEHASH differed in
+  every pair (seeds s18-a and s18-b, twice each). With the patch (DLL
+  20:31:58, -Parallel 4), both seeds repeated MAPHASH and STAGEHASH
+  exactly (s18-a 0ca9bf0ea67aad73 and c7de31d2c28b0aeb, 37 seeds
+  pinned; s18-b 59717c88cd7267f3 and 9029f74f1f50188e, 467 pinned),
+  the same values the uncommitted diagnostic build had given; an
+  unseeded run's logged seed (yam), passed back in, gave its world
+  (raccoon), tile 21692, map (8b628f88592cb98a) and stage
+  (3a590ec61704850a) again; and s18-a written into a temporary copy of
+  BT_Showcase's def (seedSource def, never committed) gave the same map
+  and stage as -showcaseseed=s18-a. With the window sabotaged shut,
+  s18-b drew the same world and tile but another map (fc3b0b9b..).
+  After the review fixes (start's tail seeded), the four finalists
+  tour-04, tour-05, tour-17 and tour-27 and tour-22 repeated MAPHASH,
+  STAGEHASH and the start state (three draws after the reseed, the same
+  value per seed) in every process: the finalists' hashes are those of
+  their runs before the fixes. Their tours' outcomes, as before, did
+  not repeat in every run (docs/AI-DECISIONS.txt).
+- How far a tour repeats once its map and stage do: every scene's
+  outcome matched in two of three pairs (cowboy; s18-a's scenes all
+  completed in both runs), but from the second scene on the details
+  drift: scene lengths by 1 to about 320 ticks, the stampede's first volley by
+  a few ticks and its kills (one run needed a second volley), fires,
+  each pull's catch, and which colonists were hurt; in s18-b the
+  grenade's volunteer lived in one run and died in the other. The game
+  draws on its one global random state from per-frame code as well as
+  per-tick code (the map's sections printed as they come into view,
+  pawns' renderers built on first draw, sounds), and how many ticks fall
+  in each frame depends on load, so the draws a tick sees shift.
+  Window size and camera matter for the same reason (only visible
+  sections are printed). With the patch, the same held: s18-b passed
+  18 of 18 twice; s18-a, whose map starts with dark entities, failed
+  the colonist-safety facts in all three runs, hurting different
+  colonists in different scenes; yam (raiders, dark entities and
+  insects at the start) passed once and once lost the stampede's
+  volley.
+- Timing. A full ten-scene tour took about 175 s of wall time alone
+  (cowboy: 146 s of scenes, 166 game ticks a second overall, Superfast's
+  cap of about 288 in quiet scenes); at -Parallel 4 the same seed ran
+  at the same rate (173 s), and dark-entity maps ran 190 to 290 s. At
+  -Parallel 8 each tour ran 10 to 25 per cent slower (199 to 247 s) but
+  twice as many at once. The tractor scene usually runs at about 48
+  ticks a second (vanilla's forced normal speed, with hostiles near
+  colonists), about a minute of each tour, but not always: in the
+  slice's final all-scene run (.local/tmp/mapseed-final-verify-all2)
+  every colonist had died by then, nothing was happening, and the
+  tractor and twins ran at 562 and 570 (see tps above). For 32 seeds:
+  about 30 minutes at -Parallel 4, 15 to 20 at -Parallel 8 (each game
+  takes about 1.5 GB of memory).
+
+Sabotage runs in slice 12000, step 5 proved checks 1, 2 and 6, and
+check 5 caught a real death on one map (see docs/AI-DECISIONS.txt). The
+review that followed found that check 3 compared the director with
+itself, that a scene with no beats passed, and that an unforced decline
+passed silently; the final step fixed all three (above). Their sabotage
+results, and the checks still unproved, are in docs/AI-DECISIONS.txt
+(slice 12000, final step) and docs/AI-TODO.txt. The smoke suite gained
+"clearing a yard spares a berserk colonist" (TractorStaging.ClearYard
+never removes the player's own pawns).
 
 ## Manual checks still worth doing
 

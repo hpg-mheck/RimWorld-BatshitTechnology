@@ -26,9 +26,10 @@ Showcases: a Showcases button at the bottom of the main menu stages all of the a
   <supportedVersions>
     <li>1.6</li>
   </supportedVersions>
-  <!-- Harmony, for the main menu's Showcases button only (the mod's one
-       patch; docs/SHOWCASE-API.md). The Harmony mod supplies 0Harmony.dll;
-       this mod never ships it. -->
+  <!-- Harmony, for the mod's two patches only: the main menu's Showcases
+       button, and the showcase map's seed (docs/SHOWCASE-API.md, Decision
+       1). The Harmony mod supplies 0Harmony.dll; this mod never ships it.
+       -->
   <modDependencies>
     <li>
       <packageId>brrainz.harmony</packageId>

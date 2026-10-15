@@ -182,4 +182,38 @@
     <researchViewX>3.00</researchViewX>
     <researchViewY>6.00</researchViewY>
   </ResearchProjectDef>
+
+  <!-- ===== Tractor Bomb (docs/TRACTOR-BOMB.md), after the grenade ===== -->
+
+  <ResearchProjectDef>
+    <defName>BT_Research_TractorBomb</defName>
+    <label>Tractor Bomb</label>
+    <description>Build the Tractor Barn, which builds Tractor Bombs by itself: little steel farm tractors that patrol for hostiles, drive at the nearest one they can see, and plant themselves. Each then drags everything within 22.5 tiles into a heap at its feet and explodes over 7.5 tiles. Sixty steel, three components and five batshittium apiece, carried in by haulers; the barn also patches up the ones that limp home.
+
+A colonist or guest inside the tractor beam earns a three-second protest, after which the bomb emplaces anyway. Keep colonists and guests out of the beam.</description>
+    <baseCost>1500</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>BT_Research_SingularityGrenade</li>
+    </prerequisites>
+    <tab>BT_BatshitTechnology</tab>
+    <researchViewX>4.00</researchViewX>
+    <researchViewY>6.00</researchViewY>
+  </ResearchProjectDef>
+
+  <ResearchProjectDef>
+    <defName>BT_Research_TractorBombDialAYield</defName>
+    <label>Tractor Bomb Dial-A-Yield</label>
+    <description>Fit every Tractor Bomb with two more dials, each with three settings: its tractor beam, Intimate (9 tiles), Neighborly (22.5) or Popular (33.75), and its blast, Birthday Cake (3 tiles), Firework (7.5) or Block Party (12). Set them on a robot, on a planted bomb until it starts to pull, or on the Tractor Barn for every robot it builds. They leave the factory at Neighborly and Firework.
+
+None of the settings is safe.</description>
+    <baseCost>1000</baseCost>
+    <techLevel>Neolithic</techLevel>
+    <prerequisites>
+      <li>BT_Research_TractorBomb</li>
+    </prerequisites>
+    <tab>BT_BatshitTechnology</tab>
+    <researchViewX>5.00</researchViewX>
+    <researchViewY>6.00</researchViewY>
+  </ResearchProjectDef>
 </Defs>

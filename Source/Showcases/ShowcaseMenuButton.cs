@@ -1,8 +1,11 @@
-// Showcase API - the main menu's Showcases button.
-// The mod's only Harmony patch (approved by Matt "Breakpoint" Heck on
-// 2026-10-13; docs/SHOWCASE-API.md, "The Main Menu Button Needs
-// Harmony"). Vanilla builds the main menu's options as a local list
-// inside MainMenuDrawer.DoMainMenuControls and hands it straight to
+// Showcase API - the main menu's Showcases button, and the home of the
+// mod's two Harmony patches, both made here through one Harmony instance
+// under one id (HarmonyId), so that HarmonyLib is named in this file only.
+//
+// 1. The button (approved by Matt "Breakpoint" Heck on 2026-10-13;
+// docs/SHOWCASE-API.md, "The Main Menu Button Needs Harmony"). Vanilla
+// builds the main menu's options as a local list inside
+// MainMenuDrawer.DoMainMenuControls and hands it straight to
 // OptionListingUtility.DrawOptionListing (RimWorld 1.6.4871), so there is
 // no def, virtual method or event to extend. A postfix on
 // DrawOptionListing draws one more option, Showcases, under the last one,
@@ -13,12 +16,23 @@
 // -showcase=<defName> command line, because it runs exactly when the main
 // menu is ready for input.
 //
-// Harmony itself comes from the Harmony mod (brrainz.harmony, a declared
-// dependency), never from this mod's Assemblies/. Harmony types appear
-// only inside the bodies of InstallPatch and DescribeOwnPatches, so a
-// missing Harmony fails those calls, which are caught and logged, and the
-// class still loads. The postfix counts its calls and the buttons it
-// draws, for the smoke runner (Source/SmokeTestShowcases.cs).
+// 2. The showcase map's seed (approved by Matt "Breakpoint" Heck on
+// 2026-10-14; docs/AI-requests-for-humans.txt, item 22): a prefix on the
+// Map.NextGenSeed getter, ShowcaseMapSeed.Prefix, which pins the seeds a
+// map's structures are generated from, but only while a showcase's game
+// generates its map; everywhere else it passes through to vanilla
+// untouched (Source/Showcases/ShowcaseMapSeed.cs).
+//
+// Each patch is installed on its own, so one that fails (a renamed method
+// in a later RimWorld) leaves the other working, and the failure is
+// logged. Harmony itself comes from the Harmony mod (brrainz.harmony, a
+// declared dependency), never from this mod's Assemblies/. Harmony types
+// appear only inside the bodies of InstallPatches, its two helpers and
+// DescribeOwnPatches, so a missing Harmony fails those calls, which are
+// caught and logged, and the class still loads. The postfix counts its
+// calls and the buttons it draws, for the smoke runner
+// (Source/SmokeTestShowcases.cs), which also checks that these two
+// patches are the mod's only ones.
 
 using System;
 using System.Collections.Generic;
@@ -61,23 +75,28 @@ namespace BatshitTechnology.Showcases
         /// <summary>The button, made once and relabelled each draw.</summary>
         private static ListableOption option;
 
-        /// <summary>Installs the patch once the game has loaded its defs.</summary>
+        /// <summary>
+        /// Installs the mod's two patches once the game has loaded its
+        /// defs: the button's postfix and the map seed's prefix.
+        /// </summary>
         static ShowcaseMenuButton()
         {
             try
             {
-                InstallPatch();
-                installed = true;
+                InstallPatches();
             }
             catch (Exception e)
             {
-                Log.Error($"{ShowcaseLog.Prefix} could not add the main menu's "
-                    + "Showcases button (is the Harmony mod active?): " + e);
+                Log.Error($"{ShowcaseLog.Prefix} could not install the Showcases "
+                    + "button or the showcase map's seed (is the Harmony mod "
+                    + "active?): " + e);
             }
         }
 
         /// <summary>
-        /// Gets a value indicating whether the patch is installed.
+        /// Gets a value indicating whether the button's patch is installed.
+        /// (<see cref="ShowcaseMapSeed.Installed"/> says the same of the
+        /// map seed's.)
         /// </summary>
         public static bool Installed => installed;
 
@@ -176,13 +195,16 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Describes every Harmony patch that belongs to this mod, one line
-        /// each ("Verse.OptionListingUtility.DrawOptionListing: postfix
-        /// BatshitTechnology.Showcases.ShowcaseMenuButton.Postfix"), so the
-        /// smoke runner can check that the menu button is the mod's only
-        /// patch. A patch is the mod's if its owner id starts with the
-        /// mod's package id, whatever the rest of the id, or if its patch
-        /// method is in one of the mod's assemblies, whatever the owner.
-        /// Empty if Harmony is missing.
+        /// each, with its owner's id in brackets
+        /// ("Verse.OptionListingUtility.DrawOptionListing: postfix
+        /// BatshitTechnology.Showcases.ShowcaseMenuButton.Postfix
+        /// [breakpoint8088.BatshitTechnology.Showcases]"), so the smoke
+        /// runner can check that the button's postfix and the map seed's
+        /// prefix are the mod's only patches, both made under
+        /// <see cref="HarmonyId"/>. A patch is the mod's if its owner id
+        /// starts with the mod's package id, whatever the rest of the id,
+        /// or if its patch method is in one of the mod's assemblies,
+        /// whatever the owner. Empty if Harmony is missing.
         /// </summary>
         /// <returns>The lines, sorted.</returns>
         public static List<string> OwnPatches()
@@ -207,8 +229,8 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// Lists this mod's patches through Harmony. Kept apart and never
-        /// inlined, like <see cref="InstallPatch"/>, and with Harmony types
-        /// only in its body, so the class loads without Harmony.
+        /// inlined, like <see cref="InstallPatches"/>, and with Harmony
+        /// types only in its body, so the class loads without Harmony.
         /// </summary>
         /// <returns>The lines, sorted.</returns>
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -258,7 +280,7 @@ namespace BatshitTechnology.Showcases
                         }
 
                         lines.Add($"{target}: {kind} "
-                            + $"{m?.DeclaringType?.FullName}.{m?.Name}");
+                            + $"{m?.DeclaringType?.FullName}.{m?.Name} [{patch.owner}]");
                     }
                 }
             }
@@ -268,16 +290,50 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Patches OptionListingUtility.DrawOptionListing with
-        /// <see cref="Postfix"/>. Kept apart and never inlined, so that a
-        /// missing Harmony assembly fails here, inside the caller's
-        /// try block.
+        /// Makes the mod's one Harmony instance and installs both patches
+        /// through it, each on its own: a patch that fails is logged and
+        /// leaves the other in place. Kept apart and never inlined, so
+        /// that a missing Harmony assembly fails here, inside the static
+        /// constructor's try block.
         /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void InstallPatches()
+        {
+            var harmony = new Harmony(HarmonyId);
+            try
+            {
+                PatchMenu(harmony);
+                installed = true;
+            }
+            catch (Exception e)
+            {
+                Log.Error($"{ShowcaseLog.Prefix} could not add the main menu's "
+                    + "Showcases button: " + e);
+            }
+
+            try
+            {
+                PatchMapSeed(harmony);
+                ShowcaseMapSeed.Installed = true;
+            }
+            catch (Exception e)
+            {
+                Log.Error($"{ShowcaseLog.Prefix} could not pin showcase maps to "
+                    + "their seeds; a showcase's map will differ from run to "
+                    + "run: " + e);
+            }
+        }
+
+        /// <summary>
+        /// Patches OptionListingUtility.DrawOptionListing with
+        /// <see cref="Postfix"/>.
+        /// </summary>
+        /// <param name="harmony">The mod's Harmony instance.</param>
         /// <exception cref="MissingMethodException">
         /// Thrown when the game no longer has the method.
         /// </exception>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void InstallPatch()
+        private static void PatchMenu(Harmony harmony)
         {
             MethodInfo target = AccessTools.Method(
                 typeof(OptionListingUtility),
@@ -290,10 +346,44 @@ namespace BatshitTechnology.Showcases
                     nameof(OptionListingUtility.DrawOptionListing));
             }
 
-            var harmony = new Harmony(HarmonyId);
             harmony.Patch(
                 target,
                 postfix: new HarmonyMethod(typeof(ShowcaseMenuButton), nameof(Postfix)));
+        }
+
+        /// <summary>
+        /// Patches the Map.NextGenSeed getter with
+        /// <see cref="ShowcaseMapSeed.Prefix"/>, after checking that the
+        /// getter and vanilla's private counter the prefix advances
+        /// (<c>Map.generatedId</c>, an int; RimWorld 1.6.4871) are still
+        /// there.
+        /// </summary>
+        /// <param name="harmony">The mod's Harmony instance.</param>
+        /// <exception cref="MissingMethodException">
+        /// Thrown when the game no longer has the getter.
+        /// </exception>
+        /// <exception cref="MissingFieldException">
+        /// Thrown when the game no longer has the counter as an int.
+        /// </exception>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void PatchMapSeed(Harmony harmony)
+        {
+            MethodInfo target = AccessTools.PropertyGetter(
+                typeof(Map), nameof(Map.NextGenSeed));
+            if (target == null)
+            {
+                throw new MissingMethodException(nameof(Map), nameof(Map.NextGenSeed));
+            }
+
+            if (AccessTools.Field(typeof(Map), "generatedId")?.FieldType != typeof(int))
+            {
+                throw new MissingFieldException(nameof(Map), "generatedId");
+            }
+
+            harmony.Patch(
+                target,
+                prefix: new HarmonyMethod(
+                    typeof(ShowcaseMapSeed), nameof(ShowcaseMapSeed.Prefix)));
         }
     }
 }

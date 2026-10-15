@@ -3,7 +3,10 @@
 // costs nothing until a town is built). It saves where the town stands,
 // its seed, its residents and animals by reference, and when a resident
 // last died. When the population drops it posts a quiet census message
-// (not a letter). There is no sign building in RimWorld, so the signs'
+// (not a letter), unless a showcase is narrating on the map: then the
+// narrator reads the census (the tour's raccoon scene), and a vanilla
+// message would repeat it in the message stack. There is no sign building
+// in RimWorld, so the signs'
 // text is drawn over their cells here, at middle zoom or closer, in
 // vanilla's neutral label style (magenta is reserved for batshittium).
 // The executed plan is not saved: it is rebuilt from the saved seed and
@@ -15,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BatshitTechnology.Core;
+using BatshitTechnology.Showcases;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -243,8 +247,9 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Takes the census every half second: when the population drops, a
-        /// quiet message says so and the incident clock restarts.
+        /// Takes the census every half second: when the population drops,
+        /// the incident clock restarts and a quiet message says so (left to
+        /// the narrator while a showcase narrates on this map).
         /// </summary>
         public override void MapComponentTick()
         {
@@ -261,13 +266,20 @@ namespace BatshitTechnology
                     lastIncidentTick = Find.TickManager.TicksGame;
                     string text = AnyRimText.CensusMessage(population);
                     IntVec3 sign = WelcomeSign;
-                    if (sign.IsValid)
+                    // While a showcase narrates here, its narrator reads
+                    // the census; a message would repeat it in the stack.
+                    if (!ShowcaseNarrating())
                     {
-                        Messages.Message(text, new LookTargets(sign, map), MessageTypeDefOf.NeutralEvent, false);
-                    }
-                    else
-                    {
-                        Messages.Message(text, MessageTypeDefOf.NeutralEvent, false);
+                        if (sign.IsValid)
+                        {
+                            Messages.Message(
+                                text, new LookTargets(sign, map),
+                                MessageTypeDefOf.NeutralEvent, false);
+                        }
+                        else
+                        {
+                            Messages.Message(text, MessageTypeDefOf.NeutralEvent, false);
+                        }
                     }
                 }
 
@@ -278,6 +290,19 @@ namespace BatshitTechnology
                 censusFailed = true;
                 Log.Error($"[BT] AnyRim census stopped: {e}");
             }
+        }
+
+        /// <summary>
+        /// Whether a showcase is running and narrating on this map: begun,
+        /// not ended, and not stopped by the viewer.
+        /// </summary>
+        /// <returns>True while one is.</returns>
+        private bool ShowcaseNarrating()
+        {
+            GameComponent_ShowcaseSession session = GameComponent_ShowcaseSession.Current;
+            ShowcaseWorker worker = session?.Worker;
+            return session != null && session.Running && worker != null
+                && !worker.Stopped && worker.Map == map;
         }
 
         /// <summary>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- The Tractor Bomb's flesh type: steel, like a mechanoid's, but its
+       own, so RimWorld does not take the robot for a mechanoid
+       (RaceProperties.IsMechanoid compares the flesh type with vanilla's
+       Mechanoid) and Biotech's mechanitor rules never apply. Not organic:
+       no pain, no bleeding, no tending, and not an animal. -->
+  <FleshTypeDef>
+    <defName>BT_TractorSteel</defName>
+    <damageEffecter>Damage_HitMechanoid</damageEffecter>
+    <isOrganic>false</isOrganic>
+    <genericWounds>
+      <li>
+        <texture>Things/Pawn/Wounds/WoundMechA</texture>
+      </li>
+      <li>
+        <texture>Things/Pawn/Wounds/WoundMechB</texture>
+      </li>
+      <li>
+        <texture>Things/Pawn/Wounds/WoundMechC</texture>
+      </li>
+    </genericWounds>
+  </FleshTypeDef>
+</Defs>

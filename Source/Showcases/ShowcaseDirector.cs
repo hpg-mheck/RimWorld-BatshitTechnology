@@ -7,10 +7,13 @@
 // The director only executes those decisions, so its rules are unit
 // tested without RimWorld. A scene whose own code throws is logged once
 // and ends Failed on that tick (SceneSequencer.Fail); the tour moves on.
+// A scene may decline a map before the tour starts (UnavailableReason),
+// and may play beats when its events happen (ShowcaseScene.Beat).
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BatshitTechnology.Core;
 using RimWorld;
 using RimWorld.Planet;
 using UnityEngine;
@@ -56,6 +59,13 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>The running scene's shot schedule, or null.</summary>
         private BeatSchedule beats;
+
+        /// <summary>
+        /// Gets the last camera move the director made, or null before
+        /// the first: for tests and capture tooling, which compare it with
+        /// where the camera really is.
+        /// </summary>
+        public ShowcaseFraming LastFraming { get; private set; }
 
         /// <summary>Gets the scenes as this run sees them.</summary>
         public IReadOnlyList<ShowcaseScene> Scenes => scenes;
@@ -120,8 +130,12 @@ namespace BatshitTechnology.Showcases
         }
 
         /// <summary>
-        /// Makes this run's copies of the def's scenes. The first scene
-        /// starts on the first tick.
+        /// Makes this run's copies of the def's scenes. A scene that
+        /// declines to run on this map (its
+        /// <see cref="ShowcaseScene.UnavailableReason"/> is not null) is
+        /// dropped here, with a SKIPPED cue logged as a message, before
+        /// the sequencer is built, so the caption counts only the scenes
+        /// that run. The first scene starts on the first tick.
         /// </summary>
         /// <param name="map">The showcase's map.</param>
         public override void Setup(Map map)
@@ -140,13 +154,25 @@ namespace BatshitTechnology.Showcases
 
                 ShowcaseScene scene = template.CloneForRun();
                 scene.Attach(this);
+                string reason = SafeUnavailableReason(scene);
+                if (reason != null)
+                {
+                    ShowcaseLog.Cue("SKIPPED", $"{scene.key}: {reason}");
+                    continue;
+                }
+
                 scenes.Add(scene);
                 List<ShowcaseShot> list = (scene.shots ?? new List<ShowcaseShot>())
                     .Where(s => s != null)
                     .ToList();
                 if (list.Count == 0)
                 {
-                    list.Add(new ShowcaseShot { atTick = 0, zoom = DefaultZoom });
+                    // A cut, so the scene opens on its own place as its
+                    // caption shows, never on the last scene's.
+                    list.Add(new ShowcaseShot
+                    {
+                        atTick = 0, zoom = DefaultZoom, pan = false,
+                    });
                 }
 
                 shots.Add(list);
@@ -372,6 +398,64 @@ namespace BatshitTechnology.Showcases
             }
         }
 
+        /// <summary>
+        /// Plays a beat of the running scene: logs BEAT, selects the
+        /// scene's subject if asked, frames the shot (from the scene's
+        /// focus as it is now), and says the moment's narration. Called by
+        /// <see cref="ShowcaseScene"/>'s Beat; it does nothing once the
+        /// tour has stopped or when the scene is not the one running.
+        /// </summary>
+        /// <param name="scene">The scene the beat belongs to.</param>
+        /// <param name="moment">The narration moment, such as "blast".</param>
+        /// <param name="shot">The camera move, or null to leave it.</param>
+        /// <param name="select">Whether to select the scene's subject.</param>
+        /// <returns>True if the beat played.</returns>
+        internal bool RunBeat(
+            ShowcaseScene scene, string moment, ShowcaseShot shot, bool select)
+        {
+            if (Stopped || scene == null || moment.NullOrEmpty()
+                || !ReferenceEquals(scene, CurrentScene))
+            {
+                return false;
+            }
+
+            ShowcaseLog.Cue("BEAT", $"{scene.key} {moment}");
+            if (select)
+            {
+                SelectSubject(scene, force: true);
+            }
+
+            if (shot != null)
+            {
+                Frame(scene, shot, moment);
+            }
+
+            Narrate(scene.key, moment, SafeLookTargets(scene));
+            return true;
+        }
+
+        /// <summary>
+        /// Asks a scene whether it declines to run on this map. A scene
+        /// whose check throws is logged once and declined, since a scene
+        /// that cannot judge its own map is unlikely to run on it.
+        /// </summary>
+        /// <param name="scene">The scene, attached to this director.</param>
+        /// <returns>Why it declines, or null if it runs.</returns>
+        private string SafeUnavailableReason(ShowcaseScene scene)
+        {
+            try
+            {
+                string reason = scene.UnavailableReason;
+                return reason.NullOrEmpty() ? null : reason;
+            }
+            catch (Exception e)
+            {
+                Log.Error($"{ShowcaseLog.Prefix} scene '{scene.key}' of "
+                    + $"{def?.defName} could not say whether it can run: {e}");
+                return "its availability check failed";
+            }
+        }
+
         /// <summary>Frames every shot of the scene that has come due.</summary>
         /// <param name="index">The scene's index.</param>
         /// <param name="now">The current tick.</param>
@@ -384,14 +468,16 @@ namespace BatshitTechnology.Showcases
 
             foreach (int i in beats.TakeDue(sequencer.Elapsed(now)))
             {
-                Frame(scenes[index], shots[index][i]);
+                Frame(scenes[index], shots[index][i], beat: null);
             }
         }
 
         /// <summary>
         /// Moves the camera for one shot, if the viewer is looking at the
         /// showcase's map: a glide or a cut, to the scene's focus (or the
-        /// map's centre) plus the shot's offset, at the shot's zoom.
+        /// map's centre) plus the shot's offset, at the shot's zoom, moved
+        /// in from the map's edges if the shot keeps on the map. The move
+        /// is recorded as <see cref="LastFraming"/>.
         /// </summary>
         /// <remarks>
         /// A cut must also cancel any glide still running. CameraDriver
@@ -406,7 +492,8 @@ namespace BatshitTechnology.Showcases
         /// </remarks>
         /// <param name="scene">The scene.</param>
         /// <param name="shot">The shot.</param>
-        private void Frame(ShowcaseScene scene, ShowcaseShot shot)
+        /// <param name="beat">The beat's moment, or null for a timed shot.</param>
+        private void Frame(ShowcaseScene scene, ShowcaseShot shot, string beat)
         {
             Map map = Map;
             if (map == null || Find.CurrentMap != map
@@ -428,18 +515,31 @@ namespace BatshitTechnology.Showcases
                 CameraDriver camera = Find.CameraDriver;
                 FloatRange range = camera.config.sizeRange;
                 float zoom = Mathf.Clamp(shot.ZoomClamped, range.min, range.max);
-                if (shot.pan && shot.panSeconds > 0f)
+                Vector3 loc = cell.ToVector3Shifted();
+                if (shot.keepOnMap && UI.screenHeight > 0)
                 {
-                    camera.PanToMapLocAndSize(
-                        cell.ToVector3Shifted(), zoom, shot.panSeconds);
+                    Spot kept = ShotFraming.KeepOnMap(
+                        new Spot(loc.x, loc.z), zoom,
+                        (double)UI.screenWidth / UI.screenHeight,
+                        map.Size.x, map.Size.z);
+                    loc = new Vector3((float)kept.X, loc.y, (float)kept.Z);
+                }
+
+                bool cut = !(shot.pan && shot.panSeconds > 0f);
+                if (!cut)
+                {
+                    camera.PanToMapLocAndSize(loc, zoom, shot.panSeconds);
                 }
                 else
                 {
-                    Vector3 loc = cell.ToVector3Shifted();
                     camera.JumpToCurrentMapLoc(loc);
                     camera.SetRootSize(zoom);
                     camera.PanToMapLocAndSize(loc, zoom, CutPanSeconds);
                 }
+
+                LastFraming = new ShowcaseFraming(
+                    scene.key, beat, loc.x, loc.z, zoom, cut,
+                    Find.TickManager.TicksGame);
             }
             catch (Exception e)
             {
@@ -453,9 +553,13 @@ namespace BatshitTechnology.Showcases
         /// show while it is explained.
         /// </summary>
         /// <param name="scene">The scene.</param>
-        private static void SelectSubject(ShowcaseScene scene)
+        /// <param name="force">
+        /// Select it even if the scene's <c>selectSubject</c> is off (a
+        /// beat that asks for it).
+        /// </param>
+        private static void SelectSubject(ShowcaseScene scene, bool force = false)
         {
-            if (!scene.selectSubject)
+            if (!force && !scene.selectSubject)
             {
                 return;
             }

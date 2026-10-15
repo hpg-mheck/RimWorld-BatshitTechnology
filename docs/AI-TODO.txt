@@ -21,9 +21,12 @@
   open questions are in docs/AI-requests-for-humans.txt. Build in this
   order:
   - [ ] Groundwork: the AnyRim town generator with size and quality
-    tiers; a reusable implosion extracted from SingularityField; a shared
-    BatshitImmunity check honoured by every effect; the audio pipeline
-    (Tools/make_sounds.py, SoundDefs, an audio section in the motif).
+    tiers; a reusable implosion extracted from SingularityField (done for
+    the Tractor Bomb: Source/Implosion.cs; it still needs the shared
+    immunity check, and blasting natural rock and mountain roof); a
+    shared BatshitImmunity check honoured by every effect; the audio
+    pipeline (Tools/make_sounds.py, SoundDefs, an audio section in the
+    motif).
   - [ ] Colony Bomb: variant defs, recipe and research; install, arm
     (10 s) and the 15 s countdown (red ring, sawtooth warning triangle,
     bass, rising DTMF and TTMF tones); the post-T 0 sequence (echo,
@@ -109,6 +112,76 @@
   (proposed). Shares the generalized implosion with the Colony Bomb.
   Pawns and animals flee an armed bomb (a mod flee job giver, added to
   the think trees by XML patch), unless too close or in a mental state.
+  - [x] Step 2: the reusable implosion (Source/Implosion.cs, Core's
+    ImplosionSettings and ImplosionMath); the grenade runs on it.
+  - [x] Step 3: research, BT_Research_TractorBomb after the grenade and
+    BT_Research_TractorBombDialAYield after it.
+  - [x] Step 4: the robot (BT_TractorBomb; Source/TractorBomb.cs,
+    TractorBombAI.cs, TractorBombGizmos.cs): its own race and flesh type,
+    no needs or mood, patrol inside a vanilla per-pawn allowed area (its
+    own "Patrol:" button), hunt within 45 tiles of sight, close to 15,
+    protest, emplace.
+  - [x] Step 5: the emplaced bomb (Source/TractorBombEmplaced.cs): tyre
+    flip, a rolled 3-5 s countdown under the shared CountdownWarningBand,
+    the implosion (gather 1.5) and a 5-tile blast at AllGathered,
+    Settled or 450 ticks. Decided: overflow stacks wait just outside the
+    nine-cell pile and the blast catches them; they never pile past the
+    cell limit.
+  - [x] Step 7: Dial-A-Yield sliders on robots and planted bombs.
+  - [x] Step 9: a robot's own death (Source/TractorBombDeath.cs).
+  - [x] Step 10: art through Tools/make_textures.py; motif extended.
+  - [x] Step 6: running away (Source/TractorBombFlee.cs,
+    Patches/BT_TractorBomb_Flee.xml, Core's TractorBombFlee).
+    JobGiver_FleeTractorBomb, first inside the mental-state gate of the
+    humanlike, animal and insect constant think trees: pawns in sight
+    within the pull radius plus 8 sprint clear; those inside the blast
+    radius freeze with one of the twenty "making peace" lines (on the
+    freeze JobDef, translatable); mental states, drafted, forced, stunned
+    and downed non-crawlers do neither; a started pull takes over. The
+    validator now checks Patches/. 42 new unit and XML tests, 6 new smoke
+    checks, each proved to fail by a sabotage run.
+  - [x] Step 8: the Tractor Barn (Source/TractorBarn.cs,
+    Defs/ThingDefs/Buildings_TractorBarn.xml): vanilla's autonomous work
+    table on ordinary bills ("Do until you have X" counts robots and
+    planted bombs), loaded by haulers with no crafter, a "Build one now"
+    button, repair docking with a steel hopper, a tyre-stampede death and
+    its art. The machining-table stopgap (BT_AssembleTractorBomb,
+    RecipeWorker_AssembleTractorBomb) is deleted.
+  - [x] Step 11 (barn): smoke checks for the barn, "Do until you have X",
+    "Build one now", repair docking and the barn's death, each proved to
+    fail by a sabotage run; Core tests for the repair arithmetic; XML
+    tests for the barn's defs and the stopgap's removal.
+  - [x] Disposition (decided after the core build): Cautious, Moderate
+    (default) and Nosy, per robot, with Core's TractorBombApproach, unit
+    tests and a smoke check proved by sabotage.
+  - [x] Planted bombs are damageable (decided after the core build):
+    a hit during the countdown starts the pull at once, a hit during the
+    pull sets off the blast at once, so blasts chain; three smoke checks
+    proved by sabotage.
+  - [x] Hostiles react individually (Decisions 9): each hostile rolls
+    once per bomb, a third each flee at once, hesitate 2 s or ignore it;
+    everyone else bails at once. Core's TractorBombHostiles with unit
+    tests; two seeded smoke checks proved by sabotage.
+  - [x] Step 11, multi-bomb physics (2026-10-14): absolute minimum and
+    maximum implosion durations in ImplosionSettings (Tractor Bomb 2 to
+    8 s, grenade exactly 5 s); superposed pulls through a map-level
+    MapComponent_Implosions (Source/ImplosionField.cs) with Core's
+    PullSuperposition; random bias jitter (a persistent per-thing
+    preference order and turn, a flicker from Rand per step); stretching
+    damage between opposing pulls (BT_Stretch, BT_StretchMark); shelves
+    wait to be ripped until their extra stacks are dragged off. Core and
+    XML tests (459 to 510), and the twin-bomb junkyard and superposed
+    chain-reaction smoke checks, each proved by a sabotage run.
+  - [ ] Tune the multi-bomb physics in play: the jitter (6 degrees and
+    a 4 per cent preference gap, 3 degrees and 1 per cent of flicker),
+    how slowly things creep along a balance line (a few per cent of the
+    rate), and stretching (3 a second for two bombs head on).
+  - [ ] Step 12: showcase scene and docs.
+  - [ ] Replace the protest's TrapArm click with a beep from the sound
+    pipeline (feature/audio).
+  - [x] Matt "Breakpoint" Heck decided: a robot that stopped 15 tiles out
+    but pulled only 10 now has a Disposition, Moderate by default, which
+    stops inside its pull.
 - [ ] Mirror Mirror (docs/MIRROR-MIRROR.md), requested by Matt
   "Breakpoint" Heck on 2026-10-13: a recreation mirror ("Allows pawns to
   pause and reflect on the possibility of alternate dimensions and/or
@@ -121,8 +194,137 @@
   eventually, recruitable like any other pawn. Allegiance is mirrored:
   an enemy prisoner gazing into a mirror in its cell produces a free,
   friendly duplicate, and the two fight at once.
+- [ ] The Drag Show (docs/DRAG-SHOW.md), requested by Matt "Breakpoint"
+  Heck on 2026-10-13: a ritual on an Event Stage (a 2x5 rectangle of
+  wooden tiles with a Center Stage marker) before an Event Seating block
+  of 5x5 Shitty Folding Chairs (5 steel, very uncomfortable) with a House
+  Seats marker. A male emcee in a Prom Dress or a female emcee in a
+  Luchador Onesie (or anyone, with "Relax Historical Accuracy") waits on
+  stage until two thirds of the seats fill. Then come magenta lights,
+  disco and dancing, and then a mild singularity drags everyone and
+  everything loose in the room to center stage (mild injuries, a mild
+  recreation buff; structure untouched). Each participant has a 1%
+  chance of losing a kidney, unless already short one; it shows up on
+  the floor. The two outfits take any fabric, but Batshittium
+  Monofilament (a new fabric from a new Batshittium Extruder, unlocked
+  by Batshittium Lore) improves results.
+  - [ ] Gaffer Tape (from cloth and any raw food) made at the Junk
+    Drawer, a 1x1 wooden cabinet with no technology requirement; the
+    Center Stage marker is made of gaffer tape and batshittium.
+  - [ ] Later, with the sound pipeline: an original disco track for the
+    Drag Show, replacing the borrowed party music.
+- [ ] The Stand-Up Comedy Showcase (docs/STAND-UP-COMEDY.md), requested by
+  Matt "Breakpoint" Heck on 2026-10-13: another performance type. Four to
+  eight comics with Social below 5, a stool, a Microphone Stand and a
+  Water Bottle per comic. Each set adds to the show's quality; a bad
+  enough set starts an audience riot (a social fight; 1% of riots are
+  true gunfights). Riot Suppression Spritzers, popper-like, foam the room
+  a few seconds into any fight, ending hostility and knocking everyone
+  out.
+- [ ] The Interstellar Delivery Locker and Drone (docs/DELIVERY-LOCKER.md),
+  requested the same day: a semi-vanilla locker that pawns open with a
+  beeping code (click, hinge, SLAM) for mundane items (Water Bottle,
+  Lifestyle Magazine, Witty T-Shirt, Ill-Fitting Hat, Incorrectly Sized
+  Battery), delivered by a janky quadrotor that blows up impressively if
+  destroyed and is replaced the next day.
+
+- [ ] Tour scene 7, "The Tractor of Tomorrow" (Source/Tour/
+  TractorScenes.cs): the Tractor Barn should build the robot on screen.
+  Cut for time in slice 12000, step 4, by the plan's cut line: the barn
+  stands finished and the robot appears at its door ("This one was made
+  earlier"), which the narration already covers. A real build needs the
+  barn's bill, its work time shortened for the scene, and a wait on the
+  robot leaving the barn.
+- [ ] Tour: watch the colonist protest in scene 7 (the drafted stray is
+  walked 30 tiles north when the robot protests) across several maps;
+  the step 5 verifier's "no colonist dies" check should catch a stray
+  that is still caught by the pull. It did once, in step 5: on the map
+  of the G1 sabotage run (all eight scenes ran), the colonist Gransier
+  died during the tractor scene, and every scene still ended Completed
+  (.local/scratch/tour-step5/sab-no-g1-player.log). The three other
+  verify runs lost nobody. Whether Gransier was the stray, frozen in
+  place by the countdown (Flee and Freeze) inside the pull, is not yet
+  known: the verifier now records each colonist's last job, draft state
+  and cell, so the next death says. Likely fixes: send the stray away
+  as soon as the protest starts and wait for it to leave the pull
+  before the robot may emplace, or let the stray be immune to the
+  freeze while its order stands. A second suspect, found in review:
+  Gransier may have been the grenade's volunteer, downed by the
+  implosion and bleeding out a scene later. Since the final step of
+  slice 12000, GrenadeScene.End heals a volunteer who lived, a downed
+  volunteer reads as "volunteerLost", and the verifier labels a later
+  death of the volunteer "the volunteer", so the next run says which.
+  It said so at once: in the final step's first verify run (.local/
+  scratch/tour-step6/verify1-player.log, AnyRim skipped), the grenade
+  ended "volunteerSurvived", the volunteer was healed, and then died
+  during the tractor scene while hauling at (101,124), beside the junk
+  pile, far from the yard. So the volunteer, not the stray, is the one
+  to watch: something at the pile kills a healthy colonist a scene
+  later (an item the implosion left, a fire, the comfort hediff). The
+  verifier now records whether a lost colonist died or vanished and its
+  bad hediffs; read those in the next failing run, then fix it (likely
+  by keeping colonists off the pile after the grenade, or clearing it).
+- [ ] Tour: find why every colonist died in scene 1 on one map. The
+  step 5 verify run "pass2" (.local/scratch/tour-step5/pass2-player.log,
+  AnyRim skipped) lost all three colonists during "The Home of
+  Tomorrow" (Aly downed and then dead at (142,137); Corbiene wandering
+  at (142,143); Grace hauling at (149,139)), and the scene played none
+  of its device beats; "Home Defence" then timed out. The log holds no
+  error, letter or incident line, so the cause is unknown. Suspects, in
+  order: the Ballista firing at a hostile animal or pawn within its
+  least range (10) between scenes, its bolts setting off the base's
+  armed devices (damage triggers, the reactor's barrage); a device's
+  own self-destruct or heat; something native to the map. Review
+  confirmed the first suspect was possible: the verb's least range is
+  5.9, so range 10 never held the turret, and the colonists moved
+  "clear" stand within 8 tiles of the map's centre, inside that ring.
+  The final step of slice 12000 added Building_BatshittiumBallista.
+  AutoTargetHeld (TryFindNewTarget finds nothing; ordered volleys still
+  fire), set from the build and after the volley, and two verifier
+  checks that would have failed pass2: "the Ballista held its fire" (a
+  world fact for every scene but the volley) and "every completed scene
+  played its beats" (home's planned devices). Close this item once a
+  few verify runs pass without a death in scene 1; reopen it with the
+  new checks' output if one recurs.
 
 ## Test justifications
+
+The Tractor Bomb follows the same split. Its pure logic is in Core with
+unit tests (TractorBombYield: the Dial-A-Yield clamps and slider stops;
+TractorBombTiming: the protest, flip, countdown roll, cap, lamp and
+beeps; DeathVortexMath: the death's parts and sputter), and XML tests pin
+its defs, research and textures. The robot's AI, the emplaced bomb, the
+death vortex and the gizmos need a live map, so the smoke runner's
+TestTractorBomb scenarios cover them instead; drawing (the flip frames,
+the vortex, the lamp, the sliders' look) is checked by eye. The flee
+step's arithmetic (TractorBombFlee: the flee distance, the too-close
+test, clear destinations, the line pick) is unit tested; its job giver,
+drivers and destination search need a live map and real think trees, so
+the smoke runner's TestTractorBombFlee covers them, and XML tests pin
+the patch against RimWorld's own think trees and races.
+
+The Tractor Barn and the decisions taken after the core build follow it
+too. Their arithmetic is unit tested in Core (TractorBarnRepair: who
+goes home, step costs, per-injury steps; TractorBombApproach: the
+dispositions' stops). The barn's bills, its hauling, its forming and
+docking, the Disposition button, a planted bomb's reaction to a hit
+(PreApplyDamage, stage changes on its own tick) and the barn's death
+need a live map, real pawns and real projectiles, so the smoke runner
+covers them (SmokeTest.TractorBarn.cs, TestTractorBombDispositions,
+SmokeTest.TractorBombHits.cs, TestDeathBlasts), each check proved to
+fail by a sabotage run; XML tests pin the barn's defs and the
+stopgap's removal; the barn's art is checked by eye at full size and
+downsampled.
+
+The multi-bomb physics follows it too. Its arithmetic is in Core with
+unit tests (ImplosionMath.IsOver: the durations; PullSuperposition: the
+superposed steps and rates, the jitter, rounding, tension and stretching
+damage), and XML tests pin the bomb's durations and the stretching
+defs. The map-level drag (MapComponent_Implosions), the implosions'
+tallies, stretching a real pawn and the shelf rule need a live map, so
+the smoke runner covers them (SmokeTest.TractorBombTwins.cs: the
+twin-bomb junkyard and the superposed chain reaction, watched tick by
+tick), each check proved to fail by a sabotage run.
 
 Comps, buildings and job drivers depend on RimWorld's runtime (map, ticks,
 power nets, Unity), so they are not unit-testable in this project. They are
@@ -214,3 +416,426 @@ Three review fixes have no automated check, for these reasons:
   ("EXPECTED <first line>") so the harness scan leaves exactly those out.
   Revise the showcases fileset's "planned API" status now that the API
   exists.
+
+- [ ] Tour verifier review items not done in slice 12000 (low severity,
+  deferred for time on 2026-10-14):
+  - A negative case for RunBeat's guards in the API smoke: a scene that
+    calls Beat from End() (when it is no longer current) and from the
+    scene that ends Stopped, expecting no BEAT cue, no narration and a
+    false return. Sabotage: delete the ReferenceEquals(scene,
+    CurrentScene) term; the check, the exact cue list and the exact
+    narration list should all fail. The Stopped term alone cannot be
+    caught once the sequencer has stopped; say so in the check's
+    comment. Check first whether ShowcaseDirector.EndScene runs while
+    CurrentScene still names the ending scene (it reads
+    sequencer.Current): if it does, a Beat from End() plays, and the
+    guard needs fixing before the test can pass.
+  - A smoke check that a held Ballista ignores a hostile 8 tiles off
+    for 120 ticks (BoltsFired unchanged), with the sabotage of removing
+    the TryFindNewTarget override. The verifier's "the Ballista held its
+    fire" fact guards the tour meanwhile, but only on a map where
+    something hostile comes near.
+  - The sabotage runs that the final step could not fit (see docs/
+    AI-DECISIONS.txt, slice 12000 final step, for those that ran).
+- [ ] Tidy-ups carried through slice 12000: validate-defs.ps1 still
+  prints the "PatchOperationAdd: N match(es)" lines under -MSBuild;
+  docs/AI-KNOWN-ISSUES.txt has two smoke-flake sections to merge; and
+  AnyRimText.OpeningMessage is no longer used by the showcase (the
+  AnyRim scene narrates instead).
+- [ ] Narration overlay follow-ups (slice 13000, 2026-10-14):
+  - Look at the overlay by eye at 2x UI scale on 4K in the operator's
+    viewing (slice 17000): its size, its place above the gizmos and the
+    inspect pane, and the shadow over snow and explosions.
+  - [Done 2026-10-14, review step: Core's TourPacing retimed the def
+    and each scene holds an intro; see docs/AI-DECISIONS.txt.]
+    Tour pacing on the overlay. Replayed at normal speed, 28 of the 42
+    lines are replaced before their full reading time (each still shows
+    2.5 s or more) and the longest wait is 5.7 s: lines bunch at scene
+    starts (the outcome line, the start line 90 ticks later, the first
+    beat at 150) and in the home scene (two start lines 30 ticks apart).
+    If the operator finds it rushed, space them by reading time: start
+    lines at about 300 ticks and TourScene.FirstBeatTick at about 600,
+    moving each scene's own beat ticks (Ballista orderTick, AnyRim
+    streetTick and homesTick, grenade throwTick, the barn's barnTick) to
+    keep their order, and checking each scene's timeoutTicks. Rerun the
+    verifier's pacing NOTE to measure it.
+  - The implosion smoke flake of 2026-10-14 (docs/AI-KNOWN-ISSUES.txt).
+  - Candidate knack for stock FieldManual (with an ECR): restoring
+    sabotaged sources with shutil.copy2 keeps their old modification
+    times, so an incremental MSBuild skips the rebuild; always confirm
+    the DLL timestamp changed.
+- [ ] Stampede follow-ups (slice 14000, 2026-10-14):
+  - Watch it by eye in the operator's viewing (slice 17000): the opening
+    shot of the band, the herd's 13 s walk, the volley framed with the
+    Ballista (zoom 56), the rain, and the 120 ms hitch as it lands.
+  - If the volley should come sooner, the grid needs more than one
+    reactor's 76-tile reach for 256 bolts: a second reactor, or
+    batteries under a roof (a battery in the open can short-circuit in
+    the scene's rain). Not done; the plan asked for the herd to be met
+    well before the base, which 76 tiles does.
+  - The cleanup volleys, the "stragglers" beat and line, and sending
+    survivors home have run in one clean run and the sabotage runs. A
+    smoke check that stages a few stragglers and expects one cleanup
+    volley at them would cover them on every run.
+  - One stampede-only verify run fired no volley (docs/AI-KNOWN-ISSUES
+    .txt). If it recurs, read the scene's "still waiting for the volley"
+    notes in that run's log; if the herd is slow rather than stuck,
+    lengthen giveUpTicks (1,800) and the scene's timeout (3,600).
+  - Measure how often the stampede declines for a closed east edge over
+    more maps (once in the slice's first runs, before the northward
+    slides). If it is often, consider the other edges, keeping the
+    volley's impact clear of the tractor yard and the pads.
+  - Sabotage the 4K narration check (slice 14000): a line too long for
+    two lines at the Medium size, and a character the font lacks, should
+    each fail "every narration line fits the overlay in two lines at
+    3840x2160 and 2x UI scale". Not run yet.
+  - Look at the operator's 115-character volley line by eye at 2x on 4K
+    in slice 17000: its two lines, its em dashes, and whether 8.25 s of
+    reading time feels right at the money shot.
+  - [Done 2026-10-14, review step: TourScene.HoldColonistsClear in the
+    self-destructs, the grenade and both tractor scenes, with the
+    verifier's per-scene "no colonist harmed" fact, which a sabotage
+    run proved; the hold itself was not sabotaged.]
+    The tour's self-destruct scenes clear colonists only at set-up and
+    arming; a hauler walked back into the reactor's barrage in one verify
+    run (docs/AI-KNOWN-ISSUES.txt). Keep colonists out of the blast's
+    reach plus margin every tick until the aftermath is idle (for
+    example, forbid the area or draft them in the base, as the stampede
+    does), then sabotage it.
+- [ ] Raccoon Incident follow-ups (slice 15000, 2026-10-14):
+  - [Done 2026-10-14, slice 18000: the Showcase API holds the
+    storyteller quiet for every showcase until it finishes or stops
+    (requests item 19, part one); clearing the starting hostiles, part
+    two, is not done: seed choice is to cover the tour.]
+    Showcase games keep the quick test's storyteller, so raids and dark
+    entities arrived in four of six verify runs and killed colonists the
+    tour did not (docs/AI-KNOWN-ISSUES.txt). Proposal: the Showcase API
+    switches off random incidents for a showcase's game (for example a
+    no-incident storyteller or difficulty while the showcase runs), which
+    would also keep the operator's viewing free of a raid. Asked in
+    docs/AI-requests-for-humans.txt; not done, as it changes every
+    showcase. The hostiles a map starts with (dark entities, mechhives)
+    did more harm than the storyteller in the later runs: the showcase's
+    stage builder could remove hostile pawns within reach of the base
+    and AnyRim when it builds, as the smoke run's QuietTheMap does
+    before its settling checks.
+  - Watch the scene by eye at 2x on 4K in slice 17000: Ned's sprint and
+    throw, Constance in her chair (she waits standing on it; vanilla has
+    no "sit" job outside meals and recreation), the street shot at zoom 30,
+    and the census on the welcome sign at zoom 16.
+  - Ned died in six of eleven throws, was downed in two and stood in
+    three: the raccoon closes on him during the throw's wind-up, so the
+    singularity opens within its 10-tile pull of him. If the operator
+    wants him to survive more often, move his post north or have him
+    throw from farther (both in Core's RaccoonIncident, with its tests).
+  - The scene's stand-down (Ned lost before it begins) ran once, as a
+    timeout before it existed; it and the "after anyone" path (Constance
+    gone) have not run on purpose since. A smoke check that kills Ned
+    before the scene, and one that removes Constance, would cover them.
+  - In one run Ned stood 8.1 tiles from the raccoon, in sight, on his
+    AttackStatic, and had not yet thrown 600 ticks after it came (he
+    threw later). Read the "still waiting" notes in future runs; if it
+    recurs, find out why TryStartAttack is refused (a busy stance, the
+    verb's own sight line to a raccoon at the gate).
+  - The census line is said through ShowcaseWorker.Say by the scene; if
+    another scene needs computed words, consider a Showcase API feature
+    (a line with a value the scene supplies) instead of more computed
+    beats.
+- [ ] Named settings follow-ups (slice 16000, 2026-10-14):
+  - Watch by eye at 2x on 4K in slice 17000: the nine setting icons and
+    the "Apply to every tractor" icon beside vanilla's (checked here only
+    at full size and at 64 px on a contact sheet), the menus, the barn's
+    buttons and pane, and the tour's tractors at Popular and Block Party
+    (the single tractor's pull reaching its party and the stray; the
+    twins' 22.5-tile pulls over the whole junkyard).
+  - [Partly done 2026-10-14, review step: "Apply to every tractor"
+    (both its filter and the bomb's setter gate) and the older saves
+    (the bomb's legacy loader) were sabotaged; the barn's settings on
+    a new robot and the Proximity menu were not.]
+    Not sabotaged: the new smoke checks (the barn's settings going with
+    a new robot, "Apply to every tractor" sparing a pulling bomb, older
+    saves loading as named stops, the Proximity menu). A run that, say,
+    skips SetSettings in Notify_FormingCompleted, lets Apply reach a
+    pulling bomb and ignores "dialledPull" would prove them.
+  - A save-and-reload of a whole game with robots, planted bombs and a
+    barn on their new settings was not run; the smoke test loads the
+    robots' comps' nodes and a planted bomb's whole node (through its
+    own ExposeData, review step) through RimWorld's loader, but runs
+    no cross-reference or post-load pass.
+  - (Done in 19000c.) The tour's stray is now the tour group's stray, a
+    tourist, which the robot protests about as a friendly guest; it
+    fell back to the Brain Squeezer's user, then the grenadier, before.
+  - The flee check's muffalo, 13 tiles out, reached 24.0 tiles (the
+    destination it chose) against the 23 needed: it passes on reaching
+    any clear cell, but watch it for flakes.
+  - Settings on several selected things of different kinds (robots,
+    planted bombs and a barn together) group by setting, and the first
+    selected thing's pull sizes the Proximity menu; fine as built, but a
+    review may prefer the barn's buttons not to group with the robots'.
+
+- [ ] Slice 19000c follow-ups (2026-10-15):
+  - No unit test for ImplosionField.Tumble (game-side, it reads the map's
+    cells and spawns items, which the Core tests cannot load); the smoke
+    runner's deterministic check stages the stuck pile instead ("an item
+    blocked behind a pile with room tumbles into it", which fails with
+    the tumble off). Watch the next full runs for the old drag flake: if
+    it returns, its message now lists what fills the pile.
+  - A showcase stopped mid-tour or failing to set up sends the tour group
+    home through the same TourGroup.Dismiss the verifier checks at
+    FINISHED (and the smoke runner checks directly), but no in-game run
+    presses Stop on the tour itself; a verifier option to stop at a
+    named scene would cover it.
+  - The tourists' rest spot and the pads' view spots are fixed offsets;
+    on a map where they are not standable the group is cut to the
+    nearest standable cell within a few tiles, else stays where it was.
+
+- [ ] Tour review step follow-ups (2026-10-14, after slices 13000 to 16000):
+  - (Done in 19000c, docs/SHOWCASE.md, "Tourists".) Tourists, the
+    second half of the plan's "Colonist Safety and Tourists" ("You can
+    add some guests or tourists for unfortunates"), were not built, for
+    time. The colonist half is built. Sketch: a party
+    of three to five visitors of a faction made for the showcase (hidden,
+    permanent, so no goodwill letters; asked in
+    docs/AI-requests-for-humans.txt, item 21), spawned with the stage as
+    a tour group near the base, walked by the director to where a scene
+    can reach them (near a pad before it arms, along the stampede's path
+    behind the keep-away), each scene's casualties counted, a deadpan
+    line when one is lost ("Our guests are enjoying an unusually close
+    look."), and every tourist removed when the showcase ends. The
+    verifier would count tourist casualties, require every tourist
+    accounted for at the end, and keep failing any colonist harmed.
+    Possibly the grenade's volunteer becomes a tourist too (item 21).
+  - The grenade scene timed out unthrown on a dark-entity map again
+    (third time; DLL 14:19:35). It now logs the grenadier's state every
+    600 ticks while the throw is overdue ("grenade: still waiting for the
+    throw"); read those notes the next time it happens.
+  - In the review step's verify runs some scenes ran at about 48 game
+    ticks a second (the tractor in every run; in one run every scene from
+    anyrim to the tractor) against 110 to 290 elsewhere, at a steady 24
+    fps: two ticks a frame, which is vanilla's forced normal speed
+    (TickManager.TickRateMultiplier is 1 while TimeSlower.ForcedNormalSpeed;
+    a fight, a flame or heat signals it, and the retired reactor heats the
+    map), not a slow tick. Which signal it was is not proved. At normal
+    speed the viewer sees no difference; verify runs only take longer.
+  - Optional review suggestions not done: a verifier NOTE for each
+    unforced decline with -TourSkip '' (the scene's reason beside the
+    verifier's own counts); a verifier fact that no volley was ordered
+    within its footprint of the base (the scene enforces SafeAim and logs
+    each refusal; unit tests prove the rule); and a smoke check that the
+    AnyRim census posts again after a stopped tour on a map with AnyRim.
+  - Not sabotaged in the review step: the stampede's decline judgement
+    (its sabotage, EntryCells returning nothing, would also stop the
+    stampede's own facts running, so it needs a run of its own), the
+    raccoon census guard (Messages.liveMessages not found), the held
+    stragglers' line, the colonist hold itself, and the volley footprint
+    in game. The stampede's "no fire reached the base" sabotage was
+    inconclusive: FireUtility.TryStartFireIn 14 tiles east of the square
+    started nothing in the scene's rain (the NOTE read 0 near the base).
+    Spawn a Fire thing directly there instead, in a stampede-only verify
+    (-TourSkip with every other key).
+- [ ] Showcase seeds follow-ups (slice 18000, 2026-10-14):
+  - [Done 2026-10-14: requests item 22 approved ("Approve the patch");
+    the Map.NextGenSeed prefix is built, acting only while a showcase's
+    game generates its map, named in the XML test and the smoke check,
+    and trials show MAPHASH and STAGEHASH repeat (docs/AI-DECISIONS.txt,
+    slice 18000, the map seed's patch).]
+  - [Done 2026-10-15: BT_Showcase pins tour-04 (docs/SHOWCASE.md, "The
+    Tour's Seed"; docs/AI-DECISIONS.txt, slice 18000, the tour's seed).]
+    The lead's best-of-32 batch (Tools/tour-trials.ps1 -Count 32), then
+    BT_Showcase's seed. Its SUMMARY fields are in
+    docs/AI-TESTING-STRATEGY.txt ("Tour trials").
+  - Requests item 19, part two (clearing the hostiles a map starts with)
+    if seed choice does not keep them away from the tour.
+  - Optional: a cue or SUMMARY field naming which map parts repeat (a
+    grid-only fingerprint of terrain and roofs), so a trial can tell a
+    structures-only divergence from a terrain one at a glance.
+  - [Done 2026-10-14: the review's eleven confirmed findings, fixed
+    (docs/AI-DECISIONS.txt, slice 18000, the review fixes), all but the
+    layouts' rooms, which are named instead (below).]
+  - Layouts' rooms are not pinned (docs/AI-KNOWN-ISSUES.txt): a third
+    Harmony patch would pin them, a prefix on LayoutWorker.FillAllRooms
+    (or Spawn) that, inside the map seed's window, seeds each room's
+    RandBlock from Gen.HashCombineInt of the sketch's place and the
+    room's index rather than System.HashCode.Combine. Not built: only
+    two patches are approved. It would change the maps of landmark and
+    ruin tiles only. Ask the operator before building it; until then a
+    showcase's seed must be one whose map holds no layout
+    (unpinnedLayouts 0) and that repeats in two processes.
+  - Not covered by an automated test, with why: smoke-test.ps1 stopping
+    a game that wrote no log within 120 s (it needs a RimWorld that
+    starts and writes nowhere; the relative-path cause of that is
+    tested); tour-trials.ps1's Ctrl+C clean-up order (stop each shell,
+    read its game's pid, stop the game) and the watcher writing
+    problem.txt and exit.txt for a run it stops (they need a run held
+    past its timeout or an interrupt; -Collect reading those files back
+    is tested); and the settle hold counting frames only while the
+    player has control (it moves the set-up later, never sooner; the
+    retry that makes a refused unpause harmless is tested by a smoke
+    check). Each was read and run by hand in the review fixes.
+  - Optional: send wild birds off before the reactor's barrage and the
+    cook-offs too (WildFliers.SendOff over the barrage's ring). Their
+    bolts spread over a 70-tile ring and many ticks, so the vanilla
+    job-loop error is unlikely there; none has been seen.
+  - Not seen to fail in the review fixes' sabotage build: the
+    verifier's MAPSEED fact comparing the cue's layouts with the
+    session's count (its sabotage was masked by another in the same
+    build that removed the layouts suffix inside MapSeedCue, which both
+    sides share; MapSeedCueTests do prove the suffix). Sabotage it alone
+    in the next sabotage build (the cue saying one layout more).
+  - (Done in slice 19000a, 2026-10-15.) Hostiles that arrived early in the
+    tour although the storyteller was quiet ("Sorne Geneline" pawns, one to
+    six, on 9 of the 32 trial maps): an ancient temple's dormant hives,
+    woken when the stage cleared the fog, and on two maps cave hives'
+    insects. The stage now removes the map's own hostiles before the fog
+    goes (docs/SHOWCASE.md, "A Clean Stage").
+
+- [ ] Tour-wide issues from the seed trials (slice 18000, 2026-10-15), for
+  slice 19000. Found in the best-of-32 trials and the four finalists'
+  frames (.local/tmp/tour-finalists, 51 frames a run); none is the
+  pinned map's fault, and each touched several seeds:
+  - (Done in 19000d.) The camera cuts after the scene's caption, so each
+    scene's first frames show the last scene's place (AnyRim opens on
+    the reactor's smoke, the grenade on the Memorial Gardens, the
+    tractor on AnyRim's south gate). Each scene now opens with a cut on
+    the tick its caption appears; the verifier checks it landed.
+  - (Done in 19000b and 19000d.) The defence volley's beat frames the
+    Artificer, never the 16 bolts or their craters; both
+    self-destructs' blast beats catch the pad just before or after it
+    goes, never during. A volley's frame now waits for its bolts to
+    land; the replicator's blast is taken at 45 ticks, the reactor's at
+    100.
+  - (Done in 19000d.) The stampede enters at x 240 to 247 of 250, so 35
+    to 40 per cent of the herd and volley frames is black off-map
+    space. Every tour shot now keeps on the map (the band is
+    unchanged); the verifier fails a frame reaching past the edge.
+  - (Done in 19000a.) Map hostiles that wake during the first scene
+    ("Sorne Geneline", Dark entities, Mechhive). The stage clears them
+    (hives, hostile pawns asleep or awake, casket occupants) before it
+    clears the fog, and the READY check counts dormant ones too.
+  - Raccoon: Ned throws with the raccoon 8 to 20 tiles off, and the
+    singularity takes Ned and Constance on about half of all seeds
+    (the census falls from 9 to 6 to 8). The scene can time out if the
+    raccoon dies first and Ned wanders (tour-27). Its "thrown" beat
+    pulls back so far that Ned, the raccoon and the grenade sit under
+    the caption bar. (Framing done in 19000d: the throw cuts to a shot
+    that fits all three in the clear part of the screen; the outcomes
+    stay for Overcharge, phase 15000.)
+  - Grenade: the volunteer's survival is a coin flip, and the pull can
+    reach a thrower about 10 tiles from the pile. Death, burial and
+    eulogy alerts then stay up for the rest of the tour.
+  - Tractor: the stray stands 6 tiles from the bomb, inside its
+    22.5-tile pull, and lives only if it flees in time; it was downed
+    at the same cell (77,63) on tour-05 and tour-22. With little in the
+    yard the single pull looks sparse (tour-17: 0 fixtures, about 185
+    item moves); stage more junk. The twins' junk is small at 1x.
+    (Done in 19000d: 22 pieces of junk in the single yard and 16 more
+    round the twins' junkyard; the twins open at zoom 28 and plant at
+    22; both pulls at 44.)
+    Since slice 18500 the stray starts at (-8,12), inside the 33.75-tile
+    pull; in one of slice 19000a's three tour-17 runs it was still inside
+    when the pull began and died (docs/AI-KNOWN-ISSUES.txt). Step 19000c
+    made a tourist the stray (done), so a stray caught in the pull is a
+    guest, narrated, and no colonist.
+  - (Done in 19000b.) Clutter: vanilla's alerts and letters down the
+    right edge ("Self-destruct armed" long after both have gone off,
+    "Need colonist beds", "Pen needed", "Roof collapse", "Ancient mech",
+    deaths, burials), the top-left messages ("Emplaced tractor bomb
+    armed..."), and in verify runs dev mode's gizmos and the Learning
+    helper. BT_Showcase now keeps the screen quiet (the Showcase API's
+    quietScreen), the tour lends no god mode, and smoke-test.ps1's
+    viewing runs and -Presentation turn dev mode and the Learning helper
+    off in their own prefs.
+  - (Done in 19000a.) The stampede's volley zone is fixed, so on some
+    seeds it killed an anima tree (the psychic scream and a mood hit;
+    tour-17, tour-27). The stage removes every anima tree on the map and
+    every tree in the volleys' zone, silently; the verifier fails a scream.
+  - The retire barrages set the shrubland alight and collapse nearby
+    ruins' roofs; the smoke and fire alerts carry into AnyRim.
+  - (Done in 19000a.) Rain and fog grey out the middle scenes on several
+    seeds, tour-04's included. BT_Showcase now holds the weather clear
+    (the Showcase API's holdWeather); the stampede borrows it for its
+    rain.
+  - The tractor scene sometimes drops to 22 to 25 ticks a second with
+    stalls of 0.8 to 4.3 s at Superfast (performance, not speed mode:
+    watch it in the viewing).
+  - At Superfast the narration overlay lags the action and two lines
+    sometimes ghost over each other; normal-speed runs showed 54 of 54
+    lines. Check at normal speed before judging.
+
+- [ ] Slice 18500 follow-ups (pull radii up by half, 2026-10-15):
+  - Request 23 (docs/AI-requests-for-humans.txt): Timid's 15-tile
+    emplacing range stayed, so Prudent now stops where Timid does at
+    Neighborly and Popular. Raise it by half too if the operator says so
+    (DefaultTimidStop, the robot's emplaceRange, the smoke proximity
+    check, the descriptions and docs/TRACTOR-BOMB.md).
+  - (Done in 19000a.) The tour's 33.75-tile pulls reach past the yard's
+    29-tile height and uproot every plant there, so an anima tree within
+    about 44 tiles of the yard's centre would scream. The stage now
+    removes every anima tree on the map, wherever it stands.
+  - The bigger pulls rip more fixtures outside the yard (tour-04: 26 in
+    the single pull, 49 in one twin, against 0 and 2 to 5 before); see
+    what they are on 19000d's contact sheets.
+
+- [ ] Slice 19000b follow-ups (clutter and capture, 2026-10-15):
+  - The quiet screen takes letters and messages off before they are
+    drawn, but their arrival sounds still play (vanilla's letters, such
+    as "Ancient mech", and the mod's own messages: tractor bombs, the
+    barn, detonations). The mod's own letters are not sent at all while
+    the screen is quiet; its messages could be skipped at source the
+    same way if the sounds bother the viewing. Not done: no one has
+    asked, and the sounds are part of the film's noise.
+  - In a player's own game the quiet screen cannot hide what the player
+    set: with dev mode on, the developer toolbar stays, and with god
+    mode already on, vanilla's DEV buttons show on whatever the tour
+    selects. Both are the player's settings, which the API never
+    changes. smoke-test.ps1's viewing runs have neither.
+  - A new smoke flake, once in seven slice 19000b smokes: "it works the
+    next unit on its own" (the Artificer) counted bolts +4 rather than
+    20, none carried or fired, its fuel spent. It runs before any
+    showcase check, and nothing of the slice runs outside a showcase;
+    watch for it again (docs/AI-KNOWN-ISSUES.txt).
+
+- [ ] Slice 19000d follow-ups (camera and framing, 2026-10-15):
+  - Request 24 (docs/AI-requests-for-humans.txt): what "needs work on
+    the sequence" means; nothing in the order or pacing was changed on
+    a guess.
+  - An END frame is taken on the tick its scene ends, and the next
+    scene begins (and now cuts) on that same tick, so the END frame
+    shows the next scene's place, not the last of its own (before, it
+    showed the camera mid-glide). The SCENE frame 20 ticks on shows the
+    same place. A frame taken a tick before the end is impossible
+    without the director ending a scene a tick ahead; not done, since
+    the frames are only for checking and the viewer sees no gap.
+  - The camera's checks (Source/SmokeTestTour.Camera.cs) judge each
+    opening a frame after it; a scene framed twice within one frame
+    (an opening and a beat) would read "not judged". No scene beats
+    within its first 150 ticks, so none can at today's speeds.
+  - The throw's framing fits Ned, the raccoon and the grenade as the
+    grenade leaves Ned's hand; the singularity that follows is framed
+    by the same shot, so a raccoon far from Ned leaves the pull's edge
+    out of view. Overcharge (phase 15000) reworks the throw.
+  - No unit test covers the director's keepOnMap arithmetic in the game
+    (UI.screenWidth, CameraDriver); Core's ShotFraming tests cover the
+    rule, and the verifier's "kept on the map" fact the result.
+
+- [ ] Slice 19000 review fixes follow-ups (Fixer, 2026-10-15):
+  - A whole save and reload of a game holding a tour group was not run:
+    the smoke runner never reloads its game. Its check calls the game's
+    own GameComponent_TourGroupSweep.LoadedGame on a group left as a
+    loaded game would find it (one dead, one downed), and a unit test
+    (ShowcaseXmlTests) holds LoadedGame to waiting for the load's long
+    event; the tourists' lord's own ExposeData round trip is not
+    exercised. Justification: no other smoke check reloads a game
+    either (see the Tractor Bomb's older saves above).
+  - Clothes a tourist dropped before a save stay after the load's sweep:
+    they cannot be told from anyone else's. Tourists never undress in
+    the tour, so none were ever seen.
+  - The hidden tourist faction stays in a loaded game's faction manager
+    after the sweep. Hidden, with no goodwill and no members, it shows
+    nowhere; removing a faction mid-game risks references from the
+    world's pawns and history, so it is left.
+  - Core's GuestLossCue holds a guest lost in a scene's intro until the
+    intro ends (tour-17's verify, 25 and 1, before the fix). The fix
+    cannot be forced in a run (a tourist must die in an intro); its
+    rule is unit tested, and the verifier's "narration follows the
+    cues" fact watches every run.

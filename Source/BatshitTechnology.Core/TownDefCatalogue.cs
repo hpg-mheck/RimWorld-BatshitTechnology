@@ -210,6 +210,7 @@ internal static class TownDefCatalogue
         d["Apparel_CollarShirt"] = Item(1) with { AcceptsStuff = Cloths };
         d["Apparel_CowboyHat"] = Item(1) with { AcceptsStuff = Cloths };
         d["Apparel_Duster"] = Item(1) with { AcceptsStuff = Cloths };
+        d["Apparel_FlakVest"] = Item(1);
         d["Apparel_PsychicFoilHelmet"] = Item(1);
         d["Apparel_SimpleHelmet"] = Item(1) with { AcceptsStuff = Metallic };
 

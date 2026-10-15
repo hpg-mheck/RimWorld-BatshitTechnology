@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- Haulers load the Tractor Barn (docs/TRACTOR-BOMB.md, "The Tractor
+       Barn"): vanilla's bill job, under Hauling as vanilla's crematorium
+       and campfire bills are. The hauler carries a bill's parts into the
+       barn and throws the switch; the barn builds the robot alone. -->
+  <WorkGiverDef>
+    <defName>BT_DoBillsTractorBarn</defName>
+    <label>load the tractor barn</label>
+    <giverClass>WorkGiver_DoBill</giverClass>
+    <workType>Hauling</workType>
+    <priorityInType>45</priorityInType>
+    <fixedBillGiverDefs>
+      <li>BT_TractorBarn</li>
+    </fixedBillGiverDefs>
+    <verb>load</verb>
+    <gerund>loading</gerund>
+    <requiredCapacities>
+      <li>Manipulation</li>
+    </requiredCapacities>
+    <prioritizeSustains>true</prioritizeSustains>
+  </WorkGiverDef>
+</Defs>

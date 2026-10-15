@@ -171,15 +171,20 @@ public sealed class ShowcaseXmlTests
     }
 
     /// <summary>
-    /// The Showcases button is the mod's one Harmony patch. Any C# use of
-    /// Harmony needs the HarmonyLib namespace (a using, an alias, a fully
+    /// The mod has exactly two Harmony patches, both made in the button's
+    /// file: the Showcases button's postfix on
+    /// OptionListingUtility.DrawOptionListing (approved 2026-10-13) and
+    /// the showcase map seed's prefix on the Map.NextGenSeed getter
+    /// (approved 2026-10-14, requests item 22). Any C# use of Harmony
+    /// needs the HarmonyLib namespace (a using, an alias, a fully
     /// qualified name) or a Harmony attribute, so no other file may
-    /// mention either; and the button's own file makes one Harmony
-    /// instance, under the mod's package id, and one Patch call, with no
-    /// bulk or reverse patching.
+    /// mention either; and the button's file makes one Harmony instance,
+    /// under the mod's package id, and two Patch calls, one postfix and
+    /// one prefix on those targets, with no transpiler, finalizer, bulk
+    /// or reverse patching.
     /// </summary>
-    [Fact(DisplayName = "The Showcases button is the mod's only Harmony patch")]
-    public void Harmony_should_patch_only_the_menu_button()
+    [Fact(DisplayName = "The Showcases button and the map seed are the mod's only Harmony patches")]
+    public void Harmony_should_patch_only_the_menu_button_and_the_map_seed()
     {
         string source = Path.Combine(FixturesDirectory, "Source");
         string buttonFile = Path.Combine(source, "Showcases", "ShowcaseMenuButton.cs");
@@ -200,13 +205,53 @@ public sealed class ShowcaseXmlTests
             "HarmonyId = \"breakpoint8088.BatshitTechnology.",
             button,
             StringComparison.Ordinal);
-        Assert.Single(Regex.Matches(button, @"\.Patch\s*\("));
+        Assert.Equal(2, Regex.Matches(button, @"\.Patch\s*\(").Count);
         Assert.Single(Regex.Matches(
             button, @"new\s*(Harmony(Lib\.Harmony)?)?\s*\(\s*HarmonyId\s*\)"));
+        Assert.Single(Regex.Matches(
+            button,
+            @"postfix\s*:\s*new\s+HarmonyMethod\s*\(\s*typeof\s*\(\s*ShowcaseMenuButton\s*\)"
+                + @"\s*,\s*nameof\s*\(\s*Postfix\s*\)\s*\)"));
+        Assert.Single(Regex.Matches(
+            button,
+            @"prefix\s*:\s*new\s+HarmonyMethod\s*\(\s*typeof\s*\(\s*ShowcaseMapSeed\s*\)"
+                + @"\s*,\s*nameof\s*\(\s*ShowcaseMapSeed\.Prefix\s*\)\s*\)"));
+        Assert.Single(Regex.Matches(
+            button, @"nameof\s*\(\s*OptionListingUtility\.DrawOptionListing\s*\)\s*,"));
+        Assert.Single(Regex.Matches(
+            button,
+            @"PropertyGetter\s*\(\s*typeof\s*\(\s*Map\s*\)\s*,"
+                + @"\s*nameof\s*\(\s*Map\.NextGenSeed\s*\)"));
         Assert.DoesNotMatch(
             @"PatchAll|PatchCategory|CreateClassProcessor|CreateProcessor|ReversePatch"
-                + @"|\[\s*Harmony",
+                + @"|transpiler\s*:|finalizer\s*:|\[\s*Harmony",
             button);
+    }
+
+    /// <summary>
+    /// The map seed's prefix decides before it does anything: its first
+    /// statement asks the window (GenerationPin.Take, bound to the game
+    /// being generated) and returns true, running vanilla's getter, when
+    /// the window does not pin this game. The window's rules themselves
+    /// are unit tested (GenerationPinTests).
+    /// </summary>
+    [Fact(DisplayName = "The map seed's prefix passes through unless its window pins the game")]
+    public void Map_seed_prefix_should_pass_through_outside_its_window()
+    {
+        string file = Path.Combine(
+            FixturesDirectory, "Source", "Showcases", "ShowcaseMapSeed.cs");
+        string code = WithoutComments(File.ReadAllText(file));
+        Match prefix = Regex.Match(
+            code,
+            @"public\s+static\s+bool\s+Prefix\s*\([^)]*\)\s*\{\s*(?<first>if\s*\((?<cond>[^{]*)\)"
+                + @"\s*\{\s*return\s+true\s*;\s*\})");
+
+        Assert.True(prefix.Success, "Prefix must open with its pass-through test.");
+        Assert.Matches(@"!\s*Pin\.Take\s*\(\s*Current\.Game\s*\)", prefix.Groups["cond"].Value);
+        Assert.Single(Regex.Matches(code, @"return\s+false\s*;"));
+        Assert.Matches(
+            @"static\s+readonly\s+GenerationPin\s+Pin\s*=\s*new\s+GenerationPin\s*\(\s*\)",
+            code);
     }
 
     /// <summary>
@@ -255,9 +300,10 @@ public sealed class ShowcaseXmlTests
     public void ClassDeclared_should_match_the_namespace_exactly()
     {
         Assert.True(ClassDeclared("BatshitTechnology.Showcases.ShowcaseDirector"));
-        Assert.True(ClassDeclared("BatshitTechnology.BatshitShowcaseWorker"));
+        Assert.True(ClassDeclared("BatshitTechnology.BatshitTourDirector"));
         Assert.False(ClassDeclared("BatshitTechnology.ShowcaseDirector"));
-        Assert.False(ClassDeclared("BatshitTechnology.Showcases.BatshitShowcaseWorker"));
+        Assert.False(ClassDeclared("BatshitTechnology.Showcases.BatshitTourDirector"));
+        Assert.False(ClassDeclared("BatshitTechnology.BatshitShowcaseWorker"));
         Assert.False(ClassDeclared("BatshitTechnology.NoSuchWorker"));
     }
 
@@ -272,27 +318,128 @@ public sealed class ShowcaseXmlTests
     {
         "defName", "label", "description", "summary", "previewTexPath",
         "estimatedMinutes", "order", "requiredMods", "compatibility",
-        "mapSize", "biome", "workerClass", "scenes", "narration",
+        "mapSize", "biome", "seed", "holdWeather", "quietScreen", "workerClass",
+        "scenes", "narration",
     };
 
     /// <summary>
-    /// Batshit Technology's first showcase runs today's demo base through
-    /// the API, with the agreed preview, size and running time.
+    /// The def's <c>seed</c> field exists in the source as a string, and a
+    /// ShowcaseDef that pins a seed pins a usable one (1 to 64 ASCII
+    /// letters, digits, '-', '_' or '.'), which the game would otherwise
+    /// refuse with an error at launch.
     /// </summary>
-    [Fact(DisplayName = "BT_Showcase runs the demo base through the API")]
-    public void BT_Showcase_should_wrap_the_demo_base()
+    [Fact(DisplayName = "A ShowcaseDef's seed, if any, is well formed")]
+    public void ShowcaseDefs_should_pin_only_well_formed_seeds()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Showcases", "ShowcaseDef.cs"));
+        Assert.Matches(new Regex(@"\[NoTranslate\]\s+public string seed;"), source);
+
+        foreach (XElement def in ShowcaseDefs())
+        {
+            XElement? seed = def.Element("seed");
+            if (seed == null || string.IsNullOrWhiteSpace(seed.Value))
+            {
+                continue;
+            }
+
+            string name = def.Element("defName")?.Value ?? "(no defName)";
+            Assert.True(ShowcaseSeed.IsWellFormed(seed.Value.Trim()),
+                $"{name}: seed '{seed.Value}': {ShowcaseSeed.WhyMalformed(seed.Value.Trim())}");
+        }
+    }
+
+    /// <summary>
+    /// The def's <c>holdWeather</c> field exists in the source as a
+    /// WeatherDef, and the directed tour holds the weather clear
+    /// (slice 19000a: rain and fog greyed out its middle scenes).
+    /// </summary>
+    [Fact(DisplayName = "BT_Showcase holds the weather clear")]
+    public void BT_Showcase_should_hold_the_weather_clear()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Showcases", "ShowcaseDef.cs"));
+        Assert.Matches(new Regex(@"public WeatherDef holdWeather;"), source);
+        XElement def = Assert.Single(
+            ShowcaseDefs(), d => d.Element("defName")?.Value == "BT_Showcase");
+
+        Assert.Equal("Clear", def.Element("holdWeather")?.Value);
+    }
+
+    /// <summary>
+    /// The def's <c>quietScreen</c> field exists in the source as a bool,
+    /// and the directed tour keeps the screen quiet (slice 19000b:
+    /// alerts, letters and messages piled up over the film).
+    /// </summary>
+    [Fact(DisplayName = "BT_Showcase keeps the screen quiet")]
+    public void BT_Showcase_should_keep_the_screen_quiet()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Showcases", "ShowcaseDef.cs"));
+        Assert.Matches(new Regex(@"public bool quietScreen;"), source);
+        XElement def = Assert.Single(
+            ShowcaseDefs(), d => d.Element("defName")?.Value == "BT_Showcase");
+
+        Assert.Equal("true", def.Element("quietScreen")?.Value);
+    }
+
+    /// <summary>
+    /// The directed tour asks for no DEV buttons: its director never
+    /// lends god mode (slice 19000b: viewing runs show no developer
+    /// clutter).
+    /// </summary>
+    [Fact(DisplayName = "The tour asks for no DEV buttons")]
+    public void Tour_director_should_not_ask_for_dev_buttons()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Tour", "BatshitTourDirector.cs"));
+        Assert.DoesNotMatch(new Regex(@"EnableDevButtons\s*\("), source);
+    }
+
+    /// <summary>
+    /// A loaded game sends home any tour group it still holds (a game
+    /// saved mid-tour; nothing about the tour is saved): the mod's
+    /// GameComponent_TourGroupSweep, which RimWorld makes for every game
+    /// through its public (Game) constructor, sweeps every map in
+    /// LoadedGame, and waits for the load's long event to finish first,
+    /// since the load runs off the main thread, where map pawns must not
+    /// be touched. The smoke runner checks the sweep itself in game.
+    /// </summary>
+    [Fact(DisplayName = "A loaded game sends leftover tourists home, on the main thread")]
+    public void Loaded_game_should_send_tourists_home()
+    {
+        string code = WithoutComments(File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Tour", "TourGroup.cs")));
+        Assert.Matches(
+            @"public\s+class\s+GameComponent_TourGroupSweep\s*:\s*GameComponent\b", code);
+        Assert.Matches(@"public\s+GameComponent_TourGroupSweep\s*\(\s*Game\s+\w+\s*\)", code);
+        Match loaded = Regex.Match(
+            code, @"public\s+override\s+void\s+LoadedGame\s*\(\s*\)\s*\{(?<body>[^}]*)\}");
+        Assert.True(loaded.Success, "the sweep must override LoadedGame");
+        Assert.Matches(
+            @"^\s*LongEventHandler\.ExecuteWhenFinished\s*\(\s*\(\s*\)\s*=>\s*SweepAllMaps\s*\(",
+            loaded.Groups["body"].Value);
+    }
+
+    /// <summary>
+    /// Batshit Technology's first showcase is the directed tour, with the
+    /// agreed preview, size and running time; its scenes and narration
+    /// are checked by <see cref="TourXmlTests"/>.
+    /// </summary>
+    [Fact(DisplayName = "BT_Showcase is the directed tour")]
+    public void BT_Showcase_should_be_the_directed_tour()
     {
         XElement def = Assert.Single(
             ShowcaseDefs(), d => d.Element("defName")?.Value == "BT_Showcase");
 
-        Assert.Equal("demo base", def.Element("label")?.Value);
+        Assert.Equal("living better with batshittium", def.Element("label")?.Value);
         Assert.Equal(
-            "BatshitTechnology.BatshitShowcaseWorker",
+            "BatshitTechnology.BatshitTourDirector",
             def.Element("workerClass")?.Value);
         Assert.Equal("UI/Showcases/BT_Showcase", def.Element("previewTexPath")?.Value);
         Assert.Equal("250", def.Element("mapSize")?.Value);
-        Assert.Equal("3", def.Element("estimatedMinutes")?.Value);
-        Assert.Null(def.Element("scenes"));
+        Assert.Equal("8", def.Element("estimatedMinutes")?.Value);
+        Assert.NotNull(def.Element("scenes"));
         Assert.Null(def.Element("requiredMods"));
     }
 
@@ -402,7 +549,7 @@ public sealed class ShowcaseXmlTests
 
     /// <summary>Every ShowcaseDef in the mod's Defs.</summary>
     /// <returns>The def elements.</returns>
-    private static IEnumerable<XElement> ShowcaseDefs() =>
+    internal static IEnumerable<XElement> ShowcaseDefs() =>
         Directory.EnumerateFiles(
                 Path.Combine(FixturesDirectory, "Defs"), "*.xml",
                 SearchOption.AllDirectories)
@@ -418,7 +565,7 @@ public sealed class ShowcaseXmlTests
     /// </summary>
     /// <param name="fullName">The namespace-qualified class name.</param>
     /// <returns>True if it is declared.</returns>
-    private static bool ClassDeclared(string fullName)
+    internal static bool ClassDeclared(string fullName)
     {
         int dot = fullName.LastIndexOf('.');
         string ns = fullName.Substring(0, dot);

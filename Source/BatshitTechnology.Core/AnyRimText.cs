@@ -62,6 +62,25 @@ public static class AnyRimText
             + "The sign has been updated. Please remain calm.";
     }
 
+    /// <summary>
+    /// The census as the narrator reads it after an incident: the census
+    /// message (<see cref="CensusMessage"/>) when the population fell, or
+    /// "AnyRim census holds at 9. Please remain calm." when no one was
+    /// lost. A rise is read as a hold: residents do not come back.
+    /// </summary>
+    /// <param name="before">The population before the incident.</param>
+    /// <param name="after">The population now.</param>
+    /// <returns>The line.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">A negative count.</exception>
+    public static string CensusReport(int before, int after)
+    {
+        RequireCount(before, nameof(before));
+        RequireCount(after, nameof(after));
+        return after < before
+            ? CensusMessage(after)
+            : $"AnyRim census holds at {Number(after)}. Please remain calm.";
+    }
+
     /// <summary>The message when the showcase finishes building the town.</summary>
     public static string OpeningMessage =>
         "AnyRim, a small town in the north-west, is available for testing. "

@@ -15,71 +15,462 @@ wrong in the same change.
 The showcase is `BT_Showcase`, the first client of the Showcase API
 (`docs/SHOWCASE-API.md`). Players start it from the main menu: Showcases
 (at the bottom of the menu, below Quit to OS; the Harmony mod must be
-active), then Batshit Technology, then "Demo base", then Start. The
-script builds nothing itself: it starts RimWorld with
-`-showcase=BT_Showcase`, the main menu acts on that by generating a fresh
-game for the showcase, and `Source/Showcase.cs` (through
-`BatshitShowcaseWorker`) does the rest and leaves the game running. The
+active), then Batshit Technology, then "Living better with
+batshittium", then Start. The script builds nothing itself: it starts
+RimWorld with `-showcase=BT_Showcase`, the main menu acts on that by
+generating a fresh game for the showcase, and the def's worker,
+`BatshitTourDirector` (`Source/Tour/`), builds the stage through
+`Source/Showcase.cs` and directs the tour, leaving the game running. The
 script exits at once with an error if the showcase is refused or fails
 to set up, or if the mod logs an error before `READY`. Windows shown to
 the operator open maximized at 2x UI scale. The game log carries cues
-for screen-capture tooling, so it never has to guess at timings:
-`[BT-SHOWCASE] READY` (from the API, once the base is built), `ANYRIM`,
-`THROW` and `TOUR`, then `FINISHED BT_Showcase` ten seconds after the
-last of them (the API's full cue list is in its specification).
+for screen-capture tooling, so it never has to guess at timings, all
+prefixed `[BT-SHOWCASE]`: `READY` (once the stage is built), `ANYRIM` or
+"AnyRim skipped", then for each scene `SCENE <key>`, `BEAT <key>
+<moment>` for each beat and `END <key> <outcome>`, or `SKIPPED <key>:
+<reason>` for a scene this map cannot stage, and last `FINISHED
+BT_Showcase` (the API's full cue list is in its specification).
+
+`.\Tools\smoke-test.ps1 -Showcase -Verify` runs the whole tour as a test
+(`docs/AI-TESTING-STRATEGY.txt`, section 4): small, muted, at Superfast,
+with AnyRim forced to decline so that declining is exercised on every
+map; the Raccoon Incident needs the town shown first, so it declines
+with it (`-TourSkip ''` runs all ten). `-Presentation` plays it at its
+own speed, without dev mode or the Learning helper, in the layout a
+viewer sees instead, and `-Shots` saves its frames, which
+`Tools\contact-sheet.ps1` tiles into a sheet per scene.
 
 A showcase game never autosaves, so the player's autosave slots are
-safe. The devices' DEV buttons show only in dev mode: the showcase
-borrows god mode for them through the API, which gives it back when the
-showcase stops or finishes, or the viewer leaves the game, so it never
-follows anyone into their own colonies. `-quicktest -showcase=BT_Showcase`
+safe. The tour shows no DEV buttons, even in dev mode (slice 19000b): it
+no longer borrows god mode for them. It keeps the screen quiet
+(docs/SHOWCASE-API.md, "The Quiet Screen"): no alerts, no Learning
+helper, no letter or top-left message over the film, with everything it
+borrowed given back when it stops or finishes, or the viewer leaves the
+game. `-quicktest -showcase=BT_Showcase`
 also works, for developer runs: the quick-test game adopts the showcase
 on its own 250-cell map.
 
 ## The Map
 
-The quick test always generates a 250 by 250 map on a random tile, biome
-and terrain. Its centre is (125,125). RimWorld's x grows east and z grows
-north.
+The quick test always generates a 250 by 250 map. The tour's seed picks
+its tile, biome and terrain (below); a different seed gives a different
+map. Its centre is (125,125). RimWorld's x grows east and z grows north.
 
 | Area | Where | Contents |
 |------|-------|----------|
 | Demo base | Centre, within 16 tiles | Every device, working |
 | Ballista range | East of the base | Volleys at (185,125) |
+| Stampede | East edge, level with the base | 200 boomalopes enter |
 | Grenade range | Clearing at (100,125) | Junk pile, two colonists |
 | Self-destruct pads | Two corners at centre ±75 | A replicator, a reactor |
 | AnyRim | North-west, about (55,163) | The test town |
 
-## Timeline
+### The Tour's Seed
 
-Ticks run at 60 a second at normal speed; the reactor's barrage slows the
-game below real time, which is why capture tools wait for log cues.
+`BT_Showcase` pins the seed `tour-04` (`Defs/Misc/BT_Showcases.xml`), so
+every launch builds the same world, tile, colonists, map and stage
+(`docs/SHOWCASE-API.md`, "Seeds"). A `-showcaseseed=<text>` command line
+overrides it, and `Tools/tour-trials.ps1` tries the tour on others.
 
-| Tick | Event |
-|------|-------|
-| 0 | Base and AnyRim built; fog cleared; `READY` and `ANYRIM` logged |
-| +300 | The replicator demo arms, camera on it (10 s countdown) |
-| +1500 | The reactor demo arms, camera on it |
-| +2700 | A colonist throws a singularity grenade; `THROW` logged |
-| +3300 | Camera tours AnyRim's welcome sign; `TOUR` logged |
+It was chosen on 2026-10-14 and 2026-10-15 (slice 18000), at Matt
+"Breakpoint" Heck's request to "try 32 variations of the demo scenario"
+and "select the best one":
 
-Before each self-destruct arms, colonists within its blast radius plus 8
-are moved back to the base, so no demo kills a colonist.
+1. **Trials.** The full tour ran once on each of `tour-01` to `tour-32`.
+   Nine seeds passed every hard requirement: all ten scenes completed,
+   nobody harmed, AnyRim placed, the grenade thrown, Ned's throw and the
+   tractor's protest. The rest failed on hostiles the map started with
+   (dark entities, mechs) or on faults in the tour's own script.
+2. **Repeats.** Six candidates ran three more times each. Every one
+   repeated its map and stage checksums (`MAPHASH`, `STAGEHASH`) in
+   every process. tour-04 and tour-17 were clean in four of four runs;
+   tour-05 and tour-27 in two.
+3. **A close look.** Four finalists (tour-04, tour-17, tour-05,
+   tour-27) were judged scene by scene from 51 frames a run and their
+   logs. The map was weighed above the script, which will change.
 
-## The Directed Tour (planned)
+Why tour-04, an arid shrubland:
 
-Requested by Matt "Breakpoint" Heck on 2026-10-13, to be built with the
-Tractor Bomb's showcase work (`ROADMAP.md`). Today's showcase runs its
-demos on a timer and moves the camera now and then. The tour takes
-ownership of the camera, directs the action, and shows one major feature
-at a time, explaining as it goes.
+- The stampede's band on the east edge is open (326 of 328 cells), and
+  the 256-bolt volley killed all 200 boomalopes at once in every run,
+  with no fire near the base.
+- Both self-destruct pads stand in open ground with readable rings. On
+  tour-17 a mountain overhang covers a quarter of the reactor's ring;
+  on tour-27 an outcrop covers half of it and splits the stampede.
+- AnyRim stands on flat ground at (51,166), with every sign, house and
+  car legible.
+- The tractor yard is roomy, and its single pull is the busiest of the
+  four (about 415 item moves against tour-17's 187).
+- No anima tree stands in the volley zone. On tour-17 and tour-27 the
+  stampede's volley kills one every run.
+- It has the fewest map-made hostiles of the four (three).
+
+Its known weaknesses:
+
+- An ancient walled structure stands 20 to 25 tiles north-east of the
+  base, beside the defence volley's craters.
+- Three "Sorne Geneline" hostiles appeared during the first scene: insects
+  from the temple's dormant hive, woken when the stage cleared the fog. In
+  two of its eight runs, colonists were hurt while they were still about.
+  Since slice 19000a the stage removes the hive first ("A Clean Stage").
+- Rock chunks lie piled beside the Transmogrifier.
+- Grass fires start around the pads.
+
+The runner-up is `tour-17`, a grassland.
+
+### A Clean Stage
+
+Built in slice 19000a (2026-10-15), from the seed trials' tour-wide issues.
+The stage (`Source/Showcase.cs`, with `Source/Tour/StageClearing.cs`) clears
+three things before READY; none of it touches map generation, so MAPHASH
+stays, and none of it draws a random number.
+
+- **The map's own hostiles.** The pads clear the whole map's fog so every
+  blast can be watched, and clearing the fog wakes what the map kept asleep.
+  An ancient temple (the walled structure with rows of caskets) holds one of
+  three things: one or two dormant hives, which wake on their next
+  tick-interval once unfogged and spawn their first insects ("Sorne
+  Geneline", the insects' fixed faction name, the same on every seed); one
+  to five sleeping mechanoids; or, with Anomaly, two to five fleshbeasts,
+  both woken at once by the unfogging (RimWorld 1.6.4871: `Hive`,
+  `FogGrid.Unfog`, `Pawn.Notify_Unfogged`). So after AnyRim is built (its
+  site search steers clear of hostiles, so the town stands where it always
+  did) and before the fog goes, the stage removes every hive; every egg
+  sac (Odyssey) and stasis cocoon, which release an insect when killed or
+  disturbed (on tour-17 the reactor's blast burst two egg sacs into
+  larvae); every hostile pawn (asleep, dormant or awake); and every pawn
+  sealed in one of the map's ancient cryptosleep caskets, which a stray
+  bolt would otherwise release with every casket of its group. Removing
+  the last hive would give the colonists vanilla's "defeated insect hive"
+  memory, which they did not earn; it is taken back.
+- **Trees whose death would hurt.** Every anima tree on the map goes (its
+  psychic scream and five days of bad mood when killed; on tour-17 and
+  tour-27 the stampede's volley killed one every run, and the tractors'
+  pulls uproot every plant within about 44 tiles of the yard's centre), and
+  every other tree in the volleys' zone: everything east of the base's
+  square to the map's edge, from the herd's band and the base's square out
+  30 tiles north and south (Core's `Stampede.VolleyZone`: a 256-bolt
+  volley's footprint at the grid's 76-tile reach is 29.8 tiles). The zone
+  takes the band as the stampede will choose it, without its shuffle.
+- **How.** Everything goes with `DestroyMode.Vanish`: no corpse, no jelly,
+  no stump and no leavings, and neither the scream, its sound nor the
+  tree-lovers' mood follows (both on-destroy comps ignore Vanish).
+- **The weather.** `BT_Showcase` holds the weather clear for the whole tour
+  (the Showcase API's `holdWeather`; docs/SHOWCASE-API.md, "The Held
+  Weather"): rain and fog had greyed out the middle scenes on several seeds,
+  tour-04's included, because the stampede's fires shorten the weather's
+  turn and weight the next pick 15 times towards rain. The stampede still
+  brings its own rain: it borrows the weather for its run and gives it back
+  at its end.
+
+The log's `[BT-SHOWCASE] stage cleared:` line says what went. On tour-04 the
+tour verifier checks, at READY, that no map hostile is left (dormant ones
+counted), no anima tree stands and no tree stands in the volley zone, and
+that the weather is held; at each scene's end, that no hostile appeared that
+a scene did not stage (the herd, the raccoon, the raiders), that no anima
+tree screamed, and that the weather held (or, for the stampede, was given
+back); and after FINISHED, that the weather was given back.
+
+### Tourists
+
+Requested by Matt "Breakpoint" Heck ("add some guests or tourists for
+unfortunates") and settled on 2026-10-15 ("Fine"; request 21): built in
+slice 19000c. The tour's casualties are a small party of visitors, never
+the colonists.
+
+- **Who.** Three to five tourists (the number drawn from the stage's
+  seed) of `BT_ShowcaseTourists`, a faction made only for showcases
+  (`Defs/Misc/BT_Tourists.xml`). It is hidden: never in the faction list
+  or the world's faction settings, never generated with a world (the
+  tour makes it in its own game when the group arrives), with no
+  goodwill, so a tourist's death or injury angers no one and posts no
+  goodwill letter, and with no leader, so none can die. Tourists are
+  adults in day clothes, unarmed, with empty pockets, and wear tour
+  composure (no mental breaks, steady mood, no hunger; "Flight: not
+  observed while a demonstration is on").
+- **Arrival.** The group arrives with the stage, after `Showcase.Build`
+  and before READY, and waits inside the base's square north-west of the
+  devices (Core's `TourGroupPlan.Rest`, 9 tiles west and 9 north of the
+  centre). One lord keeps them (a non-colonist without one walks off the
+  map); its duty has no combat in it, only a wander near a spot the
+  director sets, at a jog when far from it.
+- **Roles,** fixed by arrival so the two the tour cannot do without are
+  never spent early: the first is the grenade's volunteer, the second
+  the tractor's stray, the rest (one to three) sightseers.
+- **Walked from scene to scene.** As each scene sets up, the director
+  sends every tourist where the scene wants it (a tourist more than 12
+  tiles off is cut there, as a film would: a walk across the map takes
+  longer than a scene's intro and would cross another scene's danger);
+  the rest wait in the base.
+  - *The stampede:* the sightseers stand behind the keep-away line, on
+    the base's side: 5 tiles inside it, 20 tiles east of the base's
+    square, level with the base. The volunteer and the stray wait with
+    the colonists.
+  - *The pads:* the sightseers take turns, the first to the replicator's
+    pad, the second to the reactor's, and so on; each looks at its
+    device from 8 tiles, on the side towards the base. Once it is armed
+    they stay for the look: the device sends everyone near it running
+    each second, and the scene calls them back.
+  - *The grenade:* the volunteer stands in the junk pile from the
+    scene's start (7 tiles west and 3 south of its centre). A tourist
+    volunteers, never a colonist: the group's volunteer, else any
+    tourist still standing, else nobody, and the pile is empty
+    (`thrownAlone`).
+  - *The tractor:* the stray stands where Core's layout puts it, inside
+    the robot's pull; the robot objects to a friendly guest as it does to
+    a colonist (`docs/TRACTOR-BOMB.md`, "Protest"), and the stray jogs 30
+    tiles north when it protests.
+- **When one is lost** (downed, dead or gone), the scene showing plays
+  its `guestsLost` beat, once: "Our guests are enjoying an unusually
+  close look." The stampede, both pads and the tractor have it; the
+  grenade's volunteer has its own outcomes ("Our volunteer has been
+  comforted. Completely."). A tourist lost during a scene's intro (one
+  hurt at the replicator's pad who dies as the reactor's scene begins,
+  as on tour-17 in the review fixes) waits for the intro's end, so the
+  narrator introduces the scene first and the line follows its start
+  lines (Core's `GuestLossCue`); before, the verifier's "narration
+  follows the cues" failed on it.
+- **Going home.** When the tour finishes, is stopped, or fails to set
+  up, every tourist goes: the living and the downed, the dead with their
+  corpses, and any clothes left lying about, and the lord with them. The
+  log says what became of each (`[BT-SHOWCASE] tourists dismissed`).
+  A game saved during the tour and loaded again is an ordinary game, but
+  its tourists' lord was saved with them; so when any game loads, the
+  mod's `GameComponent_TourGroupSweep` sends home whatever group it
+  holds: every pawn of the tourists' faction or wearing tour composure,
+  standing, downed or carried, every corpse of one, and every lord of
+  theirs (`[BT-SHOWCASE] tourists dismissed (a loaded game)`). The load
+  runs off the main thread, so the sweep waits until it has finished.
+  Clothes a tourist dropped before the save cannot be told from anyone
+  else's, and stay.
+- **Checked.** The tour verifier checks at READY that the group is three
+  to five tourists of the hidden faction, not hostile, none a colonist,
+  waiting in the base; at the grenade's end that its volunteer was a
+  tourist; at the tractor's end that its stray was; at the end of a
+  scene that narrates losses and lost a tourist, that it said so; and
+  after FINISHED that the group went home, every tourist accounted for
+  (standing, downed, dead or gone), nothing of it left on the map, and
+  its faction never hostile. The SUMMARY's `tourists` counts them. The
+  smoke test runs the same group on its own map: a robot protests about
+  a tourist with no colonist near, a tourist killed and another hurt by
+  a colonist cost no goodwill and send no letter, dismissal leaves
+  nothing behind, and a second group, one dead and one downed, is gone
+  after the game's own sweep runs its `LoadedGame` (no pawn, corpse or
+  lord of theirs left), as after a load (`Source/SmokeTest.Tourists.cs`;
+  the runner never saves and reloads its game, so the lord's own save is
+  not exercised).
+
+What becomes of them is the world's: on tour-04 (three tourists, so one
+sightseer) the volunteer died in the pile in two runs of three and lived
+in the third; the sightseer died beside the replicator's pad in two
+runs and lived in one; the stray was protested about, fled and lived
+every time. On tour-17 (five) two sightseers died at the replicator's
+pad and one at the reactor's, and the volunteer was downed and healed.
+In the first run the sightseer, fleeing the armed replicator with
+everyone else, lived through its blast; since then the sightseers stay
+for the look.
+
+## The Scenes
+
+Built in slice 12000 (2026-10-14). There is no timer: each scene waits on
+the world (a burst ending, an aftermath going idle, an implosion closing)
+with its def's `timeoutTicks` behind it, and every scene declines, with a
+stated reason, a map that lacks what it needs. Ticks run at 60 a second
+at normal speed; the reactor's barrage slows the game below real time,
+which is why capture tools wait for log cues.
+
+| # | Key | Title | Beats | Declines when |
+|---|-----|-------|-------|---------------|
+| 1 | `home` | The Home of Tomorrow | each device | no device stands |
+| 2 | `defence` | Home Defence | artificer, volley | no Ballista |
+| 3 | `stampede` | Uninvited Guests | herd, volley, aftermath† | see below |
+| 4 | `retire-replicator` | When Devices Retire | blast | no pad 0 |
+| 5 | `retire-reactor` | When Reactors Retire | blast | no pad 1 |
+| 6 | `anyrim` | A Typical Rim Community | sign, street, homes | no AnyRim |
+| 7 | `grenade` | Comfort Is a Weapon | thrown* | no able colonist |
+| 8 | `raccoon` | The Raccoon Incident | guard, pest, thrown, census‡ | see Reel 9 |
+| 9 | `tractor` | The Tractor of Tomorrow | barn to blast | no yard or foe |
+| 10 | `twins` | Two Tractors | planted, pull, blast | no yard or foe |
+
+\* Or `thrownAlone` when no tourist is left to volunteer.
+
+‡ The census beat's words are computed: AnyRim's own census line, with
+the real count of surviving residents (`TourSceneScript.Computed`).
+
+† And `stragglers` before the aftermath when a cleanup volley fires. The
+stampede declines without a Ballista, with fewer than 256 explosive bolts
+in its chain, without the boomalope in the game, or when no open ground on
+the east edge reaches the base.
+
+`TourScript` (Core) holds the order and the beats; the def's XML, the
+scene classes and the tests all read it. The Ballista picks no target
+of its own during the tour (`AutoTargetHeld`): it fires only the
+volleys it is ordered to.
+
+**Colonists are never the casualties** (the operator, 2026-10-14;
+review step of slices 13000 to 16000). From a scene's set-up until it
+ends, the self-destructs, the grenade and both tractor scenes hold
+the colonists clear of everything the scene can reach
+(`TourScene.HoldColonistsClear`): any colonist in reach is moved back
+to the base, every other is drafted with Fire At Will off, and every
+30 ticks any who came back in (one that could not be drafted, say)
+is moved out again and logged. The reach is 87.6 tiles round a pad
+(the self-destruct's blast, fires, secondaries and barrage, with the
+planner's margin), 16 tiles round the grenade's pile, and the yard
+grown by 42 tiles for the tractors (31 before the pulls were raised by
+half). The grenade's grenadier is placed by its scene and spared.
+Colonists are let go when the scene ends, however it ends. A
+hauler had walked back into the reactor's barrage in one verify run
+of slice 14000; the self-destructs had cleared colonists only at
+set-up and arming. The verifier fails any colonist hurt, downed or
+killed in any scene, with no exception since slice 19000c, when the
+grenade's volunteer and the tractor's stray became tourists ("Tourists"
+above); harm done beside one of the map's starting hostiles (a
+mechhive's, dark entities) is noted instead, since the tour did not
+cause it, though the stage clears those since slice 19000a.
+
+**Pacing on the overlay.** Each line is read in full and gone two
+seconds before the next is due (Core's `TourPacing`: its reading
+time, the 1-second fade and the 2-second lead, at 60 ticks a
+second). A scene's start line waits until the previous scene's
+outcome lines have cleared (460 to 520 ticks; 940 after the raccoon's
+two-line verdict); a cue's second line waits for its first (the
+home scene's tagline at 660 ticks, the raccoon's thanks at 460, the
+byline at 430); and each scene holds its action for an intro until
+its start lines have cleared (`TourScene.IntroTicks`, 710 to 1,294
+ticks), so its first beat comes on a clear screen. Everything a
+scene does is timed on its own clock, which starts after the intro,
+so the tuned timings inside each scene are unchanged; the stampede's
+herd and the twins' robots arrive after it. Each scene's timeout
+grew by its intro. The scenes now run about 23,700 ticks in all (6.6
+minutes at normal speed, against about 4.2 before), and the menu says
+8 minutes (it said 7); `TourXmlTests` hold the def to these rules.
+
+The tour's tractors run one setting up from the defaults: Popular (a
+33.75-tile pull since the pulls were raised by half on 2026-10-15; 22.5
+before) and Block Party (a 12-tile blast), as the operator asked on
+2026-10-14 ("bump up to the next setting"; slice 16000, Core's
+`TourStagePlanner.TourPull` and `TourBlast`). The barn in the Tractor of
+Tomorrow is set the same, and says so on its pane. That robot is Nosy
+(Core's `SingleTractorLayout.TourProximity`; Prudent before slice 18500):
+from the barn's door it sees the party at most 45 tiles off, so a robot
+that stopped 15 tiles short would plant within 30 tiles of the barn, and
+the 33.75-tile pull would tear it down. Nosy, it stops 3 tiles short, at
+about (9,0) from the yard's centre; the barn stands 30 tiles west of the
+centre and the party 12 east, so the pull falls more than 2 tiles short
+of the barn, and the raiders stand inside the blast, where they freeze.
+The verifier checks at the scene's end that the barn still stands; with a
+Prudent robot it was torn down.
+The stray it protests about stands 21 tiles from where the robot plants,
+inside the pull but well outside the blast (it stood 7.6 tiles off
+before, and was downed there on two trial seeds); sent 30 tiles north at
+a jog, it leaves the pull within 18 and ends beyond the flee distance.
+Since slice 19000c it is the tour group's stray, a guest, which the
+robot objects to as it does to a colonist; before, it was a colonist
+with nothing to do, else the one in the Brain Squeezer, else the
+grenadier. The scene logs whom it chose.
+The twins stay Nosy and plant 14 tiles apart, each outside the other's
+blast. Both scenes' pull shots open to zoom 52 for the wider rings.
+
+### Scene 3: Uninvited Guests (the Stampede)
+
+Requested by Matt "Breakpoint" Heck on 2026-10-14 ("a 256 bolt volley
+taking out hundreds of incoming boomalopes from the east") and built in
+slice 14000. Core's `Stampede` holds the rules; the scene is
+`Source/Tour/StampedeScene.cs`.
+
+- **The herd.** 200 manhunting boomalopes (adults, so each bursts at 4.9
+  tiles) enter on the east edge, 25 a tick, in a dense front 8 tiles deep and
+  41 tall, level with the base and 2 tiles in from the edge: about 0.6 a cell.
+  Only standable cells that reach the base count; with too few, the band
+  widens twice (12 by 61, then 16 by 91), then each size is tried again 35 and
+  70 tiles further north along the edge (never south, where the tractor yard's
+  candidates lie), before the scene declines, naming the best band's counts.
+  They go manhunting silently, so no letter or message interrupts, and make
+  for the colonists. Measured in the verify runs: 2.8 tiles a second in the
+  rain, and 220 game ticks a second at Superfast against about 288 in the
+  other scenes (4.5 ms a tick against 3.5), so the herd stays at 200.
+- **The volley.** The Ballista loads explosive (Really Painful) bolts: each
+  lands as a 3.9-tile bomb, and every boomalope it kills bursts in turn. Its
+  first volley is 256 bolts, led to where the herd's centre will be when they
+  land (the herd's own drift over the last second, and the bolt's 0.45 tiles a
+  tick). The grid sets the range: the demo base has one 250 kW reactor and no
+  batteries, so the Ballista fires when the lead point is within the longest
+  range whose firing draw the reactor covers with the magazines' 1.5 kW
+  feeding and a 10 kW margin spare (`BallistaPower.LongestRangeWithin`): 76
+  tiles, about 60 tiles out from the base's edge. The three magazines hold
+  1,200 explosive bolts. In the verify runs the volley left between scene
+  ticks 761 and 1,040 (13 to 17 s in at normal speed; usually about 800), with
+  the herd's centre about 84 tiles off, and killed all 200 in all but one run,
+  where one 128-bolt cleanup volley finished 51 stragglers. At most two such
+  volleys may follow, at the thickest group of stragglers
+  (`Stampede.BestCover`), each after the Ballista's 5-second cooldown and once
+  the last bolt has landed. While the first volley waits, the scene logs where
+  the herd is every 600 ticks; it gives up 1,800 ticks after tick 360 and
+  sends the herd home.
+- **Fire.** It rains for the scene (the scene borrows the weather the
+  showcase holds clear, and gives it back at its end): the rain starts at
+  full strength as the scene opens, so the boomalopes' fires cannot take the
+  grassland, and the bolts' bomb waves put out any fire they touch. During
+  the aftermath's hold the scene puts out a share of whatever still burns
+  each tick, so the last is out as it ends; at the end it puts out the rest
+  and gives back the weather from before (clear), at once. In the verify
+  runs 0 to 13 fires were burning at the aftermath, all out by the end. No
+  batteries were added: a vanilla battery under open sky can short-circuit
+  in rain. The verifier counts fires near the base while the scene runs
+  (none may start within the 25-tile keep-away); its count after the scene
+  shows only that the clean-up ran, since the scene's end puts every fire
+  out.
+- **Safety.** The colonists are moved inside the base's square and drafted
+  with Fire At Will off, so none wanders east and none fires at a
+  boomalope near the base (the grenadier, holding the singularity
+  grenade, would otherwise throw it at the first one in range); they
+  are undrafted at the end. No volley is ordered whose footprint (its
+  scatter, a bolt's 3.9-tile blast and a boomalope's 4.9-tile burst)
+  reaches the base's square or a colonist (Core's `Stampede.SafeAim`):
+  a refused first volley sends the herd home at once, and a refused
+  cleanup ends the volleys. A boomalope counts as
+  having reached the base inside 25 tiles of its square, five times its own
+  blast. Any boomalope still on its feet at the aftermath stops manhunting and
+  walks off the east edge (a downed one stays down); any still alive at the
+  end is removed, however the scene ended (Skip and Stop included), so no herd
+  outlives the scene. The Ballista holds its fire again, at its old count of
+  16.
+- **Camera and beats.** The opening shot looks at the band (zoom 40). `herd`
+  at tick 150 frames the herd, a little west of its centre; `volley` frames
+  the Ballista and the impact together (zoom 56) and selects the Ballista,
+  whose inspect pane reads "Volley: 256 x really painful bolt"; `stragglers`
+  plays with a cleanup volley, but no sooner than 510 ticks after the
+  first, so the operator's volley line gets its full reading time (the
+  cleanup itself fires at once); `aftermath` frames the impact (zoom 36)
+  and holds 420 ticks. The aftermath beat waits at least 510 ticks after
+  the last volley, for the same reason.
+- **Narration.** The volley line is the operator's own (2026-10-14), word for
+  word, with his spelling and em dashes: "Two hundred fifty-six largely
+  inaccurate—but highly explosive—Ballista bolts make for a firm, but
+  neighborly, "No."" At 115 characters it raised the narration limit from 96
+  to 120 (`docs/ARTISTIC-MOTIF.md`, "Narration"). The smoke runner checks that
+  every line fits the overlay in two lines on a 3840 by 2160 screen at 2x UI
+  scale, with a glyph for each character.
+
+## The Directed Tour
+
+Requested by Matt "Breakpoint" Heck on 2026-10-13 and built with the
+Tractor Bomb's showcase work in slice 12000 (`ROADMAP.md`), on the
+Showcase API's director. The tour takes ownership of the camera, directs
+the action, and shows one major feature at a time, explaining as it
+goes. The bullets below were the plan; the notes in brackets say how it
+was built.
 
 - **A director.** A small state machine runs scenes in order. Each scene
   sets up, frames the camera, says what is happening, runs, and waits for
   the action to finish (an aftermath ending, a pull completing, the smoke
   settling) rather than a fixed delay. Then the next begins.
 - **Commentary.** Pop-up comments as game events: vanilla messages, with
-  look targets so a click jumps to the subject. They are written in the
+  look targets so a click jumps to the subject. [Replaced in slice
+  13000, at the operator's request, by the Showcase API's narration
+  overlay: one large, silent line at a time in the lower third,
+  `docs/SHOWCASE-API.md`, "The Narration Overlay".] They are written in the
   motif's deadpan voice (`docs/ARTISTIC-MOTIF.md`). Each chapter also
   gets a short caption bar, drawn by the Showcase API as a title card at
   the top centre, just below the colonist bar ("2 of 8: The Batshittium
@@ -91,29 +482,90 @@ at a time, explaining as it goes.
   2026-10-14).
 - **The camera.** The tour moves and zooms it for every beat, framing the
   subject, and pulls back for anything with a big radius.
-- **Scenes** *(proposal, in order)*:
-  1. The demo base, one device at a time: reactor, Random Replicator,
-     Transmogrifier, Brain Squeezer, Artificer, each selected, so its
-     buttons and inspect text show.
-  2. The Batshit Ballista and its magazines, firing a volley.
-  3. The Random Replicator's self-destruct.
-  4. The Batshittium Reactor's self-destruct.
-  5. The Tractor Bomb: the barn builds one, it patrols, finds a staged
-     enemy party, protests if a colonist strays too close, emplaces with
-     its tires flipping flat, counts down, pulls, and blows. Those too
-     close to run make peace with their impending doom.
-  6. AnyRim, street by street, and then the Ergonomic Singularity
-     Grenade, in the town's own pest-control incident (below). This
-     replaces the junk-pile grenade demo west of the base.
-  7. "The showcase is yours": the director lets go of the camera.
-- **Log cues.** Each scene logs `[BT-SHOWCASE] SCENE <name>` for capture
-  tooling, replacing the ad hoc cues above (which stay until then).
+- **Scenes** (as built; see "The Scenes" above): the demo base's
+  devices; the Ballista's volley (the Artificer appears there); the
+  boomalope stampede (added in slice 14000); the two self-destructs;
+  AnyRim; the grenade at the junk pile west of the base; the Raccoon
+  Incident in AnyRim (added in slice 15000); the Tractor Bomb against a
+  staged raider party, with a colonist's protest; and two Tractor Bombs
+  in a junkyard as the finale. Changes from the plan: AnyRim and the
+  grenade come before the Tractor Bomb, so the film ends on its biggest
+  bang; the grenade stays at the junk pile, and the Raccoon Incident
+  (Reel 9) follows it as its own scene (the operator's "test both",
+  2026-10-14); the barn does not build the robot on screen ("This one
+  was made earlier"; `docs/AI-TODO.txt`). Both proposals are in
+  `docs/AI-requests-for-humans.txt`, items 17 and 18.
+- **Log cues.** Each scene logs `SCENE`, `BEAT` and `END` cues (or
+  `SKIPPED`), replacing the old `THROW` and `TOUR` cues, which are gone.
 - **Letting go.** The caption bar's buttons, provided by the API: Skip
   ends the current scene, and the next begins at once; Stop ends the
   tour, after which the director stops moving the camera and narrating,
   the game keeps running (still never autosaving), and a device already
   counting down still goes off. At the end of the last scene the
   director lets go of the camera on its own.
+
+### Camera and Framing
+
+Built in slice 19000d (2026-10-15) from the seed trials' tour-wide
+faults (`docs/AI-TODO.txt`), checked on contact sheets of
+`-Presentation -Shots` runs of `tour-04`:
+
+- **Each scene opens with a cut.** Its opening shot (`<pan>false</pan>`
+  in `BT_Showcases.xml`) cuts to the scene's place on the tick its
+  caption and opening line appear. It used to glide there over 0.6 s
+  from the last scene's place, so AnyRim opened on the reactor's smoke,
+  and at Superfast, where 0.6 s is hundreds of ticks, the first frames
+  of every scene showed the scene before. Beats within a scene still
+  glide, except the raccoon's throw, which cuts.
+- **No shot shows the black beyond the map.** Every shot keeps on the
+  map (the Showcase API's `keepOnMap`): a view that would reach past an
+  edge is moved in until its edge meets the map's. The stampede's herd
+  enters at the east edge (x 240 to 247 of 250), so 35 to 40 per cent
+  of its herd and volley frames were black; now the frame's east edge
+  is the map's, with the herd near it and the open ground it crosses in
+  view. The entry band is unchanged, so the first volley's kill and the
+  fire safety are as before. The pads and the tractor yard, near other
+  edges on `tour-04`, gain the same.
+- **The throw shows who threw what at whom.** The raccoon's "thrown"
+  beat frames Ned, the raccoon and the grenade (in the air, and where
+  it is going) in the part of the screen the caption bar (the top 15
+  per cent), the narration (the bottom 32) and the sides (8 each) leave
+  clear, at the closest zoom from 20 to 34 that fits them with 4 tiles
+  to spare (Core's `ShotFraming.Fit`). It had glided from Main Street
+  with all three under the caption bar. The scene's outcomes are as
+  before: Ned's throw belongs to Overcharge (phase 15000).
+- **The yard has junk.** The single tractor's yard held only the barn
+  and the party, so its pull looked sparse; 22 pieces now lie in it
+  (Core's `TourYardJunk.Single`): slag and rock chunks, stacks of
+  silver, gold, jade, uranium and plasteel, and three ancient engine
+  blocks, 13 to 31 tiles from where the robot plants, so each
+  is seen to slide in before the blast takes it, and clear of the
+  robot's road, the barn and the stray's way out. The twins gain an
+  outer ring of 16 more (`TourYardJunk.TwinsOuter`), 13 to 25 tiles
+  from the nearer bomb, for their pulls to drag in from afar. Bright
+  metals and stone read against the yard's concrete where steel does
+  not, and nothing in it burns or goes off when hit: every def is from
+  Core's `TourYardJunk.InertDefs`, and the smoke runner reads each one's
+  flammability (zero) and parts (nothing explosive) from the loaded
+  game. The yard first held three ancient crates and a stack of
+  components, which burn (flammability 0.5 and 0.6); review of the run
+  swapped them for engine blocks and uranium on 2026-10-15.
+- **Closer on the junk.** The twins open at zoom 28 (was 45) and plant
+  at 22 (was 30), where the junk reads as junk rather than specks; both
+  tractor scenes' pulls are at 44 (was 52), where the 33.75-tile pull's
+  ring just fits the view's 88 tiles, and their blasts at 34 (was 45).
+- **Frames at the moment.** The verifier's frames of a volley wait for
+  its bolts to land (8 ticks after the first), rather than a fixed 150
+  ticks that caught the defence's bolts just after and the stampede's
+  still in the air; the replicator's blast is taken at 45 ticks (the
+  bomb's fireball 30 tiles out) and the reactor's at 100 (its barrage
+  landing), rather than 15, when each showed little more than the pad
+  (`docs/AI-TESTING-STRATEGY.txt`, section 4).
+
+The tour verifier checks the camera every frame (`docs/AI-TESTING-
+STRATEGY.txt`, section 4): each scene's opening cut landed, no frame
+reached past the map's edge, and the throw was framed clear of the
+overlays.
 
 ### The Story *(draft)*
 
@@ -129,8 +581,11 @@ Information Film.* The caption bar reads like a title card throughout.
   deadpan, spoken aloud. As the reels go by his reassurances grow
   shorter, and in the final reels they are mostly about remaining calm.
   He never breaks the fourth wall, and he never admits anything is wrong.
-- **The cast** is the colony, introduced as "our volunteer family". The
-  grenade's volunteer is "a valued member of the family". AnyRim's
+- **The cast** is the colony, introduced as "our volunteer family", and
+  a tour group of visitors, "our guests" (slice 19000c). The grenade's
+  volunteer is a guest ("A valued guest has volunteered."; it was "a
+  valued member of the family" before the tourists came), and a guest
+  lost anywhere else is "enjoying an unusually close look". AnyRim's
   residents are "our neighbours". Captions name colonists by their real
   names.
 - **The premise** is the arc. The film opens on the byline's first three
@@ -171,12 +626,24 @@ Reels and sample narration (final lines are written with the scenes):
     The colony is yours. Please remain calm." The director lets go of
     the camera.
 
-### Reel 9: The Raccoon Incident *(draft)*
+As built, the reels run in the scenes' order: Reels 1 to 4 are the
+first scene, Reel 5 the second and third (the volley, then the
+stampede), Reel 6 the fourth and fifth, then AnyRim
+(Reel 8), the grenade at the junk pile (Reel 9's title) and the Raccoon
+Incident (Reel 9's story), then the Tractor of Tomorrow (Reel 7) and the
+twins, which
+close on the byline. The film now opens on the first three promises
+("The future, delivered sooner, cheaper and funnier."). The narration's
+rules are in `docs/ARTISTIC-MOTIF.md`, "Narration".
 
-AnyRim's ninth resident is the security guard of AnyRim Savings & Loan,
-which until now had nobody in it: **Ned "Overkill" Lessly** (read it
-aloud) *(proposal)*. He carries an Ergonomic Singularity Grenade "for
-emergencies", stands at the bank door, and takes pests seriously.
+### Reel 9: The Raccoon Incident
+
+Specified by Matt "Breakpoint" Heck on 2026-10-13 and built in slice
+15000 (2026-10-14) as scene `raccoon`, after the grenade. AnyRim's ninth
+resident is the security guard of AnyRim Savings & Loan, which until
+then had nobody in it: **Ned "Overkill" Lessly** (read it aloud). He
+carries an Ergonomic Singularity Grenade "for emergencies", stands at
+the bank door, and takes pests seriously.
 
 1. **The setup.** The camera finds Ned at the bank. A raccoon wanders onto
    Main Street, foaming slightly: it is in vanilla's manhunter state,
@@ -196,11 +663,67 @@ emergencies", stands at the bank door, and takes pests seriously.
    - If it died: "The raccoon will not be troubling anyone."
    - Either way: "AnyRim thanks Ned for his service. Unfortunately."
 
-Implementation notes *(proposals)*: Ned is a regular AnyRim resident
-(the Ancients faction) with the grenade equipped; the director orders
-his throw directly, as the current demo orders the grenadier's. The
-raccoon is a vanilla Raccoon put into the manhunter mental state and
-spawned at the street's south end, so its target is predictable.
+As built (`Source/Tour/RaccoonScene.cs`; the places are Core's
+`RaccoonIncident`, in town-local cells):
+
+- **The cast.** Ned is a regular resident (the Ancients faction, his
+  household's own lord) generated capable of violence and holding the
+  grenade; his duty has no combat in it, so he never throws it on his
+  own (the smoke test watches him for 600 ticks). Before the camera
+  arrives the scene puts him on the bank's front walk, (+5,+39), and
+  Constance in her middle lawn chair, (+5,+28), facing the street, on a
+  wait the scene ends.
+- **Beats.** `guard` at tick 330 frames Ned close and selects him;
+  `pest` at tick 780 brings the raccoon in at Main Street's south end,
+  (0,−21), in the manhunter state (silently, so no message), sends it
+  running up the street to the sidewalk at the Damages' gate, (+3,+25),
+  and then sets it on Constance (left to path to her directly, it went
+  through the front yards chewing their fences), and frames the whole
+  street (zoom 30). Ned sprints to his
+  post in the west lane beside the car at the bank's kerb, (−1,+33), and
+  throws once, from there, as soon as the raccoon is in range: on the
+  centre line that is row +21, still on the road and 8.6 tiles from
+  Constance's chair, so the singularity's 10-tile pull reaches her.
+  During the throw's 1.5-second wind-up the raccoon keeps coming, so the
+  grenade usually lands within 10 tiles of Ned as well. If the raccoon
+  is not in his range and sight 900 ticks after it came, Ned goes after
+  it, the throw queued behind each sprint; while he waits, the scene logs
+  where both are every 600 ticks. `thrown` plays as
+  the grenade leaves his hand; `census` plays once the singularity is
+  over, on the welcome sign, with the census line said by the scene.
+  The scene is done 390 ticks later; Constance's and Ned's fates are the
+  world's.
+- **The verdict.** The outcome is `raccoonLost` if the raccoon is dead,
+  `raccoonSurvived` otherwise, and either way "AnyRim thanks Ned for his
+  service. Unfortunately." follows 460 ticks later, once the fate has
+  been read, before the next scene's start line. The census reads
+  "AnyRim census revised to N..." when the count fell, or "AnyRim
+  census holds at 9. Please remain calm." when no one was lost (`AnyRimText.CensusReport`). While a showcase
+  narrates on the map, AnyRim's own census message stays out of the
+  message stack, so the line is not said twice.
+- **Afterwards.** However the scene ends, a living raccoon is calmed,
+  Ned is stood down, a grenade he dropped is taken back, and Constance
+  leaves her chair.
+- **Declining.** It declines when AnyRim is not on the map, when the
+  AnyRim scene was skipped (the tour never shows the town's incident
+  without the town; the verifier's default `-TourSkip anyrim` therefore
+  skips it too), when Ned is not standing with his grenade, when the
+  game has no raccoons, or when Main Street's south end is blocked. The
+  tour asks only before it starts; if Ned has been lost by the time the
+  scene begins, no raccoon comes and the scene closes after its least
+  time on its "completed" line, which thanks him regardless (the
+  verifier then reports its missing beats and facts).
+- **Verifier facts.** Ned threw the grenade (the projectile's thrower,
+  seen in the air); one more implosion; the END cue's outcome matches the
+  raccoon's fate; the census line matches `AnyRimText.CensusReport` of
+  the counts before the scene and at the tick it was said; no census
+  message entered vanilla's stack; no colonist was hurt within the
+  incident's reach (Main Street from the entry to the bank, grown by the
+  throw and the pull, or within 5 tiles of the raccoon). The tour-wide
+  fact that no colonist is harmed in any scene covers the rest of the
+  map, and both the grenade and the raccoon scenes must end with no
+  singularity field on the map and no implosion still ticking, so the
+  grenade's explosion can never land in the next scene again.
 
 *(Proposals:)* the reels map onto the scenes above (Reels 1 to 5 are the
 demo base and the Ballista); the narrator's lines live in XML so they
@@ -217,10 +740,38 @@ right?".
   part of AnyRim, tapering roads included. The site search keeps the
   north-east and south-east corners clear by the same rule, measured the
   same way, so both demos run; the most open of the two gets the
-  replicator. If ever only one corner qualifies, the showcase logs it and
-  skips the reactor demo, and its opening message says so.
+  replicator. If ever only one corner qualifies, the showcase logs it,
+  the reactor's scene declines (`SKIPPED retire-reactor`), and the
+  captions' "i of N" count only the scenes that run.
 - **AnyRim keeps away from the base and the grenade range:** at least 10
   tiles from the base's cleared square and 15 from the grenade clearing.
+- **The stampede stays east of the base.** The herd must be 90 per cent
+  dead before any boomalope comes within 25 tiles of the base's square,
+  the colonists wait drafted inside it with Fire At Will off, no volley
+  may land within its footprint of the square, rain keeps the fires
+  from spreading, and no live boomalope outlasts the scene (see "Scene
+  3" above).
+- **Colonists are held clear until it is over.** Every dangerous scene
+  keeps colonists out of its reach from set-up to its end, not only as
+  it arms ("The Scenes" above).
+- **The guests are not.** The tour group stands where the scenes can
+  reach them, and goes home, alive or dead, when the showcase ends
+  ("Tourists" above).
+- **The tractor yard and the pads are planned together** (Core's
+  `TourStagePlanner`, slice 12000). The yard, 65 by 29 tiles, keeps 42
+  tiles from the base square, the grenade clearing and every part of
+  AnyRim: as far as anyone runs from one of the tour's Popular tractors
+  (its 33.75-tile pull plus 8), rounded up (18 before slice 16000, 31
+  before slice 18500). Its candidates lie south-west, south and
+  south-east of the base, 73 tiles south of it (62 before slice 18500),
+  so the yard's top edge is 43 tiles below the square's, a tile more
+  than it needs. The pulls reach beyond the yard's 29-tile height and
+  uproot what grows there.
+  Each pad keeps 87.6 tiles from AnyRim and from the yard, measured
+  from the device's own cell. The first yard that
+  leaves two pads wins; failing that, the one that leaves the most. Every
+  keep-away goes through one rule, `Clears(Box, KeepAway)`, and AnyRim
+  through `TownSite.Clears`.
 - **Fire cannot walk in.** A fire spreads to adjacent cells or throws a
   spark two cells. AnyRim is ringed by a 4-tile firebreak of bare ground,
   and its roads are non-flammable. Its own lawns and wooden houses burn
@@ -427,7 +978,8 @@ Each building, with its walls and floor:
   - a plasteel vault, with a plasteel door, holding 2,000 silver and 50
     gold;
   - an ATM on the front path;
-  - nobody lives here.
+  - Ned's cot behind the north counter, and a heater at the far end of
+    the south one (until slice 15000 nobody lived here).
 
 Around town:
 
@@ -438,12 +990,12 @@ Around town:
 - Hydrants on two corners of the crossroads.
 - Cars stand at measured distances from Ground Zero (about 12, 12, 21
   and 33 tiles), as Doorstep's cars did.
-- Ten graves in the cemetery: eight reserved, one for each resident, and
-  two unreserved; two oak trees.
+- Ten graves in the cemetery: nine reserved, one for each resident, and
+  one unreserved; two oak trees.
 
 ### Residents
 
-Eight residents, each with a home and a reserved plot. The nickname is
+Nine residents, each with a home and a reserved plot. The nickname is
 what shows above a pawn on the map.
 
 | Name | Age | Home |
@@ -456,6 +1008,7 @@ what shows above a pawn on the map.
 | Barry "Six Feet" Graves | 58 | Funeral home |
 | Bea "Right Back" Shortly | 29 | Five-and-Dime |
 | Morty "Two Weeks" Tallis | 64 | Public Works |
+| Ned "Overkill" Lessly | 44 | Savings & Loan |
 
 - **Hugh** is mayor, fire chief and notary, in a bowler hat.
 - **Wendy** keeps dinner warm. **Ernest** is her lodger, reading by the
@@ -466,6 +1019,8 @@ what shows above a pawn on the map.
   and bowler.
 - **Bea** runs the till beside the grenades.
 - **Morty** is two weeks from retirement, in a hard hat.
+- **Ned** guards the Savings & Loan in a flak vest, with an Ergonomic
+  Singularity Grenade "for emergencies" (Reel 9).
 
 How they behave:
 
@@ -488,11 +1043,13 @@ How they behave:
   never panic and flee. They do still dodge a grenade they can see.
 - **Generation:** from a custom kind, `BT_AnyRimResident`:
   - adults with the fixed names, genders and ages above;
-  - industrial clothes plus the hats named, and no weapons;
+  - industrial clothes plus the hats named, and no weapons but Ned's
+    grenade (he is generated capable of violence, so he can use it);
   - no royal titles, and baseliners only.
 - **Census:** when a resident dies, a quiet message (not a letter) reads
-  "AnyRim census revised to 7. The sign has been updated. Please remain
-  calm."
+  "AnyRim census revised to 8. The sign has been updated. Please remain
+  calm." While a showcase narrates on the map the message is left out,
+  since the narrator reads the census (Reel 9).
 
 ### Signs and Labels
 
@@ -502,7 +1059,7 @@ wall between two columns) with text drawn above it by
 colours, since magenta is reserved for batshittium.
 
 - **Welcome sign,** at the south entrance on the east verge, (+5,−24):
-  WELCOME TO ANYRIM / A Typical Rim Community / Pop. 8, subject to change
+  WELCOME TO ANYRIM / A Typical Rim Community / Pop. 9, subject to change
   / Est. this morning. Re-est. as needed. At zero the population line
   reads "Pop. 0. Thank you for your participation."
 - **Exit sign,** on the east arm, (+31,−4): NOW LEAVING ANYRIM / Come
@@ -684,7 +1241,8 @@ RimWorld:
   - the tapers narrow and end; everything lies inside the bounds;
   - the heat and cook-off rules hold;
   - the same seed gives the same town;
-  - eight residents with nicknames of 16 characters or fewer;
+  - nine residents with nicknames of 16 characters or fewer, only Ned
+    armed;
   - the footprint rule; `Avoiding`; the site scorer; the texts.
 - **XML tests:** the new defs follow the house rules, and every def name
   the plan uses exists in RimWorld's Core data (when the game is
@@ -697,12 +1255,15 @@ RimWorld:
   - no roof collapse pending before the first tick, and every roofed
     cell still roofed after it; the firebreak holds no plants;
   - the devices are powered; the reactor's heat ring holds no room;
-  - eight named, non-colonist residents, each in a lord;
+  - nine named, non-colonist residents, each in a lord; Ned holds his
+    grenade, nobody else is armed, and he has not thrown it 600 ticks
+    later;
   - after 600 ticks each is within 20 tiles of its own home;
   - the census drops by one when a resident dies;
   - demolition leaves nothing behind;
   - nothing logs an error.
-- **Showcase:** a screen capture at the `TOUR` cue.
+- **Showcase:** a screen capture at each `SCENE` cue, or at the `END`
+  cue of a named scene; `-Showcase -Verify` checks the whole tour.
 
 ## Known Limits
 

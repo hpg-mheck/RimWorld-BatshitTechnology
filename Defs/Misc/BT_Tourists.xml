@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- The showcase's tour group (docs/SHOWCASE.md, "Tourists"; slice
+       19000c, request 21 settled by the operator on 2026-10-15): three to
+       five visitors who stand where a scene can reach them, so no
+       colonist has to. The code is in Source/Tour/TourGroup.cs. -->
+
+  <!-- A faction made only for showcases. Hidden: it is never in the
+       faction list or the world's faction settings, it has no goodwill,
+       so a tourist's death angers no one and posts no goodwill letter,
+       and it has no leader, so none can die. It is never generated with
+       a world (requiredCountAtGameStart 0): the tour makes it in its own
+       game when the group arrives. -->
+  <FactionDef ParentName="FactionBase">
+    <defName>BT_ShowcaseTourists</defName>
+    <label>tour group</label>
+    <description>Visitors to a Batshit Technology public information film. They have been told everything they need to know.</description>
+    <pawnSingular>tourist</pawnSingular>
+    <pawnsPlural>tourists</pawnsPlural>
+    <categoryTag>BT_ShowcaseTourists</categoryTag>
+    <fixedName>Batshit Technology Visitor Programme</fixedName>
+    <requiredCountAtGameStart>0</requiredCountAtGameStart>
+    <maxConfigurableAtWorldCreation>0</maxConfigurableAtWorldCreation>
+    <displayInFactionSelection>false</displayInFactionSelection>
+    <canGenerateQuestSites>false</canGenerateQuestSites>
+    <factionIconPath>World/WorldObjects/Expanding/Sites/DownedRefugee</factionIconPath>
+    <techLevel>Industrial</techLevel>
+    <humanlikeFaction>true</humanlikeFaction>
+    <hidden>true</hidden>
+    <rescueesCanJoin>false</rescueesCanJoin>
+    <autoFlee>false</autoFlee>
+    <raidsForbidden>true</raidsForbidden>
+    <raidCommonalityFromPointsCurve>
+      <points>
+        <li>(0, 0)</li>
+      </points>
+    </raidCommonalityFromPointsCurve>
+    <basicMemberKind>BT_ShowcaseTourist</basicMemberKind>
+    <!-- A humanlike faction must name backstory categories (a config
+         error otherwise); the kind's own filter overrides these. -->
+    <backstoryFilters>
+      <li>
+        <categoriesChildhood>
+          <li>Outlander</li>
+        </categoriesChildhood>
+        <categoriesAdulthood>
+          <li>Outlander</li>
+        </categoriesAdulthood>
+      </li>
+    </backstoryFilters>
+  </FactionDef>
+
+  <!-- Day clothes, no weapon and empty pockets: a tourist carries nothing
+       the tour must later pick up. The code fixes the faction, adult age
+       and the baseliner xenotype. -->
+  <PawnKindDef>
+    <defName>BT_ShowcaseTourist</defName>
+    <label>tourist</label>
+    <race>Human</race>
+    <defaultFactionDef>BT_ShowcaseTourists</defaultFactionDef>
+    <combatPower>20</combatPower>
+    <isFighter>false</isFighter>
+    <backstoryFiltersOverride>
+      <li>
+        <categoriesChildhood>
+          <li>Outlander</li>
+        </categoriesChildhood>
+        <categoriesAdulthood>
+          <li>Outlander</li>
+        </categoriesAdulthood>
+      </li>
+    </backstoryFiltersOverride>
+    <ignoreFactionApparelStuffRequirements>true</ignoreFactionApparelStuffRequirements>
+    <apparelTags>
+      <li>IndustrialBasic</li>
+    </apparelTags>
+    <apparelMoney>300~600</apparelMoney>
+    <apparelAllowHeadgearChance>0.5</apparelAllowHeadgearChance>
+    <weaponMoney>0~0</weaponMoney>
+    <techHediffsChance>0</techHediffsChance>
+    <chemicalAddictionChance>0</chemicalAddictionChance>
+    <humanPregnancyChance>0</humanPregnancyChance>
+    <invNutrition>0</invNutrition>
+    <fleeHealthThresholdRange>-1~-1</fleeHealthThresholdRange> <!-- never flees when hurt -->
+    <initialWillRange>0~1</initialWillRange>
+    <initialResistanceRange>10~17</initialResistanceRange>
+  </PawnKindDef>
+
+  <!-- Standing about with no combat in it: the director sets each
+       tourist's spot and how far it may wander from it. A tourist far
+       from its spot jogs there. Tour composure (below) stops hunger and
+       mental breaks, so the group needs nothing else for a tour. -->
+  <DutyDef>
+    <defName>BT_ShowcaseTourist</defName>
+    <socialModeMax>Quiet</socialModeMax>
+    <thinkNode Class="ThinkNode_Priority">
+      <subNodes>
+        <li Class="JobGiver_WanderNearDutyLocation">
+          <wanderRadius>3</wanderRadius>
+          <locomotionUrgencyOutsideRadius>Jog</locomotionUrgencyOutsideRadius>
+        </li>
+      </subNodes>
+    </thinkNode>
+  </DutyDef>
+
+  <!-- After AnyRim's civic composure: no mental breaks, steady mood, no
+       hunger, for the length of a tour. -->
+  <HediffDef>
+    <defName>BT_TourComposure</defName>
+    <label>tour composure</label>
+    <description>A visitor's pass to a Batshit Technology public information film, worn on a lanyard. Mental breaks: none. Mood: holds at 70 percent, whatever the demonstration is doing. Appetite: suspended for the length of the tour; lunch is not included. Flight: not observed while a demonstration is on. The tour group has been told everything it needs to know.</description>
+    <hediffClass>HediffWithComps</hediffClass>
+    <isBad>false</isBad>
+    <everCurableByItem>false</everCurableByItem>
+    <stages>
+      <li>
+        <blocksMentalBreaks>true</blocksMentalBreaks>
+        <pctAllThoughtNullification>1</pctAllThoughtNullification>
+        <overrideMoodBase>0.7</overrideMoodBase>
+        <hungerRateFactor>0</hungerRateFactor>
+      </li>
+    </stages>
+  </HediffDef>
+</Defs>

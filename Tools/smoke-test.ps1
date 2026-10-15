@@ -14,20 +14,104 @@
 #                                         # sound, and leave it running;
 #                                         # exits 1 if it is refused, fails,
 #                                         # or logs a mod error before READY
-# Runs left open for a person to watch (-Showcase, -KeepOpen) get a
-# maximized window and 2x UI scale; plain test runs stay small and muted.
+#   .\Tools\smoke-test.ps1 -Showcase -Verify
+#                                         # verify the tour instead: the
+#                                         # runner's Source/SmokeTestTour.cs
+#                                         # watches it at Superfast, logs
+#                                         # PASS/FAIL, a one-line JSON
+#                                         # [BT-TOUR] SUMMARY and DONE, and
+#                                         # the game quits; -TourSkip names
+#                                         # scenes forced to decline
+#                                         # (default anyrim, which the
+#                                         # raccoon scene follows; '' runs
+#                                         # all ten)
+#   .\Tools\smoke-test.ps1 -Showcase -Seed tour-07
+#                                         # with -Showcase: generate from
+#                                         # that seed (-showcaseseed=), over
+#                                         # the def's own or a random one;
+#                                         # 1 to 64 of A-Z a-z 0-9 . _ -
+#   .\Tools\smoke-test.ps1 -Showcase -Verify -Shots
+#                                         # also save the game's own frame
+#                                         # for READY and each SCENE, BEAT
+#                                         # and END cue, a few ticks after
+#                                         # it (the action in frame), to
+#                                         # <DataFolder>\shots\NN-*.png;
+#                                         # Tools\contact-sheet.ps1 tiles
+#                                         # them into sheets
+#   .\Tools\smoke-test.ps1 -Showcase -Verify -Presentation -Shots
+#                                         # verify as a presentation: the
+#                                         # tour plays at its own speed,
+#                                         # not Superfast, with no dev mode
+#                                         # and no Learning helper, in a
+#                                         # 1920 by 1080 window at 1x UI,
+#                                         # the layout of the maximized 2x
+#                                         # viewing window on a 4K screen,
+#                                         # so the frames show what a
+#                                         # viewer sees; muted; the
+#                                         # timeout defaults to 2400 s
+# Every showcase logs the seed it used ([BT-SHOWCASE] SEED <text>
+# (<source>)); pass that text to -Seed to repeat the run's map and stage.
+# Tools\tour-trials.ps1 runs the verifier over many seeds in parallel.
+# Runs left open for a person to watch (-Showcase without -Verify, and
+# -KeepOpen) get a maximized window and 2x UI scale; test runs, -Verify
+# included, stay small and muted. A showcase to watch, and -Presentation,
+# also turn dev mode and the Learning helper off (these are this script's
+# own prefs, in its data folder, never a player's); -KeepOpen keeps dev
+# mode for a developer.
 # Defaults: the repository this script sits in, $env:RIMWORLD_DIR, and a
-# data folder under %TEMP%. The first run links the repository into
-# RimWorld's Mods folder (a directory junction).
+# data folder under %TEMP%. Relative paths are taken from the current
+# folder and made absolute first (RimWorld starts in its own folder, and
+# would resolve them against that); the data folder is printed. A game
+# that has written no log 120 s after it started is stopped, and the run
+# fails. The first run links the repository into RimWorld's Mods folder
+# (a directory junction).
 param(
   [string]$ModRoot = (Split-Path $PSScriptRoot -Parent),
   [string]$RimWorld = $env:RIMWORLD_DIR,
   [string]$DataFolder = (Join-Path $env:TEMP 'BatshitTechnology-smoke'),
-  [int]$TimeoutSeconds = 600,
+  # The Tractor Bomb's checks and the Showcase API's together take longer
+  # than 600 s on a slow map.
+  [int]$TimeoutSeconds = 900,
   [switch]$KeepOpen,
-  [switch]$Showcase
+  [switch]$Showcase,
+  # With -Showcase: verify the tour and quit, rather than leave it to watch.
+  [switch]$Verify,
+  # With -Verify: scene keys, comma-separated, forced to decline (G1).
+  [string]$TourSkip = 'anyrim',
+  # With -Showcase: the seed to generate from (-showcaseseed=<text>).
+  [string]$Seed = '',
+  # With -Verify: save the game's frame at the tour's cues (-btshots).
+  [switch]$Shots,
+  # With -Verify: play the tour at its own speed with the viewing prefs
+  # (-btpresentation), so -Shots frames show what a viewer sees.
+  [switch]$Presentation
 )
 $ErrorActionPreference = 'Stop'
+# Absolute paths, from the current folder, before anything uses them:
+# RimWorld is started in its own folder, and a relative -savedatafolder or
+# -logFile would land inside the RimWorld install.
+$fullPath = {
+  param($path)
+  if ($path) { $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($path) }
+  else { $path }
+}
+$ModRoot = & $fullPath $ModRoot
+$RimWorld = & $fullPath $RimWorld
+$DataFolder = & $fullPath $DataFolder
+"Data folder: $DataFolder"
+if ($Seed -and -not $Showcase) { throw '-Seed seeds a showcase; pass -Showcase too.' }
+if ($Seed -and $Seed -cnotmatch '^[A-Za-z0-9._-]{1,64}$') {
+  throw "-Seed '$Seed' is not a usable seed: 1 to 64 of A-Z, a-z, 0-9, '.', '_' and '-'."
+}
+if ($Shots -and -not $Verify) { throw '-Shots saves a verify run''s frames; pass -Verify too.' }
+if ($Presentation -and -not $Verify) {
+  throw '-Presentation presents a verify run; pass -Showcase -Verify too.'
+}
+# The tour plays for about seven minutes at its own speed, against under
+# three at Superfast.
+if ($Presentation -and -not $PSBoundParameters.ContainsKey('TimeoutSeconds')) {
+  $TimeoutSeconds = 2400
+}
 if (-not $RimWorld -or -not (Test-Path (Join-Path $RimWorld 'RimWorldWin64.exe'))) {
   throw "RimWorld not found at '$RimWorld'. Set RIMWORLD_DIR or pass -RimWorld."
 }
@@ -50,7 +134,8 @@ if (Test-Path $link) {
 }
 
 # 2. Isolated config: Harmony, Core, the installed DLCs and this mod;
-# muted, windowed, running in the background, dev mode on.
+# muted, windowed, running in the background, dev mode on (off, with the
+# Learning helper, for what a viewer sees).
 $config = Join-Path $DataFolder 'Config'
 New-Item -ItemType Directory -Force $config | Out-Null
 $version = (Get-Content (Join-Path $RimWorld 'Version.txt') -TotalCount 1).Trim()
@@ -96,10 +181,26 @@ $(& $li $expansions)
   </knownExpansions>
 </ModsConfigData>
 "@ | Set-Content -Encoding UTF8 (Join-Path $config 'ModsConfig.xml')
-$forViewing = $Showcase -or $KeepOpen
-$volume = if ($Showcase) { '0.6' } else { '0' }
-$width, $height = if ($forViewing) { 1600, 900 } else { 1280, 720 }
+if ($Verify -and -not $Showcase) { throw '-Verify verifies the tour; pass -Showcase too.' }
+# A verify run is a test run: small and muted unless kept open. What a
+# viewer sees (a showcase to watch, or a verify run presented as one) has
+# no dev mode, so no developer toolbar or DEV buttons, and no Learning
+# helper; a presentation stays muted. A presentation is not maximized:
+# its window is 1920 by 1080 at 1x, the layout a viewer sees in the
+# maximized 2x window on a 4K screen (an effective 1920 by about 1050),
+# at a size every machine can show. 1600 by 900 at 2x would be an
+# effective 800 by 450, which RimWorld 1.6 refuses outside dev mode
+# (ResolutionUtility.Update logs "Resolution too small" and resets the
+# scale; it is under 1024 by 768).
+$watching = $Showcase -and -not $Verify
+$viewingPrefs = $watching -or $Presentation
+$forViewing = $watching -or $KeepOpen
+$volume = if ($watching) { '0.6' } else { '0' }
+$width, $height = if ($Presentation) { 1920, 1080 }
+  elseif ($forViewing) { 1600, 900 } else { 1280, 720 }
 $uiScale = if ($forViewing) { '2' } else { '1' }
+$devMode = if ($viewingPrefs) { 'False' } else { 'True' }
+$training = if ($viewingPrefs) { 'False' } else { 'True' }
 @"
 <?xml version="1.0" encoding="utf-8"?>
 <PrefsData>
@@ -109,7 +210,8 @@ $uiScale = if ($forViewing) { '2' } else { '1' }
   <screenHeight>$height</screenHeight>
   <uiScale>$uiScale</uiScale>
   <runInBackground>True</runInBackground>
-  <devMode>True</devMode>
+  <devMode>$devMode</devMode>
+  <adaptiveTrainingEnabled>$training</adaptiveTrainingEnabled>
   <pauseOnError>False</pauseOnError>
   <automaticPauseMode>Never</automaticPauseMode>
   <langFolderName>English</langFolderName>
@@ -122,7 +224,16 @@ Remove-Item $log -ErrorAction SilentlyContinue
 # A showcase starts through the Showcase API, as a player's would: the
 # main menu acts on -showcase=<defName> and generates a fresh game for it.
 # A smoke run skips the menu with -quicktest.
-$runnerFlags = if ($Showcase) { @('-showcase=BT_Showcase') } else { @('-quicktest', '-btsmoketest') }
+# @(...) keeps it an array: PowerShell unwraps a one-element array that an
+# if expression returns, and += would then join strings.
+$runnerFlags = @(if ($Showcase) { '-showcase=BT_Showcase' } else { '-quicktest', '-btsmoketest' })
+if ($Verify) {
+  $runnerFlags += '-bttourverify'
+  if ($TourSkip) { $runnerFlags += "-bttourskip=$TourSkip" }
+  if ($Shots) { $runnerFlags += '-btshots' }
+  if ($Presentation) { $runnerFlags += '-btpresentation' }
+}
+if ($Seed) { $runnerFlags += "-showcaseseed=$Seed" }
 $gameArgs = @("-savedatafolder=`"$DataFolder`"") + $runnerFlags + @(
   '-logFile', "`"$log`"", '-screen-fullscreen', '0',
   '-screen-width', "$width", '-screen-height', "$height")
@@ -130,6 +241,17 @@ if ($KeepOpen) { $gameArgs += '-btsmoketestkeep' }
 $exe = Join-Path $RimWorld 'RimWorldWin64.exe'
 $proc = Start-Process $exe -ArgumentList $gameArgs -WorkingDirectory $RimWorld -PassThru
 "Started RimWorld (pid $($proc.Id)); log: $log"
+# RimWorld writes its log within seconds of starting; one that has written
+# none by then is writing it somewhere else, or not running at all.
+$logDeadline = (Get-Date).AddSeconds(120)
+
+# Stops the game and fails the run if it has written no log by the
+# deadline.
+function Assert-LogStarted {
+  if ((Test-Path $log) -or (Get-Date) -lt $logDeadline) { return }
+  if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+  throw "RimWorld (pid $($proc.Id)) wrote no log at $log within 120 s; stopped it."
+}
 
 # Errors: RimWorld logs errors and exceptions as plain lines; skip Unity's
 # stack-trace and file-location noise.
@@ -192,7 +314,7 @@ public static extern bool ShowWindowAsync(System.IntPtr hWnd, int nCmdShow);
   }
 }
 
-if ($Showcase) {
+if ($watching) {
   # Waits for READY, then leaves the game running for the viewer. A
   # REFUSED or FAILED cue ends the wait at once (the showcase will never
   # come), and the log up to READY must hold no mod error.
@@ -200,6 +322,7 @@ if ($Showcase) {
   $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
   while ((Get-Date) -lt $deadline -and -not $proc.HasExited) {
     Start-Sleep -Seconds 3
+    Assert-LogStarted
     if (-not (Test-Path $log)) { continue }
     $sofar = @(Get-Content $log)
     $end = $sofar | Select-String -Pattern '^\[BT-SHOWCASE\] (READY|REFUSED|FAILED)\b' |
@@ -227,6 +350,7 @@ $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 $done = $false
 while ((Get-Date) -lt $deadline -and -not $proc.HasExited) {
   Start-Sleep -Seconds 3
+  Assert-LogStarted
   if ((Test-Path $log) -and (Select-String -Path $log -SimpleMatch '[BT-SMOKE] DONE' -Quiet)) {
     $done = $true
     break
@@ -244,6 +368,7 @@ $lines = Get-Content $log
 ''
 '== Smoke test results'
 $lines | Select-String -SimpleMatch '[BT-SMOKE]' | % { "  $($_.Line)" }
+$lines | Select-String -SimpleMatch '[BT-TOUR] SUMMARY' | % { "  $($_.Line)" }
 if (-not $done) { "  (no DONE line: timed out after $TimeoutSeconds s, or the game exited)" }
 
 $scan = Find-LogErrors $lines

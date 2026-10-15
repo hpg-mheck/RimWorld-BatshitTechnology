@@ -197,7 +197,13 @@
       <turretBurstCooldownTime>5</turretBurstCooldownTime> <!-- one volley every 5 s -->
       <turretBurstWarmupTime>0~0</turretBurstWarmupTime>
       <turretTopDrawSize>2.6</turretTopDrawSize>
-      <ai_combatDangerous>true</ai_combatDangerous>
+      <!-- Not combatDangerous: raiders path round dangerous turrets on an
+           avoid grid out to the turret's range plus 4, and a Ballista's
+           range (up to 325) is past the engine's radial limit of ~79.8,
+           which logged "Not enough squares to get to radius 329" whenever
+           raiders pathed near a long-range Ballista. Avoiding a turret that
+           reaches most of the map was meaningless anyway. -->
+      <ai_combatDangerous>false</ai_combatDangerous>
       <!-- Internal magazine: Critical, so haulers top it up first -->
       <fixedStorageSettings>
         <filter>

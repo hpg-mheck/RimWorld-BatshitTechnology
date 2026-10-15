@@ -260,6 +260,11 @@ namespace BatshitTechnology
         /// <summary>Death blasts set off this session.</summary>
         public int DeathBlasts { get; set; }
 
+        /// <summary>
+        /// Spare tyres a destroyed Tractor Barn has flung this session.
+        /// </summary>
+        public int TyresLaunched { get; set; }
+
         /// <summary>Starts an aftermath that began this tick.</summary>
         /// <param name="aftermath">The aftermath, with its centre and source set.</param>
         public void Begin(Aftermath aftermath)

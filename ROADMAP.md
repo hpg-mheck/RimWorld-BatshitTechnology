@@ -33,7 +33,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 |---|---|---|---|
 | 1000 | Foundations (v0.8) | `trunk` | Done |
 | 2000 | AnyRim | `trunk` | Done |
-| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 12000) |
+| 3000 | Tractor Bomb | `trunk` | Done |
 | 4000 | Showcase API | `trunk` | Done |
 | 5000 | Sound pipeline | `feature/audio` | Next |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
@@ -44,6 +44,8 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 | 11000 | Antiparticle Board | `feature/antiparticle-board` | Planned |
 | 12000 | Firing positions | `feature/firing-positions` | Planned |
 | 13000 | Batshit Blimp | `feature/blimp` | Planned |
+| 14000 | All-Weather Battery | `feature/all-weather-battery` | Backlog |
+| 15000 | Grenade Overcharge | `feature/grenade-overcharge` | Backlog |
 
 ## Done
 
@@ -62,11 +64,26 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
   fixed (among them god mode leaking into the player's next colony).
   317 unit and XML tests; smoke 131/131 twice. Questions 14 to 16 in
   `docs/AI-requests-for-humans.txt` came out of it.
+- **Phase 3000, Tractor Bomb** (merged 2026-10-15; `docs/TRACTOR-BOMB.md`,
+  "As Built"; the tour in `docs/SHOWCASE.md`): the robot, the emplaced
+  bomb and its implosion, flee and freeze, Dial-A-Yield's named settings
+  (pulls of 9, 22.5 and 33.75 tiles), the Tractor Barn, Disposition and
+  hostile reactions, deaths and art; and the directed tour that shows it
+  off: ten narrated scenes on a pinned seed (tour-04), a clean stage, a
+  quiet screen, tourists as its unfortunates, and cuts that keep to the
+  map. 842 unit and XML tests; smoke 234/0; the tour 26/0 on tour-04
+  and tour-17, each map and stage repeating across processes. Items 23
+  and 24 of `docs/AI-requests-for-humans.txt` are open from its last
+  night.
 
-## Now: Phase 3000, Tractor Bomb
+Nothing is in progress. Phase 5000 is next once its specification's
+questions are answered.
 
-Branch: `feature/tractor-bomb`. Specification: `docs/TRACTOR-BOMB.md`
-(its "As Built" section describes what slices 1000 to 11000 delivered).
+## Phase 3000, Tractor Bomb (Done)
+
+Branch: `feature/tractor-bomb`, merged into `trunk` on 2026-10-15.
+Specification: `docs/TRACTOR-BOMB.md` (its "As Built" section describes
+what slices 1000 to 11000 delivered).
 
 An expendable robot that patrols for enemies, drives in as far as its
 Disposition allows, emplaces itself, counts down, drags everything in its
@@ -89,7 +106,16 @@ sense runs.
 | 9000 | Deaths | Done |
 | 10000 | Art | Done |
 | 11000 | Tests and multi-bomb physics | Done |
-| 12000 | Directed tour, docs, merge into `trunk` | Now |
+| 12000 | Directed tour, docs | Done |
+| 13000 | Narration overlay | Done |
+| 14000 | Boomalope stampede | Done |
+| 15000 | Raccoon Incident | Done |
+| 16000 | Named yield settings | Done |
+| 17000 | Operator's viewing | Done |
+| 18000 | Showcase seeds, best of 32 | Done |
+| 18500 | Pull radii up by half | Done |
+| 19000 | Tourists, viewing feedback | Done |
+| 20000 | Merge into `trunk` | Done |
 
 Slice 11000 delivered the twin-bomb junkyard test and the multi-bomb
 physics: superposed pulls with random bias jitter, absolute durations (the
@@ -104,6 +130,99 @@ one major feature at a time with on-screen commentary, and the Tractor
 Bomb gets its own scene, ending on the twin bombs in a junkyard ("Two
 tractors are better than one."). Then the README, the decisions log, and
 the merge into `trunk`.
+
+Built on 2026-10-14 (overnight, by a workflow): the Showcase API gained
+scenes that decline a map (G1) and beats (G2); `BatshitTourDirector` plays
+eight scenes with narration, the Tractor Bomb and the junkyard twins last;
+`Tools/smoke-test.ps1 -Showcase -Verify` checks a tour run end to end.
+Adversarially reviewed and fixed. 638 unit and XML tests, smoke 190/190,
+tour verification 11/11. Open before the merge: the operator watches the
+tour (`Tools/smoke-test.ps1 -Showcase`), answers requests 17 and 18 in
+`docs/AI-requests-for-humans.txt`, and reviews the narration's wording;
+two tour faults (colonist deaths) are in `docs/AI-TODO.txt`.
+
+The operator watched it on 2026-10-14 and asked for slices 13000 to
+16000, built the same day and recorded in the specifications
+(`docs/SHOWCASE.md`, `docs/SHOWCASE-API.md`, `docs/TRACTOR-BOMB.md`):
+
+- **13000, narration overlay:** one oversized line with a drop shadow,
+  fading in and out, silent, in place of vanilla's message stack.
+- **14000, boomalope stampede:** a new scene after Home Defence, in which
+  one 256-bolt volley meets hundreds of boomalopes from the east.
+- **15000, the Raccoon Incident:** built as its own scene after the
+  junk-pile grenade, which stays ("test both").
+- **16000, named yield settings:** Proximity (Timid, Prudent, Nosy), Pull
+  (Intimate, Neighborly, Popular) and Blast (Birthday Cake, Firework,
+  Block Party), set per robot, for every robot at once, and as the
+  barn's production defaults. The tour's tractors go up a setting.
+- **17000:** the operator watched again on 2026-10-14 and started a
+  showcase from the main menu's Showcases button: "Pretty sweet. Needs
+  work on the sequence, but the general capability definitely works."
+- **18000, showcase seeds:** the operator, 2026-10-14: "Showcases
+  should be able to specify the random number seed used for map
+  generation, to get repeatable results. Implement this, and try 32
+  variations of the demo scenario. Select the best one." A showcase
+  def names its seed; the tour is tried on 32 seeds and pinned to the
+  best. Done 2026-10-15: `BT_Showcase` pins `tour-04`, an arid
+  shrubland (`docs/SHOWCASE.md`, "The Tour's Seed"); the tour-wide
+  faults the trials showed are in `docs/AI-TODO.txt` for 19000.
+- **18500, pull radii:** the operator, 2026-10-15: "expand the pull
+  radii for all tractor levels by 50%." Intimate, Neighborly and
+  Popular go from 6, 15 and 22.5 tiles to 9, 22.5 and 33.75; the
+  tour's staging follows. Done 2026-10-15: old saves keep the stops
+  they meant; the emplacing range (Timid, 15) stays, so Prudent stops
+  at 15 at the two larger pulls (request 23 asks whether it should
+  move); the tour's yard moves 11 tiles further south and its single
+  tractor is Nosy, so its pull spares the barn
+  (`docs/TRACTOR-BOMB.md`, "Named Settings"; `docs/SHOWCASE.md`).
+- **19000, tourists:** a small party of visitors as the tour's
+  unfortunates, in place of colonists (the colonists are already held
+  clear of every blast until it is over); deferred from the review step,
+  with its questions in `docs/AI-requests-for-humans.txt` item 21. The
+  operator's feedback from the viewing goes in with it. On 2026-10-15
+  the operator watched the tour on its pinned seed ("Not bad; good
+  enough for now") and said "Fine, finish Phase 3000" to the plan:
+  tourists (a hidden showcase-only faction; a tourist as the grenade's
+  volunteer and the tractor's stray), a clean stage (map hostiles,
+  the volley zone's trees, clear weather), less clutter (dev mode,
+  the Learning helper, stale alerts, letters and messages), and the
+  camera and framing faults the seed trials found. Step 19000a, a clean
+  stage, done 2026-10-15: the stage removes the map's own hostiles
+  before it clears the fog (the "Sorne Geneline" insects were a
+  temple's hive, woken by the clearing), every anima tree and the
+  volley zone's trees, and the Showcase API holds the weather clear
+  (`docs/SHOWCASE.md`, "A Clean Stage"; `docs/SHOWCASE-API.md`, "The
+  Held Weather"). Step 19000b, clutter and capture, done 2026-10-15: the
+  Showcase API keeps the screen quiet for a def that asks (no alerts,
+  Learning helper, letters or top-left messages; `docs/SHOWCASE-API.md`,
+  "The Quiet Screen"), the tour lends no god mode, viewing runs turn dev
+  mode and the Learning helper off, `-Presentation` verifies the tour at
+  its own speed with the viewing prefs, frames are taken a few ticks
+  after their cues, and `Tools\contact-sheet.ps1` tiles them into
+  sheets. Step 19000c, tourists, done 2026-10-15: three to five
+  visitors of a hidden faction made for showcases arrive with the stage
+  and stand where the scenes can reach them (the stampede's keep-away
+  line, beside the pads, the grenade's pile, the tractor's pull); the
+  grenade's volunteer and the tractor's stray are tourists, the robot
+  protests about a friendly guest as about a colonist, a lost guest is
+  narrated, and the group goes home, alive or dead, when the showcase
+  ends (`docs/SHOWCASE.md`, "Tourists"). Step 19000d, camera and
+  framing, done 2026-10-15: each scene opens with a cut to its own
+  place as its caption appears, no shot shows the black beyond the
+  map (the Showcase API's `keepOnMap`), the raccoon's throw is framed
+  clear of the caption bar, the tractor yard has junk for its pull,
+  and the twins are framed closer (`docs/SHOWCASE.md`, "Camera and
+  Framing"). What "needs work on the sequence" means is asked in
+  `docs/AI-requests-for-humans.txt`, item 24. A read-only review of the
+  night's work (two lenses) found five faults, none high; all were
+  fixed (tourists sent home when a saved tour is loaded, inert yard
+  junk, the README, the stampede's wording), and the implosion's smoke
+  flake was traced and fixed on the way (`docs/AI-KNOWN-ISSUES.txt`).
+- **20000, the merge into `trunk`,** done 2026-10-15 after the lead's
+  own gate on the final code: build clean, 842 unit and XML tests,
+  smoke 234/0, tour-04 and tour-17 26/0 twice each (MAPHASH and
+  STAGEHASH repeating), and a presentation capture read on contact
+  sheets.
 
 ### Decisions
 
@@ -175,6 +294,32 @@ In order, each on its own branch:
 - **Phase 13000, Batshit Blimp and Whoops Drive** (`feature/blimp`,
   `docs/BATSHIT-BLIMP.md`): the hardest engine work (flight, being shot at
   in the air, shooting from it), and the most open questions.
+- **Phase 14000, All-Weather Battery** (`feature/all-weather-battery`;
+  backlogged by Matt "Breakpoint" Heck on 2026-10-14): a battery that
+  can stand out in the rain. Vanilla's batteries short-circuit in rain
+  when unroofed and holding more than 100 Wd
+  (`ShortCircuitUtility.TryShortCircuitInRain`), draining the net and
+  exploding, which is why the tour's boomalope stampede (slice 14000)
+  runs the Ballista from the reactor alone, at 76 tiles. With it, the
+  stampede could store power for a longer reach. Design open: what it
+  costs, and what it does instead of shorting out.
+- **Phase 15000, Grenade Overcharge** (`feature/grenade-overcharge`;
+  backlogged by Matt "Breakpoint" Heck on 2026-10-14): "the Ergonomic
+  Singularity Grenade should have an Overcharge option. This takes five
+  seconds, cannot be aborted, and doubles the radius and power of all
+  effects." Today's grenade pulls over 10 tiles for exactly 5 s
+  (`Defs/ThingDefs/Items_SingularityGrenade.xml`); overcharged,
+  20 tiles at double strength and damage. The operator's design, the
+  same day: the Overcharge button is simply a toggle. If it is active
+  when the grenade is thrown, a five-second countdown locks the pawn in
+  place and commits it to the throw, which happens when the countdown
+  ends. If the pawn dies, is incapacitated, or drops the grenade (if
+  practical) for some reason, the countdown keeps going, and the
+  grenade detonates wherever it is when the countdown expires, without
+  a throw. Showing it: "Needless to say, Ned should use the Overcharge
+  option. Poorly." Ned "Overkill" Lessly overcharges in the tour's
+  Raccoon Incident (Tractor Bomb slice 15000), and it goes about as well
+  as his name suggests; the census revises accordingly.
 
 ## Tuning and Upkeep
 

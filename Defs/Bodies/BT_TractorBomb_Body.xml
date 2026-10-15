@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- The Tractor Bomb's body: a steel chassis with a control unit (its
+       consciousness; vanilla's artificial brain), an engine (vanilla's
+       mechanoid reactor: blood pumping, so losing it is fatal), four
+       wheels it drives on, and the tractor-beam emitter. Lose three wheels
+       and it cannot move, and its pawn kind wrecks it rather than leave it
+       downed. -->
+  <BodyDef>
+    <defName>BT_TractorBody</defName>
+    <label>tractor</label>
+    <corePart>
+      <def>BT_TractorChassis</def>
+      <height>Middle</height>
+      <depth>Outside</depth>
+      <parts>
+        <li>
+          <def>ArtificialBrain</def>
+          <customLabel>control unit</customLabel>
+          <coverage>0.06</coverage>
+          <depth>Inside</depth>
+        </li>
+        <li>
+          <def>Reactor</def>
+          <customLabel>engine</customLabel>
+          <coverage>0.1</coverage>
+          <depth>Inside</depth>
+        </li>
+        <li>
+          <def>BT_TractorWheel</def>
+          <customLabel>front left wheel</customLabel>
+          <coverage>0.07</coverage>
+          <height>Bottom</height>
+        </li>
+        <li>
+          <def>BT_TractorWheel</def>
+          <customLabel>front right wheel</customLabel>
+          <coverage>0.07</coverage>
+          <height>Bottom</height>
+        </li>
+        <li>
+          <def>BT_TractorWheel</def>
+          <customLabel>rear left wheel</customLabel>
+          <coverage>0.1</coverage>
+          <height>Bottom</height>
+        </li>
+        <li>
+          <def>BT_TractorWheel</def>
+          <customLabel>rear right wheel</customLabel>
+          <coverage>0.1</coverage>
+          <height>Bottom</height>
+        </li>
+        <li>
+          <def>BT_TractorBeamEmitter</def>
+          <coverage>0.05</coverage>
+          <height>Top</height>
+        </li>
+      </parts>
+    </corePart>
+  </BodyDef>
+
+  <BodyPartDef>
+    <defName>BT_TractorChassis</defName>
+    <label>chassis</label>
+    <hitPoints>40</hitPoints>
+    <permanentInjuryChanceFactor>0</permanentInjuryChanceFactor>
+    <skinCovered>false</skinCovered>
+    <solid>true</solid>
+    <alive>false</alive>
+    <bleedRate>0</bleedRate>
+  </BodyPartDef>
+
+  <BodyPartDef>
+    <defName>BT_TractorWheel</defName>
+    <label>wheel</label>
+    <hitPoints>18</hitPoints>
+    <permanentInjuryChanceFactor>0</permanentInjuryChanceFactor>
+    <skinCovered>false</skinCovered>
+    <solid>true</solid>
+    <alive>false</alive>
+    <bleedRate>0</bleedRate>
+    <tags>
+      <li>MovingLimbCore</li>
+    </tags>
+  </BodyPartDef>
+
+  <BodyPartDef>
+    <defName>BT_TractorBeamEmitter</defName>
+    <label>tractor-beam emitter</label>
+    <hitPoints>12</hitPoints>
+    <!-- RimWorld requires every body to have a part frostbite can reach
+         (a config error otherwise); this one is exposed metal, and the
+         robot's comfort range makes it moot. -->
+    <frostbiteVulnerability>1</frostbiteVulnerability>
+    <permanentInjuryChanceFactor>0</permanentInjuryChanceFactor>
+    <skinCovered>false</skinCovered>
+    <solid>true</solid>
+    <alive>false</alive>
+    <bleedRate>0</bleedRate>
+  </BodyPartDef>
+</Defs>

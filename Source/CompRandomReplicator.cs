@@ -421,7 +421,8 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Sends one letter per outage, once it has outlasted a brownout
-        /// flicker, and only if refrigerated food is at risk.
+        /// flicker, and only if refrigerated food is at risk; none while a
+        /// showcase keeps the screen quiet.
         /// </summary>
         private void TickPowerCutLetter()
         {
@@ -434,7 +435,8 @@ namespace BatshitTechnology
 
             powerCutTick = -1;
             if (!Props.sendPowerCutLetters || !refrigeration || StoredCount == 0
-                || !FlickUtility.WantsToBeOn(parent))
+                || !FlickUtility.WantsToBeOn(parent)
+                || Showcases.ShowcaseScreen.IsQuiet)
             {
                 return;
             }

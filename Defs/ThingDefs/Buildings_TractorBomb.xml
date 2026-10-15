@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Defs>
+  <!-- An emplaced Tractor Bomb (Source/TractorBombEmplaced.cs): what a
+       robot becomes where it stops. Never built by hand; it flips its
+       tyres flat (the flip frames are loaded by path in code), counts down
+       3 to 5 s under the shared warning band, hosts the implosion and
+       explodes. Pawns and items pass over it, like sandbags, so its own
+       cell is part of the pile. It has no hit points: damage cannot stop
+       it, only hurry it (its pull starts, or its blast goes off, at
+       once). -->
+  <ThingDef ParentName="BuildingBase">
+    <defName>BT_TractorBombEmplaced</defName>
+    <label>emplaced tractor bomb</label>
+    <description>A tractor bomb that has found what it was looking for. Its tyres are flipped out flat as stabiliser pads, its tractor beam is warming up, and nothing can stop it now: in a few seconds it drags everything within reach into a heap at its feet and explodes. Shooting it only hurries it along: hit before its pull starts, it starts pulling; hit while pulling, it goes off.\n\nLeave.</description>
+    <thingClass>BatshitTechnology.Building_TractorBomb</thingClass>
+    <graphicData>
+      <texPath>Things/Building/Security/BT_TractorBombEmplaced</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <drawSize>(2,2)</drawSize>
+    </graphicData>
+    <size>(1,1)</size>
+    <rotatable>true</rotatable>
+    <altitudeLayer>Building</altitudeLayer>
+    <drawerType>RealtimeOnly</drawerType>
+    <passability>PassThroughOnly</passability>
+    <pathCost>30</pathCost>
+    <fillPercent>0.25</fillPercent>
+    <useHitPoints>false</useHitPoints>
+    <tickerType>Normal</tickerType>
+    <selectable>true</selectable>
+    <stealable>false</stealable>
+    <canOverlapZones>true</canOverlapZones>
+    <noRightClickDraftAttack>true</noRightClickDraftAttack>
+    <statBases>
+      <Flammability>0</Flammability>
+      <Beauty>-10</Beauty>
+    </statBases>
+    <building>
+      <deconstructible>false</deconstructible>
+      <claimable>false</claimable>
+      <isInert>true</isInert>
+      <ai_neverTrashThis>true</ai_neverTrashThis>
+      <repairable>false</repairable>
+    </building>
+    <modExtensions>
+      <li Class="BatshitTechnology.TractorBombExtension">
+        <implosion>
+          <!-- The pull radius is the bomb's own: Neighborly, 22.5 tiles,
+               unless set otherwise -->
+          <gatherRadius>1.5</gatherRadius>
+          <pullTicks>300</pullTicks> <!-- accelerates over five seconds -->
+          <pullRateStart>0.6</pullRateStart>
+          <pullRateEnd>12</pullRateEnd>
+          <ripFixtures>true</ripFixtures>
+          <ripTicks>120</ripTicks>
+          <!-- Never less than 2 s, never more than 8 s: in between, it
+               ends once everything is gathered or nothing can move -->
+          <minDurationTicks>120</minDurationTicks>
+          <maxDurationTicks>480</maxDurationTicks>
+        </implosion>
+        <countdownSeconds>3~5</countdownSeconds>
+        <deployTicks>30</deployTicks> <!-- the tyres flip in half a second -->
+        <explosionDamageDef>Bomb</explosionDamageDef>
+        <explosionDamage>65</explosionDamage>
+        <finalWarningSeconds>1.5</finalWarningSeconds>
+        <pulsePeriodSeconds>1</pulsePeriodSeconds>
+        <finalPulsePeriodSeconds>0.25</finalPulsePeriodSeconds>
+      </li>
+    </modExtensions>
+  </ThingDef>
+
+  <!-- A robot's death (Source/TractorBombDeath.cs): a sputtering
+       miniature vortex that sucks in its own parts, and nothing else, then
+       pops. -->
+  <ThingDef>
+    <defName>BT_TractorBombDeathVortex</defName>
+    <label>wrecked tractor bomb</label>
+    <description>What is left of a tractor bomb, briefly: its tractor beam's last act is to gather up its own parts.</description>
+    <thingClass>BatshitTechnology.TractorBombDeathVortex</thingClass>
+    <category>Ethereal</category>
+    <tickerType>Normal</tickerType>
+    <drawerType>RealtimeOnly</drawerType>
+    <altitudeLayer>MoteOverhead</altitudeLayer>
+    <useHitPoints>false</useHitPoints>
+    <selectable>false</selectable>
+    <rotatable>false</rotatable>
+  </ThingDef>
+</Defs>

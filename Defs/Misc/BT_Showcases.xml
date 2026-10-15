@@ -7,17 +7,278 @@
   literally; \n makes one), so their lines run long.
 -->
 <Defs>
-  <!-- Today's demo base (Source/Showcase.cs), run by BatshitShowcaseWorker
-       until the directed tour replaces it. -->
+  <!-- The directed tour (docs/SHOWCASE.md, "The Directed Tour"): ten
+       scenes over the demo base Source/Showcase.cs builds, run by
+       BatshitTourDirector. The keys and narration moments follow Core's
+       TourScript; TourXmlTests hold the two together. Narration is The
+       Story's voice: deadpan, one line, at most 120 characters (raised
+       from 96 for the operator's stampede volley line, 2026-10-14). Lines
+       are timed by Core's TourPacing for the narration overlay: a scene's
+       start lines wait until the previous scene's outcome lines have been
+       read and cleared, a cue's later lines wait for the line before, and
+       each scene holds its action for an intro until its start lines
+       have cleared (TourXmlTests hold the def to these rules). The tour
+       group (docs/SHOWCASE.md, "Tourists") is the guests: a scene that
+       loses one says the guestsLost line. -->
   <BatshitTechnology.Showcases.ShowcaseDef>
     <defName>BT_Showcase</defName>
-    <label>demo base</label>
-    <summary>Every device at work, then several of them exploding on schedule.</summary>
-    <description>A working Batshit Technology base, built on a fresh map with every project researched: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, the Artificer making bolts, and a Batshit Ballista firing 16-bolt volleys at open ground.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners, a colonist throws an Ergonomic Singularity Grenade at a junk pile with a volunteer in it, and the camera visits AnyRim, a small test town built for exactly this.\n\nColonists are moved clear of each self-destruct. The volunteer was not consulted.</description>
+    <label>living better with batshittium</label>
+    <summary>A public information film: every device at work, then several of them exploding on cue.</summary>
+    <description>A working Batshit Technology base, built on a fresh map with every project researched, toured scene by scene: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, and the Artificer making bolts for a Batshit Ballista, which fires one 16-bolt volley, then meets a stampede of manhunting boomalopes from the east with one of 256.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners; the camera walks AnyRim, a small test town built for exactly this; a colonist throws an Ergonomic Singularity Grenade at a junk pile with a visitor volunteering in it; AnyRim's bank guard deals with a rabid raccoon on Main Street, with the same grenade; a Tractor Bomb from the Tractor Barn finds a party of raiders; and two Tractor Bombs settle a junkyard full of them.\n\nA scene this map cannot stage is left out. Colonists are moved clear of each blast. A small tour group is shown round as well, at closer range. The volunteer was not consulted.</description>
     <previewTexPath>UI/Showcases/BT_Showcase</previewTexPath>
-    <estimatedMinutes>3</estimatedMinutes>
+    <estimatedMinutes>8</estimatedMinutes>
     <order>0</order>
     <mapSize>250</mapSize>
-    <workerClass>BatshitTechnology.BatshitShowcaseWorker</workerClass>
+    <!-- Picked from 32 trial seeds (tour-01 to tour-32), 2026-10-14:
+         flat arid shrubland with an open stampede band, clean pads, a
+         legible AnyRim and a roomy tractor yard (docs/SHOWCASE.md, "The
+         Tour's Seed"). A -showcaseseed= command line overrides it. -->
+    <seed>tour-04</seed>
+    <!-- Rain and fog greyed out the middle scenes on several seeds,
+         tour-04's included: the weather is held clear for the whole tour
+         (docs/SHOWCASE-API.md, "The Held Weather"). The stampede borrows
+         it for its rain and gives it back. -->
+    <holdWeather>Clear</holdWeather>
+    <!-- Alerts ("Need colonist beds", "Pen needed"), letters ("Ancient
+         mech", "Roof collapsed") and top-left messages piled up over the
+         film: the screen is kept quiet while the tour runs
+         (docs/SHOWCASE-API.md, "The Quiet Screen"). -->
+    <quietScreen>true</quietScreen>
+    <workerClass>BatshitTechnology.BatshitTourDirector</workerClass>
+    <!-- Each scene opens with a cut, not a glide, so its caption and
+         opening line never show the last scene's place; and every shot
+         keeps on the map, so none shows the black beyond its edge (the
+         stampede's herd enters at the east edge, the pads and the yard
+         lie near others). Slice 19000d. -->
+    <scenes>
+      <li Class="BatshitTechnology.DeviceParadeScene">
+        <key>home</key>
+        <title>The Home of Tomorrow</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>4000</timeoutTicks>
+        <shots><li><zoom>14</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+      <li Class="BatshitTechnology.BallistaVolleyScene">
+        <key>defence</key>
+        <title>Home Defence</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>2700</timeoutTicks>
+        <settleTicks>120</settleTicks>
+        <shots><li><zoom>14</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+      <!-- The herd enters over the first ticks; the volley waits for it
+           to come within the range the grid can power (about 76 tiles). -->
+      <li Class="BatshitTechnology.StampedeScene">
+        <key>stampede</key>
+        <title>Uninvited Guests</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>4400</timeoutTicks>
+        <settleTicks>120</settleTicks>
+        <selectSubject>false</selectSubject>
+        <herdSize>200</herdSize>
+        <shots><li><zoom>40</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+      <li Class="BatshitTechnology.SelfDestructScene">
+        <key>retire-replicator</key>
+        <title>When Devices Retire</title>
+        <pad>0</pad>
+        <minTicks>600</minTicks>
+        <timeoutTicks>3200</timeoutTicks>
+        <settleTicks>120</settleTicks>
+        <shots><li><zoom>22</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+      <li Class="BatshitTechnology.SelfDestructScene">
+        <key>retire-reactor</key>
+        <title>When Reactors Retire</title>
+        <pad>1</pad>
+        <minTicks>600</minTicks>
+        <timeoutTicks>3900</timeoutTicks>
+        <settleTicks>120</settleTicks>
+        <shots><li><zoom>22</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+      <li Class="BatshitTechnology.AnyRimWalkScene">
+        <key>anyrim</key>
+        <title>A Typical Rim Community</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>3200</timeoutTicks>
+        <selectSubject>false</selectSubject>
+        <shots><li><zoom>30</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+      <li Class="BatshitTechnology.GrenadeScene">
+        <key>grenade</key>
+        <title>Comfort Is a Weapon</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>2600</timeoutTicks>
+        <settleTicks>180</settleTicks>
+        <shots><li><zoom>22</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+      <!-- AnyRim's guard and a manhunting raccoon (docs/SHOWCASE.md, "Reel
+           9"). Declines without AnyRim, or when its scene was skipped. -->
+      <li Class="BatshitTechnology.RaccoonScene">
+        <key>raccoon</key>
+        <title>The Raccoon Incident</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>4400</timeoutTicks>
+        <settleTicks>120</settleTicks>
+        <shots><li><zoom>20</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+      <li Class="BatshitTechnology.TractorBombScene">
+        <key>tractor</key>
+        <title>The Tractor of Tomorrow</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>5500</timeoutTicks>
+        <settleTicks>240</settleTicks>
+        <shots><li><zoom>30</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+      <li Class="BatshitTechnology.TwinTractorsScene">
+        <key>twins</key>
+        <title>Two Tractors</title>
+        <minTicks>600</minTicks>
+        <timeoutTicks>4400</timeoutTicks>
+        <settleTicks>300</settleTicks>
+        <!-- Close enough for the junk to read as junk (it was specks at
+             45); the robots drive in from the frame's edges. -->
+        <shots><li><zoom>28</zoom><pan>false</pan><keepOnMap>true</keepOnMap></li></shots>
+      </li>
+    </scenes>
+    <narration>
+      <!-- home -->
+      <li><scene>home</scene><when>start</when><delayTicks>90</delayTicks>
+        <text>Living Better with Batshittium. A Batshit Technology public information film.</text></li>
+      <li><scene>home</scene><when>start</when><delayTicks>660</delayTicks>
+        <text>The future, delivered sooner, cheaper and funnier.</text></li>
+      <li><scene>home</scene><when>reactor</when>
+        <text>Two hundred and fifty thousand watts from a single unit of batshittium.</text></li>
+      <li><scene>home</scene><when>replicator</when>
+        <text>Your family will never know what's for supper, and neither will you.</text></li>
+      <li><scene>home</scene><when>transmogrifier</when>
+        <text>Every rock on your land is a fortune waiting to be transmogrified.</text></li>
+      <li><scene>home</scene><when>squeezer</when>
+        <text>A firm, reassuring squeeze for the overworked mind.</text></li>
+      <li><scene>home</scene><when>completed</when>
+        <text>This is the home of tomorrow. Tomorrow has been moved forward.</text></li>
+      <!-- defence -->
+      <li><scene>defence</scene><when>start</when><delayTicks>520</delayTicks>
+        <text>The home of tomorrow must also look after itself.</text></li>
+      <li><scene>defence</scene><when>artificer</when>
+        <text>The Artificer turns batshittium into bolts, quietly, around the clock.</text></li>
+      <li><scene>defence</scene><when>volley</when>
+        <text>Sixteen bolts, one volley, and a neighbourhood with very few complaints.</text></li>
+      <li><scene>defence</scene><when>completed</when>
+        <text>Note that the area now meets local lawn care standards.</text></li>
+      <!-- stampede -->
+      <li><scene>stampede</scene><when>start</when><delayTicks>500</delayTicks>
+        <text>Not everyone calls ahead.</text></li>
+      <li><scene>stampede</scene><when>herd</when>
+        <text>A herd of boomalopes has taken a keen interest in the family.</text></li>
+      <li><scene>stampede</scene><when>volley</when>
+        <text>Two hundred fifty-six largely inaccurate—but highly explosive—Ballista bolts make for a firm, but neighborly, "No."</text></li>
+      <li><scene>stampede</scene><when>stragglers</when>
+        <text>A few have stayed on. The Ballista will see them out.</text></li>
+      <li><scene>stampede</scene><when>aftermath</when>
+        <text>The east has been cleared. The rain will see to the rest.</text></li>
+      <li><scene>stampede</scene><when>guestsLost</when>
+        <text>Our guests are enjoying an unusually close look.</text></li>
+      <li><scene>stampede</scene><when>completed</when>
+        <text>Your home is safe. The east will grow back.</text></li>
+      <!-- retire-replicator -->
+      <li><scene>retire-replicator</scene><when>start</when><delayTicks>460</delayTicks>
+        <text>Every Batshit device knows when to step aside.</text></li>
+      <li><scene>retire-replicator</scene><when>blast</when>
+        <text>Please step aside also.</text></li>
+      <li><scene>retire-replicator</scene><when>guestsLost</when>
+        <text>Our guests are enjoying an unusually close look.</text></li>
+      <li><scene>retire-replicator</scene><when>completed</when>
+        <text>The replicator has been retired with full honours.</text></li>
+      <!-- retire-reactor -->
+      <li><scene>retire-reactor</scene><when>start</when><delayTicks>480</delayTicks>
+        <text>A reactor, too, deserves a dignified retirement.</text></li>
+      <li><scene>retire-reactor</scene><when>blast</when>
+        <text>Please remain indoors. Any indoors will do.</text></li>
+      <li><scene>retire-reactor</scene><when>guestsLost</when>
+        <text>Our guests are enjoying an unusually close look.</text></li>
+      <li><scene>retire-reactor</scene><when>completed</when>
+        <text>Its warmth will be with us for some time.</text></li>
+      <!-- anyrim -->
+      <li><scene>anyrim</scene><when>start</when><delayTicks>460</delayTicks>
+        <text>Meanwhile, in the community.</text></li>
+      <li><scene>anyrim</scene><when>sign</when>
+        <text>Every home in AnyRim is a proving ground.</text></li>
+      <li><scene>anyrim</scene><when>street</when>
+        <text>So is every neighbour.</text></li>
+      <li><scene>anyrim</scene><when>homes</when>
+        <text>The residents have been told everything they need to know.</text></li>
+      <li><scene>anyrim</scene><when>completed</when>
+        <text>AnyRim has never once complained in writing.</text></li>
+      <!-- grenade -->
+      <li><scene>grenade</scene><when>start</when><delayTicks>470</delayTicks>
+        <text>Comfort is the finest defence of all.</text></li>
+      <li><scene>grenade</scene><when>thrown</when>
+        <text>A valued guest has volunteered.</text></li>
+      <li><scene>grenade</scene><when>thrownAlone</when>
+        <text>Our guests have declined to volunteer. The demonstration proceeds regardless.</text></li>
+      <li><scene>grenade</scene><when>volunteerSurvived</when>
+        <text>Our volunteer reports feeling very supported.</text></li>
+      <li><scene>grenade</scene><when>volunteerLost</when>
+        <text>Our volunteer has been comforted. Completely.</text></li>
+      <li><scene>grenade</scene><when>completed</when>
+        <text>Everything is exactly where it belongs now.</text></li>
+      <!-- raccoon: the census between the throw and the outcome is
+           AnyRim's own line, said with the real count by the scene -->
+      <li><scene>raccoon</scene><when>start</when><delayTicks>470</delayTicks>
+        <text>Every community has its pests.</text></li>
+      <li><scene>raccoon</scene><when>guard</when>
+        <text>In AnyRim, pest control is in the capable hands of Ned Lessly, AnyRim Savings &amp; Loan Security.</text></li>
+      <li><scene>raccoon</scene><when>pest</when>
+        <text>A raccoon has wandered onto Main Street, foaming slightly.</text></li>
+      <li><scene>raccoon</scene><when>thrown</when>
+        <text>Ned believes in a proportionate response.</text></li>
+      <li><scene>raccoon</scene><when>raccoonSurvived</when>
+        <text>The raccoon has been reassured.</text></li>
+      <li><scene>raccoon</scene><when>raccoonSurvived</when><delayTicks>460</delayTicks>
+        <text>AnyRim thanks Ned for his service. Unfortunately.</text></li>
+      <li><scene>raccoon</scene><when>raccoonLost</when>
+        <text>The raccoon will not be troubling anyone.</text></li>
+      <li><scene>raccoon</scene><when>raccoonLost</when><delayTicks>460</delayTicks>
+        <text>AnyRim thanks Ned for his service. Unfortunately.</text></li>
+      <li><scene>raccoon</scene><when>completed</when>
+        <text>AnyRim thanks Ned for his service. Unfortunately.</text></li>
+      <!-- tractor -->
+      <li><scene>tractor</scene><when>start</when><delayTicks>940</delayTicks>
+        <text>The Tractor Barn builds it. The tractor finds the problem.</text></li>
+      <li><scene>tractor</scene><when>barn</when>
+        <text>The Tractor Barn: a working farm building, in most respects.</text></li>
+      <li><scene>tractor</scene><when>delivered</when>
+        <text>This one was made earlier. The barn insists it was no trouble.</text></li>
+      <li><scene>tractor</scene><when>spotted</when>
+        <text>It has found a problem. It is very good at finding problems.</text></li>
+      <li><scene>tractor</scene><when>protest</when>
+        <text>The tractor objects to bystanders. The bystander is reconsidering.</text></li>
+      <li><scene>tractor</scene><when>emplaced</when>
+        <text>The tractor has settled in. It will not be moving again.</text></li>
+      <li><scene>tractor</scene><when>doom</when>
+        <text>Some neighbours are making peace with their impending doom. This is normal.</text></li>
+      <li><scene>tractor</scene><when>pull</when>
+        <text>Everything nearby is invited to the middle.</text></li>
+      <li><scene>tractor</scene><when>blast</when>
+        <text>The invitation was not optional.</text></li>
+      <li><scene>tractor</scene><when>guestsLost</when>
+        <text>Our guests are enjoying an unusually close look.</text></li>
+      <li><scene>tractor</scene><when>completed</when>
+        <text>The problem is resolved.</text></li>
+      <!-- twins -->
+      <li><scene>twins</scene><when>start</when><delayTicks>410</delayTicks>
+        <text>Some problems call for a second opinion.</text></li>
+      <li><scene>twins</scene><when>planted</when>
+        <text>Both opinions have arrived, and they agree.</text></li>
+      <li><scene>twins</scene><when>pull</when>
+        <text>Please remain calm. The junkyard is being consolidated.</text></li>
+      <li><scene>twins</scene><when>blast</when>
+        <text>Consolidation is complete.</text></li>
+      <li><scene>twins</scene><when>completed</when>
+        <text>Two tractors are better than one.</text></li>
+      <li><scene>twins</scene><when>completed</when><delayTicks>430</delayTicks>
+        <text>The Future: Sooner. Cheaper. Funnier. And ludicrously dangerous.</text></li>
+    </narration>
   </BatshitTechnology.Showcases.ShowcaseDef>
 </Defs>
