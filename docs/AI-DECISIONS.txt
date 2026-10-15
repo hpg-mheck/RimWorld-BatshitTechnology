@@ -2911,3 +2911,24 @@ not moved since the branch last took it in (6564a9f), so the merge is a
 plain --no-ff merge of feature/tractor-bomb. Open for the operator from
 the night: requests 23 (Timid and Prudent both stop 15 tiles out now) and
 24 (the sequence).
+2026-10-15 Claude: Sound pipeline slice 1000, research into sources. The
+operator opened Phase 5000 ("Merge and proceed to Phase 5000"; the merge
+was already done at 5a23f98) and asked for options for music and effects
+within $50 for services, preferring "AI-guided composition resulting in
+high-quality output". feature/audio was cut from trunk. Four read-only
+research agents (hosted music; effects and libraries; local models and
+composed music; licensing, platforms and community), about 940K tokens
+and 22 minutes, wrote docs/research/sound-sources-2026-10/. The lead
+rechecked the deciding facts on the vendors' pages: Lyria 3.5 at $0.08 a
+song with no free tier and Google claiming no ownership; Stable Audio 3
+(May 2026, gated, Stability AI Community License: the user owns outputs,
+which are not Derivative Works, free commercial use under $1M a year
+with registration); ACE-Step 1.5 under MIT; ElevenLabs' Sound Effects
+terms forbidding output "as isolated audio files or samples". The
+options and a recommendation (local first, then at most about $20 of
+hosted music, decided by a blind listening trial) are in
+docs/SOUND-SOURCES.md; the choice is requests item 25. The operator's
+"We're going to work with what we've got right now" was recorded as
+resolving request 23 (Proximity stays) and deferring request 24 (the
+sequence). Nothing was installed, downloaded, bought or signed up for,
+and no personal detail was sent anywhere.

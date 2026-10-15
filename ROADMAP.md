@@ -99,8 +99,12 @@ services, not for Claude's own use.
 |---|---|---|
 | 1000 | Research: sources for music and effects | Now |
 
-The slices after 1000 are planned once the operator has chosen among the
-options.
+Slice 1000's options are in `docs/SOUND-SOURCES.md` (2026-10-15):
+(A) all local, $0; (B) local first, then up to about $20 of hosted music
+for pieces the free candidates lose in a blind listening trial
+(recommended); (C) Suno Pro for the disco. The choice is item 25 of
+`docs/AI-requests-for-humans.txt`. The slices after 1000 are planned
+once the operator has chosen.
 
 ## Phase 3000, Tractor Bomb (Done)
 

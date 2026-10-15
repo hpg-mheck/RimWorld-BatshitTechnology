@@ -1,6 +1,10 @@
 # Sound Pipeline
 
 Status: specified, not yet built; proposals pending Matt "Breakpoint" Heck.
+On 2026-10-15 the operator widened the sources to services and AI-guided
+composition within $50; `docs/SOUND-SOURCES.md` sets out the options, and
+the goals below ("fully synthesized", "no samples") are reopened until he
+chooses (`docs/AI-requests-for-humans.txt`, item 25).
 Phase 5000 in `ROADMAP.md`, branch `feature/audio`. Points this document
 proposes are marked *(proposal)* and gathered under "Open Questions"; they
 stand unless he changes them.

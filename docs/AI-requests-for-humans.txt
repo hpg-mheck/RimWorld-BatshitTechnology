@@ -138,32 +138,33 @@ Matt "Breakpoint" Heck:
     now pins the map and the stage as well as the world, starting tile,
     colonists and settlement; docs/SHOWCASE-API.md, "Seeds" and Decision
     1, and docs/AI-DECISIONS.txt, slice 18000.)
-23. The Tractor Bomb's Proximity after the pulls went up by half (slice
-    18500, 2026-10-15). Built as asked: Intimate 9, Neighborly 22.5,
-    Popular 33.75 tiles. Timid's 15 tiles (the robot's emplacing range)
-    and Nosy's 3 are distances of their own, so they stayed; Prudent,
-    "15 tiles or one inside its pull, whichever is nearer", now stops at
-    15 at Neighborly and Popular, the same as Timid (8 at Intimate). The
-    menu therefore reads "Timid, stops 15 tiles out" and "Prudent, stops
-    15 tiles out" at the default pull. Before, the two differed by one
-    tile there. Keep it so (the robot drives as before and its bigger
-    beam catches more; recommended), or raise the emplacing range by
-    half as well (Timid 22.5, Prudent 21.5 at the default, as the old
-    pattern had it, though then the beam catches no more than before)?
-    Also for your eye: the tour's single tractor is now Nosy, not
-    Prudent, because from the barn's door a Prudent robot would plant
-    within its 33.75-tile pull of the barn (docs/SHOWCASE.md).
-24. The tour's sequence (slice 19000d, 2026-10-15). After the viewing in
-    slice 17000 you said: "Pretty sweet. Needs work on the sequence, but
-    the general capability definitely works." What should change? Slice
-    19000 fixed only what the seed trials showed (each scene now opens
-    with a cut to its own place, no shot shows the black beyond the
-    map, the raccoon's throw is framed clear of the caption bar, the
-    tractor yard has junk, and the twins are framed closer); nothing in
-    the order or pacing was changed on a guess. For example: the order
-    of the ten scenes (home, defence, stampede, the replicator's pad,
-    the reactor's pad, AnyRim, grenade, raccoon, tractor, twins); a
-    scene to drop or merge (the two pads; the grenade and the raccoon);
-    the time between scenes (each opens with about 12 to 16 seconds of
-    the last scene's outcome and its own title line, request 20); or
-    the shots within a scene.
+23. (Resolved 2026-10-15, with request 24: "We're going to work with
+    what we've got right now." The Proximity distances stay as built in
+    slice 18500: Timid stops 15 tiles out, Prudent at 15 tiles or one
+    inside its pull, so the two match at Neighborly and Popular; the
+    tour's single tractor stays Nosy.)
+24. (Deferred 2026-10-15: "We're going to work with what we've got
+    right now." The tour's sequence stays as slice 19000 left it; what
+    "needs work on the sequence" means is to be taken up when the
+    operator returns to the tour.)
+25. Sound and music sources (Phase 5000, slice 1000, 2026-10-15).
+    You asked for options for both effects and music within $50 for
+    services; they are in docs/SOUND-SOURCES.md. In short: (A) all
+    local, $0: effects from code synthesis, CC0 recordings and Stable
+    Audio 3 run on your GPU, music composed by Claude as code and
+    rendered with free synthesizers and sampled orchestras, with ACE-Step
+    1.5 and Stable Audio 3 as generated candidates; (B) the same, then up
+    to about $20 of hosted music (Google Lyria through the Gemini API,
+    the Stability API) only for pieces the free candidates lose in a
+    blind listening trial (recommended); (C) Suno Pro ($10) for the
+    disco only, driven by hand. ElevenLabs, Udio and the stock libraries
+    are ruled out by their terms. Questions: (1) Which option? (2) May
+    slice 2000 install a Python venv with PyTorch, Surge XT, the sample
+    libraries and the open models, and run the listening trial? (3) Will
+    you accept Stable Audio 3's Hugging Face gate and register for its
+    free commercial licence with your own account (it asks for name,
+    email and country)? (4) Which music do you want: the disco loop and
+    the sting only, or also a 1950s theme for the tour and a lounge loop
+    for the comedy showcase? (5) The audio under CC0, separate from the
+    code's MIT, with a one-line AI disclosure on the Workshop page and in
+    the README? (6) Would you record three raspberries on your phone?
