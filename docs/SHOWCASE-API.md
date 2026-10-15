@@ -419,8 +419,20 @@ repeatable results." Built in slice 18000.
      random) and the player's settlement (its name is random).
   3. The map: seeded from the world's seed and the starting tile, so it
      follows from the two above, once the map seed's prefix has made
-     those seeds the same in every process ("The map's seeds", below).
-  4. `stage`: the global random state, set afresh (as `Rand.Seed`
+     those seeds the same in every process ("The map's seeds", below),
+     all but the rooms of a layout ("What it cannot pin").
+  4. `start`: the global random state through the rest of the game's
+     start, set afresh (as for `stage`) in the session's
+     `FinalizeInit`, once the map is generated. The scenario, the
+     history and every game component's `StartedNewGame` draw on it
+     before the first tick and keep what they draw: Anomaly's first
+     harbinger tree check, for one, which unseeded came at a tick
+     random per process, then drew again and queued an incident in the
+     middle of the tour. Nothing is pushed then, and the main thread
+     draws nothing during the long event. The session records the
+     state the start left (`StartState`, the SUMMARY's `startState`),
+     the same for a seed in every process.
+  5. `stage`: the global random state, set afresh (as `Rand.Seed`
      would, through its private state, since the public setter logs an
      error unless something is pushed) just before the worker is set
      up.
@@ -430,7 +442,15 @@ repeatable results." Built in slice 18000.
   those frames as the frame rate allowed, and pawns, plants and the
   random state moved on by a different amount every run. The speed is
   put back as the worker is set up (the tour's stage sets Normal
-  anyway).
+  anyway). RimWorld silently refuses a change of speed while the player
+  has no control: while the screen fades in after the map loads
+  (`Root_Play.Start` queues a half-second fade) or a cutscene plays. So
+  the settling frames count only while the player has control, and if
+  the unpause is refused anyway, the session keeps the hold and tries
+  again every frame until it takes (`SettleReleaseRefused` counts the
+  tries; the SUMMARY's `settleRetries`). Before, a set-up that landed in
+  the fade (at about 240 frames a second or more) left the showcase
+  paused at `READY`.
 - **The loading screen.** Rand is one global state, shared by every
   thread. While the game generates on the long event's thread, the main
   thread draws the loading screen, and the first time it shows the
@@ -439,69 +459,91 @@ repeatable results." Built in slice 18000.
   depends on thread timing. The launcher shuffles them first, on the
   main thread, as vanilla would (`LoadingTips.Prime`); nothing else on
   the loading screen draws on Rand (RimWorld 1.6.4871).
-- **What a seed pins.** In any process, on the same game and mod list:
-  the world, the starting tile, the colonists (names, traits, gear,
-  work priorities), the settlement, the whole map, and the stage the
-  worker builds on it, so `MAPHASH` and `STAGEHASH` repeat. A seed
-  given in the def and the same seed given on the command line give the
-  same map. Checked in slice 18000 (`docs/AI-DECISIONS.txt`): two
-  processes with the same seed drew the same world seed string, tile
-  and colonists, every Rand checkpoint matched through the preparation
-  and every gen step's draws, and, with the map seed's prefix, every
-  gen step's result, `MAPHASH` and `STAGEHASH` matched too.
-- **The map's seeds: the second Harmony patch.** RimWorld 1.6.4871
-  alone cannot generate the same map twice in two processes.
-  `Map.NextGenSeed` is `System.HashCode.Combine(tile, counter, world
-  seed)`, and `System.HashCode` mixes in a random seed chosen once per
-  process. BaseGen (every symbol: ancient shrines, ruins), the scatter
-  groups (mechanoid remains, junk clusters), prefabs, layouts and
-  unique weapons seed their Rand blocks from it, so those structures
-  differed from process to process, and every later gen step that walks
-  the map (plants, rock chunks, animals) shifted with them. Matt
-  "Breakpoint" Heck approved a second Harmony patch for it on
-  2026-10-14 (requests item 22; Decision 1): a prefix on the
-  `NextGenSeed` getter (`ShowcaseMapSeed.Prefix`) that reads the same
-  three inputs in vanilla's order (the tile's hash, or the map's id off
-  the planet; the counter, advanced as vanilla advances it; the
-  world's seed) and combines them with `Gen.HashCombineInt`, which is
-  the same in every process. It acts only inside a window:
+- **What a seed pins.** In any process, on the same game and mod list: the
+  world, the starting tile, the colonists (names, traits, gear, work
+  priorities), the settlement, the rest of the game's start, the whole map but
+  the rooms of any layout on it, and the stage the worker builds on it, so
+  `MAPHASH` and `STAGEHASH` repeat for a map without layouts. A seed given in
+  the def and the same seed given on the command line give the same map.
+  Checked in slice 18000 (`docs/AI-DECISIONS.txt`): two processes with the
+  same seed drew the same world seed string, tile and colonists, every Rand
+  checkpoint matched through the preparation and every gen step's draws, and,
+  with the map seed's prefix, every gen step's result, `MAPHASH` and
+  `STAGEHASH` matched too.
+- **The map's seeds: the second Harmony patch.** RimWorld 1.6.4871 alone
+  cannot generate the same map twice in two processes. `Map.NextGenSeed` is
+  `System.HashCode.Combine(tile, counter, world seed)`, and `System.HashCode`
+  mixes in a random seed chosen once per process. BaseGen (every symbol:
+  ancient shrines, ruins), the scatter groups (mechanoid remains, junk
+  clusters), prefabs, layouts' sketches (not their rooms) and unique weapons
+  seed their Rand blocks from it, so those structures differed from process to
+  process, and every later gen step that walks the map (plants, rock chunks,
+  animals) shifted with them. Matt "Breakpoint" Heck approved a second Harmony
+  patch for it on 2026-10-14 (requests item 22; Decision 1): a prefix on the
+  `NextGenSeed` getter (`ShowcaseMapSeed.Prefix`) that reads the same three
+  inputs in vanilla's order (the tile's hash, or the map's id off the planet;
+  the counter, advanced as vanilla advances it; the world's seed) and combines
+  them with `Gen.HashCombineInt`, which is the same in every process. It acts
+  only inside a window:
   - the launcher opens it for the showcase's new `Game` on the long
     event's thread, once the world and the starting tile are drawn and
     before the map is generated;
   - the session closes it at the start of `StartedNewGame` (the end of
     `Game.InitNewGame`, once the map exists), for every new game,
     showcase or not, and logs how many seeds it pinned (`MAPSEED`);
-  - it is closed, with a warning if it was found open, if the set-up
-    or the map's preparation throws, whenever the main menu is shown
+  - it is closed, with a warning if it was found open, if the set-up or the
+    map's preparation throws (and the launch request is dropped, with a
+    warning: vanilla only logs a failed preparation and starts the
+    half-prepared game anyway, which then starts as an ordinary game, never as
+    a showcase on a map its seed did not pin), whenever the main menu is shown
     (which vanilla never draws while a long event runs), when a game is
-    loaded, and again, harmlessly, at the showcase's set-up, Stop and
-    end;
+    loaded, and again, harmlessly, at the showcase's set-up, Stop and end;
   - the window is bound to that `Game` object (Core's `GenerationPin`),
     so a window some failure left open can never pin another game's
     seeds: the player's next real game is another object.
 
-  Outside the window the prefix returns at once and vanilla's getter
-  runs untouched, so every other map, in a showcase's game after its
-  start or in any other game, is vanilla's. A quick-test map
-  (`-quicktest -showcase=`) is generated by vanilla before the showcase
-  adopts it, so it is not pinned (`MAPSEED not pinned (quicktest
-  map)`). If Harmony is missing, or a later RimWorld renames the getter
-  or its private counter (`Map.generatedId`), the patch is not
-  installed, an error says so, and maps follow vanilla (`MAPSEED not
-  pinned (no patch)`); the menu button is installed on its own and
-  still works.
-- **What it cannot pin.** After `READY` the game draws on the same
-  global random state from code that runs per frame rather than per
-  tick (effects, motes, sounds and the interface draw on Rand), and how
-  many ticks fall in each frame depends on the machine's load and the
-  speed: Superfast in a verify run, Normal for a viewer, whose own
-  clicks and camera add more. So the run after `READY` repeats only as
-  far as those draws happen not to land between ticks that matter; how
-  far that is for the tour is measured by `Tools/tour-trials.ps1` and
-  recorded in `docs/AI-TESTING-STRATEGY.txt` ("Tour trials"). A seed
-  also does not cover a `-quicktest` game: vanilla generated that map
-  unseeded, so its cue adds `quicktest map, not pinned` (the stage is
-  still seeded).
+  Outside the window the prefix returns at once and vanilla's getter runs
+  untouched, so every other map, in a showcase's game after its start or in
+  any other game, is vanilla's. A quick-test map (`-quicktest -showcase=`) is
+  generated by vanilla before the showcase adopts it, so it is not pinned
+  (`MAPSEED not pinned (quicktest map)`); any other showcase game whose window
+  was not open says `not pinned (window not open)`. If Harmony is missing, or
+  a later RimWorld renames the getter or its private counter
+  (`Map.generatedId`), the patch is not installed, an error says so, and maps
+  follow vanilla (`MAPSEED not pinned (no patch)`); the menu button is
+  installed on its own and still works.
+- **What it cannot pin: layouts' rooms.** RimWorld 1.6.4871 fills the
+  rooms of every layout (`LayoutWorker.FillAllRooms`) inside `new
+  RandBlock(HashCode.Combine(sketch id, room))`; the sketch's id is
+  never set, and `System.HashCode` is random per process again. The
+  prefix pins the sketch, drawn from `NextGenSeed`, but not the rooms:
+  their loot, furniture and hostiles (a garrison's, an infested
+  settlement's), and every gen step placed around them afterwards,
+  differ from process to process. Layouts reach a starting map through
+  Odyssey's landmarks (the ancient garrison, warehouse, chemfuel
+  refinery, infested settlement and launch site, each a 0.2 chance on
+  its tile) and through ruins; a showcase's random tile does not avoid
+  them. Pinning the rooms would take a third Harmony patch, which is
+  not approved. Instead the session reads the tile's landmark and
+  mutators and counts the map's layouts with rooms
+  (`UnpinnedLayouts`), the `MAPSEED` cue names them (`pinned (653
+  seeds); rooms of 1 layout not pinned; landmark AncientGarrison`), the
+  verifier notes them and the SUMMARY carries them (`landmark`,
+  `mutators`, `unpinnedLayouts`), and `Tools/tour-trials.ps1` lists
+  such runs. The guard is its repeat check: run a candidate seed in two
+  processes (`-Repeat 2`) and require `MAPHASH` and `STAGEHASH` to
+  match. A map with no layout is pinned whole.
+- **What it cannot pin: after READY.** After `READY` the game draws on the
+  same global random state from code that runs per frame rather than per tick
+  (effects, motes, sounds and the interface draw on Rand), and how many ticks
+  fall in each frame depends on the machine's load and the speed: Superfast in
+  a verify run, Normal for a viewer, whose own clicks and camera add more. So
+  the run after `READY` repeats only as far as those draws happen not to land
+  between ticks that matter; how far that is for the tour is measured by
+  `Tools/tour-trials.ps1` and recorded in `docs/AI-TESTING-STRATEGY.txt`
+  ("Tour trials"). A seed also does not cover a `-quicktest` game: vanilla
+  generated that map unseeded, so its cue adds `quicktest map, not pinned`
+  (the stage is still seeded).
 - **Viewing and verify runs.** Nothing in generation or staging depends
   on the window, the UI scale or the speed, so a viewing run
   (`-Showcase`: Normal speed, a maximized window at 2x UI) and a verify
@@ -576,8 +618,10 @@ for cues (the tour verifier's shots do).
 - `GAME <def>`: the new game's session adopted the showcase.
 - `MAPSEED pinned (<n> seeds)` (record): the map seed's window was open
   while the map was generated, and pinned that many of its seeds; it
-  is closed by now. Or `MAPSEED not pinned (quicktest map)` or `...
-  (no patch)`.
+  is closed by now. With `; rooms of <n> layouts not pinned` when the
+  map holds layouts, and `; landmark <defName>` when its tile has a
+  landmark. Or `MAPSEED not pinned (quicktest map)`, `... (window not
+  open)` or `... (no patch)`.
 - `MAPHASH <hex> (<n> cells, <n> things, <n> pawns)` (record): the new
   map's fingerprint, before any tick.
 - `STORYTELLER quiet (<n> parts held)` (record): random incidents are
@@ -618,9 +662,11 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
   delayed `stopped` lines), the narration overlay's timing and layout,
   the god-mode loan, and the Force-start and command-line rules; from
   slice 18000, the seed's precedence, characters and refusals, the
-  derived Rand seeds and FNV-1a (pinned to the published vectors), and
-  the map fingerprint (pinned to an independent reference, blind to the
-  order of things and pawns, changed by every field it covers).
+  derived Rand seeds and FNV-1a (pinned to the published vectors), the
+  map fingerprint (pinned to an independent reference, blind to the
+  order of things and pawns, changed by every field it covers), and the
+  `MAPSEED` cue's detail (`MapSeedCue`: each reason for not pinning,
+  and the layouts and landmark of a pinned map).
 - **XML tests:** every `ShowcaseDef`'s fields (worker classes matched by
   exact namespace), the keyed text and the keys the code uses, preview
   images, the Harmony dependency, that no file but the button's uses
@@ -659,32 +705,34 @@ Capture tooling should treat `REFUSED` and `FAILED` as ending the run:
   - god mode is lent only in dev mode and given back on every way out;
   - a showcase game never autosaves, an ordinary one does, the session
     saves nothing, and the save folder gains no files;
-  - from slice 18000 (`Source/SmokeTestShowcases.Seeds.cs`): a launch's
-    seed is the def's, else a fresh random one; a malformed def seed is
-    a configuration error; the global reseed repeats a seed's draws; the
-    fingerprint is stable, draws no Rand and sees a stack come and go;
-    the storyteller is held from a run's start and given back after
-    `FINISHED` and after Stop; `STAGEHASH` comes just before `READY`;
-    in the smoke run's ordinary game the map seed's window is closed
-    and `Map.NextGenSeed` gives vanilla's own value (computed through
-    `System.HashCode.Combine` in the same process), even with the window
-    open for another game, while with the window open for its own game
-    it gives the pinned value, and is vanilla's again once closed.
+  - from slice 18000 (`Source/SmokeTestShowcases.Seeds.cs`): a launch's seed
+    is the def's, else a fresh random one; a malformed def seed is a
+    configuration error; the global reseed repeats a seed's draws; the
+    fingerprint is stable, draws no Rand and sees a stack come and go; the
+    storyteller is held from a run's start and given back after `FINISHED` and
+    after Stop; `STAGEHASH` comes just before `READY`; a failed launch drops
+    its request and closes the window, saying so; the settle hold outlasts a
+    screen fade (a refused unpause keeps the hold, and the next try takes); in
+    the smoke run's ordinary game the map seed's window is closed and
+    `Map.NextGenSeed` gives vanilla's own value (computed through
+    `System.HashCode.Combine` in the same process), even with the window open
+    for another game, while with the window open for its own game it gives the
+    pinned value, and is vanilla's again once closed.
 - **Showcase run:** `Tools/smoke-test.ps1 -Showcase` starts BT_Showcase
   through the main menu with `-showcase=BT_Showcase` and waits for
   `[BT-SHOWCASE] READY`, failing on a `REFUSED` or `FAILED` cue or a mod
   error before it. The run on to `FINISHED` is checked by hand in the
   verification runs, since the game is left open for the viewer.
-- **Tour verify run:** `Tools/smoke-test.ps1 -Showcase -Verify` checks
-  Batshit Technology's tour to `FINISHED`, and, for the API, that the
-  launch logged its seed from the source its precedence picks,
-  `MAPSEED` said the map's seeds were pinned (as many as the session
-  holds, and every seed pinned in the process), with the window closed
-  at `READY` and still closed at the end, `MAPHASH` came before `START`
-  and `STAGEHASH` just before `READY`, the stage was set up at tick 0,
-  and the storyteller was quiet until `FINISHED` and given back after
-  it (`docs/AI-TESTING-STRATEGY.txt`, section 4).
-  `Tools/tour-trials.ps1` runs it over many seeds.
+- **Tour verify run:** `Tools/smoke-test.ps1 -Showcase -Verify` checks Batshit
+  Technology's tour to `FINISHED`, and, for the API, that the launch logged
+  its seed from the source its precedence picks, `MAPSEED` said the map's
+  seeds were pinned (as many as the session holds, and every seed pinned in
+  the process, with its layouts and landmark), with the window closed at
+  `READY` and still closed at the end, `MAPHASH` came before `START` and
+  `STAGEHASH` just before `READY`, the rest of the game's start was drawn from
+  the seed, the stage was set up at tick 0, and the storyteller was quiet
+  until `FINISHED` and given back after it (`docs/AI-TESTING-STRATEGY.txt`,
+  section 4). `Tools/tour-trials.ps1` runs it over many seeds.
 
 ## Decisions
 
@@ -737,7 +785,9 @@ Quiet Storyteller"):
     fresh random one, logged so any run can be pinned. It pins the
     world, tile, colonists and settlement, and, through the second
     Harmony patch (approved 2026-10-14, requests item 22), the map and
-    the stage.
+    the stage, all but the rooms of a layout, which would need a third
+    patch; the MAPSEED cue names a map's layouts, and a trial's repeat
+    check catches them.
 12. **No random incidents during a showcase** (requests item 19, part
     one, the operator's default answer): the storyteller is held from
     the session's start and given back when the showcase finishes or

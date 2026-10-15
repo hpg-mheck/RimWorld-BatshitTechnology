@@ -46,6 +46,19 @@ run on a Windows machine with RimWorld installed and RIMWORLD_DIR set.
   game's own think trees, and every Core and DLC pawn or critter race is
   checked to run one of the patched trees.
 
+Python tests (python -m unittest discover -s Tools/tests): the texture
+generator and the Ubersight status writer, and, from the review fixes of
+slice 18000, the trial tools (test_trial_tools.py), which drive
+Tools/tour-trials.ps1 and Tools/smoke-test.ps1 under every PowerShell
+edition found (pwsh and Windows PowerShell 5.1) without starting
+RimWorld: -Collect over trial folders made by the test (a seed's runs
+compared only where two or more logged a hash, runs without one counted;
+seeds that differ in case are two seeds; no wallSeconds without a
+recorded end; a stopped run's problem.txt read back; maps holding
+layouts listed), duplicate seeds refused before any run starts, a
+relative -OutDir and -DataFolder made absolute, and, dot-sourced, a
+game never taken for a run's own without its recorded start time.
+
 ## 2. Def validation against the game assembly (under a minute)
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File Tools\validate-defs.ps1
@@ -318,6 +331,23 @@ seed was pinned and makes the next call vanilla's again. Both put the
 map's counter back. The adopted run's record check also expects no
 MAPSEED cue.
 
+The review fixes of slice 18000 added three. A failed launch drops its
+request and closes the map seed's window, saying so: a request for the
+smoke game is planted, the window opened for it, and the launch
+abandoned as a failed preparation would (two warnings, expected).
+The settle hold outlasts a screen fade: the smoke game is held, a 30 s
+fade to clear started (RimWorld then refuses any change of speed), the
+release tried (it must keep the hold, still paused), the fade ended and
+the release tried again (it must take). A Ballista volley sends wild
+birds near its target off the map before its bolts land: a wild quail
+(Odyssey) is put down within 4 tiles of the Ballista's target and four
+explosive bolts fired; at the tick the volley leaves the quail must
+already be on vanilla's ExitMapFlying job (vanilla alone sends it only
+as the first bolt lands, and restarts the job on every blast after,
+which past ten in one tick logs "started 10 jobs in one tick"), and it
+must leave unhurt, with no error logged. Without Odyssey's quail the
+check is skipped with a note.
+
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
 PowerNetManager.UpdatePowerNetsAndConnections_First). Destructive
@@ -387,7 +417,13 @@ after GAME and before MAPHASH and says "pinned (<n> seeds)" with the
 session's count, at least one, every seed pinned in the process was
 pinned in that window, and the window is closed, so the prefix would
 pass this game's next seed through; after the farewell, no seed was
-pinned since READY and the window is still closed.
+pinned since READY and the window is still closed. The review fixes
+added one: at READY, the rest of the game's start, after its map, was
+drawn from the seed (the session reseeded in FinalizeInit and read the
+state the start left). MAPSEED's expected text now comes from Core's
+MapSeedCue with the layouts and landmark the session read, and a NOTE
+names the tile's landmark, its mutators and the map's layouts whose
+rooms the seed does not pin.
 
 The stampede's facts (Source/SmokeTestTour.Stampede.cs) use Core's
 Stampede rules but measure the world each tick rather than asking the
@@ -467,29 +503,54 @@ deadline: the sum of the scenes' timeouts plus 3,000 ticks.
 runs the verifier (smoke-test.ps1 -Showcase -Verify, every scene unless
 -TourSkip says otherwise) over a list of seeds, -Parallel games at once
 (default 4), -Repeat runs a seed (default 1), each in its own data
-folder under a fresh .local\tmp\tour-trials-<stamp>\ (or -OutDir), with
--Shots passed on if given. -RandomRuns adds unseeded runs; each logs
-its random seed, which can then be passed back in. A run that crashes,
-hangs or times out (-TimeoutSeconds, default 1500, plus a 240 s margin)
-gets a row with the error and the others carry on; only games the
-script started, by the pid each run reports, are ever stopped. It
-writes results.json (each run's row, with its SUMMARY whole) and
-results.csv (one row a run: run, seed, seedSource, repeat, exitCode,
-error, passed, failed, wallSeconds, mapHash, stageHash, then the SUMMARY
-flattened: nested fields dotted, as scenes.home.tps, lists joined with
-';'), prints a table, and for every seed run more than once says
-whether its MAPHASH and STAGEHASH repeated. It exits 1 if any run left
-no SUMMARY.
+folder under a fresh .local\tmp\tour-trials-<stamp>\ (or -OutDir; a
+relative one is taken from the current folder and made absolute, as
+smoke-test.ps1 does with -DataFolder, since RimWorld starts in its own
+folder and would otherwise write the run inside its install), with
+-Shots passed on if given. A seed may be given once (compared ignoring
+case, as folder names are; -Repeat runs it again); a list that repeats
+one is refused before any game starts. -RandomRuns adds unseeded runs;
+each logs its random seed, which can then be passed back in. A run that
+crashes, hangs or times out (-TimeoutSeconds, default 1500, plus a 240 s
+margin) gets a row with the error and the others carry on; only games
+the script started, by the pid each run reports and that process's
+start time, are ever stopped (a pid whose start time cannot be read is
+never stopped), including on Ctrl+C. A run the watcher stops gets
+problem.txt (why) and exit.txt (when) written for it, so -Collect
+rebuilds the same row; a run with no recorded end gets no wallSeconds
+from -Collect. smoke-test.ps1 itself stops a game that has written no
+log 120 s after it started. It writes results.json (each run's row,
+with its SUMMARY whole) and results.csv (one row a run: run, seed,
+seedSource, repeat, exitCode, error, passed, failed, wallSeconds,
+mapHash, stageHash, then the SUMMARY flattened: nested fields dotted, as
+scenes.home.tps, lists joined with ';'), prints a table, and for every
+seed run more than once (seeds compared exactly, case included) says
+whether its MAPHASH, STAGEHASH and start state repeated: "same" only
+when at least two runs logged one and all agree, "DIFFERS" when they
+disagree, "not compared" when fewer than two logged one, each with how
+many runs had none. It then lists the runs whose maps hold layouts
+(unpinnedLayouts above zero), whose rooms a seed does not pin: repeat
+such a seed with -Repeat 2 before trusting it. It exits 1 if any run
+left no SUMMARY.
 
-The SUMMARY's fields (Source/SmokeTestTour.Summary.cs; version 2,
-which added mapSeeds):
+The SUMMARY's fields (Source/SmokeTestTour.Summary.cs; version 3: 2
+added mapSeeds; 3 added landmark, mutators, unpinnedLayouts,
+startReseeded, startState and settleRetries, and made killedFirstVolley
+null without a volley):
 
 - version; seed and seedSource (command line, def or random); worldSeed
   (the world's seed string, drawn from the seed); mapSeeds (the map's
   generation seeds the map seed's prefix pinned, the MAPSEED cue's
-  count; -1 if none were); mapHash and stageHash
-  (the MAPHASH and STAGEHASH cues); biome, tile (the starting tile's
-  id) and mapSize;
+  count; -1 if none were); landmark (the starting tile's, or null) and
+  mutators (the tile's, by def name); unpinnedLayouts (layouts on the
+  map, ancient structures or ruins, whose rooms vanilla fills under a
+  seed random per process, so a seed does not pin them; 0 for a map a
+  seed pins whole); startReseeded and startState (whether the rest of
+  the game's start was drawn from the seed, and the global random state
+  it left, as hex: the same for a seed in every process); settleRetries
+  (how often the game refused to leave the settle hold); mapHash and
+  stageHash (the MAPHASH and STAGEHASH cues); biome, tile (the starting
+  tile's id) and mapSize;
 - passed, failed (the verifier's counts, the final log check included)
   and finished (FINISHED was reached); skipForced (the -TourSkip keys);
   shots (frames saved);
@@ -500,14 +561,24 @@ which added mapSeeds):
   completed, timedOut or raccoonLost; or declined, with why from its
   SKIPPED cue; or notRun), ending (the director's SceneEnd), ticks,
   seconds (real), tps (average game ticks a real second) and
-  longestTickMs (the longest real gap between two ticks);
+  longestTickMs (the longest real gap between two ticks, a shot's
+  capture included when -Shots is on). tps is a speed-mode and load
+  figure, not a score of the map's performance or smoothness: at
+  Superfast RimWorld 1.6 aims at 60 ticks a second while hostiles near
+  colonists force normal speed (TickManager.TickRateMultiplier 1), 360
+  as a rule (6) and 720 when nothing is happening in the game (12; every
+  colonist dead, say), as far as the machine keeps up, and under
+  -Parallel the other games' load counts too. A ranking that rewarded
+  high tps would favour runs where the colonists died;
 - colonists (at READY), harmed (colonist harm not excused, each with its
   scene), excused (harm beside a starting hostile, or the volunteer's),
   deaths and deathsAfterTour;
 - volunteer: name, grenadeOutcome (the grenade's END word) and atEnd
   (alive, downed, dead or gone);
 - stampede: herd, killedFirstVolley (the herd's dead as the second
-  volley left, or at the end after a single volley), volleys,
+  volley left; after a single volley, the dead at the scene's end, an
+  upper bound, since fire, chain blasts and colonists kill too; null
+  when no volley left, so a lost volley is never credited), volleys,
   volleyBolts (each volley's bolts), killed (dead at the end),
   deadAtFirstEntry (dead when the first live boomalope reached the
   keep-away, or null), peakFires (on the map at once), firesNearBase
@@ -551,6 +622,12 @@ docs/AI-DECISIONS.txt):
   BT_Showcase's def (seedSource def, never committed) gave the same map
   and stage as -showcaseseed=s18-a. With the window sabotaged shut,
   s18-b drew the same world and tile but another map (fc3b0b9b..).
+  After the review fixes (start's tail seeded), the four finalists
+  tour-04, tour-05, tour-17 and tour-27 and tour-22 repeated MAPHASH,
+  STAGEHASH and the start state (three draws after the reseed, the same
+  value per seed) in every process: the finalists' hashes are those of
+  their runs before the fixes. Their tours' outcomes, as before, did
+  not repeat in every run (docs/AI-DECISIONS.txt).
 - How far a tour repeats once its map and stage do: every scene's
   outcome matched in two of three pairs (cowboy; s18-a's scenes all
   completed in both runs), but from the second scene on the details
@@ -574,10 +651,14 @@ docs/AI-DECISIONS.txt):
   cap of about 288 in quiet scenes); at -Parallel 4 the same seed ran
   at the same rate (173 s), and dark-entity maps ran 190 to 290 s. At
   -Parallel 8 each tour ran 10 to 25 per cent slower (199 to 247 s) but
-  twice as many at once. The tractor scene runs at about 48 ticks a
-  second in every run (vanilla's forced normal speed), about a minute
-  of each tour. For 32 seeds: about 30 minutes at -Parallel 4, 15 to 20
-  at -Parallel 8 (each game takes about 1.5 GB of memory).
+  twice as many at once. The tractor scene usually runs at about 48
+  ticks a second (vanilla's forced normal speed, with hostiles near
+  colonists), about a minute of each tour, but not always: in the
+  slice's final all-scene run (.local/tmp/mapseed-final-verify-all2)
+  every colonist had died by then, nothing was happening, and the
+  tractor and twins ran at 562 and 570 (see tps above). For 32 seeds:
+  about 30 minutes at -Parallel 4, 15 to 20 at -Parallel 8 (each game
+  takes about 1.5 GB of memory).
 
 Sabotage runs in slice 12000, step 5 proved checks 1, 2 and 6, and
 check 5 caught a real death on one map (see docs/AI-DECISIONS.txt). The

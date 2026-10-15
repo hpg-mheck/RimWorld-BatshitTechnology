@@ -224,8 +224,11 @@
   and noted, but harm they cause from farther off is not. The grenade
   scene timed out unthrown on a dark-entity map a third time (all-scene
   verify, DLL 14:19:35); the scene now logs the grenadier's state every
-  600 ticks while the throw is overdue. The tractor scene runs at about
-  48 game ticks a second in verify runs (see docs/AI-TODO.txt).
+  600 ticks while the throw is overdue. The tractor scene usually runs
+  at about 48 game ticks a second in verify runs, vanilla's forced
+  normal speed (see docs/AI-TODO.txt); with every colonist dead it ran
+  at 562 (nothing happening: 12x). The SUMMARY's tps is a speed-mode
+  figure, not a measure of performance (docs/AI-TESTING-STRATEGY.txt).
 - Showcase seeds (slice 18000, 2026-10-14): the map seed's Harmony patch
   (requests item 22, approved) makes a seed pin a showcase's map and
   stage in any process, as well as its world, tile, colonists and
@@ -238,6 +241,35 @@
   changed what the getter combines would need the prefix reviewed. A
   -quicktest showcase's map is vanilla's and not pinned (its MAPSEED
   cue says so).
+- Showcase seeds and layouts (review of slice 18000, 2026-10-14): a seed
+  does not pin the rooms of a layout. RimWorld 1.6.4871 fills every
+  layout's rooms (LayoutWorker.FillAllRooms) under
+  System.HashCode.Combine(sketch id, room), random per process; the map
+  seed's prefix pins only the sketch. A starting tile with one of
+  Odyssey's ancient-structure landmarks (garrison, warehouse, chemfuel
+  refinery, infested settlement, launch site; 0.2 each) or ruins gets a
+  map whose rooms' loot, furniture and hostiles, and the gen steps
+  placed after them, differ from process to process, so its MAPHASH
+  and STAGEHASH do not repeat. Pinning them would take a third Harmony
+  patch, not approved. The MAPSEED cue, the verifier's NOTE and the
+  SUMMARY (landmark, mutators, unpinnedLayouts) name such maps, and
+  Tools/tour-trials.ps1 lists them; a seed chosen for a showcase should
+  have none, and should repeat its MAPHASH and STAGEHASH in two
+  processes (-Repeat 2). Layouts a gen step spawns without adding them
+  to the map's list (Map.layoutStructureSketches) would not be counted.
+- Wild birds and the Ballista (review of slice 18000, 2026-10-14):
+  vanilla restarts a wild flier's ExitMapFlying job on every blast of
+  radius 3.5 or more within its radius plus 7 tiles (and, at 40 per
+  cent, every bullet within 12), and guards a Flee job against restarts
+  in one tick but not that one, so more than ten blasts near a bird in
+  one tick log "<bird> started 10 jobs in one tick" as an error (seed
+  tour-22's quail, thirteen times, during the stampede's 256-bolt
+  volley; Odyssey's small birds fly off on every scare). The Ballista
+  now sends the wild birds within reach of its volley's landing zone
+  off the map, with vanilla's own job, as the volley leaves. The
+  reactor's barrage and the cook-offs do not: their bolts spread over a
+  70-tile ring and many ticks, so eleven blasts within 11 tiles of one
+  bird in one tick are unlikely, but not impossible; none was seen.
 - Seed choice and starting hostiles (slice 18000 trials, 2026-10-14): a
   pinned map keeps its starting hostiles too. Seed s18-a's map starts
   with dark entities, and all three of its all-scene verify runs (two

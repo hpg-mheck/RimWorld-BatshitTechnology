@@ -632,3 +632,44 @@ Three review fixes have no automated check, for these reasons:
   - Optional: a cue or SUMMARY field naming which map parts repeat (a
     grid-only fingerprint of terrain and roofs), so a trial can tell a
     structures-only divergence from a terrain one at a glance.
+  - [Done 2026-10-14: the review's eleven confirmed findings, fixed
+    (docs/AI-DECISIONS.txt, slice 18000, the review fixes), all but the
+    layouts' rooms, which are named instead (below).]
+  - Layouts' rooms are not pinned (docs/AI-KNOWN-ISSUES.txt): a third
+    Harmony patch would pin them, a prefix on LayoutWorker.FillAllRooms
+    (or Spawn) that, inside the map seed's window, seeds each room's
+    RandBlock from Gen.HashCombineInt of the sketch's place and the
+    room's index rather than System.HashCode.Combine. Not built: only
+    two patches are approved. It would change the maps of landmark and
+    ruin tiles only. Ask the operator before building it; until then a
+    showcase's seed must be one whose map holds no layout
+    (unpinnedLayouts 0) and that repeats in two processes.
+  - Not covered by an automated test, with why: smoke-test.ps1 stopping
+    a game that wrote no log within 120 s (it needs a RimWorld that
+    starts and writes nowhere; the relative-path cause of that is
+    tested); tour-trials.ps1's Ctrl+C clean-up order (stop each shell,
+    read its game's pid, stop the game) and the watcher writing
+    problem.txt and exit.txt for a run it stops (they need a run held
+    past its timeout or an interrupt; -Collect reading those files back
+    is tested); and the settle hold counting frames only while the
+    player has control (it moves the set-up later, never sooner; the
+    retry that makes a refused unpause harmless is tested by a smoke
+    check). Each was read and run by hand in the review fixes.
+  - Optional: send wild birds off before the reactor's barrage and the
+    cook-offs too (WildFliers.SendOff over the barrage's ring). Their
+    bolts spread over a 70-tile ring and many ticks, so the vanilla
+    job-loop error is unlikely there; none has been seen.
+  - Not seen to fail in the review fixes' sabotage build: the
+    verifier's MAPSEED fact comparing the cue's layouts with the
+    session's count (its sabotage was masked by another in the same
+    build that removed the layouts suffix inside MapSeedCue, which both
+    sides share; MapSeedCueTests do prove the suffix). Sabotage it alone
+    in the next sabotage build (the cue saying one layout more).
+  - Hostiles that arrive early in the tour although the storyteller is quiet
+    ("Sorne Geneline" pawns, one to six, on 9 of the 32 trial maps; mostly
+    during the first scene, but on two maps without AnyRim already there as it
+    began): their source is not traced. In the first post-fix run of tour-04
+    they hurt two colonists by the base from the stampede on and killed one in
+    the tractor scene (its three pre-fix runs passed; of its three later runs,
+    two passed). Find what sends them (a quest, a map's own event) before
+    relying on a seed whose maps get them.

@@ -2168,3 +2168,150 @@ docs/AI-KNOWN-ISSUES.txt. Every failure was a tour fact on a random map;
 the map seed's two facts passed in all four runs. No RimWorld of this
 session is left running; the operator's data folder was never used, and
 no -KeepOpen or plain -Showcase run was made.
+
+2026-10-14 Claude: Tractor Bomb slice 18000, the review fixes. The review of
+slice 18000 confirmed eleven findings
+(.local/scratch/seeds18000/review-findings.json). Commits f9d79d9 (Core),
+90be032 (API), eebe294 (Ballista), e6eb20d (verifier), eef666f and 438db8c
+(tools and their tests), then the docs. Decisions:
+- Layouts' rooms (high): RimWorld 1.6.4871 fills every layout's rooms in
+  LayoutWorker.FillAllRooms under new RandBlock(HashCode.Combine(sketch id,
+  room)); the id is never set and System.HashCode is random per process, so
+  the map seed's prefix pins a layout's sketch but not its rooms. Not fixed
+  with a patch: only two are approved. The session now reads the starting
+  tile's landmark and mutators and counts the map's layouts with rooms
+  (Map.layoutStructureSketches); MAPSEED says them ("pinned (n seeds); rooms
+  of n layouts not pinned; landmark X", Core's MapSeedCue), the verifier notes
+  them, the SUMMARY carries them (landmark, mutators, unpinnedLayouts), and
+  tour-trials.ps1 lists such runs. The repeat check (-Repeat 2) stays the
+  guard. A third patch (a FillAllRooms prefix inside the window) is written up
+  in docs/AI-TODO.txt for the operator to decide. Correction to the two slice
+  18000 entries above: their "layouts" pinned through NextGenSeed means the
+  layouts' sketches only.
+- The settle hold (low): RimWorld's speed setter silently refuses while the
+  player has no control (the half-second fade Root_Play.Start queues).
+  Settling frames now count only while Game.PlayerHasControl, and a refused
+  unpause keeps the hold, counted (settleRetries), and is retried every frame.
+  TogglePaused was not used: it checks PlayerCanControl too, contrary to the
+  finding's hint.
+- The start's tail (low): the session's FinalizeInit (Game.FinalizeInit,
+  before the scenario's PostGameStart, the history and every component's
+  StartedNewGame) sets the global random state from the seed's new "start"
+  purpose when a seeded launch request waits for that very game
+  (ShowcaseLauncher.PendingSeedFor, which never drops a stale request).
+  StartedNewGame snapshots the state the start left (startState); it was
+  00000003xxxxxxxx in every run, three draws, and the same for a seed in every
+  process tried. MAPHASH and STAGEHASH cannot depend on the tail (they
+  repeated while it was random), and did not change. The post-READY tour of a
+  seed does change, as the finding said, so earlier trial outcomes no longer
+  describe it.
+- A failed launch (low): Generate's and the preparation's catches call
+  AbandonLaunch, which closes the window and drops the pending request with a
+  warning, so the half-prepared game vanilla still starts is an ordinary game.
+  MAPSEED says "not pinned (window not open)" for a showcase game without a
+  window and "(quicktest map)" only for a request from TakeQuickTestRequest
+  (LaunchRequest.QuickTest).
+- Relative paths (high): tour-trials.ps1 makes -OutDir, -ModRoot, -RimWorld
+  and -Collect absolute (GetUnresolvedProviderPathFromPSPath) before use;
+  smoke-test.ps1 does the same for -DataFolder, -ModRoot and -RimWorld, prints
+  the data folder, and stops a game that has written no log 120 s after it
+  started. The stray folder in the Steam install named by the finding was
+  already gone when this step began.
+- The repeat check (medium): grouped with Group-Object -CaseSensitive, over
+  runs that have a seed; Get-RepeatVerdict says "same" only when two or more
+  runs logged a hash and all agree (ordinal), "DIFFERS" when they disagree,
+  "not compared" otherwise, each with the runs without one; the start state is
+  compared too.
+- Duplicate seeds (low): refused, ignoring case, before any run starts;
+  planned folder names are checked the same way.
+- Game tracking (low): Update-GamePid marks a pid gone when its process is
+  gone, not RimWorld, or its start time unreadable; Test-OwnGame requires the
+  pid, the name and the recorded start time to match; on Ctrl+C each shell is
+  stopped first, then its game's pid read, then the game stopped.
+- tps (low): documented as a speed-mode and load figure (1x, 6x or 12x of 60
+  at Superfast, TickManager.TickRateMultiplier), not performance; the testing
+  strategy's "48 ticks a second in every run" corrected.
+- killedFirstVolley (low): null without a volley (Core's
+  Stampede.KilledFirstVolley); documented as an upper bound after a single
+  volley.
+- -Collect (low): the watcher writes problem.txt and exit.txt for a run it
+  stops; Get-TrialRow reads problem.txt, and takes now as the end only for a
+  live run (-Live), so -Collect leaves wallSeconds empty.
+- SUMMARY version 3: landmark, mutators, unpinnedLayouts, startReseeded,
+  startState, settleRetries; killedFirstVolley may be null.
+The quail (seed tour-22, .local/tmp/tour-finalists/tour-22-r1): the mod's
+volley, vanilla's bug. Thirteen "Quail38777 started 10 jobs in one tick.
+newJob=ExitMapFlying" errors came between the stampede's volley and its
+aftermath. Vanilla's Pawn_MindState.Notify_Explosion sends a wild animal
+fleeing from every blast of radius 3.5 or more within its radius plus 7 tiles
+(the Ballista's explosive bolt: 3.9, so 10.9), and
+StartFleeingBecauseOfPawnAction then starts ExitMapFlying with InterruptForced
+at the race's leaveMapOnFleeChance, which is 1 for Odyssey's small birds;
+FleeUtility.ShouldAnimalFleeDanger blocks a restart of Flee in the tick it
+started but not of ExitMapFlying, so eleven blasts near one bird in one tick
+log the error (twice, for two quails; the map's AnimalLife_Increased mutator).
+A vanilla mortar never lands eleven shells in a tick; the 256-bolt volley
+does. Only r1 of three runs hit it (the birds wander, post-READY drift). No
+mod code sends animals away. Fixed in the mod's own code, no Harmony:
+Verb_BallistaVolley sends the wild birds within its scatter plus 13 tiles (the
+larger of the bullet clamor's 12 and the blast's 10.9, plus one) off the map
+with vanilla's own job as the volley leaves (bolts need at least 22 ticks to
+land; the job waits up to nine), and says so in dev mode. This covers every
+Ballista volley, in play too. The reactor's barrage and cook-offs are left
+(bolts over a 70-tile ring and many ticks; noted in docs/AI-KNOWN-ISSUES.txt).
+Rerun: tour-22 twice on DLL 22:28:36 (.local/tmp/s18fix-tour22) 19 passed, 0
+failed each, no job-loop error, MAPHASH, STAGEHASH and start state the same in
+both processes; once on the final DLL (s18fix-tour22-final) 19 and 0, and the
+volley's note: "Ballista volley at (205, 119): 3 wild bird(s) within 34 tiles
+sent off the map first".
+Checksum guard (tour-trials.ps1 -Seeds tour-04,tour-17,tour-05,tour-27
+-Parallel 4, absolute -OutDir). Expected MAPHASH and STAGEHASH from the runs
+before the fixes; every run matched both, on DLL 22:28:36 (s18fix-checksum1)
+and on the final DLL (s18fix-checksum-final): tour-04 807b81f05fe15c80
+fe29e8884f2c2be5, tour-17 fbdfda1b460cb8e8 650b924f23c39898, tour-05
+c49c6280e30240aa 2971e182c9441a2f, tour-27 991689b314743fbc dce72cc5279dc789;
+no landmark, no mutators, no layouts on any of the four. Outcomes: first round
+tour-04 17 and 2 (colonists Foxy and Nug hurt near the base from the stampede
+on, Nug dead in the tractor scene, by hostiles that arrive during the first
+scene), tour-05 18 and 1 (Sami hurt in the grenade, tractor and twins scenes,
+as its earlier r2), tour-17 and tour-27 19 and 0; final round all four 19 and
+0. A further round on the final DLL, each seed twice at -Parallel 8
+(s18fix-finalists-repeat): MAPHASH, STAGEHASH and start state "same (2 of 2
+runs)" for all four; tour-04 19 and 0, then 18 and 1 (Foxy hurt in the grenade
+scene); tour-05 18 and 1 twice (Sami, the tractor's stray, hurt again);
+tour-17 19 and 0, then 18 and 1 (Bowman bitten in the grenade scene, downed in
+the raccoon's); tour-27 19 and 0 twice. Over the four runs since the fixes:
+tour-27 4 of 4 clean, tour-17 3, tour-04 2, tour-05 1.
+Sabotage (.local/scratch/seeds18000/fixes/sabotage_fixes.py, one build, DLL
+22:40:29, 18 sabotages, listed in the script): unit tests 4 failed, 761
+passed, exactly the targets (both MapSeedCue tests, the start purpose,
+killedFirstVolley); Python tests: 10 of the 11 trial-tool tests failed in both
+PowerShell editions (the eleventh guards unchanged behaviour); smoke 211
+passed, 3 failed, exactly the three new checks (the quail's job at the cast
+"GotoWander", gone later by vanilla's own flight; the request still pending;
+the hold dropped in the fade); a quick verify of tour-04 (every scene
+declined) 16 passed, 3 failed: the new start fact ("start reseeded False")
+plus the two that fail in every all-declined run. Not shown: the MAPSEED
+fact's new layouts part (S8, the cue saying one layout more than the session),
+because S1 removed the layouts suffix inside MapSeedCue, which the cue and the
+verifier's expected text share; MapSeedCueTests prove the suffix, but the
+fact's comparison with the session's count was not seen to fail. Restored by
+copying the saved files back (SHA-256 matched, git diff clean), touched,
+rebuilt: DLL 22:42:37, Core 22:42:36.
+Final suite (DLL 22:42:37, from the sources as committed; 0 warnings, 0
+errors, 0 Def problems): 765 unit and XML tests (was 762); Python 29 run, 8
+skipped (Pillow is not installed in this shell's Python), 21 passed (was 18
+run: 11 trial-tool tests); full smoke (.local/tmp/s18fix-final-smoke) 214
+passed, 0 failed (was 211); default verify (random seed gallant, two dark
+entities) 19 passed, 0 failed (was 18: the start fact); all-scene verify
+(-TourSkip ''): the first run (random seed dark, two dark entities at the
+start) 16 passed, 3 failed: colonists hurt in the grenade and raccoon scenes
+and Paul killed in the raccoon's, and the tractor's protest beat missed for
+want of a free colonist; the rerun (random seed club, four mechhive mechs at
+the start) 16 passed, 3 failed: the grenade scene timed out, Dodson, shot
+while hauling in the AnyRim scene, died in the grenade scene, and the
+volunteer, Giggles, died in the tractor scene. Both are the known
+starting-hostiles flake (docs/AI-KNOWN-ISSUES.txt); every new fact passed in
+both, and neither logged an error. No RimWorld of this session is left
+running; the operator's data folder was never used, and no -KeepOpen or plain
+-Showcase run was made.
