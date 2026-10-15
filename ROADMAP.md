@@ -33,7 +33,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 |---|---|---|---|
 | 1000 | Foundations (v0.8) | `trunk` | Done |
 | 2000 | AnyRim | `trunk` | Done |
-| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 19000 next) |
+| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slices 18500 to 20000) |
 | 4000 | Showcase API | `trunk` | Done |
 | 5000 | Sound pipeline | `feature/audio` | Next |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
@@ -98,6 +98,7 @@ sense runs.
 | 16000 | Named yield settings | Done |
 | 17000 | Operator's viewing | Done |
 | 18000 | Showcase seeds, best of 32 | Done |
+| 18500 | Pull radii up by half | Now |
 | 19000 | Tourists, viewing feedback | Planned |
 | 20000 | Merge into `trunk` | Planned |
 
@@ -150,11 +151,22 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
   best. Done 2026-10-15: `BT_Showcase` pins `tour-04`, an arid
   shrubland (`docs/SHOWCASE.md`, "The Tour's Seed"); the tour-wide
   faults the trials showed are in `docs/AI-TODO.txt` for 19000.
+- **18500, pull radii:** the operator, 2026-10-15: "expand the pull
+  radii for all tractor levels by 50%." Intimate, Neighborly and
+  Popular go from 6, 15 and 22.5 tiles to 9, 22.5 and 33.75; the
+  tour's staging follows.
 - **19000, tourists:** a small party of visitors as the tour's
   unfortunates, in place of colonists (the colonists are already held
   clear of every blast until it is over); deferred from the review step,
   with its questions in `docs/AI-requests-for-humans.txt` item 21. The
-  operator's feedback from the viewing goes in with it.
+  operator's feedback from the viewing goes in with it. On 2026-10-15
+  the operator watched the tour on its pinned seed ("Not bad; good
+  enough for now") and said "Fine, finish Phase 3000" to the plan:
+  tourists (a hidden showcase-only faction; a tourist as the grenade's
+  volunteer and the tractor's stray), a clean stage (map hostiles,
+  the volley zone's trees, clear weather), less clutter (dev mode,
+  the Learning helper, stale alerts, letters and messages), and the
+  camera and framing faults the seed trials found.
 - **20000:** the merge into `trunk`.
 
 ### Decisions
