@@ -97,9 +97,12 @@ For development, `.\Tools\smoke-test.ps1 -Showcase` (PowerShell, after
 building) does the same without touching your own saves, options or mod
 list: it starts RimWorld with an isolated data folder and
 `-showcase=BT_Showcase`, which the main menu acts on as if Start had been
-pressed, generating a quick-test-style map (it needs Harmony too). It
+pressed, generating a quick-test-style map (it needs Harmony too), with dev
+mode and the Learning helper off in its own prefs. It
 exits with an error if the showcase is refused or fails, or if the mod
-logs an error before the demo is ready. The showcase is a directed
+logs an error before the demo is ready. While the tour plays, vanilla's
+alerts, letters and top-left messages are kept off the screen, and given
+back when it ends. The showcase is a directed
 tour, a 1950s public information film in ten scenes, each captioned
 ("4 of 10: When Devices Retire") and narrated in the mod's deadpan voice,
 with the camera moving for every beat:

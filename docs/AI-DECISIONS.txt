@@ -2535,3 +2535,114 @@ repeat after READY exposes on tour-17 once in three runs
 Requests item 19 is resolved; its part two is built. No game of this step is
 left running; the operator's data folder was not used, and no -KeepOpen or
 plain -Showcase run was made.
+
+2026-10-15 Claude: Tractor Bomb slice 19000b, clutter and capture. Built
+overnight under the approved plan ("Fine, finish Phase 3000."), from the
+read-only research's section 2 (.local/scratch/phase3000-finish/
+research.md). (1) A quiet screen, without Harmony: the Showcase API's new
+quietScreen (BT_Showcase sets it; off by default, as holdWeather is, so a
+showcase that wants to show a letter still can). From the set-up until
+the showcase finishes or stops, the current storyteller def's
+disableAlerts and disableAdaptiveTraining are raised (no alerts, no
+Learning helper, no new lessons), letters that arrive after the set-up
+are taken off the stack each frame in the session's update (after the
+ticks, before the frame is drawn) and vanilla's live messages are
+cleared. Alerts did not need Harmony, so no request was filed. A def is
+shared until RimWorld restarts, so the flags are lent, not set (Core's
+OwnedFlagsLoan, unit tested), given back at FINISHED, at Stop, after a
+failed set-up, at a smoke reset, at the main menu and when any game
+starts or loads, as god mode is; a change of storyteller mid-showcase
+hands the old def's flags back and lends the new def's. Prefs are never
+touched (Prefs.Save would keep them), so a player's preferences are never
+changed; the storyteller def is not swapped (it is saved with the game).
+The mod's own letters ("Self-destruct armed", "Replicator power cut") are
+not sent at all while the screen is quiet: a ThreatBig letter pauses the
+game under the default pause preference before it can be taken off, so
+in a player's own game the tour would have stopped at both retirements.
+Arrival sounds of vanilla letters and of messages still play (AI-TODO,
+AI-KNOWN-ISSUES). (2) No DEV buttons: BatshitTourDirector no longer
+calls EnableDevButtons, so the tour never lends god mode, even in dev
+mode; the API keeps the method for other showcases. A player who turned
+god mode on themselves still sees vanilla's DEV buttons on whatever the
+tour selects, and a dev-mode player keeps the dev toolbar: both are
+theirs. (3) Viewing prefs: smoke-test.ps1's viewing runs (-Showcase
+without -Verify) and -Presentation write devMode False and
+adaptiveTrainingEnabled False into the script's own Prefs.xml; -KeepOpen
+keeps dev mode for a developer, and test runs are unchanged. (4)
+-Presentation (with -Verify) passes -btpresentation: the verifier no
+longer forces Superfast, so the tour plays at its own speed (Normal,
+about 48 ticks a real second here, eight minutes for all ten scenes; the
+timeout defaults to 2400 s), muted. Its window is 1920 by 1080 at 1x UI,
+not the plan's 1600 by 900 at 2x: that is an effective 800 by 450, which
+RimWorld 1.6 refuses outside dev mode (ResolutionUtility.Update logs
+"Resolution too small (800x450), resetting UI scale to 2." and the
+verifier's error check failed the first presentation run on it), and it
+is not what the operator sees either: the viewing window is maximized,
+and this machine's screen takes the recommended scale 2 (GetRecommended-
+UIScale), so a 4K screen showing an effective 1920 by about 1050, which
+1920 by 1080 at 1x reproduces at a size every machine can show. The
+viewing run itself still logs that error once before it is maximized,
+harmlessly (AI-KNOWN-ISSUES). (5) Frames a few ticks after their cues
+(Core's TourShotTiming, unit tested): READY and END at once (END's frame
+already shows the next scene's camera, which step 19000d moves), SCENE
+after 20 ticks, a beat after 30 unless its kind needs otherwise: volley
+and stragglers 150 (a volley launches every bolt at once, and a really
+painful bolt flies 0.45 tiles a tick, about 130 ticks to the defence's
+target 60 tiles east; at 60 ticks a presentation frame showed the bolts
+still in the air, at 150 they land), pull 60 (an implosion pulls 2 to 8
+s), herd 45, blast 15 (the fireball spreading), thrown 10. Contact sheets
+of the final presentation show the volley landing, the tractor's vortex
+at its pull and its fireball at its blast, and no alert, letter,
+message, Learning helper, dev toolbar or DEV button in any frame.
+Frames are taken first in,
+first out (Core's ShotQueue), each after 3 s of real time at the latest,
+and the game quits only once every frame is saved. (6)
+Tools/contact-sheet.ps1 tiles a run's shots into sheets with
+System.Drawing, one per scene (READY's frame opens the first) or
+-PerSheet N, each frame labelled by its name, under pwsh and Windows
+PowerShell 5.1 (Tools/tests/test_contact_sheet.py). (7) Checks: seven
+smoke checks (Source/SmokeTestShowcases.QuietScreen.cs); the verifier's
+READY check (quiet, no DEV buttons), a world fact at each scene's end
+(alerts, helper and DEV buttons off every tick while it runs; no letter
+after READY and no message on screen two frames running), and a
+given-back check after FINISHED (Source/SmokeTestTour.QuietScreen.cs);
+SUMMARY version 5 adds screen and presentation. (8) Determinism: MAPHASH
+807b81f05fe15c80, unchanged; STAGEHASH 51b5fb83f6ac44fb (was
+5bbfccb83e5dcfc3), the same in two processes
+(.local/tmp/p3k-19000b-final-tour04) and in the presentation runs, which
+have dev mode off: since the tour lends no god mode, a verify run and a
+player's own game stage alike. (9) Sabotage
+(.local/scratch/phase3000-finish/sabotage-19000b.txt): build 1 (S1
+nothing given back, S2 nothing taken off, S5 god mode lent again): unit
+800 and 1, smoke 221 and 5, all-scene tour-04 verify 21 and 3 (READY,
+the world facts, with "Roof collapse" and the tractor bomb's messages left
+on screen, and the given-back check); build 2 (S3 no flag raised, S4 no
+following a change of storyteller, S6 BT_Showcase not asking): unit 800
+and 1, smoke 220 and 6 (four quiet-screen checks and the known implosion
+flake's two), a home-and-defence verify 22 and 2. Every new check failed
+at least once; S4 was not tried alone. Restored with git checkout and
+rebuilt. (10) Gate: DLL from f551082, 0 warnings, 0 errors, 0 Def problems;
+801 unit and XML tests (was 785); Python tool tests 35, 8 skipped for
+want of Pillow (6 new). All-scene verifies, 24 passed and 0 failed each
+(22 before, two checks added): tour-04 twice on the final DLL
+(.local/tmp/p3k-19000b-final2-tour04) and twice on the one before it,
+which differed only in the volley's frame delay (p3k-19000b-final-tour04);
+tour-17 (MAPHASH fbdfda1b460cb8e8, unchanged; STAGEHASH 0916eac2efd25ae0,
+was 2b7ffac084f4fa96; p3k-19000b-final-tour17); the presentation of
+tour-04 with shots (p3k-19000b-final-present, 51 frames, 120 MB, no
+"Resolution too small"), and of its first three scenes on the final DLL
+(p3k-19000b-volley). Full smoke: 226 passed, 0 failed, on the final DLL
+(p3k-19000b-final4-smoke) and the one before (final3); 219 before, seven
+checks added. The other smokes' failures were known flakes
+(docs/AI-KNOWN-ISSUES.txt): AnyRim found no site on a map with a
+mechhive, hives and a void monolith (209 and 1, final-smoke); the
+squeezer's colonist fled and never sat (221 and 5, final2-smoke); and,
+on the first build, a new one, the Artificer's second unit counting 4
+bolts of 20 (smoke1, recorded). Earlier in the step: an all-scene
+tour-04 verify with shots, 24 and 0 (p3k-19000b-v1). The first
+presentation run (1600 by 900 at 2x) failed only the error check, on
+vanilla's "Resolution too small", which made the window 1920 by 1080 at
+1x. No request for the operator: alerts needed no Harmony, and the
+window's size is recorded here. No game of this step is left running;
+the operator's data folder was not used, and no -KeepOpen or plain
+-Showcase run was made.

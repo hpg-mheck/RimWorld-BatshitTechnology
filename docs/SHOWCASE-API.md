@@ -200,6 +200,7 @@ A `ShowcaseDef` (written in XML as
 | `biome` | A start in a random valid tile of that biome, if any exists |
 | `seed` | The seed the game is generated from; blank is random ("Seeds") |
 | `holdWeather` | A weather held while it runs ("The Held Weather") |
+| `quietScreen` | Clutter kept off the film ("The Quiet Screen") |
 | `workerClass` | A `ShowcaseWorker` subclass (default `ShowcaseDirector`) |
 | `scenes` | For a director: scenes in order, keys unique |
 | `narration` | Lines of `scene`, `when`, `delayTicks` and `text` |
@@ -363,6 +364,8 @@ showcase stops or finishes, when its set-up fails, at the main menu, and
 when any game that is not a showcase starts or loads. A developer's own
 god mode stays on; a player outside dev mode never gets it. The mod's
 own DEV buttons check `DebugSettings.ShowDevGizmos`, as vanilla's do.
+The directed tour asks for none (slice 19000b): it is a film, and a
+viewer in dev mode should see no developer buttons in it.
 
 ### The Command Line
 
@@ -629,6 +632,48 @@ weather showing, without Harmony and without drawing a random number:
 The weather's state belongs to the map and is saved as usual, so a
 showcase game the viewer saves keeps the weather it had, and the hold,
 being the session's, does not survive the load.
+
+### The Quiet Screen
+
+A def may ask for a quiet screen, `quietScreen` (slice 19000b; the tour
+does, since "Need colonist beds", "Pen needed", "Ancient mech", "Roof
+collapsed", top-left messages and the Learning helper's lessons piled up
+over its film). From the set-up until the showcase finishes or stops,
+the session keeps vanilla's clutter off the screen, without Harmony and
+without changing anything the player set (`ShowcaseScreen`):
+
+- **Alerts and the Learning helper.** The current storyteller def's
+  `disableAlerts` and `disableAdaptiveTraining` are raised, as vanilla's
+  hidden Tutor storyteller has them. In RimWorld 1.6.4871,
+  `AlertsReadout.AlertsReadoutUpdate` clears every active alert while
+  the first is set, and `TutorSystem.AdaptiveTrainingEnabled` is false
+  while the second is, which hides the Learning helper and stops new
+  lessons. A def is shared by every game until RimWorld restarts, so the
+  values from before are lent, not set (Core's `OwnedFlagsLoan`), and
+  given back when the showcase finishes or stops, when its set-up fails,
+  at the main menu, and when any game starts or loads, as god mode is.
+  If the viewer picks another storyteller mid-showcase, the old def's
+  flags are given back and the new def's lent, at the next frame.
+  Prefs are never touched: `Prefs.Save` runs from the options, the main
+  menu and the key bindings, and would keep a value changed for the
+  showcase.
+- **Letters.** Each frame, after the ticks and before the frame is
+  drawn, every letter that arrived since the set-up is taken off the
+  stack (`LetterStack.RemoveLetter`); one from before stays. The letter
+  stays in the History tab's archive. Its arrival sound has played by
+  then, and a big threat's letter pauses the game under the default
+  preference (pause on major threats), so the mod's own letters ("Self-
+  destruct armed", "Replicator power cut") are not sent at all while the
+  screen is quiet (`ShowcaseScreen.IsQuiet`).
+- **Messages.** Each frame, vanilla's live messages are cleared
+  (`Messages.Clear`); historical ones stay archived. Their arrival
+  sounds still play.
+
+The session's `ScreenQuiet` says whether it is quiet now, and
+`ShowcaseScreen.LettersTakenOff` how many letters it took off. A
+showcase that does not ask leaves the screen alone. Viewing runs of
+`Tools/smoke-test.ps1` also turn dev mode and the Learning helper off in
+their own prefs (docs/AI-TESTING-STRATEGY.txt, section 4).
 
 ### Log Cues
 

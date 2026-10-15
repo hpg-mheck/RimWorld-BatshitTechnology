@@ -323,3 +323,24 @@
   layout is slice 18500's; the tour after READY repeats only partly
   (below), so its flight differs from run to run. Step 19000c replaces
   the colonist stray with a tourist, or starts it outside the pull.
+- Showcases, the quiet screen (slice 19000b, 2026-10-15): letters and
+  top-left messages are taken off before they are drawn, but their
+  arrival sounds still play, and a letter still pauses the game if the
+  player's pause preference covers it (the mod's own letters are not sent
+  at all while the screen is quiet; vanilla's big threats come only from
+  the storyteller, which a showcase holds). The letters stay in the
+  History tab.
+- smoke-test.ps1 viewing runs (slice 19000b, 2026-10-15): with dev mode
+  off, RimWorld 1.6 refuses an effective resolution under 1024 by 768,
+  so the 1600 by 900 window at 2x (an effective 800 by 450) logs
+  "Resolution too small (800x450), resetting UI scale to 2." once, before
+  the window is maximized; the recommended scale on a 4K screen is 2, so
+  nothing changes. Not the mod's error, so the run still passes.
+  -Presentation uses a 1920 by 1080 window at 1x instead.
+- Smoke flake (slice 19000b, 2026-10-15): "it works the next unit on its
+  own" failed once in seven smokes: the Artificer spent its second unit,
+  but only 4 of its 20 bolts were counted, none carried by a pawn and
+  none fired (.local/tmp/p3k-19000b-smoke1). The check runs early, before
+  any showcase check, and nothing the slice changed runs outside a
+  showcase; it passed in every other recorded run. Unexplained: a stack
+  hauled somewhere TotalBolts does not look is the likeliest cause.

@@ -60,6 +60,15 @@ recorded end; a stopped run's problem.txt read back; maps holding
 layouts listed), duplicate seeds refused before any run starts, a
 relative -OutDir and -DataFolder made absolute, and, dot-sourced, a
 game never taken for a run's own without its recorded start time.
+Slice 19000b added -Presentation's checks there (refused without
+-Verify; against a fake RimWorld, the prefs it writes: no dev mode, no
+Learning helper, 1920 by 1080 at 1x, muted, where a plain verify run
+keeps dev mode at 1280 by 720) and test_contact_sheet.py, which makes
+small PNG frames with zlib and runs Tools/contact-sheet.ps1 under both
+editions: a sheet per scene (READY's frame opening the first, a
+hyphenated scene key kept whole), -PerSheet's fixed counts, frames
+scaled to the tile width, the default sheets folder beside shots, and a
+folder without frames failing.
 
 ## 2. Def validation against the game assembly (under a minute)
 
@@ -364,6 +373,20 @@ back by itself once that scene is skipped; and the fog is given back
 when the run finishes and when the second run is stopped. The smoke
 game's own weather is put back after each.
 
+Slice 19000b added seven for the quiet screen
+(Source/SmokeTestShowcases.QuietScreen.cs; docs/SHOWCASE-API.md, "The
+Quiet Screen"), with test showcases adopted in the smoke game: a showcase
+that asks lends the storyteller def's alert and adaptive-training flags
+(no alerts, no Learning helper) and leaves the player's preferences
+alone; at the next update a letter that arrived and every top-left
+message are gone while a letter from before stays; the flags follow a
+change of storyteller (the new def's lent, the old def's given back);
+Stop gives them back and letters arrive again; a showcase that finishes
+gives them back; leaving the game (the main menu, a loaded game, a new
+game) gives them back; and a showcase that does not ask leaves the
+screen alone. The session's update is called by hand there, since the
+runner's ticks run without frames.
+
 Notes for extending the runner: it ticks inside a single frame, so
 per-frame engine work must be triggered by hand (power-net wiring:
 PowerNetManager.UpdatePowerNetsAndConnections_First). Destructive
@@ -382,10 +405,32 @@ hostiles the map starts with stay), and adds -bttourverify and
 -bttourskip=anyrim (-TourSkip changes the list; pass -TourSkip '' to
 run all ten scenes). -Seed <text> generates from that seed
 (-showcaseseed=), and -Shots saves the game's own frame (Unity's
-ScreenCapture, so windows over the game do not matter) at READY and at
+ScreenCapture, so windows over the game do not matter) for READY and
 each SCENE, BEAT and END cue, one a frame, to
 <DataFolder>\shots\NN-<scene>-<cue>.png (about 50 shots and 56 MB for
-an all-scene tour). The raccoon scene needs the town
+an all-scene tour). Since slice 19000b each frame is taken a few ticks
+after its cue, so the action is in it (Core's TourShotTiming): READY and
+END at once, SCENE after 20 ticks, a beat after 30 unless its kind needs
+more or less (a volley or the stampede's stragglers 150, the bolts
+landing; a pull 60, things on the move; the herd 45; a blast 15, the
+fireball spreading; a throw 10, the grenade in the air). Frames are
+taken in the order their cues came (a later one waits for an earlier),
+any frame is taken after 3 s of real time if its tick does not come,
+and the game quits only once every frame asked for is saved.
+Tools\contact-sheet.ps1 -Path <DataFolder> tiles them into
+<DataFolder>\sheets\NN-<scene>.png, one sheet per scene with each
+frame labelled by its name (-PerSheet N for a fixed count instead);
+read the sheets, not the frames. -Presentation (with -Verify) makes the
+run a presentation: the verifier leaves the tour at its own speed
+(-btpresentation; normal speed, about eight minutes for all ten
+scenes, so the timeout defaults to 2400 s), with no dev mode and no
+Learning helper, muted, in a 1920 by 1080 window at 1x UI: the layout a
+viewer sees in the maximized 2x window on a 4K screen (an effective
+1920 by about 1050), so -Shots frames show what a viewer sees. (1600 by
+900 at 2x, the viewing run's window before it is maximized, is an
+effective 800 by 450, which RimWorld 1.6 refuses outside dev mode: it
+logs "Resolution too small" and resets the scale.) The raccoon scene
+needs the town
 shown first, so it declines whenever the AnyRim scene is forced to, and
 the default run skips both. The verifier
 (Source/SmokeTestTour.cs, part of the smoke runner) forces the listed
@@ -461,6 +506,21 @@ was given back by its end). After the farewell: no tick showed another
 weather, the session holds none, and a WEATHER cue gave it back after
 FINISHED. The SUMMARY (version 4) adds cleared, unstagedHostiles,
 turnedHostile, screams and weather.
+
+Slice 19000b added the quiet screen's checks
+(Source/SmokeTestTour.QuietScreen.cs). At READY: the def asks for a
+quiet screen, the session keeps it, the storyteller def's alerts and
+adaptive training are off (so no alert and no Learning helper), and no
+DEV button shows (the tour lends no god mode). Every tick while the
+showcase runs it counts ticks on which any of that was not so; every
+frame until FINISHED it notes any letter that arrived after READY, and
+any top-left message, still on screen a frame later (two consecutive
+frames' samples, so it does not matter whether it runs before or after
+the session's own update). At each scene's end one more world fact: the
+screen stayed quiet. After the farewell: nothing is lent and the
+storyteller def's alerts and adaptive training are on again. The
+SUMMARY (version 5) adds screen (frames sampled, lettersTakenOff,
+messagesSeen, stale, loudTicks) and presentation.
 
 The stampede's facts (Source/SmokeTestTour.Stampede.cs) use Core's
 Stampede rules but measure the world each tick rather than asking the

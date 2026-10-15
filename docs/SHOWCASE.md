@@ -35,13 +35,18 @@ BT_Showcase` (the API's full cue list is in its specification).
 (`docs/AI-TESTING-STRATEGY.txt`, section 4): small, muted, at Superfast,
 with AnyRim forced to decline so that declining is exercised on every
 map; the Raccoon Incident needs the town shown first, so it declines
-with it (`-TourSkip ''` runs all ten).
+with it (`-TourSkip ''` runs all ten). `-Presentation` plays it at its
+own speed, without dev mode or the Learning helper, in the layout a
+viewer sees instead, and `-Shots` saves its frames, which
+`Tools\contact-sheet.ps1` tiles into a sheet per scene.
 
 A showcase game never autosaves, so the player's autosave slots are
-safe. The devices' DEV buttons show only in dev mode: the showcase
-borrows god mode for them through the API, which gives it back when the
-showcase stops or finishes, or the viewer leaves the game, so it never
-follows anyone into their own colonies. `-quicktest -showcase=BT_Showcase`
+safe. The tour shows no DEV buttons, even in dev mode (slice 19000b): it
+no longer borrows god mode for them. It keeps the screen quiet
+(docs/SHOWCASE-API.md, "The Quiet Screen"): no alerts, no Learning
+helper, no letter or top-left message over the film, with everything it
+borrowed given back when it stops or finishes, or the viewer leaves the
+game. `-quicktest -showcase=BT_Showcase`
 also works, for developer runs: the quick-test game adopts the showcase
 on its own 250-cell map.
 

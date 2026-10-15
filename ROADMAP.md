@@ -177,7 +177,14 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
   temple's hive, woken by the clearing), every anima tree and the
   volley zone's trees, and the Showcase API holds the weather clear
   (`docs/SHOWCASE.md`, "A Clean Stage"; `docs/SHOWCASE-API.md`, "The
-  Held Weather").
+  Held Weather"). Step 19000b, clutter and capture, done 2026-10-15: the
+  Showcase API keeps the screen quiet for a def that asks (no alerts,
+  Learning helper, letters or top-left messages; `docs/SHOWCASE-API.md`,
+  "The Quiet Screen"), the tour lends no god mode, viewing runs turn dev
+  mode and the Learning helper off, `-Presentation` verifies the tour at
+  its own speed with the viewing prefs, frames are taken a few ticks
+  after their cues, and `Tools\contact-sheet.ps1` tiles them into
+  sheets.
 - **20000:** the merge into `trunk`.
 
 ### Decisions
