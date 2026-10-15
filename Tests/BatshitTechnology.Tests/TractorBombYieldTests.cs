@@ -16,24 +16,25 @@ public sealed class TractorBombYieldTests
 {
     /// <summary>
     /// The operator's numbers (2026-10-14, with the middle and large
-    /// settings raised by half): pull 6, 15 and 22.5 tiles; blast 3, 7.5
-    /// and 12; the defaults in the middle.
+    /// settings raised by half; on 2026-10-15 every pull raised by half
+    /// again): pull 9, 22.5 and 33.75 tiles; blast 3, 7.5 and 12; the
+    /// defaults in the middle.
     /// </summary>
     [Fact(DisplayName = "Named stops have the operator's radii")]
     public void Radii_should_match_the_spec()
     {
-        Assert.Equal(6.0, TractorBombYield.Radius(TractorBombPull.Intimate));
-        Assert.Equal(15.0, TractorBombYield.Radius(TractorBombPull.Neighborly));
-        Assert.Equal(22.5, TractorBombYield.Radius(TractorBombPull.Popular));
+        Assert.Equal(9.0, TractorBombYield.Radius(TractorBombPull.Intimate));
+        Assert.Equal(22.5, TractorBombYield.Radius(TractorBombPull.Neighborly));
+        Assert.Equal(33.75, TractorBombYield.Radius(TractorBombPull.Popular));
         Assert.Equal(3.0, TractorBombYield.Radius(TractorBombBlast.BirthdayCake));
         Assert.Equal(7.5, TractorBombYield.Radius(TractorBombBlast.Firework));
         Assert.Equal(12.0, TractorBombYield.Radius(TractorBombBlast.BlockParty));
         Assert.Equal(TractorBombPull.Neighborly, TractorBombYield.DefaultPull);
         Assert.Equal(TractorBombBlast.Firework, TractorBombYield.DefaultBlast);
-        Assert.Equal(15.0, TractorBombYield.DefaultPullRadius);
+        Assert.Equal(22.5, TractorBombYield.DefaultPullRadius);
         Assert.Equal(7.5, TractorBombYield.DefaultBlastRadius);
-        Assert.Equal(6.0, TractorBombYield.MinPull);
-        Assert.Equal(22.5, TractorBombYield.MaxPull);
+        Assert.Equal(9.0, TractorBombYield.MinPull);
+        Assert.Equal(33.75, TractorBombYield.MaxPull);
         Assert.Equal(3.0, TractorBombYield.MinBlast);
         Assert.Equal(12.0, TractorBombYield.MaxBlast);
     }
@@ -88,7 +89,7 @@ public sealed class TractorBombYieldTests
             TractorBombYield.Sanitize((TractorBombPull)7));
         Assert.Equal(TractorBombBlast.Firework,
             TractorBombYield.Sanitize((TractorBombBlast)(-2)));
-        Assert.Equal(15.0, TractorBombYield.Radius((TractorBombPull)7));
+        Assert.Equal(22.5, TractorBombYield.Radius((TractorBombPull)7));
         Assert.Equal(7.5, TractorBombYield.Radius((TractorBombBlast)3));
         Assert.Equal(TractorBombPull.Popular,
             TractorBombYield.Sanitize(TractorBombPull.Popular));
@@ -96,9 +97,13 @@ public sealed class TractorBombYieldTests
 
     /// <summary>
     /// An older save's dialled tractor beam (3 to 20 whole tiles) snaps to
-    /// the nearest stop: 3 to 10 Intimate, 11 to 18 Neighborly, 19 and 20
-    /// Popular. The midpoints (10.5 and 18.75) go to the larger stop;
-    /// nonsense goes to an end, and NaN to the default.
+    /// the stop it meant, against the stops as they were before the pulls
+    /// were raised by half (6, 15 and 22.5): 3 to 10 Intimate, 11 to 18
+    /// Neighborly, 19 and 20 Popular. The midpoints (10.5 and 18.75) go to
+    /// the larger stop; nonsense goes to an end, and NaN to the default.
+    /// Against today's radii (9, 22.5, 33.75), 11 to 15 would load as
+    /// Intimate and 19 and 20 as Neighborly: the rows at 11, 15, 19 and 20
+    /// fail if the snapping follows the new radii.
     /// </summary>
     /// <param name="tiles">The radius dialled.</param>
     /// <param name="expected">The stop it loads as.</param>
@@ -108,6 +113,7 @@ public sealed class TractorBombYieldTests
     [InlineData(10.49, TractorBombPull.Intimate)]
     [InlineData(10.5, TractorBombPull.Neighborly)]
     [InlineData(11, TractorBombPull.Neighborly)]
+    [InlineData(15, TractorBombPull.Neighborly)]
     [InlineData(18, TractorBombPull.Neighborly)]
     [InlineData(18.75, TractorBombPull.Popular)]
     [InlineData(19, TractorBombPull.Popular)]
@@ -145,15 +151,26 @@ public sealed class TractorBombYieldTests
     }
 
     /// <summary>
-    /// Each stop's own radius loads as itself, so a radius read back from
-    /// anywhere names its stop.
+    /// Each stop's radius as it was when old saves were first snapped
+    /// loads as that stop, and the stop now pulls half as far again: an
+    /// old save keeps the stop it meant and gets the new radius. Each
+    /// blast's radius (unchanged) loads as itself.
     /// </summary>
-    [Fact(DisplayName = "Each stop's radius snaps to itself")]
+    [Fact(DisplayName = "Each stop's old radius snaps to itself")]
     public void Nearest_should_round_trip_every_stop()
     {
-        foreach (TractorBombPull p in Enum.GetValues(typeof(TractorBombPull)))
+        var old = new[]
         {
-            Assert.Equal(p, TractorBombYield.NearestPull(TractorBombYield.Radius(p)));
+            (TractorBombYield.LegacyIntimatePull, TractorBombPull.Intimate),
+            (TractorBombYield.LegacyNeighborlyPull, TractorBombPull.Neighborly),
+            (TractorBombYield.LegacyPopularPull, TractorBombPull.Popular),
+        };
+        Assert.Equal(new[] { 6.0, 15.0, 22.5 }, old.Select(o => o.Item1));
+        foreach (var (tiles, stop) in old)
+        {
+            TractorBombPull loaded = TractorBombYield.NearestPull(tiles);
+            Assert.Equal(stop, loaded);
+            Assert.Equal(tiles * 1.5, TractorBombYield.Radius(loaded));
         }
 
         foreach (TractorBombBlast b in Enum.GetValues(typeof(TractorBombBlast)))
@@ -170,15 +187,16 @@ public sealed class TractorBombYieldTests
     /// <param name="pull">The clamped pull.</param>
     /// <param name="blast">The clamped blast.</param>
     [Theory(DisplayName = "Radius clamps keep fractions within range")]
-    [InlineData(-5, 6, 3)]
-    [InlineData(2.9, 6, 3)]
-    [InlineData(4.9, 6, 4.9)]
-    [InlineData(7.5, 7.5, 7.5)]
+    [InlineData(-5, 9, 3)]
+    [InlineData(2.9, 9, 3)]
+    [InlineData(4.9, 9, 4.9)]
+    [InlineData(9.5, 9.5, 9.5)]
     [InlineData(22.5, 22.5, 12)]
-    [InlineData(1e9, 22.5, 12)]
-    [InlineData(double.PositiveInfinity, 22.5, 12)]
-    [InlineData(double.NegativeInfinity, 6, 3)]
-    [InlineData(double.NaN, 15, 7.5)]
+    [InlineData(33.75, 33.75, 12)]
+    [InlineData(1e9, 33.75, 12)]
+    [InlineData(double.PositiveInfinity, 33.75, 12)]
+    [InlineData(double.NegativeInfinity, 9, 3)]
+    [InlineData(double.NaN, 22.5, 7.5)]
     public void Clamps_should_keep_fractions_in_range(
         double asked, double pull, double blast)
     {

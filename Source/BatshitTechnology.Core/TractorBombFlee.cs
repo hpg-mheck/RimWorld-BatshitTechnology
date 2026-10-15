@@ -52,6 +52,22 @@ public static class TractorBombFlee
     public const int FleeMargin = 8;
 
     /// <summary>
+    /// How many cells a search for somewhere to run may visit: four and a
+    /// half times the circle a pawn must leave at the longest flee
+    /// distance (Popular's 41.75 tiles plus the clearance), about 25,800,
+    /// so only a hemmed-in pawn runs out. The old 12,000 was the same
+    /// multiple of the sliders' 28-tile flee; the area grew 2.25 times
+    /// when the pulls were raised by half (2026-10-15).
+    /// </summary>
+    public static readonly int SearchCells = (int)Math.Ceiling(
+        4.5 * Math.PI * Math.Pow(
+            Math.Max(
+                TractorBombYield.MaxPull + FleeMargin,
+                TractorBombYield.MaxBlast + 1)
+                + DestinationClearance,
+            2));
+
+    /// <summary>
     /// How far past the flee distance a destination must lie, in tiles, so
     /// that a pawn that arrives is clearly out, not on the edge, and does
     /// not turn round at once if it drifts back a step.
@@ -61,12 +77,15 @@ public static class TractorBombFlee
     /// <summary>
     /// How far from a bomb a pawn runs: its pull radius plus
     /// <see cref="FleeMargin"/>. Never less than one tile past its blast
-    /// radius, which the named stops (pull at least 6, blast at most 12)
+    /// radius, which the named stops (pull at least 9, blast at most 12)
     /// never need, but a widened range might.
     /// </summary>
     /// <param name="pull">The bomb's pull radius, in tiles.</param>
     /// <param name="blast">The bomb's blast radius, in tiles.</param>
-    /// <returns>The flee distance, in tiles (30.5 for a Popular pull).</returns>
+    /// <returns>
+    /// The flee distance, in tiles (30.5 at the default pull, 41.75 for a
+    /// Popular one).
+    /// </returns>
     public static double FleeDistance(double pull, double blast) =>
         Math.Max(
             TractorBombYield.ClampPull(pull) + FleeMargin,

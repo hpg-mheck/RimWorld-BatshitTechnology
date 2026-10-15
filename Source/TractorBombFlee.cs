@@ -349,10 +349,13 @@ namespace BatshitTechnology
         private const int MaxCandidates = 16;
 
         /// <summary>
-        /// How many cells the search may visit: far more than the circle a
-        /// 28-tile flee distance leaves, so only a hemmed-in pawn runs out.
+        /// How many cells the search may visit: Core's
+        /// <see cref="TractorBombFlee.SearchCells"/>, far more than the
+        /// circle the longest flee distance (41.75 tiles) leaves, so only a
+        /// hemmed-in pawn runs out.
         /// </summary>
-        private const int MaxCellsSearched = 12000;
+        private static readonly int MaxCellsSearched =
+            TractorBombFlee.SearchCells;
 
         /// <summary>
         /// Whether a pawn is in a state to run or freeze at all: spawned,

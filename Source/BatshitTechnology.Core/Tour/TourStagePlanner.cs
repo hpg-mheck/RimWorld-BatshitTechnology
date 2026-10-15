@@ -93,7 +93,8 @@ public static class TourStagePlanner
     /// How far the yard keeps from the base, the grenade clearing and
     /// AnyRim, in whole tiles: as far as anyone runs from one of the
     /// tour's tractors, its pull plus 8 (Core's
-    /// <see cref="TractorBombFlee.FleeDistance"/>), rounded up: 31.
+    /// <see cref="TractorBombFlee.FleeDistance"/>), rounded up: 42 since
+    /// the pulls were raised by half (31 before).
     /// </summary>
     public static readonly int TractorReach = (int)Math.Ceiling(
         TractorBombFlee.FleeDistance(
@@ -125,10 +126,12 @@ public static class TourStagePlanner
     /// The yard's candidate centres, from the base, best first: south-west,
     /// south and south-east, away from AnyRim in the north-west, and far
     /// enough south that the yard keeps <see cref="TractorReach"/> from the
-    /// base square (its top edge 32 tiles below the square's).
+    /// base square with a tile to spare (its top edge 43 tiles below the
+    /// square's; 62 tiles down before the pulls were raised by half, now
+    /// 73), so the yard's reach never takes in the base's edge.
     /// </summary>
     public static readonly IReadOnlyList<Cell> DefaultYardOffsets =
-        new[] { new Cell(-45, -62), new Cell(0, -62), new Cell(45, -62) };
+        new[] { new Cell(-45, -73), new Cell(0, -73), new Cell(45, -73) };
 
     /// <summary>
     /// The pads' candidate cells, from the base: the four far corners,

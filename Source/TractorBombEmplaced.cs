@@ -3,7 +3,7 @@
 // stabiliser pads over about half a second, then it counts down a rolled
 // 3 to 5 seconds under the shared warning band (CountdownWarning.cs), then
 // hosts the shared implosion (Implosion.cs): everything within its pull
-// radius (Neighborly, 15 tiles, unless set otherwise) is dragged to within
+// radius (Neighborly, 22.5 tiles, unless set otherwise) is dragged to within
 // 1.5 tiles. It explodes over its blast radius (Firework, 7.5 tiles,
 // unless set otherwise) when its pull is
 // over: never before two seconds, as soon as everything is gathered or

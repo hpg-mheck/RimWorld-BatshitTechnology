@@ -50,7 +50,7 @@ namespace BatshitTechnology
     /// <summary>
     /// A named setting's button: shows the setting's current stop, and a
     /// click opens a menu of its three stops with their sizes ("Popular,
-    /// 22.5 tiles"). Groups with the same setting's button on everything
+    /// 33.75 tiles"). Groups with the same setting's button on everything
     /// else selected, and the choice sets them all.
     /// </summary>
     public class Command_TractorBombDial : Command

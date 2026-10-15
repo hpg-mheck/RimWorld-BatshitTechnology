@@ -34,28 +34,30 @@ public sealed class TractorBombDialsTests
     /// <summary>
     /// The menu entries give each stop's size: the radius for a pull or
     /// a blast, and how far a robot stops for a proximity, worked out with
-    /// the pull in effect.
+    /// the pull in effect. Since the pulls were raised by half
+    /// (2026-10-15), Prudent stops at the 15-tile emplacing range at the
+    /// default pull and at Popular, and one inside the beam at Intimate.
     /// </summary>
     [Fact(DisplayName = "Menu entries name each stop with its size")]
     public void MenuLabel_should_name_and_size_each_stop()
     {
         Assert.Equal(
-            new[] { "Intimate, 6 tiles", "Neighborly, 15 tiles", "Popular, 22.5 tiles" },
-            Menu(TractorBombDial.Pull, 15));
+            new[] { "Intimate, 9 tiles", "Neighborly, 22.5 tiles", "Popular, 33.75 tiles" },
+            Menu(TractorBombDial.Pull, 22.5));
         Assert.Equal(
             new[] { "Birthday Cake, 3 tiles", "Firework, 7.5 tiles", "Block Party, 12 tiles" },
-            Menu(TractorBombDial.Blast, 15));
+            Menu(TractorBombDial.Blast, 22.5));
         Assert.Equal(
             new[]
             {
-                "Timid, stops 15 tiles out", "Prudent, stops 14 tiles out",
+                "Timid, stops 15 tiles out", "Prudent, stops 15 tiles out",
                 "Nosy, stops 3 tiles out",
             },
-            Menu(TractorBombDial.Proximity, 15));
-        Assert.Equal("Prudent, stops 5 tiles out",
-            TractorBombDials.MenuLabel(TractorBombDial.Proximity, 1, 6, 15));
+            Menu(TractorBombDial.Proximity, 22.5));
+        Assert.Equal("Prudent, stops 8 tiles out",
+            TractorBombDials.MenuLabel(TractorBombDial.Proximity, 1, 9, 15));
         Assert.Equal("Prudent, stops 15 tiles out",
-            TractorBombDials.MenuLabel(TractorBombDial.Proximity, 1, 22.5, 15));
+            TractorBombDials.MenuLabel(TractorBombDial.Proximity, 1, 33.75, 15));
     }
 
     /// <summary>
@@ -77,12 +79,16 @@ public sealed class TractorBombDialsTests
     }
 
     /// <summary>
-    /// Distances show a decimal only when they have one, and one tile is
-    /// singular.
+    /// Distances show decimals only when they have them, up to two (so
+    /// Popular's 33.75 reads exactly), and one tile is singular.
     /// </summary>
     /// <param name="tiles">The distance.</param>
     /// <param name="expected">The text.</param>
     [Theory(DisplayName = "Tile counts read naturally")]
+    [InlineData(33.75, "33.75 tiles")]
+    [InlineData(41.75, "41.75 tiles")]
+    [InlineData(33.749999, "33.75 tiles")]
+    [InlineData(2.125, "2.13 tiles")]
     [InlineData(22.5, "22.5 tiles")]
     [InlineData(15.0, "15 tiles")]
     [InlineData(7.5, "7.5 tiles")]
@@ -106,7 +112,7 @@ public sealed class TractorBombDialsTests
         Assert.Equal(1, TractorBombDials.Sanitize(3));
         Assert.Equal(2, TractorBombDials.Sanitize(2));
         Assert.Equal("Neighborly", TractorBombDials.Name(TractorBombDial.Pull, 9));
-        Assert.Equal(15.0, TractorBombDials.Tiles(TractorBombDial.Pull, 9, 15, 15));
+        Assert.Equal(22.5, TractorBombDials.Tiles(TractorBombDial.Pull, 9, 15, 15));
         Assert.Equal(TractorBombBlast.Firework,
             TractorBombSettings.Default
                 .With(TractorBombDial.Blast, 0)

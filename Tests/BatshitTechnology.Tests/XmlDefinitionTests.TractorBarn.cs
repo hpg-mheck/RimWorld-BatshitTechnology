@@ -229,14 +229,42 @@ public sealed partial class XmlDefinitionTests
         {
             Assert.Contains(stop, robot, StringComparison.Ordinal);
         }
+
+        // The old default pull (15 tiles until the pulls were raised by
+        // half) is not the pull any more.
+        Assert.DoesNotContain("within 15 tiles", robot, StringComparison.Ordinal);
+        Assert.DoesNotContain("within 15 tiles", research, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Dial-A-Yield's description gives every pull and blast at its
+    /// current size, from Core, so raising the pulls by half (2026-10-15)
+    /// could not leave the old 6, 15 and 22.5 behind.
+    /// </summary>
+    [Fact(DisplayName = "Dial-A-Yield's description gives every stop's size")]
+    public void DialAYieldDescription_should_give_every_stop()
+    {
+        string text = SingleDef(
+                "ResearchProjectDef", "BT_Research_TractorBombDialAYield")
+            .Element("description")?.Value ?? string.Empty;
+        Assert.Contains(
+            $"Intimate ({Tiles(TractorBombYield.IntimatePull)} tiles), "
+                + $"Neighborly ({Tiles(TractorBombYield.NeighborlyPull)}) or "
+                + $"Popular ({Tiles(TractorBombYield.PopularPull)})",
+            text, StringComparison.Ordinal);
+        Assert.Contains(
+            $"Birthday Cake ({Tiles(TractorBombYield.BirthdayCakeBlast)} tiles), "
+                + $"Firework ({Tiles(TractorBombYield.FireworkBlast)}) or "
+                + $"Block Party ({Tiles(TractorBombYield.BlockPartyBlast)})",
+            text, StringComparison.Ordinal);
     }
 
     /// <summary>
     /// A radius as the descriptions write it: whole numbers bare, others
-    /// with one decimal place.
+    /// with their decimal places, up to two.
     /// </summary>
     /// <param name="radius">The radius, in tiles.</param>
-    /// <returns>"15" or "7.5".</returns>
+    /// <returns>"15", "7.5" or "33.75".</returns>
     private static string Tiles(double radius) =>
-        radius.ToString("0.#", CultureInfo.InvariantCulture);
+        radius.ToString("0.##", CultureInfo.InvariantCulture);
 }

@@ -19,9 +19,9 @@ namespace BatshitTechnology
 {
     /// <summary>
     /// The hunt: emplace if a hostile the robot can see is within its
-    /// stopping distance (its Proximity: Timid 15 tiles, Prudent one inside
-    /// its tractor beam, Nosy 3), otherwise close in on the nearest one it can
-    /// reach.
+    /// stopping distance (its Proximity: Timid 15 tiles, Prudent 15 or one
+    /// inside its tractor beam if nearer, Nosy 3), otherwise close in on the
+    /// nearest one it can reach.
     /// </summary>
     public class JobGiver_TractorBombHunt : ThinkNode_JobGiver
     {

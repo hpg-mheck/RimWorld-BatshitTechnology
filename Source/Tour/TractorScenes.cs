@@ -168,7 +168,9 @@ namespace BatshitTechnology
     /// Scene 7, "The Tractor of Tomorrow": the barn, a robot "made
     /// earlier" at its door, and a party of four raiders across the yard.
     /// The robot spots them, protests at a colonist standing in its pull
-    /// (who is sent away), digs in, and goes off.
+    /// (who is sent away), digs in, and goes off. The robot is Nosy
+    /// (Core's <see cref="SingleTractorLayout.TourProximity"/>), so its
+    /// 33.75-tile pull stops short of the barn.
     /// </summary>
     public class TractorBombScene : TractorYardScene
     {
@@ -178,8 +180,18 @@ namespace BatshitTechnology
         /// <summary>When the robot rolls out of the barn, in ticks.</summary>
         public int deliverTick = 480;
 
-        /// <summary>How far north the stray is sent, in tiles.</summary>
-        public int strayRetreat = 30;
+        /// <summary>
+        /// How far north the stray is sent, in tiles: Core's
+        /// <see cref="SingleTractorLayout.StrayRetreat"/>, which its tests
+        /// hold beyond the flee distance from where the robot plants.
+        /// </summary>
+        public int strayRetreat = SingleTractorLayout.StrayRetreat;
+
+        /// <summary>
+        /// The zoom of the pull shot: wide enough for the
+        /// 33.75-tile pull's ring (67.5 tiles across) with room round it.
+        /// </summary>
+        public float pullZoom = 52f;
 
         /// <summary>The barn.</summary>
         [Unsaved]
@@ -241,7 +253,7 @@ namespace BatshitTechnology
             barn = TractorStaging.SpawnBarn(
                 Map, TractorStaging.At(Centre, SingleTractorLayout.Barn));
             (barn as Building_TractorBarn)?.SetSettings(
-                TourSettings(TractorBombApproach.Default));
+                TourSettings(SingleTractorLayout.TourProximity));
             party = TractorStaging.SpawnArmy(
                 Map, Centre, SingleTractorLayout.Party, armed: false,
                 stunned: true);
@@ -262,7 +274,7 @@ namespace BatshitTechnology
             {
                 robot = TractorStaging.SpawnRobot(
                     Map, TractorStaging.At(Centre, SingleTractorLayout.BarnDoor));
-                Fit(robot, TractorBombApproach.Default);
+                Fit(robot, SingleTractorLayout.TourProximity);
                 BeatOnce("delivered", Shot(30f));
             }
 
@@ -296,7 +308,7 @@ namespace BatshitTechnology
             if (bombs.Any(b => Alive(b)
                 && b.CurrentStage == Building_TractorBomb.Stage.Imploding))
             {
-                BeatOnce("pull", Shot(45f), select: false);
+                BeatOnce("pull", Shot(pullZoom), select: false);
             }
 
             if (ExplosionsSinceStart > 0)
@@ -446,6 +458,12 @@ namespace BatshitTechnology
         /// </summary>
         public int implodeDelay = 150;
 
+        /// <summary>
+        /// The zoom of the pull shot: wide enough for both 33.75-tile
+        /// pulls' rings (about 82 tiles across and 68 tall together).
+        /// </summary>
+        public float pullZoom = 52f;
+
         /// <summary>The raiders.</summary>
         [Unsaved]
         private List<Pawn> army;
@@ -553,7 +571,7 @@ namespace BatshitTechnology
             if (bombs.Any(b => Alive(b)
                 && b.CurrentStage == Building_TractorBomb.Stage.Imploding))
             {
-                BeatOnce("pull", Shot(34f), select: false);
+                BeatOnce("pull", Shot(pullZoom), select: false);
             }
 
             if (ExplosionsSinceStart > 0)

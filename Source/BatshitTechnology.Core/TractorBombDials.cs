@@ -191,8 +191,8 @@ public static class TractorBombDials
     }
 
     /// <summary>
-    /// A menu entry: the stop's name and its size, as "Popular, 22.5
-    /// tiles" or, for a proximity, "Prudent, stops 14 tiles out".
+    /// A menu entry: the stop's name and its size, as "Popular, 33.75
+    /// tiles" or, for a proximity, "Prudent, stops 8 tiles out".
     /// </summary>
     /// <param name="dial">The setting.</param>
     /// <param name="stop">The stop.</param>
@@ -222,8 +222,9 @@ public static class TractorBombDials
     }
 
     /// <summary>
-    /// A distance for players: one decimal place only when it has one,
-    /// and "tile" for exactly one ("22.5 tiles", "15 tiles", "1 tile").
+    /// A distance for players: decimal places only when it has them, up
+    /// to two, so every stop reads exactly ("33.75 tiles", "22.5 tiles",
+    /// "15 tiles"), and "tile" for exactly one.
     /// </summary>
     /// <param name="tiles">The distance, in tiles.</param>
     /// <returns>The text.</returns>
@@ -231,7 +232,8 @@ public static class TractorBombDials
     {
         string n = double.IsNaN(tiles)
             ? "?"
-            : Math.Round(tiles, 1).ToString("0.#", CultureInfo.InvariantCulture);
+            : Math.Round(tiles, 2, MidpointRounding.AwayFromZero)
+                .ToString("0.##", CultureInfo.InvariantCulture);
         return n == "1" ? "1 tile" : n + " tiles";
     }
 }

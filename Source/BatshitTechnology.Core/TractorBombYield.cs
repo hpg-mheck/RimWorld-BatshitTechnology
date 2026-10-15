@@ -9,13 +9,13 @@ namespace BatshitTechnology.Core;
 /// </summary>
 public enum TractorBombPull
 {
-    /// <summary>6 tiles: only the closest of friends.</summary>
+    /// <summary>9 tiles: only the closest of friends.</summary>
     Intimate = 0,
 
-    /// <summary>15 tiles, the default: the whole street.</summary>
+    /// <summary>22.5 tiles, the default: the whole street.</summary>
     Neighborly = 1,
 
-    /// <summary>22.5 tiles: everyone, whether invited or not.</summary>
+    /// <summary>33.75 tiles: everyone, whether invited or not.</summary>
     Popular = 2,
 }
 
@@ -43,7 +43,11 @@ public enum TractorBombBlast
 /// </summary>
 /// <remarks>
 /// The radii are exact, not rounded: RimWorld's radial patterns and
-/// explosions take fractional radii (vanilla's own use 2.9 and 4.9).
+/// explosions take fractional radii (vanilla's own use 2.9 and 4.9). The
+/// pulls were raised by half on 2026-10-15 (the operator: "expand the pull
+/// radii for all tractor levels by 50%"), from 6, 15 and 22.5 tiles; the
+/// blasts were not. The longest pull plus the flee margin, 41.75 tiles,
+/// stays well inside RimWorld's radial pattern (about 79.8 tiles).
 /// Every radius that reaches a bomb comes from a stop here, and every
 /// stop read from a save passes through <see cref="Sanitize(TractorBombPull)"/>
 /// or <see cref="Sanitize(TractorBombBlast)"/>, so nothing can stall or
@@ -52,13 +56,32 @@ public enum TractorBombBlast
 public static class TractorBombYield
 {
     /// <summary>Intimate's tractor beam, in tiles.</summary>
-    public const double IntimatePull = 6;
+    public const double IntimatePull = 9;
 
     /// <summary>Neighborly's tractor beam, in tiles: the default.</summary>
-    public const double NeighborlyPull = 15;
+    public const double NeighborlyPull = 22.5;
 
     /// <summary>Popular's tractor beam, in tiles.</summary>
-    public const double PopularPull = 22.5;
+    public const double PopularPull = 33.75;
+
+    /// <summary>
+    /// Intimate's tractor beam before the pulls were raised by half
+    /// (2026-10-15), in tiles: what an older save's dialled number was
+    /// snapped against, and still is.
+    /// </summary>
+    public const double LegacyIntimatePull = 6;
+
+    /// <summary>
+    /// Neighborly's tractor beam before the pulls were raised by half, in
+    /// tiles.
+    /// </summary>
+    public const double LegacyNeighborlyPull = 15;
+
+    /// <summary>
+    /// Popular's tractor beam before the pulls were raised by half, in
+    /// tiles.
+    /// </summary>
+    public const double LegacyPopularPull = 22.5;
 
     /// <summary>Birthday Cake's blast, in tiles.</summary>
     public const double BirthdayCakeBlast = 3;
@@ -160,9 +183,13 @@ public static class TractorBombYield
             : (DefaultPull, DefaultBlast);
 
     /// <summary>
-    /// The stop nearest a dialled tractor beam from an older save (3 to 20
-    /// whole tiles). A tie goes to the larger stop; a value that is not a
-    /// number becomes the default.
+    /// The stop a dialled tractor beam from an older save (3 to 20 whole
+    /// tiles, from before the named settings) meant: the nearest of the
+    /// stops as they were when such saves were first snapped (6, 15 and
+    /// 22.5 tiles), not of today's radii, so 3 to 10 still load as
+    /// Intimate, 11 to 18 as Neighborly, and 19 and 20 as Popular. The
+    /// stop then pulls at its current radius. A tie goes to the larger
+    /// stop; a value that is not a number becomes the default.
     /// </summary>
     /// <param name="tiles">The radius dialled, in tiles.</param>
     /// <returns>The stop.</returns>
@@ -170,7 +197,8 @@ public static class TractorBombYield
         double.IsNaN(tiles)
             ? DefaultPull
             : (TractorBombPull)Nearest(
-                tiles, IntimatePull, NeighborlyPull, PopularPull);
+                tiles, LegacyIntimatePull, LegacyNeighborlyPull,
+                LegacyPopularPull);
 
     /// <summary>
     /// The stop nearest a dialled blast from an older save (2 to 10 whole

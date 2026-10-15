@@ -142,7 +142,7 @@ namespace BatshitTechnology
             Check("a new robot leaves the barn with the barn's settings",
                 comp != null && comp.Settings == production
                     && comp.Proximity == TractorBombProximity.Nosy
-                    && comp.PullRadius == 15f && comp.BlastRadius == 7.5f
+                    && comp.PullRadius == 22.5f && comp.BlastRadius == 7.5f
                     && pane.Contains("New tractors: Nosy, Neighborly, Firework"),
                 $"robot {comp?.Settings}, in effect {comp?.PullRadius}/"
                     + $"{comp?.BlastRadius}; barn pane "
@@ -155,7 +155,7 @@ namespace BatshitTechnology
         /// those settings to every robot of the player's on the map and to
         /// every planted bomb whose pull has not started (its pull and
         /// blast), but not to a bomb already pulling. The pulling bomb
-        /// stands 40 tiles off with a 6-tile pull, out of everyone's way.
+        /// stands 40 tiles off with a 9-tile pull, out of everyone's way.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The middle of the test area.</param>
@@ -215,7 +215,7 @@ namespace BatshitTechnology
             bool robotsSet = a.Settings == wanted && b.Settings == wanted;
             bool waitingSet = waiting.Settings.Pull == TractorBombPull.Popular
                 && waiting.Settings.Blast == TractorBombBlast.BlockParty
-                && waiting.PullRadius == 22.5f && waiting.BlastRadius == 12f;
+                && waiting.PullRadius == 33.75f && waiting.BlastRadius == 12f;
             bool pullingKept = pulling.Settings.Pull == TractorBombPull.Intimate
                 && pulling.Settings.Blast == TractorBombBlast.BirthdayCake
                 && pulling.CurrentStage == Building_TractorBomb.Stage.Imploding;

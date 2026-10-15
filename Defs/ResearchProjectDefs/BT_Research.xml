@@ -188,7 +188,7 @@
   <ResearchProjectDef>
     <defName>BT_Research_TractorBomb</defName>
     <label>Tractor Bomb</label>
-    <description>Build the Tractor Barn, which builds Tractor Bombs by itself: little steel farm tractors that patrol for hostiles, drive at the nearest one they can see, and plant themselves. Each then drags everything within 15 tiles into a heap at its feet and explodes over 7.5 tiles. Sixty steel, three components and five batshittium apiece, carried in by haulers; the barn also patches up the ones that limp home.
+    <description>Build the Tractor Barn, which builds Tractor Bombs by itself: little steel farm tractors that patrol for hostiles, drive at the nearest one they can see, and plant themselves. Each then drags everything within 22.5 tiles into a heap at its feet and explodes over 7.5 tiles. Sixty steel, three components and five batshittium apiece, carried in by haulers; the barn also patches up the ones that limp home.
 
 A colonist inside the tractor beam earns a three-second protest, after which the bomb emplaces anyway. Keep colonists out of the beam.</description>
     <baseCost>1500</baseCost>
@@ -204,7 +204,7 @@ A colonist inside the tractor beam earns a three-second protest, after which the
   <ResearchProjectDef>
     <defName>BT_Research_TractorBombDialAYield</defName>
     <label>Tractor Bomb Dial-A-Yield</label>
-    <description>Fit every Tractor Bomb with two more dials, each with three settings: its tractor beam, Intimate (6 tiles), Neighborly (15) or Popular (22.5), and its blast, Birthday Cake (3 tiles), Firework (7.5) or Block Party (12). Set them on a robot, on a planted bomb until it starts to pull, or on the Tractor Barn for every robot it builds. They leave the factory at Neighborly and Firework.
+    <description>Fit every Tractor Bomb with two more dials, each with three settings: its tractor beam, Intimate (9 tiles), Neighborly (22.5) or Popular (33.75), and its blast, Birthday Cake (3 tiles), Firework (7.5) or Block Party (12). Set them on a robot, on a planted bomb until it starts to pull, or on the Tractor Barn for every robot it builds. They leave the factory at Neighborly and Firework.
 
 None of the settings is safe.</description>
     <baseCost>1000</baseCost>

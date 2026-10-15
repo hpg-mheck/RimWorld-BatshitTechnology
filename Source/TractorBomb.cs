@@ -1,7 +1,8 @@
 // Batshit Technology - the Tractor Bomb (docs/TRACTOR-BOMB.md).
 // An expendable robot, a little steel farm tractor with a magenta
 // tractor-beam emitter where the exhaust stack should be. It patrols its
-// allowed area, spots a hostile it can see, closes to within 15 tiles,
+// allowed area, spots a hostile it can see, closes to within 15 tiles
+// (or nearer, as its Proximity says),
 // protests for three seconds if a colonist is inside its pull radius, and
 // emplaces itself: the robot leaves the map and an emplaced bomb
 // (TractorBombEmplaced.cs) takes its place, counts down and implodes.

@@ -155,13 +155,30 @@ public static class TwinJunkyardLayout
 /// <summary>
 /// The single-tractor scene's yard, as offsets from its centre: the
 /// Tractor Barn to the west, a party of four raiders to the east, and a
-/// stray colonist close enough to where the robot plants to make it
-/// protest. The robot starts at the barn's door, Prudent, with the tour's
-/// Popular pull, so it stops 15 tiles short of the party; the barn stands
-/// far enough west that the 22.5-tile pull never rips it loose.
+/// stray colonist inside the pull to make the robot protest. The robot
+/// starts at the barn's door and is Nosy (slice 18500): with the tour's
+/// Popular pull at 33.75 tiles, a robot that stops more than about 8
+/// tiles short of a party it can see from the door (45 tiles at most)
+/// plants within its own pull of the barn. Nosy, it stops 3 tiles short,
+/// about 38 tiles from the barn, with the raiders inside its blast.
 /// </summary>
 public static class SingleTractorLayout
 {
+    /// <summary>
+    /// How close the scene's robot drives, and what the barn's pane says
+    /// its new robots get: Nosy (Prudent before the pulls were raised by
+    /// half, when it stopped 15 tiles short).
+    /// </summary>
+    public const TractorBombProximity TourProximity =
+        TractorBombProximity.Nosy;
+
+    /// <summary>
+    /// How far north the stray is sent once the robot protests, in tiles:
+    /// from <see cref="Stray"/>, beyond the tour's flee distance (41.75
+    /// tiles) from where the robot plants.
+    /// </summary>
+    public const int StrayRetreat = 30;
+
     /// <summary>The barn's centre.</summary>
     public static readonly Cell Barn = new(-30, 0);
 
@@ -179,20 +196,23 @@ public static class SingleTractorLayout
         TwinJunkyardLayout.Cells((12, 0), (13, 1), (13, -1), (14, 0));
 
     /// <summary>
-    /// Where the stray colonist stands: about eight tiles from where the
-    /// robot is predicted to plant, (-3,-1), so inside its pull and the
-    /// robot protests.
+    /// Where the stray colonist stands: about 21 tiles north-west of where
+    /// the robot is predicted to plant, (9,0), so inside its 33.75-tile
+    /// pull (the robot protests) but well outside its 12-tile blast, and
+    /// off the robot's road. Sent north by <see cref="StrayRetreat"/>, it
+    /// is out of the pull after about 17 tiles, well within the protest,
+    /// the tyres' flip and the shortest countdown. (It stood 7.6 tiles
+    /// from the plant before, and was downed there on two trial seeds.)
     /// </summary>
-    public static readonly Cell Stray = new(0, 6);
+    public static readonly Cell Stray = new(-8, 12);
 
     /// <summary>
-    /// How far the scene's robot stops from its quarry: Prudent with the
-    /// tour's Popular pull, so its 15-tile emplacing range (one tile
-    /// inside the pull would be 21.5).
+    /// How far the scene's robot stops from its quarry: Nosy, 3 tiles,
+    /// whatever the pull.
     /// </summary>
     public static double TourStop =>
         TractorBombApproach.StopDistance(
-            TractorBombApproach.Default,
+            TourProximity,
             TractorBombApproach.DefaultTimidStop,
             TractorBombYield.Radius(TourStagePlanner.TourPull));
 

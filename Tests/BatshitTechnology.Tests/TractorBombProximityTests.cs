@@ -14,14 +14,16 @@ namespace BatshitTechnology.Tests;
 public sealed class TractorBombProximityTests
 {
     /// <summary>
-    /// At the default pull (Neighborly, 15 tiles) Timid stops 15 tiles
-    /// out, Prudent at 14 (one inside its beam) and Nosy at 3.
+    /// At the default pull (Neighborly, 22.5 tiles since the pulls were
+    /// raised by half) Timid stops 15 tiles out, Prudent at 15 too (one
+    /// inside its beam would be 21.5, beyond the emplacing range) and Nosy
+    /// at 3.
     /// </summary>
     /// <param name="proximity">The proximity.</param>
     /// <param name="expected">Its stop, in tiles.</param>
     [Theory(DisplayName = "Each proximity stops at its distance")]
     [InlineData(TractorBombProximity.Timid, 15.0)]
-    [InlineData(TractorBombProximity.Prudent, 14.0)]
+    [InlineData(TractorBombProximity.Prudent, 15.0)]
     [InlineData(TractorBombProximity.Nosy, 3.0)]
     public void StopDistance_should_match_the_spec(
         TractorBombProximity proximity, double expected)
@@ -32,17 +34,18 @@ public sealed class TractorBombProximityTests
     }
 
     /// <summary>
-    /// The pull moves the Prudent stop: one inside Intimate's 6 tiles is
-    /// 5; Neighborly's is 14; Popular's would be 21.5, so the 15-tile
-    /// emplacing range wins. Timid never moves; Nosy is 3 throughout.
+    /// The pull moves the Prudent stop: one inside Intimate's 9 tiles is
+    /// 8; Neighborly's would be 21.5 and Popular's 32.75, so the 15-tile
+    /// emplacing range wins at both. Timid never moves; Nosy is 3
+    /// throughout.
     /// </summary>
     /// <param name="pull">The pull.</param>
     /// <param name="timid">The Timid stop.</param>
     /// <param name="prudent">The Prudent stop.</param>
     /// <param name="nosy">The Nosy stop.</param>
     [Theory(DisplayName = "The pull moves the Prudent stop")]
-    [InlineData(TractorBombPull.Intimate, 15.0, 5.0, 3.0)]
-    [InlineData(TractorBombPull.Neighborly, 15.0, 14.0, 3.0)]
+    [InlineData(TractorBombPull.Intimate, 15.0, 8.0, 3.0)]
+    [InlineData(TractorBombPull.Neighborly, 15.0, 15.0, 3.0)]
     [InlineData(TractorBombPull.Popular, 15.0, 15.0, 3.0)]
     public void StopDistance_should_follow_the_pull(
         TractorBombPull pull, double timid, double prudent, double nosy)
@@ -80,7 +83,8 @@ public sealed class TractorBombProximityTests
 
     /// <summary>
     /// A nonsense emplacing range falls back to 15; a nonsense pull is
-    /// clamped to the stops' range, or the default if not a number.
+    /// clamped to the stops' range (9 to 33.75 tiles), or the default
+    /// (22.5) if not a number.
     /// </summary>
     /// <param name="timidStop">The emplacing range given.</param>
     /// <param name="pull">The pull radius given.</param>
@@ -92,9 +96,9 @@ public sealed class TractorBombProximityTests
     [InlineData(0.0, 15.0, 15.0, 14.0)]
     [InlineData(-3.0, 15.0, 15.0, 14.0)]
     [InlineData(double.NaN, 15.0, 15.0, 14.0)]
-    [InlineData(15.0, double.NaN, 15.0, 14.0)]
+    [InlineData(15.0, double.NaN, 15.0, 15.0)]
     [InlineData(15.0, 500.0, 15.0, 15.0)]
-    [InlineData(15.0, -2.0, 15.0, 5.0)]
+    [InlineData(15.0, -2.0, 15.0, 8.0)]
     public void StopDistance_should_sanitize_inputs(
         double timidStop, double pull, double expectedTimid,
         double expectedPrudent)

@@ -15,20 +15,21 @@ namespace BatshitTechnology.Tests;
 public sealed class TractorBombFleeTests
 {
     /// <summary>
-    /// The spec's numbers: pull radius plus 8, so 23 tiles at the default
-    /// (Neighborly), 14 for Intimate and 30.5 for Popular, whatever the
-    /// blast; never less than a tile past the blast.
+    /// The spec's numbers: pull radius plus 8, so 30.5 tiles at the
+    /// default (Neighborly, 22.5 since the pulls were raised by half), 17
+    /// for Intimate and 41.75 for Popular, whatever the blast; never less
+    /// than a tile past the blast.
     /// </summary>
     /// <param name="pull">The pull radius, in tiles.</param>
     /// <param name="blast">The blast radius, in tiles.</param>
     /// <param name="expected">The flee distance, in tiles.</param>
     [Theory(DisplayName = "Flee distance is the pull plus 8")]
-    [InlineData(15, 7.5, 23)]
-    [InlineData(6, 3, 14)]
-    [InlineData(6, 12, 14)]
+    [InlineData(22.5, 7.5, 30.5)]
+    [InlineData(9, 3, 17)]
+    [InlineData(9, 12, 17)]
+    [InlineData(33.75, 12, 41.75)]
+    [InlineData(33.75, 3, 41.75)]
     [InlineData(22.5, 12, 30.5)]
-    [InlineData(22.5, 3, 30.5)]
-    [InlineData(15, 12, 23)]
     public void FleeDistance_should_be_pull_plus_margin(
         double pull, double blast, double expected)
     {
@@ -44,9 +45,9 @@ public sealed class TractorBombFleeTests
     /// <param name="blast">The blast radius asked for.</param>
     /// <param name="expected">The flee distance, in tiles.</param>
     [Theory(DisplayName = "Flee distance clamps nonsense radii")]
-    [InlineData(-4, 5, 14)]
-    [InlineData(500, 5, 30.5)]
-    [InlineData(double.NaN, double.NaN, 23)]
+    [InlineData(-4, 5, 17)]
+    [InlineData(500, 5, 41.75)]
+    [InlineData(double.NaN, double.NaN, 30.5)]
     [InlineData(10.4, 4.6, 18.4)]
     public void FleeDistance_should_clamp_radii(
         double pull, double blast, double expected)
@@ -57,9 +58,9 @@ public sealed class TractorBombFleeTests
     }
 
     /// <summary>
-    /// The too-close test at the default yield (pull 15, blast 7.5, flee
-    /// 23), before the pull starts: frozen within 7.5 tiles, fleeing out
-    /// to 23 (included, as RimWorld's InHorDistOf includes the edge),
+    /// The too-close test at the default yield (pull 22.5, blast 7.5, flee
+    /// 30.5), before the pull starts: frozen within 7.5 tiles, fleeing out
+    /// to 30.5 (30 included, as RimWorld's InHorDistOf includes the edge),
     /// unconcerned beyond.
     /// </summary>
     /// <param name="dx">The offset along x.</param>
@@ -73,16 +74,17 @@ public sealed class TractorBombFleeTests
     [InlineData(8, 0, TractorBombReaction.Flee)]
     [InlineData(6, 5, TractorBombReaction.Flee)]
     [InlineData(-12, 0, TractorBombReaction.Flee)]
-    [InlineData(23, 0, TractorBombReaction.Flee)]
-    [InlineData(-16, 16, TractorBombReaction.Flee)]
-    [InlineData(24, 0, TractorBombReaction.None)]
-    [InlineData(17, 17, TractorBombReaction.None)]
+    [InlineData(30, 0, TractorBombReaction.Flee)]
+    [InlineData(-21, 21, TractorBombReaction.Flee)]
+    [InlineData(31, 0, TractorBombReaction.None)]
+    [InlineData(22, 22, TractorBombReaction.None)]
     [InlineData(-200, 300, TractorBombReaction.None)]
     public void React_should_sort_pawns_by_distance(
         int dx, int dz, TractorBombReaction expected)
     {
         Assert.Equal(
-            expected, TractorBombFlee.React(dx, dz, 15, 7.5, pulling: false));
+            expected,
+            TractorBombFlee.React(dx, dz, 22.5, 7.5, pulling: false));
     }
 
     /// <summary>
@@ -95,39 +97,61 @@ public sealed class TractorBombFleeTests
     public void React_should_leave_the_pulled_to_the_implosion()
     {
         Assert.Equal(TractorBombReaction.Caught,
-            TractorBombFlee.React(3, 0, 15, 7.5, pulling: true));
+            TractorBombFlee.React(3, 0, 22.5, 7.5, pulling: true));
         Assert.Equal(TractorBombReaction.Caught,
-            TractorBombFlee.React(9, 12, 15, 7.5, pulling: true));
+            TractorBombFlee.React(12, 18, 22.5, 7.5, pulling: true));
         Assert.Equal(TractorBombReaction.Flee,
-            TractorBombFlee.React(16, 0, 15, 7.5, pulling: true));
+            TractorBombFlee.React(23, 0, 22.5, 7.5, pulling: true));
         Assert.Equal(TractorBombReaction.None,
-            TractorBombFlee.React(24, 0, 15, 7.5, pulling: true));
+            TractorBombFlee.React(31, 0, 22.5, 7.5, pulling: true));
 
-        // Pull 6, blast 12: flee distance 14.
+        // Pull 9, blast 12: flee distance 17.
         Assert.Equal(TractorBombReaction.Caught,
-            TractorBombFlee.React(0, 6, 6, 12, pulling: true));
+            TractorBombFlee.React(0, 9, 9, 12, pulling: true));
         Assert.Equal(TractorBombReaction.Freeze,
-            TractorBombFlee.React(0, 10, 6, 12, pulling: true));
+            TractorBombFlee.React(0, 10, 9, 12, pulling: true));
         Assert.Equal(TractorBombReaction.Flee,
-            TractorBombFlee.React(0, 13, 6, 12, pulling: true));
+            TractorBombFlee.React(0, 13, 9, 12, pulling: true));
     }
 
     /// <summary>
     /// The reaction follows the settings: a Popular beam sends pawns at
-    /// 30 tiles running, an Intimate one leaves them be at 15, and a
-    /// fractional edge counts (30.5 includes 30, not 31).
+    /// 41 tiles running, an Intimate one leaves them be at 18, and a
+    /// fractional edge counts (41.75 includes 41, not 42).
     /// </summary>
     [Fact(DisplayName = "Reactions follow the settings")]
     public void React_should_follow_the_settings()
     {
         Assert.Equal(TractorBombReaction.Flee,
-            TractorBombFlee.React(30, 0, 22.5, 3, pulling: false));
+            TractorBombFlee.React(41, 0, 33.75, 3, pulling: false));
         Assert.Equal(TractorBombReaction.None,
-            TractorBombFlee.React(31, 0, 22.5, 3, pulling: false));
+            TractorBombFlee.React(42, 0, 33.75, 3, pulling: false));
+        Assert.Equal(TractorBombReaction.Flee,
+            TractorBombFlee.React(17, 0, 9, 3, pulling: false));
         Assert.Equal(TractorBombReaction.None,
-            TractorBombFlee.React(15, 0, 6, 3, pulling: false));
+            TractorBombFlee.React(18, 0, 9, 3, pulling: false));
         Assert.Equal(TractorBombReaction.Freeze,
-            TractorBombFlee.React(0, 12, 6, 12, pulling: false));
+            TractorBombFlee.React(0, 12, 9, 12, pulling: false));
+    }
+
+    /// <summary>
+    /// A flee search may visit four and a half times the circle a pawn
+    /// must leave at the longest flee distance (Popular's 41.75 tiles and
+    /// the clearance), as the old 12,000 did for the sliders' 28 tiles, so
+    /// only a hemmed-in pawn runs out of cells; and it stays a bounded
+    /// search.
+    /// </summary>
+    [Fact(DisplayName = "The flee search covers the longest flee")]
+    public void SearchCells_should_cover_the_longest_flee()
+    {
+        double longest = TractorBombFlee.FleeDistance(
+            TractorBombYield.MaxPull, TractorBombYield.MaxBlast)
+            + TractorBombFlee.DestinationClearance;
+        double circle = System.Math.PI * longest * longest;
+        Assert.Equal(42.75, longest);
+        Assert.True(TractorBombFlee.SearchCells >= 4.5 * circle,
+            $"{TractorBombFlee.SearchCells} cells");
+        Assert.InRange(TractorBombFlee.SearchCells, 12000, 40000);
     }
 
     /// <summary>

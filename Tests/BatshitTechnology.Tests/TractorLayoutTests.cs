@@ -7,8 +7,8 @@ namespace BatshitTechnology.Tests;
 /// <summary>
 /// Verifies the tour's tractor layouts, <see cref="TwinJunkyardLayout"/>
 /// and <see cref="SingleTractorLayout"/>, against the planner's yard and
-/// the Tractor Bomb's own rules, at the tour's settings: Popular (22.5
-/// tiles) and Block Party (12).
+/// the Tractor Bomb's own rules, at the tour's settings: Popular (33.75
+/// tiles since the pulls were raised by half) and Block Party (12).
 /// </summary>
 public sealed class TractorLayoutTests
 {
@@ -69,9 +69,10 @@ public sealed class TractorLayoutTests
 
     /// <summary>
     /// Every cell of the barn's 3x3 footprint stands more than two tiles
-    /// beyond the tour's 22.5-tile pull from where its robot plants (a
+    /// beyond the tour's 33.75-tile pull from where its robot plants (a
     /// tile or two of pathing either way), so the pull never rips it
-    /// loose; the 12-tile blast falls far short of it.
+    /// loose; the 12-tile blast falls far short of it. The robot is Nosy,
+    /// so it stops 3 tiles short of the party.
     /// </summary>
     [Fact(DisplayName = "The barn is beyond the pull and the blast")]
     public void Barn_should_be_beyond_pull_and_blast()
@@ -84,7 +85,29 @@ public sealed class TractorLayoutTests
             .Min(c => plant!.Value.DistanceTo(c));
         Assert.True(nearest > TourPull + 2, $"barn {nearest:F1} tiles from the plant");
         Assert.True(nearest > TourBlast + 2, $"barn {nearest:F1} tiles from the plant");
-        Assert.Equal(15.0, SingleTractorLayout.TourStop);
+        Assert.Equal(TractorBombProximity.Nosy, SingleTractorLayout.TourProximity);
+        Assert.Equal(3.0, SingleTractorLayout.TourStop);
+        Assert.Equal(new Cell(9, 0), plant!.Value);
+    }
+
+    /// <summary>
+    /// Why the scene's robot is Nosy: from the barn's door, a Prudent
+    /// robot (15 tiles short of the party) would plant within the tour's
+    /// pull of the barn, wherever in sight of the door the party stood.
+    /// </summary>
+    [Fact(DisplayName = "A Prudent robot from the door would pull the barn")]
+    public void Prudent_robot_would_reach_the_barn()
+    {
+        double prudent = TractorBombApproach.StopDistance(
+            TractorBombProximity.Prudent,
+            TractorBombApproach.DefaultTimidStop, TourPull);
+        Assert.Equal(15.0, prudent);
+
+        // The farthest a robot can plant from the door: the party at the
+        // edge of its sight, less the stop.
+        Assert.True(TractorPlanting.RobotSight - prudent < TourPull + 2);
+        Assert.True(TractorPlanting.RobotSight - SingleTractorLayout.TourStop
+            > TourPull + 2);
     }
 
     /// <summary>
@@ -101,16 +124,42 @@ public sealed class TractorLayoutTests
 
     /// <summary>
     /// The stray stands inside the predicted pull, so the robot protests,
-    /// and outside the party; the party is inside the pull too.
+    /// and outside the party; the party is inside the pull too, and inside
+    /// the blast (the doom beat's frozen raiders). The stray stands well
+    /// outside the blast, so it never freezes.
     /// </summary>
     [Fact(DisplayName = "The stray is inside the pull, so the robot protests")]
     public void Stray_should_be_inside_the_pull()
     {
         Cell plant = SingleTractorLayout.PredictedPlant()!.Value;
-        Assert.True(plant.DistanceTo(SingleTractorLayout.Stray) < TourPull);
+        double stray = plant.DistanceTo(SingleTractorLayout.Stray);
+        Assert.True(stray < TourPull - 2, $"stray {stray:F1}");
+        Assert.True(stray > TourBlast + 4, $"stray {stray:F1}");
         Assert.All(SingleTractorLayout.Party,
             p => Assert.True(plant.DistanceTo(p) <= TourPull));
+        Assert.All(SingleTractorLayout.Party,
+            p => Assert.True(plant.DistanceTo(p) <= TourBlast));
         Assert.DoesNotContain(SingleTractorLayout.Stray, SingleTractorLayout.Party);
+    }
+
+    /// <summary>
+    /// Sent north once the robot protests, the stray leaves the pull
+    /// within 20 tiles (the protest's 3 s, the tyres' half second and the
+    /// shortest 3 s countdown give a walking colonist about 30), and ends
+    /// beyond the flee distance, so no one sends it running back.
+    /// </summary>
+    [Fact(DisplayName = "The stray's retreat clears the pull in time")]
+    public void Stray_retreat_should_clear_the_pull()
+    {
+        Cell plant = SingleTractorLayout.PredictedPlant()!.Value;
+        Cell stray = SingleTractorLayout.Stray;
+        int steps = Enumerable.Range(0, SingleTractorLayout.StrayRetreat + 1)
+            .First(n => plant.DistanceTo(stray + new Cell(0, n)) > TourPull);
+        Assert.True(steps <= 20, $"{steps} tiles to leave the pull");
+        double end = plant.DistanceTo(
+            stray + new Cell(0, SingleTractorLayout.StrayRetreat));
+        Assert.True(end > TractorBombFlee.FleeDistance(TourPull, TourBlast),
+            $"ends {end:F1} tiles out");
     }
 
     /// <summary>
