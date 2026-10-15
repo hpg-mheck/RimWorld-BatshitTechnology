@@ -257,6 +257,23 @@ public static class Stampede
         && (deadAtFirstEntry ?? int.MaxValue) >= DeadNeeded(herd)
         && deadAtEnd >= DeadNeeded(herd);
 
+    /// <summary>
+    /// The SUMMARY's <c>killedFirstVolley</c>: the herd's dead as the
+    /// second volley left; with a single volley, the dead at the scene's
+    /// end (an upper bound, since fire, chain blasts and the colonists
+    /// kill too); and null when no volley was fired, so a scene whose
+    /// volley never left is never credited with kills.
+    /// </summary>
+    /// <param name="volleys">Volleys fired in the scene.</param>
+    /// <param name="deadAtSecondVolley">
+    /// The dead as the second volley left, or null if none did.
+    /// </param>
+    /// <param name="deadAtEnd">The dead at the scene's end.</param>
+    /// <returns>The count, or null without a volley.</returns>
+    public static int? KilledFirstVolley(
+        int volleys, int? deadAtSecondVolley, int deadAtEnd) =>
+        volleys <= 0 ? null : deadAtSecondVolley ?? deadAtEnd;
+
     /// <summary>The mean of some spots.</summary>
     /// <param name="spots">The spots.</param>
     /// <returns>Their centre, or null when there are none.</returns>

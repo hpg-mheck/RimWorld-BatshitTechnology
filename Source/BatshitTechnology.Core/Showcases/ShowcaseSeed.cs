@@ -107,6 +107,15 @@ public static class ShowcaseSeed
     public const string Stage = "stage";
 
     /// <summary>
+    /// The purpose for the global random state through the rest of the
+    /// game's start, once its map is generated: the game's components,
+    /// the scenario and the history, which draw on it before the first
+    /// tick and keep what they drew (Anomaly's first harbinger tree
+    /// check, for one).
+    /// </summary>
+    public const string Start = "start";
+
+    /// <summary>
     /// Whether text is a usable seed: 1 to <see cref="MaxLength"/>
     /// characters, each an ASCII letter or digit, '-', '_' or '.'. That
     /// keeps a seed whole on RimWorld's command line (which splits at

@@ -184,7 +184,14 @@ public sealed class ShowcaseSeedTests
 
         string[] seeds = Enumerable.Range(1, 32).Select(i => $"tour-{i:00}")
             .Concat(new[] { "Tour-01", "parsnipmiller" }).ToArray();
-        string[] purposes = { ShowcaseSeed.World, ShowcaseSeed.Prep, ShowcaseSeed.Stage };
+        Assert.Equal(
+            unchecked((int)Fnv1a.Hash32("tour-01/start")),
+            ShowcaseSeed.Derive("tour-01", ShowcaseSeed.Start));
+
+        string[] purposes =
+        {
+            ShowcaseSeed.World, ShowcaseSeed.Prep, ShowcaseSeed.Stage, ShowcaseSeed.Start,
+        };
         int[] derived = seeds.SelectMany(s => purposes.Select(p => ShowcaseSeed.Derive(s, p)))
             .ToArray();
         Assert.Equal(derived.Length, derived.Distinct().Count());

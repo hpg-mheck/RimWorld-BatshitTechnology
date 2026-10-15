@@ -143,6 +143,22 @@ public sealed class StampedeTests
     }
 
     /// <summary>
+    /// The SUMMARY's killedFirstVolley: null when no volley left (the
+    /// herd's other deaths are never credited to a volley), the dead at
+    /// the second volley when there was one, and the dead at the end
+    /// after a single volley.
+    /// </summary>
+    [Fact(DisplayName = "killedFirstVolley is null without a volley")]
+    public void Killed_first_volley_should_be_null_without_a_volley()
+    {
+        Assert.Null(Stampede.KilledFirstVolley(0, null, 37));
+        Assert.Null(Stampede.KilledFirstVolley(0, 12, 37));
+        Assert.Equal(37, Stampede.KilledFirstVolley(1, null, 37));
+        Assert.Equal(150, Stampede.KilledFirstVolley(2, 150, 200));
+        Assert.Equal(150, Stampede.KilledFirstVolley(3, 150, 200));
+    }
+
+    /// <summary>
     /// The aim leads a moving herd by the bolt's flight: the bolt's flight
     /// to the aim point matches the herd's travel to it.
     /// </summary>
