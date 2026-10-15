@@ -65,21 +65,25 @@ namespace BatshitTechnology
 
         /// <summary>
         /// Created by RimWorld for every game. In a tour verify run, arms
-        /// the scenes forced to decline before the tour is set up.
+        /// the scenes forced to decline before the tour is set up, and the
+        /// shots if they were asked for.
         /// </summary>
         /// <param name="game">The game this component belongs to.</param>
         public GameComponent_SmokeTest(Game game)
         {
             ArmTourSkips();
+            ArmTourShots();
         }
 
         /// <summary>
         /// Once per game, after the map has settled for a couple of
         /// seconds, runs the test; then advances the frame-driven showcase
-        /// checks on later frames, and quits when they are done.
+        /// checks on later frames, and quits when they are done. In a tour
+        /// verify run with shots, takes one waiting shot a frame.
         /// </summary>
         public override void GameComponentUpdate()
         {
+            PumpTourShots();
             if (finished)
             {
                 return;
@@ -145,8 +149,9 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Ends the run: the final log check, the DONE line, and quitting
-        /// unless the run is to be kept open. Runs once.
+        /// Ends the run: the final log check, a tour verify run's SUMMARY
+        /// line, the DONE line, and quitting unless the run is to be kept
+        /// open. Runs once.
         /// </summary>
         private void Finish()
         {
@@ -157,6 +162,11 @@ namespace BatshitTechnology
 
             finished = true;
             TestNoErrorsLogged();
+            if (TourVerifying)
+            {
+                LogTourSummary();
+            }
+
             Log.Message($"[BT-SMOKE] DONE passed={passed} failed={failed}");
             if (!GenCommandLine.CommandLineArgPassed(KeepOpenFlag))
             {

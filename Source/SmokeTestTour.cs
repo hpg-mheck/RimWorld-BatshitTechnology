@@ -7,9 +7,15 @@
 // captions and narration, then logs "[BT-SMOKE] DONE" through the smoke
 // runner's own Finish, which also checks the log for errors. The
 // -bttourskip=<key,key> argument makes those scenes decline, so the
-// API's declining (G1) runs on any map. At READY it silences the
-// storyteller, as the smoke run does, so no raid lands mid-tour. Without
-// -bttourverify it does nothing.
+// API's declining (G1) runs on any map. The Showcase API quiets the
+// storyteller for every showcase (no raid lands mid-tour); the verifier
+// checks that it is quiet from READY to FINISHED and given back after,
+// that the run's seed and fingerprints were logged (SEED, MAPHASH,
+// STAGEHASH), and that the stage was set up before the game's first tick.
+// At the end it logs one "[BT-TOUR] SUMMARY {json}" line, what trials
+// compare seeds by (Source/SmokeTestTour.Summary.cs, Tools/tour-trials.ps1),
+// and with -btshots it saves the game's frame at READY and at each SCENE,
+// BEAT and END cue. Without -bttourverify it does nothing.
 
 using System;
 using System.Collections.Generic;
@@ -122,14 +128,15 @@ namespace BatshitTechnology
 
                     // A raid or other incident from the storyteller is not
                     // the tour's doing, and killed colonists in four of six
-                    // runs in slice 15000; the verifier tests the tour, as
-                    // the smoke run tests the devices, without it. Hostiles
-                    // already on the map stay, and each scene's start notes
-                    // them.
-                    SilenceStoryteller(director.Map);
+                    // runs in slice 15000; the Showcase API now quiets it
+                    // for every showcase, and the verifier checks that it
+                    // did. Hostiles already on the map stay, and each
+                    // scene's start notes them.
+                    CheckShowcaseRecordsAtReady(session, director, now);
                     Log.Message($"[BT-SMOKE] NOTE tour READY at tick {now}; "
                         + $"{director.Scenes.Count} scenes run, deadline tick "
-                        + $"{tourWatch.DeadlineTick}");
+                        + $"{tourWatch.DeadlineTick}; "
+                        + $"{tourWatch.HostilesAtReady.Count} hostile pawns on the map");
                 }
                 else if (session?.Worker != null
                     && !(session.Worker is BatshitTourDirector))
@@ -159,15 +166,109 @@ namespace BatshitTechnology
                 tourWatch.FinishedTick = now;
             }
 
+            if (tourWatch.FinishedTick < 0 && session != null
+                && (!session.StorytellerQuiet
+                    || (Find.Storyteller?.storytellerComps?.Count ?? 0) > 0))
+            {
+                tourWatch.StorytellerAwakeTicks++;
+            }
+
             bool farewellDone = tourWatch.FinishedTick >= 0
                 && (session == null || session.FarewellTick >= 0
                     || now > tourWatch.FinishedTick + FarewellWaitTicks);
             if (farewellDone || now > tourWatch.DeadlineTick)
             {
                 tourWatch.StopClock(now);
+                tourWatch.EndTick = now;
                 CheckTour(tourWatch);
+                CheckStorytellerGivenBack(session, tourWatch);
                 Finish();
             }
+        }
+
+        /// <summary>
+        /// The Showcase API's records at READY: the storyteller quiet (no
+        /// part, nothing queued); the seed the launch logged in its SEED
+        /// cue, from the source its precedence picks; MAPHASH logged before
+        /// START and STAGEHASH just before READY, matching the session's;
+        /// the global random state reseeded; and the stage set up before
+        /// the game's first tick, so no frame-timed tick ran before it.
+        /// </summary>
+        /// <param name="session">The showcase session.</param>
+        /// <param name="director">The tour's director.</param>
+        /// <param name="now">The current tick.</param>
+        private void CheckShowcaseRecordsAtReady(
+            GameComponent_ShowcaseSession session, BatshitTourDirector director, int now)
+        {
+            Storyteller teller = Find.Storyteller;
+            int parts = teller?.storytellerComps?.Count ?? -1;
+            int queued = teller?.incidentQueue?.Count ?? -1;
+            Check("tour: the storyteller is quiet at READY",
+                session.StorytellerQuiet && parts == 0 && queued == 0
+                    && session.StorytellerCompsHeld > 0,
+                $"quiet {session.StorytellerQuiet}; parts {parts}; queued {queued}; "
+                    + $"held {session.StorytellerCompsHeld}");
+
+            List<string> cues = ShowcaseCuesSince(null, withRecords: true);
+            int game = cues.FindLastIndex(c => c.StartsWith("GAME ", StringComparison.Ordinal));
+            List<string> run = game < 0 ? cues : cues.Skip(game).ToList();
+            string seedCue = cues.LastOrDefault(c => c.StartsWith("SEED ", StringComparison.Ordinal));
+            int map = run.FindIndex(c => c.StartsWith("MAPHASH ", StringComparison.Ordinal));
+            int start = run.FindIndex(c => c.StartsWith("START ", StringComparison.Ordinal));
+            int stage = run.FindIndex(c => c.StartsWith("STAGEHASH ", StringComparison.Ordinal));
+            int ready = run.IndexOf("READY");
+            ResolvedSeed seed = session.Seed;
+            string passed = ShowcaseSeed.Normalize(ShowcaseLauncher.CommandLineSeed);
+            string pinned = ShowcaseSeed.Normalize(director.def?.seed);
+            SeedSource wanted = passed != null ? SeedSource.CommandLine
+                : pinned != null ? SeedSource.Def : SeedSource.Random;
+            string wantedText = passed ?? pinned;
+            Check("tour: the launch logged its seed, from the source its "
+                    + "precedence picks",
+                seed != null && seedCue == $"SEED {seed.CueDetail}"
+                    && seed.Source == wanted
+                    && (wantedText == null || seed.Text == wantedText),
+                $"cue '{seedCue}'; session {seed?.CueDetail ?? "none"}; wanted "
+                    + $"{ShowcaseSeed.SourceName(wanted)} {wantedText}");
+            Check("tour: MAPHASH before START and STAGEHASH just before READY, "
+                    + "as the session holds them",
+                map >= 0 && map < start && stage >= 0 && stage == ready - 1
+                    && session.MapHash != null && session.StageHash != null
+                    && run[map].StartsWith($"MAPHASH {session.MapHash} (", StringComparison.Ordinal)
+                    && run[stage].StartsWith($"STAGEHASH {session.StageHash} (",
+                        StringComparison.Ordinal),
+                $"records [{string.Join(" | ", run.Where(IsRecord))}]; MAPHASH at {map}, "
+                    + $"START at {start}, STAGEHASH at {stage}, READY at {ready}");
+            Check("tour: the stage was set up from the seed before the game's "
+                    + "first tick",
+                session.Reseeded && director.StartTick == 0,
+                $"reseeded {session.Reseeded}; set up at tick {director.StartTick}, "
+                    + $"READY seen at {now}");
+        }
+
+        /// <summary>
+        /// The storyteller stayed quiet until FINISHED and has its parts
+        /// back after it, as many as the showcase held; checked only when
+        /// the tour finished (one that ran out of time still holds them).
+        /// </summary>
+        /// <param name="session">The showcase session, or null.</param>
+        /// <param name="watch">What the run saw.</param>
+        private void CheckStorytellerGivenBack(
+            GameComponent_ShowcaseSession session, TourWatch watch)
+        {
+            if (watch.FinishedTick < 0)
+            {
+                return; // "FINISHED reached" already fails
+            }
+
+            int parts = Find.Storyteller?.storytellerComps?.Count ?? -1;
+            Check("tour: the storyteller stays quiet until FINISHED, then has "
+                    + "its parts back",
+                watch.StorytellerAwakeTicks == 0 && session != null
+                    && !session.StorytellerQuiet && parts == watch.StorytellerPartsHeld,
+                $"awake {watch.StorytellerAwakeTicks} ticks before FINISHED; quiet "
+                    + $"{session?.StorytellerQuiet}; parts {parts} of "
+                    + $"{watch.StorytellerPartsHeld} held");
         }
 
         /// <summary>The verifier's six checks (the sixth is Finish's).</summary>
@@ -283,10 +384,32 @@ namespace BatshitTechnology
         /// <returns>The note's text.</returns>
         private static string OverlayPacing(BatshitTourDirector director)
         {
+            NarrationPacing pacing = PaceNarration(director);
+            if (pacing.Said == 0)
+            {
+                return "overlay pacing: no lines said";
+            }
+
+            return $"overlay pacing at normal speed: {pacing.Shown} of "
+                + $"{pacing.Said} lines shown, the longest wait "
+                + $"{pacing.LongestWaitSeconds:0.0} s, {pacing.CutShort} replaced "
+                + "before their full reading time (each still shows "
+                + $"{NarrationTiming.BaseReadingSeconds:0.0} s or more)";
+        }
+
+        /// <summary>
+        /// How the tour's narration would pace on the overlay at normal
+        /// speed: lines said, at their ticks, replayed through Core's rules
+        /// in 1/60 s steps, then the closing message.
+        /// </summary>
+        /// <param name="director">The tour's director.</param>
+        /// <returns>The pacing.</returns>
+        private static NarrationPacing PaceNarration(BatshitTourDirector director)
+        {
             List<NarrationRecord> said = director.NarrationLog.ToList();
             if (said.Count == 0)
             {
-                return "overlay pacing: no lines said";
+                return new NarrationPacing(0, 0, 0, 0.0);
             }
 
             const double Step = 1.0 / NarrationTiming.TicksPerSecond;
@@ -325,11 +448,41 @@ namespace BatshitTechnology
                 }
             }
 
-            return $"overlay pacing at normal speed: {overlay.LinesShown} of "
-                + $"{overlay.LinesSaid} lines shown, the longest wait "
-                + $"{overlay.LongestWaitSeconds:0.0} s, {shortened} replaced "
-                + "before their full reading time (each still shows "
-                + $"{NarrationTiming.BaseReadingSeconds:0.0} s or more)";
+            return new NarrationPacing(
+                overlay.LinesSaid, overlay.LinesShown, shortened, overlay.LongestWaitSeconds);
+        }
+
+        /// <summary>
+        /// The narration's pacing at normal speed: lines handed to the
+        /// overlay (the closing message included), lines shown, lines
+        /// replaced before their full reading time, and the longest wait.
+        /// </summary>
+        private readonly struct NarrationPacing
+        {
+            /// <summary>Creates the pacing.</summary>
+            /// <param name="said">Lines handed to the overlay.</param>
+            /// <param name="shown">Lines shown.</param>
+            /// <param name="cutShort">Lines replaced before their reading time.</param>
+            /// <param name="longestWait">The longest wait, in seconds.</param>
+            public NarrationPacing(int said, int shown, int cutShort, double longestWait)
+            {
+                Said = said;
+                Shown = shown;
+                CutShort = cutShort;
+                LongestWaitSeconds = longestWait;
+            }
+
+            /// <summary>Gets the lines handed to the overlay.</summary>
+            public int Said { get; }
+
+            /// <summary>Gets the lines shown.</summary>
+            public int Shown { get; }
+
+            /// <summary>Gets the lines replaced before their reading time.</summary>
+            public int CutShort { get; }
+
+            /// <summary>Gets the longest any line waited, in seconds.</summary>
+            public double LongestWaitSeconds { get; }
         }
 
         /// <summary>
@@ -621,9 +774,10 @@ namespace BatshitTechnology
         /// <summary>
         /// What the verifier saw of one tour: the scene showing, its
         /// caption, the counters at its start, the facts at its end, the
-        /// implosions it set off, and colonists' deaths.
+        /// implosions it set off, and colonists' deaths. The SUMMARY's
+        /// measures are in Source/SmokeTestTour.Summary.cs.
         /// </summary>
-        private sealed class TourWatch
+        private sealed partial class TourWatch
         {
             /// <summary>Every implosion seen so far, to count new ones.</summary>
             private readonly HashSet<Implosion> seenImplosions =
@@ -703,6 +857,7 @@ namespace BatshitTechnology
             public TourWatch(BatshitTourDirector director, int now)
             {
                 Director = director;
+                ReadyTick = now;
                 DeadlineTick = now + TourMarginTicks
                     + director.Scenes.Sum(s => Math.Max(s.minTicks, s.timeoutTicks));
                 foreach (Implosion i in Running())
@@ -722,7 +877,35 @@ namespace BatshitTechnology
                         startingHostiles.Add(p);
                     }
                 }
+
+                StorytellerPartsHeld =
+                    GameComponent_ShowcaseSession.Current?.StorytellerCompsHeld ?? -1;
+                NoteReady();
             }
+
+            /// <summary>Gets the tick the tour was READY.</summary>
+            public int ReadyTick { get; }
+
+            /// <summary>Gets or sets the tick the verifier stopped watching.</summary>
+            public int EndTick { get; set; } = -1;
+
+            /// <summary>
+            /// Gets the hostile pawns on the map at READY (a mechhive's, dark
+            /// entities): not the tour's doing.
+            /// </summary>
+            public IReadOnlyCollection<Pawn> HostilesAtReady => startingHostiles;
+
+            /// <summary>
+            /// Gets how many storyteller parts the showcase held at READY,
+            /// or -1 if it held none.
+            /// </summary>
+            public int StorytellerPartsHeld { get; }
+
+            /// <summary>
+            /// Gets or sets how many ticks before FINISHED the storyteller
+            /// was seen with parts (or the showcase not holding them).
+            /// </summary>
+            public int StorytellerAwakeTicks { get; set; }
 
             /// <summary>Gets the tour's director.</summary>
             public BatshitTourDirector Director { get; }
@@ -782,6 +965,8 @@ namespace BatshitTechnology
                         raccoonWatch = new RaccoonWatch(incident, Director);
                     }
 
+                    NoteSceneBegins(current, now);
+
                     showing = current;
                     Captions.Add(Director.Caption);
                     boltsAtStart = Building_BatshittiumBallista.BoltsFired;
@@ -809,12 +994,18 @@ namespace BatshitTechnology
                     if (seenImplosions.Add(i))
                     {
                         implosionsInScene++;
+                        NoteImplosion(i);
                     }
                 }
 
                 if (showing is GrenadeScene cast && cast.Volunteer != null)
                 {
                     volunteerSeen = cast.Volunteer;
+                }
+
+                if (current != null && current == showing)
+                {
+                    SampleForSummary(current, now);
                 }
 
                 if (showing is StampedeScene && current == showing)
@@ -859,10 +1050,26 @@ namespace BatshitTechnology
                     last = $"{last ?? "unseen"}; "
                         + (p.Destroyed && !p.Dead ? "vanished" : "dead")
                         + $"; hediffs [{hurt}]";
-                    Deaths.Add(($"{p.LabelShort} ({role}last: {last})",
-                        current?.key ?? "between scenes", volunteer));
+                    string death = $"{p.LabelShort} ({role}last: {last})";
+                    if (FinishedTick >= 0)
+                    {
+                        // The storyteller is back after FINISHED: a death
+                        // in the farewell is the colony's, not the tour's.
+                        DeathsAfterTour.Add(death);
+                        Log.Message($"[BT-SMOKE] NOTE a colonist died after the "
+                            + $"tour finished: {death}");
+                        continue;
+                    }
+
+                    Deaths.Add((death, current?.key ?? "between scenes", volunteer));
                 }
             }
+
+            /// <summary>
+            /// Gets the colonists lost after FINISHED, when the colony is the
+            /// viewer's again: noted, never failed.
+            /// </summary>
+            public List<string> DeathsAfterTour { get; } = new List<string>();
 
             /// <summary>
             /// The world facts at a scene's end: no bolt fired outside the
@@ -976,6 +1183,8 @@ namespace BatshitTechnology
             {
                 if (clock != null)
                 {
+                    clock.Freeze(now);
+                    clocks[clock.Key] = clock;
                     Log.Message("[BT-SMOKE] NOTE " + clock.Note(now));
                     clock = null;
                 }

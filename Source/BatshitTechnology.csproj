@@ -56,6 +56,11 @@
       <HintPath>$(RimWorldManaged)\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- ScreenCapture, for the tour verifier's shots (-btshots). -->
+    <Reference Include="UnityEngine.ScreenCaptureModule">
+      <HintPath>$(RimWorldManaged)\UnityEngine.ScreenCaptureModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="System"/>
     <Reference Include="System.Core"/>
     <Reference Include="System.Xml"/>
@@ -89,6 +94,7 @@
     <Compile Include="SmokeTestTour.cs" />
     <Compile Include="SmokeTestTour.Raccoon.cs" />
     <Compile Include="SmokeTestTour.Stampede.cs" />
+    <Compile Include="SmokeTestTour.Summary.cs" />
     <Compile Include="Tour\BatshitTourDirector.cs" />
     <Compile Include="Tour\RaccoonScene.cs" />
     <Compile Include="Tour\StampedeScene.cs" />

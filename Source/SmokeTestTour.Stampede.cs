@@ -134,6 +134,18 @@ namespace BatshitTechnology
             public int MostFires { get; private set; }
 
             /// <summary>
+            /// Gets the scene tick (ticks sampled since the scene began) the
+            /// first volley left on, or -1 while none has.
+            /// </summary>
+            public int FirstVolleyTick { get; private set; } = -1;
+
+            /// <summary>
+            /// Gets the herd's dead as the second volley left, which is what
+            /// the first volley killed; null while there is no second.
+            /// </summary>
+            public int? DeadAtSecondVolley { get; private set; }
+
+            /// <summary>
             /// Gets what of a singularity grenade was seen during the scene
             /// (its projectile or its field), or null.
             /// </summary>
@@ -155,12 +167,22 @@ namespace BatshitTechnology
 
                 int fired = Building_BatshittiumBallista.BoltsFired - boltsSeen;
                 boltsSeen = Building_BatshittiumBallista.BoltsFired;
+                IReadOnlyList<Pawn> herd = Scene.Herd;
                 if (fired > 0)
                 {
+                    if (Volleys.Count == 0)
+                    {
+                        FirstVolleyTick = sampled;
+                    }
+                    else if (Volleys.Count == 1)
+                    {
+                        // The first volley's bolts have all landed by now.
+                        DeadAtSecondVolley = herd.Count(p => p != null && p.Dead);
+                    }
+
                     Volleys.Add(fired); // a volley leaves in a single tick
                 }
 
-                IReadOnlyList<Pawn> herd = Scene.Herd;
                 if (DeadAtFirstEntry == null)
                 {
                     Pawn inside = herd.FirstOrDefault(p => p != null
@@ -360,6 +382,29 @@ namespace BatshitTechnology
 
             /// <summary>Gets the scene's key.</summary>
             public string Key { get; }
+
+            /// <summary>Gets the ticks the scene ran, once frozen.</summary>
+            public int Ticks { get; private set; }
+
+            /// <summary>Gets the real seconds the scene ran, once frozen.</summary>
+            public double Seconds { get; private set; }
+
+            /// <summary>Gets the average ticks a real second, once frozen.</summary>
+            public double TicksPerSecond => Ticks / System.Math.Max(1e-3, Seconds);
+
+            /// <summary>Gets the longest real gap between two ticks, in ms.</summary>
+            public double WorstMs => worstMs;
+
+            /// <summary>
+            /// Freezes the clock's totals at the scene's end, for the
+            /// SUMMARY.
+            /// </summary>
+            /// <param name="tick">The current game tick.</param>
+            public void Freeze(int tick)
+            {
+                Ticks = tick - startTick;
+                Seconds = watch.Elapsed.TotalSeconds;
+            }
 
             /// <summary>Notes one more tick.</summary>
             public void Tick()

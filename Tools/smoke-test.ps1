@@ -18,11 +18,26 @@
 #                                         # verify the tour instead: the
 #                                         # runner's Source/SmokeTestTour.cs
 #                                         # watches it at Superfast, logs
-#                                         # PASS/FAIL and DONE, and the game
-#                                         # quits; -TourSkip names scenes
-#                                         # forced to decline (default
-#                                         # anyrim, which the raccoon
-#                                         # scene follows; '' runs all ten)
+#                                         # PASS/FAIL, a one-line JSON
+#                                         # [BT-TOUR] SUMMARY and DONE, and
+#                                         # the game quits; -TourSkip names
+#                                         # scenes forced to decline
+#                                         # (default anyrim, which the
+#                                         # raccoon scene follows; '' runs
+#                                         # all ten)
+#   .\Tools\smoke-test.ps1 -Showcase -Seed tour-07
+#                                         # with -Showcase: generate from
+#                                         # that seed (-showcaseseed=), over
+#                                         # the def's own or a random one;
+#                                         # 1 to 64 of A-Z a-z 0-9 . _ -
+#   .\Tools\smoke-test.ps1 -Showcase -Verify -Shots
+#                                         # also save the game's own frame
+#                                         # at READY and each SCENE, BEAT
+#                                         # and END cue, to
+#                                         # <DataFolder>\shots\NN-*.png
+# Every showcase logs the seed it used ([BT-SHOWCASE] SEED <text>
+# (<source>)); pass that text to -Seed to repeat the run's map and stage.
+# Tools\tour-trials.ps1 runs the verifier over many seeds in parallel.
 # Runs left open for a person to watch (-Showcase without -Verify, and
 # -KeepOpen) get a maximized window and 2x UI scale; test runs, -Verify
 # included, stay small and muted.
@@ -41,9 +56,18 @@ param(
   # With -Showcase: verify the tour and quit, rather than leave it to watch.
   [switch]$Verify,
   # With -Verify: scene keys, comma-separated, forced to decline (G1).
-  [string]$TourSkip = 'anyrim'
+  [string]$TourSkip = 'anyrim',
+  # With -Showcase: the seed to generate from (-showcaseseed=<text>).
+  [string]$Seed = '',
+  # With -Verify: save the game's frame at the tour's cues (-btshots).
+  [switch]$Shots
 )
 $ErrorActionPreference = 'Stop'
+if ($Seed -and -not $Showcase) { throw '-Seed seeds a showcase; pass -Showcase too.' }
+if ($Seed -and $Seed -cnotmatch '^[A-Za-z0-9._-]{1,64}$') {
+  throw "-Seed '$Seed' is not a usable seed: 1 to 64 of A-Z, a-z, 0-9, '.', '_' and '-'."
+}
+if ($Shots -and -not $Verify) { throw '-Shots saves a verify run''s frames; pass -Verify too.' }
 if (-not $RimWorld -or -not (Test-Path (Join-Path $RimWorld 'RimWorldWin64.exe'))) {
   throw "RimWorld not found at '$RimWorld'. Set RIMWORLD_DIR or pass -RimWorld."
 }
@@ -147,7 +171,9 @@ $runnerFlags = @(if ($Showcase) { '-showcase=BT_Showcase' } else { '-quicktest',
 if ($Verify) {
   $runnerFlags += '-bttourverify'
   if ($TourSkip) { $runnerFlags += "-bttourskip=$TourSkip" }
+  if ($Shots) { $runnerFlags += '-btshots' }
 }
+if ($Seed) { $runnerFlags += "-showcaseseed=$Seed" }
 $gameArgs = @("-savedatafolder=`"$DataFolder`"") + $runnerFlags + @(
   '-logFile', "`"$log`"", '-screen-fullscreen', '0',
   '-screen-width', "$width", '-screen-height', "$height")
@@ -269,6 +295,7 @@ $lines = Get-Content $log
 ''
 '== Smoke test results'
 $lines | Select-String -SimpleMatch '[BT-SMOKE]' | % { "  $($_.Line)" }
+$lines | Select-String -SimpleMatch '[BT-TOUR] SUMMARY' | % { "  $($_.Line)" }
 if (-not $done) { "  (no DONE line: timed out after $TimeoutSeconds s, or the game exited)" }
 
 $scan = Find-LogErrors $lines
