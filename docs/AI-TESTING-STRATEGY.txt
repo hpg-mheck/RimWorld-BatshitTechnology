@@ -522,6 +522,28 @@ storyteller def's alerts and adaptive training are on again. The
 SUMMARY (version 5) adds screen (frames sampled, lettersTakenOff,
 messagesSeen, stale, loudTicks) and presentation.
 
+Slice 19000c added the tour group's checks
+(Source/SmokeTestTour.Tourists.cs; docs/SHOWCASE.md, "Tourists"). At
+READY: three to five tourists of the hidden tourist faction (no
+goodwill, not hostile, never made with a world), none a colonist, wait
+near the base's rest spot, with a volunteer and a stray. Every tick
+until FINISHED it counts each tourist first seen downed, dead or gone,
+under the scene showing. At each scene's end: the grenade's volunteer
+was a tourist; the tractor's stray was a tourist; and a scene that
+narrates its losses (the stampede, the pads, the tractor) and lost one
+played its guestsLost beat. After the farewell: the group went home,
+every tourist accounted for (standing, downed, dead or gone), nothing
+of it (tourist, corpse or clothes) left on the map, its faction never
+hostile, and every tourist it lost seen lost by the verifier. The
+colonist checks lost their volunteer exception: no colonist may be
+hurt, downed or killed in any scene. The SUMMARY (version 6) adds
+tourists. The smoke runner (Source/SmokeTest.Tourists.cs) runs the same
+group on its own map: it arrives as above; a Timid robot protests about
+a tourist in its pull with no colonist near (the guest protest); a
+tourist killed and another hurt by a colonist change no goodwill or
+relation and send no letter; and dismissal counts every tourist and
+leaves nothing behind, twice over.
+
 The stampede's facts (Source/SmokeTestTour.Stampede.cs) use Core's
 Stampede rules but measure the world each tick rather than asking the
 scene: a herd of at least 150; a 256-bolt volley (the Ballista's bolt
@@ -668,8 +690,8 @@ null without a volley):
   -Parallel the other games' load counts too. A ranking that rewarded
   high tps would favour runs where the colonists died;
 - colonists (at READY), harmed (colonist harm not excused, each with its
-  scene), excused (harm beside a starting hostile, or the volunteer's),
-  deaths and deathsAfterTour;
+  scene), excused (harm beside a starting hostile; before version 6
+  also the volunteer's), deaths and deathsAfterTour;
 - volunteer: name, grenadeOutcome (the grenade's END word) and atEnd
   (alive, downed, dead or gone);
 - stampede: herd, killedFirstVolley (the herd's dead as the second
@@ -690,10 +712,15 @@ null without a volley):
   (pawns each pull caught), pullsItemMoves (item moves each made),
   pullsFixtures (fixtures each uninstalled or tore down) and
   hostilesStretched (hostiles newly stretch-marked); the tractor also
-  protest (its protest beat played) and stray (the colonist placed in
-  the robot's pull and why, or why none);
+  protest (its protest beat played) and stray (the tourist placed in
+  the robot's pull and why, or why none; a colonist before version 6);
 - narration: said, shown, cutShort and longestWaitSeconds, replayed at
   normal speed (as the overlay-pacing NOTE);
+- tourists (version 6): arrived, lost, standing, downed, dead and gone
+  (as the group was dismissed), lostByScene, volunteer and stray (their
+  fates), dismissed, accounted (every tourist counted once) and
+  leftOnMap (tourists, corpses or clothes still on the map after
+  dismissal);
 - storyteller: held (parts held at READY), awakeTicks (ticks before
   FINISHED with parts) and restored.
 

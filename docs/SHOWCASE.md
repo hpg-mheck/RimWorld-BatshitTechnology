@@ -171,6 +171,87 @@ a scene did not stage (the herd, the raccoon, the raiders), that no anima
 tree screamed, and that the weather held (or, for the stampede, was given
 back); and after FINISHED, that the weather was given back.
 
+### Tourists
+
+Requested by Matt "Breakpoint" Heck ("add some guests or tourists for
+unfortunates") and settled on 2026-10-15 ("Fine"; request 21): built in
+slice 19000c. The tour's casualties are a small party of visitors, never
+the colonists.
+
+- **Who.** Three to five tourists (the number drawn from the stage's
+  seed) of `BT_ShowcaseTourists`, a faction made only for showcases
+  (`Defs/Misc/BT_Tourists.xml`). It is hidden: never in the faction list
+  or the world's faction settings, never generated with a world (the
+  tour makes it in its own game when the group arrives), with no
+  goodwill, so a tourist's death or injury angers no one and posts no
+  goodwill letter, and with no leader, so none can die. Tourists are
+  adults in day clothes, unarmed, with empty pockets, and wear tour
+  composure (no mental breaks, steady mood, no hunger; "Flight: not
+  observed while a demonstration is on").
+- **Arrival.** The group arrives with the stage, after `Showcase.Build`
+  and before READY, and waits inside the base's square north-west of the
+  devices (Core's `TourGroupPlan.Rest`, 9 tiles west and 9 north of the
+  centre). One lord keeps them (a non-colonist without one walks off the
+  map); its duty has no combat in it, only a wander near a spot the
+  director sets, at a jog when far from it.
+- **Roles,** fixed by arrival so the two the tour cannot do without are
+  never spent early: the first is the grenade's volunteer, the second
+  the tractor's stray, the rest (one to three) sightseers.
+- **Walked from scene to scene.** As each scene sets up, the director
+  sends every tourist where the scene wants it (a tourist more than 12
+  tiles off is cut there, as a film would: a walk across the map takes
+  longer than a scene's intro and would cross another scene's danger);
+  the rest wait in the base.
+  - *The stampede:* the sightseers stand behind the keep-away line, on
+    the base's side: 5 tiles inside it, 20 tiles east of the base's
+    square, level with the base. The volunteer and the stray wait with
+    the colonists.
+  - *The pads:* the sightseers take turns, the first to the replicator's
+    pad, the second to the reactor's, and so on; each looks at its
+    device from 8 tiles, on the side towards the base. Once it is armed
+    they stay for the look: the device sends everyone near it running
+    each second, and the scene calls them back.
+  - *The grenade:* the volunteer stands in the junk pile from the
+    scene's start (7 tiles west and 3 south of its centre). A tourist
+    volunteers, never a colonist: the group's volunteer, else any
+    tourist still standing, else nobody, and the pile is empty
+    (`thrownAlone`).
+  - *The tractor:* the stray stands where Core's layout puts it, inside
+    the robot's pull; the robot objects to a friendly guest as it does to
+    a colonist (`docs/TRACTOR-BOMB.md`, "Protest"), and the stray jogs 30
+    tiles north when it protests.
+- **When one is lost** (downed, dead or gone), the scene showing plays
+  its `guestsLost` beat, once: "Our guests are enjoying an unusually
+  close look." The stampede, both pads and the tractor have it; the
+  grenade's volunteer has its own outcomes ("Our volunteer has been
+  comforted. Completely.").
+- **Going home.** When the tour finishes, is stopped, or fails to set
+  up, every tourist goes: the living and the downed, the dead with their
+  corpses, and any clothes left lying about, and the lord with them. The
+  log says what became of each (`[BT-SHOWCASE] tourists dismissed`).
+- **Checked.** The tour verifier checks at READY that the group is three
+  to five tourists of the hidden faction, not hostile, none a colonist,
+  waiting in the base; at the grenade's end that its volunteer was a
+  tourist; at the tractor's end that its stray was; at the end of a
+  scene that narrates losses and lost a tourist, that it said so; and
+  after FINISHED that the group went home, every tourist accounted for
+  (standing, downed, dead or gone), nothing of it left on the map, and
+  its faction never hostile. The SUMMARY's `tourists` counts them. The
+  smoke test runs the same group on its own map: a robot protests about
+  a tourist with no colonist near, a tourist killed and another hurt by
+  a colonist cost no goodwill and send no letter, and dismissal leaves
+  nothing behind (`Source/SmokeTest.Tourists.cs`).
+
+What becomes of them is the world's: on tour-04 (three tourists, so one
+sightseer) the volunteer died in the pile in two runs of three and lived
+in the third; the sightseer died beside the replicator's pad in two
+runs and lived in one; the stray was protested about, fled and lived
+every time. On tour-17 (five) two sightseers died at the replicator's
+pad and one at the reactor's, and the volunteer was downed and healed.
+In the first run the sightseer, fleeing the armed replicator with
+everyone else, lived through its blast; since then the sightseers stay
+for the look.
+
 ## The Scenes
 
 Built in slice 12000 (2026-10-14). There is no timer: each scene waits on
@@ -193,7 +274,7 @@ which is why capture tools wait for log cues.
 | 9 | `tractor` | The Tractor of Tomorrow | barn to blast | no yard or foe |
 | 10 | `twins` | Two Tractors | planted, pull, blast | no yard or foe |
 
-\* Or `thrownAlone` when no colonist is left to volunteer.
+\* Or `thrownAlone` when no tourist is left to volunteer.
 
 ‡ The census beat's words are computed: AnyRim's own census line, with
 the real count of surviving residents (`TourSceneScript.Computed`).
@@ -219,17 +300,16 @@ is moved out again and logged. The reach is 87.6 tiles round a pad
 (the self-destruct's blast, fires, secondaries and barrage, with the
 planner's margin), 16 tiles round the grenade's pile, and the yard
 grown by 42 tiles for the tractors (31 before the pulls were raised by
-half). The grenade's grenadier and
-volunteer and the tractor's stray are placed by their scenes and
-spared. They are let go when the scene ends, however it ends. A
+half). The grenade's grenadier is placed by its scene and spared.
+Colonists are let go when the scene ends, however it ends. A
 hauler had walked back into the reactor's barrage in one verify run
 of slice 14000; the self-destructs had cleared colonists only at
-set-up and arming. The verifier now fails any colonist hurt, downed
-or killed in any scene, but the volunteer during the grenade; harm
-done beside one of the map's starting hostiles (a mechhive's, dark
-entities) is noted instead, since the tour did not cause it. The
-plan's tourists, a party of visitors who would be the casualties a
-scene needs, were not built in this step (`docs/AI-TODO.txt`).
+set-up and arming. The verifier fails any colonist hurt, downed or
+killed in any scene, with no exception since slice 19000c, when the
+grenade's volunteer and the tractor's stray became tourists ("Tourists"
+above); harm done beside one of the map's starting hostiles (a
+mechhive's, dark entities) is noted instead, since the tour did not
+cause it, though the stage clears those since slice 19000a.
 
 **Pacing on the overlay.** Each line is read in full and gone two
 seconds before the next is due (Core's `TourPacing`: its reading
@@ -265,10 +345,12 @@ The verifier checks at the scene's end that the barn still stands; with a
 Prudent robot it was torn down.
 The stray it protests about stands 21 tiles from where the robot plants,
 inside the pull but well outside the blast (it stood 7.6 tiles off
-before, and was downed there on two trial seeds); sent 30 tiles north,
-it leaves the pull within 18 and ends beyond the flee distance. It is a
-colonist with nothing to do, else the one in the Brain Squeezer, else
-the grenadier (drafted and holding fire); the scene logs whom it chose.
+before, and was downed there on two trial seeds); sent 30 tiles north at
+a jog, it leaves the pull within 18 and ends beyond the flee distance.
+Since slice 19000c it is the tour group's stray, a guest, which the
+robot objects to as it does to a colonist; before, it was a colonist
+with nothing to do, else the one in the Brain Squeezer, else the
+grenadier. The scene logs whom it chose.
 The twins stay Nosy and plant 14 tiles apart, each outside the other's
 blast. Both scenes' pull shots open to zoom 52 for the wider rings.
 
@@ -418,8 +500,11 @@ Information Film.* The caption bar reads like a title card throughout.
   deadpan, spoken aloud. As the reels go by his reassurances grow
   shorter, and in the final reels they are mostly about remaining calm.
   He never breaks the fourth wall, and he never admits anything is wrong.
-- **The cast** is the colony, introduced as "our volunteer family". The
-  grenade's volunteer is "a valued member of the family". AnyRim's
+- **The cast** is the colony, introduced as "our volunteer family", and
+  a tour group of visitors, "our guests" (slice 19000c). The grenade's
+  volunteer is a guest ("A valued guest has volunteered."; it was "a
+  valued member of the family" before the tourists came), and a guest
+  lost anywhere else is "enjoying an unusually close look". AnyRim's
   residents are "our neighbours". Captions name colonists by their real
   names.
 - **The premise** is the arc. The film opens on the byline's first three
@@ -588,6 +673,9 @@ right?".
 - **Colonists are held clear until it is over.** Every dangerous scene
   keeps colonists out of its reach from set-up to its end, not only as
   it arms ("The Scenes" above).
+- **The guests are not.** The tour group stands where the scenes can
+  reach them, and goes home, alive or dead, when the showcase ends
+  ("Tourists" above).
 - **The tractor yard and the pads are planned together** (Core's
   `TourStagePlanner`, slice 12000). The yard, 65 by 29 tiles, keeps 42
   tiles from the base square, the grenade clearing and every part of

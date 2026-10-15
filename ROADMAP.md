@@ -184,7 +184,14 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
   mode and the Learning helper off, `-Presentation` verifies the tour at
   its own speed with the viewing prefs, frames are taken a few ticks
   after their cues, and `Tools\contact-sheet.ps1` tiles them into
-  sheets.
+  sheets. Step 19000c, tourists, done 2026-10-15: three to five
+  visitors of a hidden faction made for showcases arrive with the stage
+  and stand where the scenes can reach them (the stampede's keep-away
+  line, beside the pads, the grenade's pile, the tractor's pull); the
+  grenade's volunteer and the tractor's stray are tourists, the robot
+  protests about a friendly guest as about a colonist, a lost guest is
+  narrated, and the group goes home, alive or dead, when the showcase
+  ends (`docs/SHOWCASE.md`, "Tourists").
 - **20000:** the merge into `trunk`.
 
 ### Decisions

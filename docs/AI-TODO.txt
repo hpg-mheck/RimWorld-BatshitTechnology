@@ -562,11 +562,9 @@ Three review fixes have no automated check, for these reasons:
     robots' comps' nodes and a planted bomb's whole node (through its
     own ExposeData, review step) through RimWorld's loader, but runs
     no cross-reference or post-load pass.
-  - The tour's stray now falls back to the Brain Squeezer's user, then
-    the grenadier, when the volunteer is lost (the robot had nobody to
-    protest about, and the verifier failed the missed "protest" beat).
-    The colonist-safety step (plan, "Colonist Safety and Tourists") may
-    want a tourist as the stray instead.
+  - (Done in 19000c.) The tour's stray is now the tour group's stray, a
+    tourist, which the robot protests about as a friendly guest; it
+    fell back to the Brain Squeezer's user, then the grenadier, before.
   - The flee check's muffalo, 13 tiles out, reached 24.0 tiles (the
     destination it chose) against the 23 needed: it passes on reaching
     any clear cell, but watch it for flakes.
@@ -575,10 +573,27 @@ Three review fixes have no automated check, for these reasons:
     selected thing's pull sizes the Proximity menu; fine as built, but a
     review may prefer the barn's buttons not to group with the robots'.
 
+- [ ] Slice 19000c follow-ups (2026-10-15):
+  - No unit test for ImplosionField.Tumble (game-side, it reads the map's
+    cells and spawns items, which the Core tests cannot load); the smoke
+    runner's deterministic check stages the stuck pile instead ("an item
+    blocked behind a pile with room tumbles into it", which fails with
+    the tumble off). Watch the next full runs for the old drag flake: if
+    it returns, its message now lists what fills the pile.
+  - A showcase stopped mid-tour or failing to set up sends the tour group
+    home through the same TourGroup.Dismiss the verifier checks at
+    FINISHED (and the smoke runner checks directly), but no in-game run
+    presses Stop on the tour itself; a verifier option to stop at a
+    named scene would cover it.
+  - The tourists' rest spot and the pads' view spots are fixed offsets;
+    on a map where they are not standable the group is cut to the
+    nearest standable cell within a few tiles, else stays where it was.
+
 - [ ] Tour review step follow-ups (2026-10-14, after slices 13000 to 16000):
-  - Tourists, the second half of the plan's "Colonist Safety and
-    Tourists" ("You can add some guests or tourists for unfortunates"),
-    were not built, for time. The colonist half is built. Sketch: a party
+  - (Done in 19000c, docs/SHOWCASE.md, "Tourists".) Tourists, the
+    second half of the plan's "Colonist Safety and Tourists" ("You can
+    add some guests or tourists for unfortunates"), were not built, for
+    time. The colonist half is built. Sketch: a party
     of three to five visitors of a faction made for the showcase (hidden,
     permanent, so no goodwill letters; asked in
     docs/AI-requests-for-humans.txt, item 21), spawned with the stage as
@@ -709,7 +724,8 @@ Three review fixes have no automated check, for these reasons:
     Since slice 18500 the stray starts at (-8,12), inside the 33.75-tile
     pull; in one of slice 19000a's three tour-17 runs it was still inside
     when the pull began and died (docs/AI-KNOWN-ISSUES.txt). Step 19000c
-    makes a tourist the stray, or starts the colonist outside the pull.
+    made a tourist the stray (done), so a stray caught in the pull is a
+    guest, narrated, and no colonist.
   - (Done in 19000b.) Clutter: vanilla's alerts and letters down the
     right edge ("Self-destruct armed" long after both have gone off,
     "Need colonist beds", "Pen needed", "Roof collapse", "Ancient mech",

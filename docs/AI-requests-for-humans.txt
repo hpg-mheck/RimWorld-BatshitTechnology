@@ -122,16 +122,15 @@ Matt "Breakpoint" Heck:
     if the openings drag, the 2-second gap (NarrationTiming.LeadSeconds)
     can go to 1 second, which saves about 10 seconds a scene; or say
     which scenes may start their action under their title line.
-21. Tourists (the plan's "Colonist Safety and Tourists", your "add some
-    guests or tourists for unfortunates"): the colonist half is built
-    (colonists are held clear of every blast, barrage, pull and herd
-    until it is over, and the verifier fails any colonist hurt but the
-    grenade's volunteer); the tourist party was not, for time. Before it
-    is built, please choose who they belong to: (a) a faction made for
-    the showcase only (hidden, so their deaths anger no one and post no
-    goodwill letters; recommended), or (b) AnyRim's own residents'
-    faction, presented as visiting relatives. And should a tourist stand
-    in for the grenade's volunteer, so no colonist is ever harmed?
+21. (Resolved 2026-10-15: "Fine, finish Phase 3000", to the plan that
+    proposed (a), a faction made for the showcase only, and a tourist as
+    the grenade's volunteer. Built in slice 19000c: three to five
+    tourists of BT_ShowcaseTourists, a hidden faction (no goodwill, no
+    letters, no leader), arrive with the stage and stand where the
+    scenes can reach them; the grenade's volunteer and the tractor's
+    stray are tourists, never colonists; and the verifier fails any
+    colonist harmed, with no volunteer exception; docs/SHOWCASE.md,
+    "Tourists".)
 22. (Resolved 2026-10-14: "Approve the patch." Built in slice 18000:
     the mod's second Harmony patch, a prefix on the Map.NextGenSeed
     getter, active only while a showcase's game generates its map and

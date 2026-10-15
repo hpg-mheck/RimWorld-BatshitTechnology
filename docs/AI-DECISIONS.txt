@@ -2646,3 +2646,99 @@ vanilla's "Resolution too small", which made the window 1920 by 1080 at
 window's size is recorded here. No game of this step is left running;
 the operator's data folder was not used, and no -KeepOpen or plain
 -Showcase run was made.
+
+2026-10-15 Claude: Tractor Bomb slice 19000c, tourists. Built overnight
+under the approved plan ("Fine, finish Phase 3000."), which settles
+request 21 as proposed. (1) The faction: BT_ShowcaseTourists
+(Defs/Misc/BT_Tourists.xml), hidden, so it has no goodwill (a tourist's
+death or injury by the colony changes nothing and posts no letter;
+Faction.HasGoodwill is false for a hidden faction, RimWorld 1.6.4871),
+never generated with a world (requiredCountAtGameStart 0, not
+configurable), and with no pawn group makers, so no leader (a visible
+copy logged "Faction leader ... is null" under sabotage). The tour makes
+it in its own game when the group arrives (FactionGenerator, as AnyRim
+does for the Ancients); it stays in that game afterwards, hidden. Its
+fixed name is "Batshit Technology Visitor Programme"; the kind is an
+unarmed adult with empty pockets; tour composure blocks mental breaks
+and hunger. (2) The group: three to five (Rand.RangeInclusive inside the
+session's seeded staging, so STAGEHASH covers them), arriving after
+Showcase.Build in BatshitTourDirector.Setup, waiting at Core's
+TourGroupPlan.Rest (9 west, 9 north of the base's centre), under one
+lord whose duty is only a wander near a per-tourist spot (jogging when
+far). Roles fixed by arrival: volunteer, stray, then sightseers, so the
+two parts the tour needs are never spent early. (3) Walked: each scene
+places its tourists after its own set-up (TourScene.PlaceTourists);
+anyone over 12 tiles off is cut to the spot, since a walk across the map
+takes longer than an intro and would cross another scene's danger.
+"Behind the stampede's keep-away line" was read as on the base's side:
+5 tiles inside the 25-tile line, 20 east of the base's square. Pads:
+sightseers take turns (first to the replicator) and look from 8 tiles
+towards the base. The first verify run's sightseer fled the armed
+replicator with everyone else and lived, so the pads' sightseers now
+stay for the look: the scene ends their flee job each tick while the
+device is armed, and their duty walks them back (composure: "Flight: not
+observed while a demonstration is on"). SelfDestruct itself is
+unchanged. (4) The volunteer is a tourist, never a colonist: the group's
+volunteer, else any tourist standing, else none (thrownAlone); it
+stands in the pile from the scene's start. Lines: "A valued guest has
+volunteered." and "Our guests have declined to volunteer. The
+demonstration proceeds regardless." (5) The stray is a tourist. The
+robot's rule was widened rather than starting a colonist stray outside
+the pull: it protests about a colonist or a friendly guest (a humanlike
+of another faction, not hostile, not the colony's prisoner; Core's
+TractorBombProtest), since a guest pulled in costs goodwill in a real
+game and the protest is only a three-second warning; message, status,
+inspect pane, robot and research texts say "a colonist or guest".
+AnyRim's residents count as guests too. (6) A lost tourist (downed, dead
+or gone) plays the scene's guestsLost beat once, with the operator's
+line "Our guests are enjoying an unusually close look.", in the
+stampede, both pads and the tractor (Core's TourScript; optional beats).
+(7) Going home: at FINISHED, at Stop and after a failed set-up, every
+tourist is removed (Vanish), the dead with their corpses, any of their
+clothes left lying about, and the lord; the log counts the fates. (8)
+Checks: the colonist checks lost the volunteer exception; the verifier
+adds READY (the group), per-scene facts (the volunteer and the stray
+were tourists; a loss was narrated) and a given-back check (accounted
+for, nothing left, never hostile, every loss seen); SUMMARY version 6
+adds tourists. The smoke runner adds five checks
+(Source/SmokeTest.Tourists.cs): arrival, the guest protest, no goodwill
+or letter from a colonist killing and hurting tourists, a clean
+dismissal, no errors. Unit and XML tests: Core's TourGroupPlan and
+TourGroupCount, TractorBombProtest, the script's optional guestsLost
+beat, the defs, the lines (816, was 801). (9) The lead's implosion flake
+(02:50): traced by reading the code to an implosion fault, not the
+check: a stack steps only strictly nearer the centre, so the silver at
+(0, 2) waited for good once its three forward cells were full and their
+stacks could step no nearer, while the pile had room on its far side;
+fill order follows the pull's random flicker. Fixed with
+ImplosionField.Tumble (a blocked stack within a tile and a half of the
+gather radius tumbles into the pile's nearest free cell; single pulls
+only; a full pile still keeps extra stacks outside) and a deterministic
+smoke check of such a pile. A first fix (a straight "climb") came with a
+check whose stacks freed the way by themselves: it passed with the fix
+disabled, so both were replaced; the drag check's failure now lists the
+pile. The exact pile of a failing run was never captured; the next full
+runs will confirm. (10) Determinism: MAPHASH 807b81f05fe15c80,
+unchanged; STAGEHASH ba2b5a7f044f45cf (was 51b5fb83f6ac44fb), the same
+in two parallel processes (.local/tmp/p3k-19000c-final-trials) and in
+the two earlier runs; tour-17 MAPHASH fbdfda1b460cb8e8, unchanged,
+STAGEHASH 3e545fe519d9f53a (was 0916eac2efd25ae0). (11) Sabotage
+(.local/scratch/phase3000-finish/sabotage-19000c.txt): build 1 (S1
+faction not hidden, S3 corpses left, S5 no stray, S6 losses not
+narrated): unit 816 and 0, smoke 223 and 8, tour-04 verify of the
+stampede, pads, grenade and tractor 21 and 5; build 2 (S2 colonists
+only, S4 a colonist volunteer, S7 no dismissal at FINISHED): unit 815
+and 1, smoke 230 and 1, verify 23 and 3; builds 3 and 4 the implosion
+fix off (the first check passed vacuously, 232 and 0; the restaged one
+failed, 231 and 1). Every new check failed at least once. (12) Gate:
+DLL from 371f6e3, 0 errors, 0 Def problems; unit and XML 816 passed, 0
+failed; full smoke 232 and 0 twice (p3k-19000c-final-smoke,
+final2-smoke; 226 before 19000c, five tourist checks and the tumble
+check added), the drag check passing in both; all-scene verifies on
+tour-04, 26 and 0 twice (two checks added), and tour-17, 26 and 0
+(p3k-19000c-final-tour17). The tractor scene's longest tick on tour-04:
+232 and 269 ms. Tourists on tour-04 lost 1, 0 and 2 of 3 in the three
+all-scene runs (the first before the sightseers stayed for the look);
+on tour-17, 3 of 5 (and the volunteer downed, then healed).
+No game of this step is left running; the operator's data folder was
+not used, and no -KeepOpen or plain -Showcase run was made.

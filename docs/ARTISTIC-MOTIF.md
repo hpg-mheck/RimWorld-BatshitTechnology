@@ -291,8 +291,13 @@ public information film's cheerful voice, warm, confident and on message.
   (sooner, cheaper, funnier) and closes, in the twins' scene, on the
   whole byline: "The Future: Sooner. Cheaper. Funnier. And ludicrously
   dangerous."
-- **The cast** is "our volunteer family"; the grenade's volunteer is "a
-  valued member of the family"; AnyRim's residents are "our neighbours".
+- **The cast** is "our volunteer family"; the tour group of visitors are
+  "our guests" (since slice 19000c), and the grenade's volunteer is one
+  of them, "a valued guest"; AnyRim's residents are "our neighbours". A
+  guest lost is never mourned, only noted: "Our guests are enjoying an
+  unusually close look." In-game, the guests' faction is a "tour group"
+  of the "Batshit Technology Visitor Programme", and their composure
+  hediff reads like the lanyard it is.
   Outcomes speak to what happened on screen: a volunteer knocked flat is
   "comforted. Completely.", and an empty pile gets its own line. A line
   that must state a number the world decides is computed, never
