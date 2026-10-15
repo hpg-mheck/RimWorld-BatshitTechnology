@@ -45,6 +45,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 | 12000 | Firing positions | `feature/firing-positions` | Planned |
 | 13000 | Batshit Blimp | `feature/blimp` | Planned |
 | 14000 | All-Weather Battery | `feature/all-weather-battery` | Backlog |
+| 15000 | Grenade Overcharge | `feature/grenade-overcharge` | Backlog |
 
 ## Done
 
@@ -233,6 +234,18 @@ In order, each on its own branch:
   runs the Ballista from the reactor alone, at 76 tiles. With it, the
   stampede could store power for a longer reach. Design open: what it
   costs, and what it does instead of shorting out.
+- **Phase 15000, Grenade Overcharge** (`feature/grenade-overcharge`;
+  backlogged by Matt "Breakpoint" Heck on 2026-10-14): "the Ergonomic
+  Singularity Grenade should have an Overcharge option. This takes five
+  seconds, cannot be aborted, and doubles the radius and power of all
+  effects." Today's grenade pulls over 10 tiles for exactly 5 s
+  (`Defs/ThingDefs/Items_SingularityGrenade.xml`); overcharged,
+  20 tiles at double strength and damage. Design open: whether the five
+  seconds are spent in the thrower's hands (so a thrower downed or
+  interrupted mid-charge drops it, still charging, at their feet) or on
+  the ground after it lands; how the option is chosen (a toggle on the
+  carrier, or a second throw command); and how the tour or AnyRim might
+  show it.
 
 ## Tuning and Upkeep
 
