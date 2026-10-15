@@ -804,7 +804,11 @@ namespace BatshitTechnology
     /// <summary>
     /// The Ballista's verb: one cast fires a whole volley. Each bolt flies
     /// to its own random cell around the target, inside a scatter radius
-    /// that grows with distance.
+    /// that grows with distance. As it leaves, the wild birds within reach
+    /// of where it can land are sent off the map (<see cref="WildFliers"/>),
+    /// as vanilla would on the first blast, before up to 256 blasts in a
+    /// few ticks could restart their flight more than ten times in one
+    /// tick, which RimWorld logs as an error.
     /// </summary>
     public class Verb_BallistaVolley : Verb_LaunchProjectile
     {
@@ -845,6 +849,14 @@ namespace BatshitTechnology
                 projectile.Launch(
                     caster, caster.DrawPos, cell, currentTarget, ProjectileHitFlags.All,
                     false, EquipmentSource);
+            }
+
+            float reach = scatter + WildFliers.NoticeReach(projectileDef);
+            int birds = WildFliers.SendOff(map, target, reach);
+            if (birds > 0 && Prefs.DevMode)
+            {
+                Log.Message($"[BT] Ballista volley at ({target.x}, {target.z}): {birds} "
+                    + $"wild bird(s) within {reach:0} tiles sent off the map first");
             }
 
             lastShotTick = Find.TickManager.TicksGame;

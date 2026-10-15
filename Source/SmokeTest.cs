@@ -632,7 +632,97 @@ namespace BatshitTechnology
                 !NewErrorSince(avoidMark), "an error was logged (see the log)");
             ballista.SetCount(4);
             ballista.SetRange(30);
+            TestVolleySendsBirdsOff(map, ballista, chained1);
         }
+
+        /// <summary>
+        /// A Ballista volley sends the wild birds near its target off the
+        /// map as it leaves, before its bolts land. Vanilla restarts a
+        /// flying animal's ExitMapFlying job on every blast near it, and
+        /// more than ten in one tick log "started 10 jobs in one tick" as
+        /// an error (thirteen times in one tour: seed tour-22, the
+        /// stampede's volley). A wild quail, one of Odyssey's birds, is
+        /// put down beside the target and four explosive bolts are fired
+        /// at it: at the tick the volley leaves the quail must already be
+        /// flying off (vanilla alone would send it only as the first bolt
+        /// lands), and it must leave unhurt. Skipped, with a note, without
+        /// Odyssey's quail.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="ballista">The powered Ballista.</param>
+        /// <param name="magazine">A magazine chained to it.</param>
+        private void TestVolleySendsBirdsOff(
+            Map map, Building_BatshittiumBallista ballista, Building_BallistaMagazine magazine)
+        {
+            const string Name = "a Ballista volley sends wild birds near its "
+                + "target off the map before its bolts land";
+            PawnKindDef kind = DefDatabase<PawnKindDef>.GetNamedSilentFail("Quail");
+            if (kind == null)
+            {
+                Log.Message("[BT-SMOKE] NOTE no quail (Odyssey is not loaded); "
+                    + $"skipped: {Name}");
+                return;
+            }
+
+            IntVec3 target = ballista.Position + new IntVec3(25, 0, 0);
+            if (!CellFinder.TryFindRandomCellNear(target, map, 4,
+                c => c.Standable(map) && !c.Roofed(map) && !c.Fogged(map)
+                    && c.GetFirstPawn(map) == null, out IntVec3 cell))
+            {
+                Check(Name, false, $"no open cell near {target}");
+                return;
+            }
+
+            var mark = ErrorMark();
+            Pawn bird = PawnGenerator.GeneratePawn(kind);
+            GenSpawn.Spawn(bird, cell, map);
+            bool wouldFly = WildFliers.WouldFlyOff(bird);
+            ThingDef reallyPainful = BT_BallistaDefOf.BT_BoltReallyPainful;
+            ballista.SetAmmo(reallyPainful);
+            AddBolts(magazine.Storage, reallyPainful, 8);
+            ballista.SetCount(4);
+            ballista.SetRange(30);
+            int volleysBefore = Building_BatshittiumBallista.VolleysFired;
+            ballista.OrderAttack(new LocalTargetInfo(target));
+            int waited = 0;
+            while (Building_BatshittiumBallista.VolleysFired == volleysBefore && waited < 900)
+            {
+                Tick(1);
+                waited++;
+            }
+
+            bool fired = Building_BatshittiumBallista.VolleysFired > volleysBefore;
+            bool inFlight = BoltsInFlight(map);
+            string jobThen = bird.Spawned ? bird.CurJobDef?.defName ?? "none" : "gone";
+            bool sentAtCast = !bird.Spawned || bird.CurJobDef == JobDefOf.ExitMapFlying;
+            ballista.OrderAttack(LocalTargetInfo.Invalid);
+            for (int t = 0; t < 600 && (bird.Spawned || BoltsInFlight(map)); t++)
+            {
+                Tick(1);
+            }
+
+            bool left = !bird.Spawned && !bird.Dead;
+            Check(Name,
+                wouldFly && fired && inFlight && sentAtCast && left && !NewErrorSince(mark),
+                $"the quail would fly off {wouldFly}; volley fired {fired} after "
+                    + $"{waited} ticks, bolts in flight then {inFlight}; the quail's job "
+                    + $"then {jobThen}; now spawned {bird.Spawned}, dead {bird.Dead}; "
+                    + $"error logged {NewErrorSince(mark)}");
+            ballista.SetAmmo(BT_BallistaDefOf.BT_BoltPainful);
+            if (bird.Spawned)
+            {
+                bird.Destroy(DestroyMode.Vanish);
+            }
+        }
+
+        /// <summary>
+        /// Whether one of the Ballista's bolts is still in the air.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <returns>True while a BT_ projectile flies.</returns>
+        private static bool BoltsInFlight(Map map) =>
+            map.listerThings.ThingsInGroup(ThingRequestGroup.Projectile)
+                .Any(t => t.def.defName.StartsWith("BT_", StringComparison.Ordinal));
 
         /// <summary>
         /// The Artificer idles until a bolt type is researched, then turns
