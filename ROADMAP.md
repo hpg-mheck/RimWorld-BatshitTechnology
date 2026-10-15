@@ -33,7 +33,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 |---|---|---|---|
 | 1000 | Foundations (v0.8) | `trunk` | Done |
 | 2000 | AnyRim | `trunk` | Done |
-| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 17000) |
+| 3000 | Tractor Bomb | `feature/tractor-bomb` | **Now** (slice 18000) |
 | 4000 | Showcase API | `trunk` | Done |
 | 5000 | Sound pipeline | `feature/audio` | Next |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
@@ -95,8 +95,8 @@ sense runs.
 | 14000 | Boomalope stampede | Done |
 | 15000 | Raccoon Incident | Done |
 | 16000 | Named yield settings | Done |
-| 17000 | Operator's viewing | Now |
-| 18000 | Tourists, viewing feedback | Planned |
+| 17000 | Operator's viewing | Done |
+| 18000 | Tourists, viewing feedback | Now |
 | 19000 | Merge into `trunk` | Planned |
 
 Slice 11000 delivered the twin-bomb junkyard test and the multi-bomb
@@ -137,7 +137,9 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
   (Intimate, Neighborly, Popular) and Blast (Birthday Cake, Firework,
   Block Party), set per robot, for every robot at once, and as the
   barn's production defaults. The tour's tractors go up a setting.
-- **17000:** the operator watches again.
+- **17000:** the operator watched again on 2026-10-14 and started a
+  showcase from the main menu's Showcases button: "Pretty sweet. Needs
+  work on the sequence, but the general capability definitely works."
 - **18000, tourists:** a small party of visitors as the tour's
   unfortunates, in place of colonists (the colonists are already held
   clear of every blast until it is over); deferred from the review step,
