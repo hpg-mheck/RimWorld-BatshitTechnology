@@ -190,7 +190,7 @@
     <label>Tractor Bomb</label>
     <description>Build the Tractor Barn, which builds Tractor Bombs by itself: little steel farm tractors that patrol for hostiles, drive at the nearest one they can see, and plant themselves. Each then drags everything within 22.5 tiles into a heap at its feet and explodes over 7.5 tiles. Sixty steel, three components and five batshittium apiece, carried in by haulers; the barn also patches up the ones that limp home.
 
-A colonist inside the tractor beam earns a three-second protest, after which the bomb emplaces anyway. Keep colonists out of the beam.</description>
+A colonist or guest inside the tractor beam earns a three-second protest, after which the bomb emplaces anyway. Keep colonists and guests out of the beam.</description>
     <baseCost>1500</baseCost>
     <techLevel>Neolithic</techLevel>
     <prerequisites>

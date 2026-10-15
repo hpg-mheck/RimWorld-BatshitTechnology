@@ -1962,7 +1962,9 @@ namespace BatshitTechnology
         /// The Tractor Bomb, on a cleared stage at the middle of the map:
         /// the robot itself, its patrol, the Tractor Barn that builds and
         /// repairs it (SmokeTest.TractorBarn.cs), a hunt from patrol to
-        /// explosion, each proximity's stop, a protest, everyone else
+        /// explosion, each proximity's stop, a protest (and one about a
+        /// tourist, with the tour group's checks: SmokeTest.Tourists.cs),
+        /// everyone else
         /// running from an armed bomb, shooting planted bombs
         /// (SmokeTest.TractorBombHits.cs), hostiles' rolled reactions
         /// (SmokeTest.TractorBombHostiles.cs), Dial-A-Yield's named Pull
@@ -1990,6 +1992,7 @@ namespace BatshitTechnology
             TestTractorBombHunt(map, center);
             TestTractorBombProximities(map, center);
             TestTractorBombProtest(map, center);
+            TestTourists(map, center);
             TestTractorBombFlee(map, center);
             TestTractorBombShot(map, center);
             TestTractorBombHostileReactions(map, center);

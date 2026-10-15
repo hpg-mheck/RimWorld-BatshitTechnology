@@ -17,12 +17,14 @@
        start lines wait until the previous scene's outcome lines have been
        read and cleared, a cue's later lines wait for the line before, and
        each scene holds its action for an intro until its start lines
-       have cleared (TourXmlTests hold the def to these rules). -->
+       have cleared (TourXmlTests hold the def to these rules). The tour
+       group (docs/SHOWCASE.md, "Tourists") is the guests: a scene that
+       loses one says the guestsLost line. -->
   <BatshitTechnology.Showcases.ShowcaseDef>
     <defName>BT_Showcase</defName>
     <label>living better with batshittium</label>
     <summary>A public information film: every device at work, then several of them exploding on cue.</summary>
-    <description>A working Batshit Technology base, built on a fresh map with every project researched, toured scene by scene: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, and the Artificer making bolts for a Batshit Ballista, which fires one 16-bolt volley, then meets a stampede of manhunting boomalopes from the east with one of 256.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners; the camera walks AnyRim, a small test town built for exactly this; a colonist throws an Ergonomic Singularity Grenade at a junk pile with a volunteer in it; AnyRim's bank guard deals with a rabid raccoon on Main Street, with the same grenade; a Tractor Bomb from the Tractor Barn finds a party of raiders; and two Tractor Bombs settle a junkyard full of them.\n\nA scene this map cannot stage is left out. Colonists are moved clear of each blast. The volunteer was not consulted.</description>
+    <description>A working Batshit Technology base, built on a fresh map with every project researched, toured scene by scene: a fuelled Batshittium Reactor powering a stocked Random Replicator, the Transmogrifier on a bill of rock chunks, a colonist in the Brain Squeezer, and the Artificer making bolts for a Batshit Ballista, which fires one 16-bolt volley, then meets a stampede of manhunting boomalopes from the east with one of 256.\n\nThen the demonstrations. A lone Random Replicator and a lone Batshittium Reactor self-destruct in the far corners; the camera walks AnyRim, a small test town built for exactly this; a colonist throws an Ergonomic Singularity Grenade at a junk pile with a visitor volunteering in it; AnyRim's bank guard deals with a rabid raccoon on Main Street, with the same grenade; a Tractor Bomb from the Tractor Barn finds a party of raiders; and two Tractor Bombs settle a junkyard full of them.\n\nA scene this map cannot stage is left out. Colonists are moved clear of each blast. A small tour group is shown round as well, at closer range. The volunteer was not consulted.</description>
     <previewTexPath>UI/Showcases/BT_Showcase</previewTexPath>
     <estimatedMinutes>8</estimatedMinutes>
     <order>0</order>
@@ -168,6 +170,8 @@
         <text>A few guests have stayed on. The Ballista will see them out.</text></li>
       <li><scene>stampede</scene><when>aftermath</when>
         <text>The east has been cleared. The rain will see to the rest.</text></li>
+      <li><scene>stampede</scene><when>guestsLost</when>
+        <text>Our guests are enjoying an unusually close look.</text></li>
       <li><scene>stampede</scene><when>completed</when>
         <text>Your home is safe. The east will grow back.</text></li>
       <!-- retire-replicator -->
@@ -175,6 +179,8 @@
         <text>Every Batshit device knows when to step aside.</text></li>
       <li><scene>retire-replicator</scene><when>blast</when>
         <text>Please step aside also.</text></li>
+      <li><scene>retire-replicator</scene><when>guestsLost</when>
+        <text>Our guests are enjoying an unusually close look.</text></li>
       <li><scene>retire-replicator</scene><when>completed</when>
         <text>The replicator has been retired with full honours.</text></li>
       <!-- retire-reactor -->
@@ -182,6 +188,8 @@
         <text>A reactor, too, deserves a dignified retirement.</text></li>
       <li><scene>retire-reactor</scene><when>blast</when>
         <text>Please remain indoors. Any indoors will do.</text></li>
+      <li><scene>retire-reactor</scene><when>guestsLost</when>
+        <text>Our guests are enjoying an unusually close look.</text></li>
       <li><scene>retire-reactor</scene><when>completed</when>
         <text>Its warmth will be with us for some time.</text></li>
       <!-- anyrim -->
@@ -199,9 +207,9 @@
       <li><scene>grenade</scene><when>start</when><delayTicks>470</delayTicks>
         <text>Comfort is the finest defence of all.</text></li>
       <li><scene>grenade</scene><when>thrown</when>
-        <text>A valued member of the family has volunteered.</text></li>
+        <text>A valued guest has volunteered.</text></li>
       <li><scene>grenade</scene><when>thrownAlone</when>
-        <text>The family has declined to volunteer. The demonstration proceeds regardless.</text></li>
+        <text>Our guests have declined to volunteer. The demonstration proceeds regardless.</text></li>
       <li><scene>grenade</scene><when>volunteerSurvived</when>
         <text>Our volunteer reports feeling very supported.</text></li>
       <li><scene>grenade</scene><when>volunteerLost</when>
@@ -247,6 +255,8 @@
         <text>Everything nearby is invited to the middle.</text></li>
       <li><scene>tractor</scene><when>blast</when>
         <text>The invitation was not optional.</text></li>
+      <li><scene>tractor</scene><when>guestsLost</when>
+        <text>Our guests are enjoying an unusually close look.</text></li>
       <li><scene>tractor</scene><when>completed</when>
         <text>The problem is resolved.</text></li>
       <!-- twins -->

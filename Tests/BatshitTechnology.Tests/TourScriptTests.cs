@@ -162,5 +162,29 @@ public sealed class TourScriptTests
         Assert.Empty(TourScript.RequiredMoments("bogus"));
         Assert.Equal("thrown", TourScript.StandsFor("thrownAlone"));
         Assert.Equal("pull", TourScript.StandsFor("pull"));
+        Assert.Equal(new[] { "blast" }, TourScript.RequiredMoments("retire-replicator"));
+        Assert.Equal(new[] { "blast" }, TourScript.RequiredMoments("retire-reactor"));
+    }
+
+    /// <summary>
+    /// A lost tourist is narrated by the scenes that stand tourists where
+    /// they can be reached (the stampede's line, both pads, the tractor's
+    /// pull), as an optional beat; the grenade's volunteer has outcomes of
+    /// its own, and no other scene has the beat.
+    /// </summary>
+    [Fact(DisplayName = "Only the stampede, pads and tractor narrate a lost guest")]
+    public void GuestsLost_should_be_an_optional_beat_of_four_scenes()
+    {
+        Assert.Equal(
+            new[] { "stampede", "retire-replicator", "retire-reactor", "tractor" },
+            TourScript.Scenes.Where(s => TourScript.NarratesGuestsLost(s.Key))
+                .Select(s => s.Key));
+        Assert.True(TourScript.NarratesGuestsLost("TRACTOR"));
+        Assert.False(TourScript.NarratesGuestsLost("grenade"));
+        Assert.False(TourScript.NarratesGuestsLost(null));
+        Assert.True(TourScript.Knows("stampede", TourScript.GuestsLost));
+        Assert.False(TourScript.Knows("twins", TourScript.GuestsLost));
+        Assert.All(TourScript.Keys, k => Assert.DoesNotContain(
+            TourScript.GuestsLost, TourScript.RequiredMoments(k)));
     }
 }

@@ -11,6 +11,7 @@
 // repairs (TractorBarn.cs). The barn builds new ones.
 
 using System.Collections.Generic;
+using BatshitTechnology.Core;
 using RimWorld;
 using Verse;
 using Verse.AI;
@@ -185,7 +186,8 @@ namespace BatshitTechnology
 
     /// <summary>
     /// Ready to emplace: stands still, protests for three seconds if a
-    /// colonist is inside its pull radius (beeping, its lamp blinking red
+    /// colonist or a friendly guest is inside its pull radius (Core's
+    /// TractorBombProtest; beeping, its lamp blinking red
     /// and yellow), then emplaces anyway. Nothing interrupts it but its
     /// death.
     /// </summary>
@@ -203,7 +205,8 @@ namespace BatshitTechnology
         /// <returns>The job report.</returns>
         public override string GetReport() =>
             pawn.TryGetComp<CompTractorBomb>()?.Protesting == true
-                ? "protesting: a colonist is inside its tractor beam."
+                ? $"protesting: {TractorBombProtest.Whom} is inside its "
+                    + "tractor beam."
                 : base.GetReport();
 
         /// <summary>Stop and protest if need be, then emplace.</summary>

@@ -433,6 +433,29 @@ namespace BatshitTechnology
         }
 
         /// <summary>
+        /// Walks the sightseers to the keep-away line, east of the base:
+        /// behind it, on the base's side (Core's
+        /// <see cref="TourGroupPlan.StampedeLine"/>), where the herd and the
+        /// volleys can reach them and the colonists cannot be. The
+        /// volunteer and the stray wait in the base, with the colonists.
+        /// </summary>
+        /// <param name="group">The tour group.</param>
+        protected override void PlaceTourists(TourGroup group)
+        {
+            Pawn[] sightseers = group.Sightseers.ToArray();
+            IntVec3 line = Stage.BaseCentre.IsValid
+                ? AnyRim.ToMap(IntVec3.Zero, TourGroupPlan.StampedeLine(
+                    AnyRim.ToCell(Stage.BaseCentre)))
+                : IntVec3.Invalid;
+            foreach (Pawn p in sightseers)
+            {
+                group.Send(p, line, TourGroupPlan.RestRadius);
+            }
+
+            group.RestAll(sightseers);
+        }
+
+        /// <summary>
         /// Lets the herd in, plays its beats, aims and orders the volleys,
         /// sees stragglers off, and puts out the fires in the aftermath.
         /// </summary>

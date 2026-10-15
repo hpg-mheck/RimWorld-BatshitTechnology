@@ -17,7 +17,10 @@
 // map seed's window closed before START and stayed closed (MAPSEED, which
 // also names the layouts and landmark a seed cannot pin; a NOTE repeats
 // them), that the rest of the game's start was drawn from the seed, and
-// that the stage was set up before the game's first tick.
+// that the stage was set up before the game's first tick, and that the
+// tour group arrived, stood in for every casualty a scene needs (no
+// colonist is ever excused harm) and went home at the end
+// (Source/SmokeTestTour.Tourists.cs).
 // At the end it logs one "[BT-TOUR] SUMMARY {json}" line, what trials
 // compare seeds by (Source/SmokeTestTour.Summary.cs, Tools/tour-trials.ps1),
 // and with -btshots it saves the game's frame at READY and at each SCENE,
@@ -160,6 +163,7 @@ namespace BatshitTechnology
                     CheckShowcaseRecordsAtReady(session, director, now);
                     CheckCleanStageAtReady(session, director);
                     CheckQuietScreenAtReady(session, director);
+                    CheckTouristsAtReady(director);
                     if (TourPresenting)
                     {
                         Log.Message("[BT-SMOKE] NOTE presentation: the tour plays at "
@@ -218,6 +222,7 @@ namespace BatshitTechnology
                 CheckStorytellerGivenBack(session, tourWatch);
                 CheckWeatherGivenBack(session, tourWatch);
                 CheckQuietScreenGivenBack(session, tourWatch);
+                CheckTouristsGivenBack(tourWatch);
                 CheckMapSeedStayedClosed();
                 Finish();
             }
@@ -470,13 +475,12 @@ namespace BatshitTechnology
                 narrationProblem);
             Log.Message("[BT-SMOKE] NOTE " + OverlayPacing(director));
 
-            // 5. No colonist dies but the volunteer, during the grenade.
+            // 5. No colonist dies, with no volunteer exception: since slice
+            // 19000c the grenade's volunteer is a tourist.
             List<string> lost = watch.Deaths
-                .Where(d => !d.Volunteer)
                 .Select(d => $"{d.Name} during {d.Scene}").ToList();
-            Check("tour: no colonist dies but the volunteer", lost.Count == 0,
-                $"{watch.Colonists} colonists; lost [{string.Join(", ", lost)}]"
-                    + $"; volunteer deaths {watch.Deaths.Count(d => d.Volunteer)}");
+            Check("tour: no colonist dies", lost.Count == 0,
+                $"{watch.Colonists} colonists; lost [{string.Join(", ", lost)}]");
         }
 
         /// <summary>
@@ -1076,6 +1080,7 @@ namespace BatshitTechnology
 
                     NoteSceneBegins(current, now);
                     NoteCleanStageSceneBegins();
+                    NoteTouristsSceneBegins();
 
                     showing = current;
                     Captions.Add(Director.Caption);
@@ -1101,6 +1106,7 @@ namespace BatshitTechnology
 
                 SampleCleanStage();
                 SampleQuietScreen();
+                SampleTourists();
 
                 foreach (Implosion i in Running())
                 {
@@ -1209,8 +1215,8 @@ namespace BatshitTechnology
                         stray == 0);
                 }
 
-                // Colonists are never the casualties: in every scene, only
-                // the grenade's volunteer (during the grenade) may be hurt.
+                // Colonists are never the casualties, in any scene: the
+                // tour group is (slice 19000c), the volunteer included.
                 List<string> harmed = sceneHarm.Values
                     .Where(h => h.Excuse == null).Select(h => h.What).ToList();
                 Fact(scene, "no colonist harmed during the scene "
@@ -1227,6 +1233,7 @@ namespace BatshitTechnology
 
                 CleanStageFacts(scene);
                 QuietScreenFacts(scene);
+                TouristFacts(scene);
 
                 switch (scene)
                 {
@@ -1367,9 +1374,11 @@ namespace BatshitTechnology
 
             /// <summary>
             /// Notes, once per colonist per scene, a colonist hurt, downed or
-            /// killed during the scene, and whether it is excused: the
-            /// grenade's volunteer during the grenade, or harm done with one
-            /// of the map's starting hostiles beside the colonist.
+            /// killed during the scene, and whether it is excused: only harm
+            /// done with one of the map's starting hostiles beside the
+            /// colonist (the stage clears those since slice 19000a). The
+            /// grenade's volunteer is a tourist, not a colonist, since slice
+            /// 19000c, so no colonist is ever excused for being one.
             /// </summary>
             /// <param name="scene">The scene showing.</param>
             private void SampleHarm(ShowcaseScene scene)
@@ -1398,20 +1407,13 @@ namespace BatshitTechnology
                         + $"{p.CurJobDef?.defName ?? "nothing"}: "
                         + string.Join(", ", fresh.Take(4));
                     string excuse = null;
-                    if (scene is GrenadeScene g && ReferenceEquals(g.Volunteer, p))
+                    Pawn hostile = startingHostiles.FirstOrDefault(h =>
+                        h.Spawned && !h.Dead && at.IsValid
+                        && h.Position.InHorDistOf(at, HostileExcuseTiles));
+                    if (hostile != null)
                     {
-                        excuse = "the volunteer";
-                    }
-                    else
-                    {
-                        Pawn hostile = startingHostiles.FirstOrDefault(h =>
-                            h.Spawned && !h.Dead && at.IsValid
-                            && h.Position.InHorDistOf(at, HostileExcuseTiles));
-                        if (hostile != null)
-                        {
-                            excuse = $"a starting hostile, {hostile.LabelShort}, "
-                                + $"at {hostile.Position}";
-                        }
+                        excuse = $"a starting hostile, {hostile.LabelShort}, "
+                            + $"at {hostile.Position}";
                     }
 
                     sceneHarm[p] = (what, excuse);

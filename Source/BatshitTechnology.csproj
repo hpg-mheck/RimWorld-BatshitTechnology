@@ -89,6 +89,7 @@
     <Compile Include="SmokeTest.TractorBombHits.cs" />
     <Compile Include="SmokeTest.TractorBombHostiles.cs" />
     <Compile Include="SmokeTest.TractorBombTwins.cs" />
+    <Compile Include="SmokeTest.Tourists.cs" />
     <Compile Include="SmokeTestShowcases.cs" />
     <Compile Include="SmokeTestShowcases.QuietScreen.cs" />
     <Compile Include="SmokeTestShowcases.Seeds.cs" />
@@ -99,10 +100,12 @@
     <Compile Include="SmokeTestTour.Raccoon.cs" />
     <Compile Include="SmokeTestTour.Stampede.cs" />
     <Compile Include="SmokeTestTour.Summary.cs" />
+    <Compile Include="SmokeTestTour.Tourists.cs" />
     <Compile Include="Tour\BatshitTourDirector.cs" />
     <Compile Include="Tour\RaccoonScene.cs" />
     <Compile Include="Tour\StageClearing.cs" />
     <Compile Include="Tour\StampedeScene.cs" />
+    <Compile Include="Tour\TourGroup.cs" />
     <Compile Include="Tour\TourScenes.cs" />
     <Compile Include="Tour\TourStage.cs" />
     <Compile Include="Tour\TractorScenes.cs" />

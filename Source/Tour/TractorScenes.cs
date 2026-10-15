@@ -167,9 +167,11 @@ namespace BatshitTechnology
     /// <summary>
     /// Scene 7, "The Tractor of Tomorrow": the barn, a robot "made
     /// earlier" at its door, and a party of four raiders across the yard.
-    /// The robot spots them, protests at a colonist standing in its pull
-    /// (who is sent away), digs in, and goes off. The robot is Nosy
-    /// (Core's <see cref="SingleTractorLayout.TourProximity"/>), so its
+    /// The robot spots them, protests at the tour group's stray standing
+    /// in its pull (a friendly guest, which it objects to as it does to a
+    /// colonist; slice 19000c), who is sent away, digs in, and goes off.
+    /// The robot is Nosy (Core's
+    /// <see cref="SingleTractorLayout.TourProximity"/>), so its
     /// 33.75-tile pull stops short of the barn.
     /// </summary>
     public class TractorBombScene : TractorYardScene
@@ -201,9 +203,15 @@ namespace BatshitTechnology
         [Unsaved]
         private Pawn robot;
 
-        /// <summary>The colonist standing in the robot's way, or null.</summary>
+        /// <summary>The tourist standing in the robot's way, or null.</summary>
         [Unsaved]
         private Pawn stray;
+
+        /// <summary>
+        /// Gets the tourist this run stood in the robot's pull, or null
+        /// (the tour verifier checks it is a tourist, never a colonist).
+        /// </summary>
+        internal Pawn StrayPlaced => stray;
 
         /// <summary>Whether the stray has been sent away.</summary>
         [Unsaved]
@@ -281,13 +289,23 @@ namespace BatshitTechnology
                 Map, Centre, SingleTractorLayout.Party, armed: false,
                 stunned: true);
             stray = PlaceStray();
-            HoldColonistsClear(InYardReach, stray);
+            HoldColonistsClear(InYardReach);
+        }
+
+        /// <summary>
+        /// Leaves the stray where <see cref="PlaceStray"/> put it; the rest
+        /// of the group waits in the base.
+        /// </summary>
+        /// <param name="group">The tour group.</param>
+        protected override void PlaceTourists(TourGroup group)
+        {
+            group.RestAll(stray);
         }
 
         /// <summary>Plays the scene's beats as the world reaches them.</summary>
         public override void Tick()
         {
-            KeepColonistsClear(InYardReach, stray);
+            KeepColonistsClear(InYardReach);
             if (Elapsed >= barnTick)
             {
                 BeatOnce("barn", Shot(30f));
@@ -345,8 +363,9 @@ namespace BatshitTechnology
         public override bool IsDone() => AllWentOff(1);
 
         /// <summary>
-        /// Stands the stray down however the scene ended, and says what
-        /// the yard held if the bomb never went off.
+        /// Notes the barn's fate, lets the colonists go, and says what the
+        /// yard held if the bomb never went off. The stray rejoins the
+        /// group with the next scene.
         /// </summary>
         /// <param name="ending">How it ended.</param>
         public override void End(SceneEnd ending)
@@ -355,12 +374,6 @@ namespace BatshitTechnology
                 : barn.Destroyed ? "destroyed"
                 : barn.Spawned ? "standing" : "gone";
             base.End(ending);
-            if (Alive(stray) && stray.drafter != null)
-            {
-                stray.drafter.FireAtWill = true;
-                stray.drafter.Drafted = false;
-            }
-
             if (ending == SceneEnd.TimedOut)
             {
                 Log.Message($"{ShowcaseLog.Prefix} tractor timed out: "
@@ -388,70 +401,45 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Puts a free colonist, drafted so it stays put and holding its
-        /// fire, where the robot will find it in its pull (Core's layout
-        /// says where). A colonist with nothing to do is chosen first;
-        /// failing that, the one in the Brain Squeezer, then the grenadier
-        /// (holding fire, it throws nothing): when the grenade's volunteer
-        /// is lost, no one else may be left, and the robot then had no one
-        /// to protest about. The choice is logged.
+        /// Stands the tour group's stray where the robot will find it in
+        /// its pull (Core's layout says where), else the first tourist
+        /// still standing; never a colonist (docs/SHOWCASE.md, "Tourists").
+        /// The robot objects to a friendly guest as it does to a colonist
+        /// (Core's TractorBombProtest). The choice is logged; with no
+        /// tourist left there is no stray and no protest.
         /// </summary>
-        /// <returns>The colonist, or null if none is free.</returns>
+        /// <returns>The tourist, or null if none could be placed.</returns>
         private Pawn PlaceStray()
         {
-            Pawn pawn = Map.mapPawns.FreeColonistsSpawned
-                .Where(p => !p.Dead && !p.Downed && !p.InMentalState
-                    && p.drafter != null)
-                .OrderBy(StrayRank)
-                .FirstOrDefault();
+            TourGroup group = Stage.Tourists;
+            Pawn pawn = group == null || group.Dismissed ? null
+                : TourGroup.Standing(group.Stray) ? group.Stray
+                : group.Members.FirstOrDefault(TourGroup.Standing);
             IntVec3 cell = TractorStaging.At(Centre, SingleTractorLayout.Stray);
-            if (pawn == null || !cell.InBounds(Map) || !cell.Standable(Map))
+            if (pawn == null || !cell.InBounds(Map) || !group.Place(pawn, cell))
             {
                 Log.Message($"{ShowcaseLog.Prefix} tractor: no stray ("
-                    + (pawn == null ? "no free colonist" : $"{cell} is no "
+                    + (pawn == null ? "no tourist standing" : $"{cell} is no "
                         + "place to stand") + "), so no protest");
                 return null;
             }
 
-            string why = StrayRank(pawn) switch
-            {
-                0 => "free",
-                1 => "from the Brain Squeezer",
-                _ => "the grenadier",
-            };
+            string why = group.RoleOf(pawn) == TouristRole.Stray
+                ? "tourist, the group's stray"
+                : $"tourist, the group's {group.RoleOf(pawn)?.ToString().ToLowerInvariant()}";
             Log.Message($"{ShowcaseLog.Prefix} tractor: stray "
-                + $"{pawn.LabelShort} ({why}) at {cell}");
-
-            pawn.jobs?.StopAll();
-            pawn.Position = cell;
-            pawn.Notify_Teleported();
-            // Drafted to hold the spot, but never firing: a drafted
-            // colonist shoots (or throws) at the raiders by itself, and
-            // the second showcase run lost its robot before it emplaced.
-            pawn.drafter.Drafted = true;
-            pawn.drafter.FireAtWill = false;
+                + $"{pawn.LabelShort} ({why}) at {pawn.Position}");
             return pawn;
         }
 
         /// <summary>
-        /// How fit a colonist is to be the stray, best first: 0 for one
-        /// with nothing to do, 1 for the one in the Brain Squeezer, 2 for
-        /// the grenadier.
-        /// </summary>
-        /// <param name="p">The colonist.</param>
-        /// <returns>The rank.</returns>
-        private static int StrayRank(Pawn p) =>
-            p.equipment?.Primary?.def.defName == Showcase.GrenadeDef ? 2
-            : p.CurJobDef == BT_BrainSqueezerDefOf.BT_UseBrainSqueezer ? 1
-            : 0;
-
-        /// <summary>
-        /// Walks the stray out of the robot's reach: north, out of the
-        /// yard, or to the base if nowhere there will do.
+        /// Sends the stray out of the robot's reach at a jog: north, out of
+        /// the yard, or to the base if nowhere there will do; it waits
+        /// there for the rest of the scene.
         /// </summary>
         private void SendStrayAway()
         {
-            if (straySent || !Alive(stray) || stray.Dead || stray.Downed)
+            if (straySent || !TourGroup.Standing(stray))
             {
                 return;
             }
@@ -465,8 +453,7 @@ namespace BatshitTechnology
                 cell = Map.Center;
             }
 
-            stray.jobs?.TryTakeOrderedJob(
-                JobMaker.MakeJob(JobDefOf.Goto, cell), JobTag.Misc);
+            Stage.Tourists?.Hurry(stray, cell);
         }
     }
 

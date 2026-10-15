@@ -112,8 +112,7 @@ namespace BatshitTechnology
             (int hives, int nests, int hostiles, int occupants) =
                 StageClearing.ClearMapHostiles(map);
             List<Thing> pads = BuildSelfDestructDemo(map, center);
-            (Pawn grenadier, Pawn volunteer, IntVec3 grenadeTarget) =
-                BuildGrenadeDemo(map, center);
+            (Pawn grenadier, IntVec3 grenadeTarget) = BuildGrenadeDemo(map, center);
             CellRect? volleyZone = VolleyZone(map, center, herd);
             (int anima, int zoneTrees) = StageClearing.ClearTrees(map, volleyZone);
             var clearance = new StageClearance(
@@ -137,7 +136,6 @@ namespace BatshitTechnology
                 BallistaTarget = volleyTarget,
                 Pads = pads,
                 Grenadier = grenadier,
-                Volunteer = volunteer,
                 GrenadeTarget = grenadeTarget,
                 AnyRimPlan = anyRimPlan,
                 AnyRimAnchor = anyRimAnchor,
@@ -446,16 +444,17 @@ namespace BatshitTechnology
         /// <summary>
         /// A junk pile 25 tiles west of the base (stools, a wooden wall and
         /// stacks of steel and wood), and a colonist armed with an Ergonomic
-        /// Singularity Grenade, ready to throw it at the pile with another
-        /// colonist volunteering inside it. The grenade scene throws it.
+        /// Singularity Grenade, ready to throw it at the pile. The grenade
+        /// scene throws it, with one of the tour group volunteering inside
+        /// the pile (never a colonist, since slice 19000c).
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="baseCenter">The demo base's centre.</param>
         /// <returns>
-        /// The grenadier and the volunteer (either may be null when the
-        /// colony is short of colonists) and the pile's centre.
+        /// The grenadier (null when the colony has no colonist) and the
+        /// pile's centre.
         /// </returns>
-        private static (Pawn Grenadier, Pawn Volunteer, IntVec3 Target)
+        private static (Pawn Grenadier, IntVec3 Target)
             BuildGrenadeDemo(Map map, IntVec3 baseCenter)
         {
             IntVec3 grenadeTarget = baseCenter + new IntVec3(
@@ -497,13 +496,20 @@ namespace BatshitTechnology
                 .Where(p => !p.Dead && !p.Downed).ToList();
             if (colonists.Count == 0)
             {
-                return (null, null, grenadeTarget);
+                return (null, grenadeTarget);
             }
 
-            Pawn grenadier = ArmGrenadier(colonists[0]);
-            Pawn volunteer = colonists.Count > 1 ? colonists[colonists.Count - 1] : null;
-            return (grenadier, volunteer, grenadeTarget);
+            return (ArmGrenadier(colonists[0]), grenadeTarget);
         }
+
+        /// <summary>
+        /// Where the grenade's volunteer stands: inside the pile, 7 tiles
+        /// west and 3 south of its centre.
+        /// </summary>
+        /// <param name="target">The pile's centre.</param>
+        /// <returns>The cell.</returns>
+        internal static IntVec3 VolunteerCell(IntVec3 target) =>
+            target + new IntVec3(-7, 0, -3);
 
         /// <summary>The Ergonomic Singularity Grenade's def name.</summary>
         internal const string GrenadeDef = "BT_ErgonomicSingularityGrenade";
@@ -536,14 +542,14 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Brings the grenadier into range of the pile and the volunteer
-        /// into it, and orders the throw.
+        /// Brings the grenadier into range of the pile and orders the
+        /// throw. The grenade scene has already stood its volunteer in the
+        /// pile (<see cref="VolunteerCell"/>).
         /// </summary>
         /// <param name="grenadier">The colonist holding the grenade.</param>
-        /// <param name="volunteer">The volunteer, or null.</param>
         /// <param name="target">The pile's centre.</param>
         /// <returns>Why the throw could not be ordered, or null if it was.</returns>
-        internal static string ThrowGrenade(Pawn grenadier, Pawn volunteer, IntVec3 target)
+        internal static string ThrowGrenade(Pawn grenadier, IntVec3 target)
         {
             if (grenadier == null || grenadier.Dead || !grenadier.Spawned
                 || grenadier.Downed)
@@ -559,10 +565,6 @@ namespace BatshitTechnology
             }
 
             Teleport(grenadier, target + new IntVec3(12, 0, 0));
-            if (volunteer != null && !volunteer.Dead && volunteer.Spawned)
-            {
-                Teleport(volunteer, target + new IntVec3(-7, 0, -3));
-            }
 
             grenadier.drafter.Drafted = true;
             Job job = JobMaker.MakeJob(JobDefOf.AttackStatic, target);

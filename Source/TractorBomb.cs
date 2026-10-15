@@ -3,7 +3,8 @@
 // tractor-beam emitter where the exhaust stack should be. It patrols its
 // allowed area, spots a hostile it can see, closes to within 15 tiles
 // (or nearer, as its Proximity says),
-// protests for three seconds if a colonist is inside its pull radius, and
+// protests for three seconds if a colonist or a friendly guest is inside
+// its pull radius (Core's TractorBombProtest), and
 // emplaces itself: the robot leaves the map and an emplaced bomb
 // (TractorBombEmplaced.cs) takes its place, counts down and implodes.
 // Destroyed before it emplaces, it gets a death of its own
@@ -436,12 +437,13 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Whether a colonist stands inside its pull radius: what it
-        /// protests about.
+        /// Whether a colonist or a friendly guest stands inside its pull
+        /// radius: what it protests about (Core's
+        /// <see cref="TractorBombProtest"/>).
         /// </summary>
         /// <returns>True if one does.</returns>
-        public bool ColonistInPull() =>
-            parent.Spawned && TractorBombUtility.ColonistWithin(
+        public bool FriendInPull() =>
+            parent.Spawned && TractorBombUtility.FriendWithin(
                 parent.Map, parent.Position, PullRadius);
 
         /// <summary>
@@ -458,12 +460,12 @@ namespace BatshitTechnology
             readyTick = Find.TickManager.TicksGame;
             protestTicksRun = 0;
             protestTicksLeft =
-                TractorBombTiming.ProtestDelay(ColonistInPull());
+                TractorBombTiming.ProtestDelay(FriendInPull());
             if (protestTicksLeft > 0 && parent.Faction == Faction.OfPlayer)
             {
                 Messages.Message(
-                    $"{parent.LabelCap} objects: a colonist is within "
-                        + "reach of its tractor beam ("
+                    $"{parent.LabelCap} objects: {TractorBombProtest.Whom} is "
+                        + "within reach of its tractor beam ("
                         + TractorBombDials.TilesText(PullRadius)
                         + "). It will emplace in three seconds regardless.",
                     parent, MessageTypeDefOf.CautionInput, false);
@@ -856,13 +858,16 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Whether a colonist (free or enslaved) stands within a radius.
+        /// Whether a colonist (free or enslaved) or a friendly guest (a
+        /// humanlike of another faction, not hostile to the colony and not
+        /// its prisoner) stands within a radius: Core's
+        /// <see cref="TractorBombProtest.ObjectsTo"/>.
         /// </summary>
         /// <param name="map">The map.</param>
         /// <param name="center">The centre.</param>
         /// <param name="radius">The radius, in tiles.</param>
         /// <returns>True if one does.</returns>
-        public static bool ColonistWithin(
+        public static bool FriendWithin(
             Map map, IntVec3 center, float radius)
         {
             if (map == null)
@@ -872,8 +877,7 @@ namespace BatshitTechnology
 
             foreach (Pawn p in map.mapPawns.AllPawnsSpawned)
             {
-                if (p.IsColonist && !p.Dead
-                    && p.Position.InHorDistOf(center, radius))
+                if (p.Position.InHorDistOf(center, radius) && Objectionable(p))
                 {
                     return true;
                 }
@@ -881,6 +885,21 @@ namespace BatshitTechnology
 
             return false;
         }
+
+        /// <summary>
+        /// Whether the robot would object to this pawn in its pull: a
+        /// colonist, or a friendly guest.
+        /// </summary>
+        /// <param name="p">The pawn.</param>
+        /// <returns>True if it would.</returns>
+        public static bool Objectionable(Pawn p) =>
+            p != null && TractorBombProtest.ObjectsTo(
+                p.IsColonist,
+                p.RaceProps?.Humanlike == true,
+                p.Faction != null && p.Faction.IsPlayer,
+                p.Faction == null || p.HostileTo(Faction.OfPlayer),
+                p.IsPrisonerOfColony,
+                p.Dead);
 
         /// <summary>
         /// The robot's quarry: the nearest hostile pawn it can see, within

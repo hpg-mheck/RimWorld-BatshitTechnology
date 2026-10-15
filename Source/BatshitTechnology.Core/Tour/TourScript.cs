@@ -127,15 +127,24 @@ public static class TourScript
     /// <summary>The raccoon scene's outcome when the raccoon dies.</summary>
     public const string RaccoonLost = "raccoonLost";
 
+    /// <summary>
+    /// The beat a scene plays, once, when one of the tour group is lost
+    /// during it (downed, killed or gone): "Our guests are enjoying an
+    /// unusually close look." Only the scenes that stand tourists where
+    /// they can be reached have it: the stampede's line, the pads and the
+    /// tractor's pull. The grenade's volunteer has outcomes of its own.
+    /// </summary>
+    public const string GuestsLost = "guestsLost";
+
     /// <summary>The scenes, in running order.</summary>
     public static IReadOnlyList<TourSceneScript> Scenes { get; } =
         new[]
         {
             Scene(Home, "reactor", "replicator", "transmogrifier", "squeezer"),
             Scene(Defence, "artificer", "volley"),
-            Scene(Stampede, "herd", "volley", Stragglers, "aftermath"),
-            Scene(RetireReplicator, "blast"),
-            Scene(RetireReactor, "blast"),
+            Scene(Stampede, "herd", "volley", Stragglers, "aftermath", GuestsLost),
+            Scene(RetireReplicator, "blast", GuestsLost),
+            Scene(RetireReactor, "blast", GuestsLost),
             Scene(AnyRim, "sign", "street", "homes"),
             new TourSceneScript(
                 Grenade, new[] { Thrown, ThrownAlone },
@@ -147,7 +156,7 @@ public static class TourScript
                 Computed = new[] { Census },
             },
             Scene(Tractor, "barn", "delivered", "spotted", "protest",
-                "emplaced", "doom", "pull", "blast"),
+                "emplaced", "doom", "pull", "blast", GuestsLost),
             Scene(Twins, "planted", "pull", "blast"),
         };
 
@@ -194,16 +203,28 @@ public static class TourScript
     /// <summary>
     /// The beats a scene may complete without, because the world decides
     /// them: the tractor's "doom" needs a raider to freeze in place, the
-    /// grenade plays one of its two throws, and the stampede's stragglers
-    /// need boomalopes to outlive the first volley.
+    /// grenade plays one of its two throws, the stampede's stragglers
+    /// need boomalopes to outlive the first volley, and
+    /// <see cref="GuestsLost"/> needs a tourist to be lost.
     /// </summary>
     private static readonly IReadOnlyDictionary<string, string[]> Optional =
         new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
-            [Tractor] = new[] { "doom" },
+            [Tractor] = new[] { "doom", GuestsLost },
             [Grenade] = new[] { ThrownAlone },
-            [Stampede] = new[] { Stragglers },
+            [Stampede] = new[] { Stragglers, GuestsLost },
+            [RetireReplicator] = new[] { GuestsLost },
+            [RetireReactor] = new[] { GuestsLost },
         };
+
+    /// <summary>
+    /// Whether a scene plays <see cref="GuestsLost"/> when a tourist is
+    /// lost during it.
+    /// </summary>
+    /// <param name="key">The scene's key.</param>
+    /// <returns>True for the stampede, the pads and the tractor.</returns>
+    public static bool NarratesGuestsLost(string? key) =>
+        For(key)?.Moments.Contains(GuestsLost, StringComparer.OrdinalIgnoreCase) == true;
 
     /// <summary>
     /// The beats a scene that completed must have played (the tour

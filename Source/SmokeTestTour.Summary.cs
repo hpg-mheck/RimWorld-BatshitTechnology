@@ -42,9 +42,10 @@ namespace BatshitTechnology
         /// stampede's killedFirstVolley null when no volley left; 4 adds
         /// cleared, unstagedHostiles, turnedHostile, screams and weather
         /// (slice 19000a's clean stage); 5 adds screen (slice 19000b's
-        /// quiet screen) and presentation.
+        /// quiet screen) and presentation; 6 adds tourists (slice
+        /// 19000c's tour group).
         /// </summary>
-        private const int SummaryVersion = 5;
+        private const int SummaryVersion = 6;
 
         /// <summary>The cues the verifier takes a shot at.</summary>
         private static readonly HashSet<string> ShotCues =
@@ -453,6 +454,7 @@ namespace BatshitTechnology
                 summary.Add("narration", Narration());
                 AddCleanStageTo(summary);
                 AddQuietScreenTo(summary);
+                AddTouristsTo(summary);
                 summary.Add("storyteller", new JsonLine
                 {
                     { "held", StorytellerPartsHeld },

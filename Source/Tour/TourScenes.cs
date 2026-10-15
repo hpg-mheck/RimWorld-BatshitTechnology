@@ -116,6 +116,37 @@ namespace BatshitTechnology
             played = new HashSet<string>();
             held = new List<Pawn>();
             SetupScene();
+            TourGroup group = Stage.Tourists;
+            if (group != null && !group.Dismissed)
+            {
+                PlaceTourists(group);
+            }
+        }
+
+        /// <summary>
+        /// Walks the tour group to where this scene wants it, after the
+        /// scene is built. By default every tourist waits at the rest spot
+        /// in the base; the stampede, the pads, the grenade and the
+        /// tractor put theirs where the scene can reach them
+        /// (docs/SHOWCASE.md, "Tourists").
+        /// </summary>
+        /// <param name="group">The tour group, not yet dismissed.</param>
+        protected virtual void PlaceTourists(TourGroup group)
+        {
+            group.RestAll();
+        }
+
+        /// <summary>
+        /// A tourist was lost while this scene showed: plays its
+        /// guestsLost beat once, without moving the camera, if the scene
+        /// narrates it (Core's <see cref="TourScript.NarratesGuestsLost"/>).
+        /// </summary>
+        internal void GuestLost()
+        {
+            if (played != null && TourScript.NarratesGuestsLost(key))
+            {
+                BeatOnce(TourScript.GuestsLost, null, select: false);
+            }
         }
 
         /// <summary>
@@ -531,7 +562,8 @@ namespace BatshitTechnology
     /// Scenes 3 and 4, "When Devices Retire": the lone device on a pad
     /// arms its self-destruct with the camera on it, and the scene holds
     /// until it has gone off and its aftermath (fires, secondaries, the
-    /// reactor's barrage) is over.
+    /// reactor's barrage) is over. The tour group's sightseers take turns
+    /// to look at it from close by, and stay for the look.
     /// </summary>
     public class SelfDestructScene : TourScene
     {
@@ -559,6 +591,10 @@ namespace BatshitTechnology
         /// <summary>Whether it has gone off.</summary>
         [Unsaved]
         private bool blasted;
+
+        /// <summary>The tour group's sightseers looking at this pad.</summary>
+        [Unsaved]
+        private List<Pawn> visiting = new List<Pawn>();
 
         /// <summary>Gets the device while it stands.</summary>
         public override Thing Subject => Alive(device) ? device : null;
@@ -596,6 +632,11 @@ namespace BatshitTechnology
         public override void Tick()
         {
             KeepColonistsClear(InReach);
+            if (armed && !blasted)
+            {
+                Stage.Tourists?.StayForTheLook(visiting);
+            }
+
             if (!armed && Elapsed >= armTick && Alive(device))
             {
                 ClearBlast();
@@ -628,6 +669,40 @@ namespace BatshitTechnology
         public override void End(SceneEnd ending)
         {
             ReleaseHeldColonists();
+        }
+
+        /// <summary>
+        /// Walks this pad's sightseers (they take turns between the two
+        /// pads, Core's <see cref="TourGroupPlan.PadFor"/>) to look at the
+        /// device from <see cref="TourGroupPlan.PadViewTiles"/> tiles, on
+        /// the side towards the base, before it arms; the rest wait in
+        /// the base. Once it is armed they stay for the look (the device
+        /// sends everyone near it running each second; the scene calls
+        /// them back, <see cref="TourGroup.StayForTheLook"/>).
+        /// </summary>
+        /// <param name="group">The tour group.</param>
+        protected override void PlaceTourists(TourGroup group)
+        {
+            visiting = new List<Pawn>();
+            IReadOnlyList<Pawn> sightseers = group.Sightseers;
+            for (int i = 0; i < sightseers.Count && padCell.IsValid; i++)
+            {
+                if (TourGroupPlan.PadFor(i) == pad)
+                {
+                    visiting.Add(sightseers[i]);
+                }
+            }
+
+            IntVec3 view = padCell.IsValid && Stage.BaseCentre.IsValid
+                ? AnyRim.ToMap(IntVec3.Zero, TourGroupPlan.PadView(
+                    AnyRim.ToCell(padCell), AnyRim.ToCell(Stage.BaseCentre)))
+                : IntVec3.Invalid;
+            foreach (Pawn p in visiting)
+            {
+                group.Send(p, view, TourGroupPlan.RestRadius);
+            }
+
+            group.RestAll(visiting.ToArray());
         }
 
         /// <summary>
@@ -777,9 +852,12 @@ namespace BatshitTechnology
     /// <summary>
     /// Scene 6, "Comfort Is a Weapon": a colonist throws the Ergonomic
     /// Singularity Grenade at the junk pile with a volunteer inside it.
-    /// The cast is checked when the throw is due (a colonist chosen at the
-    /// start may be busy or hurt by then), and another colonist takes a
-    /// part that needs it. The outcome speaks to the volunteer's fate.
+    /// The volunteer is one of the tour group, never a colonist (slice
+    /// 19000c): the group's volunteer, else any tourist still standing,
+    /// else nobody, and the pile is empty. The cast is checked when the
+    /// throw is due (a colonist chosen at the start may be busy or hurt by
+    /// then), and another colonist takes the grenadier's part if it needs
+    /// it. The outcome speaks to the volunteer's fate.
     /// </summary>
     public class GrenadeScene : TourScene
     {
@@ -813,9 +891,8 @@ namespace BatshitTechnology
         private bool volunteerLost;
 
         /// <summary>
-        /// Gets the volunteer cast at the throw, or null before it or when
-        /// no colonist was left to volunteer (the tour verifier excuses
-        /// this colonist's death during this scene only).
+        /// Gets the volunteer cast at the throw, a tourist; null before it
+        /// or when no tourist was left to volunteer.
         /// </summary>
         public Pawn Volunteer => volunteer;
 
@@ -852,16 +929,15 @@ namespace BatshitTechnology
         {
             if (ordered)
             {
-                KeepColonistsClear(NearPile, grenadier, volunteer);
+                KeepColonistsClear(NearPile, grenadier);
             }
 
             if (!ordered && Elapsed >= throwTick)
             {
                 ordered = true;
                 Cast();
-                HoldColonistsClear(NearPile, grenadier, volunteer);
-                string why = Showcase.ThrowGrenade(
-                    grenadier, volunteer, Stage.GrenadeTarget);
+                HoldColonistsClear(NearPile, grenadier);
+                string why = Showcase.ThrowGrenade(grenadier, Stage.GrenadeTarget);
                 if (why != null)
                 {
                     Log.Warning($"{ShowcaseLog.Prefix} the grenade could not "
@@ -952,9 +1028,9 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Casts the throw: the staged grenadier and volunteer if they can
-        /// still play their parts, else other able colonists (the new
-        /// grenadier is handed a grenade).
+        /// Casts the throw: the staged grenadier if it can still play its
+        /// part, else another able colonist (handed a grenade); and the
+        /// volunteer from the tour group, placed in the pile.
         /// </summary>
         private void Cast()
         {
@@ -963,10 +1039,41 @@ namespace BatshitTechnology
                 ? Stage.Grenadier
                 : able.FirstOrDefault();
             Showcase.ArmGrenadier(grenadier);
-            volunteer = able.Contains(Stage.Volunteer)
-                && Stage.Volunteer != grenadier
-                ? Stage.Volunteer
-                : able.LastOrDefault(p => p != grenadier);
+            volunteer = PlaceVolunteer(Stage.Tourists);
+        }
+
+        /// <summary>
+        /// Stands the tour group's volunteer in the pile, else the first
+        /// tourist still standing; never a colonist (docs/SHOWCASE.md,
+        /// "Tourists").
+        /// </summary>
+        /// <param name="group">The tour group, or null.</param>
+        /// <returns>The volunteer placed, or null if none could be.</returns>
+        private Pawn PlaceVolunteer(TourGroup group)
+        {
+            if (group == null || group.Dismissed || !Stage.GrenadeTarget.IsValid)
+            {
+                return null;
+            }
+
+            Pawn chosen = TourGroup.Standing(group.Volunteer)
+                ? group.Volunteer
+                : group.Members.FirstOrDefault(TourGroup.Standing);
+            return chosen != null
+                && group.Place(chosen, Showcase.VolunteerCell(Stage.GrenadeTarget))
+                ? chosen
+                : null;
+        }
+
+        /// <summary>
+        /// Stands the volunteer in the pile from the scene's start, so the
+        /// opening shot shows the guest waiting; the rest wait in the base.
+        /// </summary>
+        /// <param name="group">The tour group.</param>
+        protected override void PlaceTourists(TourGroup group)
+        {
+            Pawn placed = PlaceVolunteer(group);
+            group.RestAll(placed);
         }
 
         /// <summary>

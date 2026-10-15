@@ -2,7 +2,8 @@
 // What Showcase.Build put on the map for the tour's scenes
 // (docs/SHOWCASE.md, "The Directed Tour"): the demo base's devices, the
 // Ballista, the self-destruct pads, the grenade's cast, AnyRim and the
-// tractor yard, and what the stage cleared from the map. The director
+// tractor yard, what the stage cleared from the map, and the tour
+// group of visitors. The director
 // keeps one per run, so nothing here is static and no pawn outlives its
 // game through it.
 
@@ -56,11 +57,6 @@ namespace BatshitTechnology
         /// <summary>Gets the colonist holding the grenade, or null.</summary>
         public Pawn Grenadier { get; internal set; }
 
-        /// <summary>
-        /// Gets the colonist who volunteers inside the junk pile, or null.
-        /// </summary>
-        public Pawn Volunteer { get; internal set; }
-
         /// <summary>Gets the junk pile's centre, where the grenade lands.</summary>
         public IntVec3 GrenadeTarget { get; internal set; } = IntVec3.Invalid;
 
@@ -92,6 +88,13 @@ namespace BatshitTechnology
         /// map leaves no room east of the base.
         /// </summary>
         public CellRect? VolleyZone { get; internal set; }
+
+        /// <summary>
+        /// Gets the tour group: three to five visitors who stand where a
+        /// scene can reach them (docs/SHOWCASE.md, "Tourists"); null when
+        /// none could come.
+        /// </summary>
+        public TourGroup Tourists { get; internal set; }
 
         /// <summary>Gets a value indicating whether AnyRim stands.</summary>
         public bool HasAnyRim => AnyRimPlan != null && AnyRimAnchor.IsValid;
