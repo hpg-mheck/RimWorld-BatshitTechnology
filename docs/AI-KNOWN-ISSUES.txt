@@ -167,7 +167,10 @@
   runs passed. The change being tested (the narration overlay) shares
   no code with the implosion. It resembles the queue outside the
   1.5-tile pile that the sideways slip fixed on 2026-10-13 (silver and a
-  component stuck at (0, 2) and (0, 3)); not yet explained.
+  component stuck at (0, 2) and (0, 3)); not yet explained. Seen again
+  once in slice 18000 and in three of seven full runs of slice 18500
+  (2026-10-15; the step changed no implosion code), each time the same
+  silver stack at (0, 2), on a random quick-test map; still not traced.
 - Smoke-test flakes on some random maps, not yet explained: "AnyRim's
   devices and lamps are powered" fails when two or three of AnyRim's 23
   consumers sit on a power net with no generator ("connected; net

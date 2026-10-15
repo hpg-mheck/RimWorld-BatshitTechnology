@@ -2350,3 +2350,88 @@ command-line run of tour-04 before and after the review fixes. The tour-wide
 faults the finalists showed (camera cuts that lag the caption, an off-map
 stampede frame, the raccoon and grenade casualties, the tractor's stray,
 vanilla's alerts) are in docs/AI-TODO.txt for slice 19000.
+2026-10-15 Claude: Tractor Bomb slice 18500, pull radii up by half. The
+operator: "expand the pull radii for all tractor levels by 50%." Built
+overnight under the approved plan (.local/scratch/phase3000-finish). Intimate
+6 -> 9, Neighborly 15 -> 22.5, Popular 22.5 -> 33.75 tiles (Core's
+TractorBombYield; MinPull, MaxPull and the defaults follow). The blasts and
+the Ergonomic Singularity Grenade are unchanged. Decisions: (1) Old saves: a
+dialled pull from before the named settings still snaps against the stops as
+they were then (new TractorBombYield.Legacy*Pull: 6, 15, 22.5), so 3 to 10
+stay Intimate, 11 to 18 Neighborly, 19 and 20 Popular; the stop then pulls at
+today's radius. Against the new radii 11 to 15 would have become Intimate and
+19 and 20 Neighborly. A bomb saved by name keeps its name and gets the new
+radius. (2) Proximity: Timid's 15 tiles (the robot's XML emplaceRange) and
+Nosy's 3 are distances of their own, not fractions of the pull, and stay, as
+they did when slice 16000 raised the pulls; Prudent follows its rule, 15 or
+one inside the beam if nearer: 8 at Intimate, 15 at Neighborly and Popular, so
+Timid and Prudent now coincide at the two larger pulls (they differed by one
+tile at the old default). Kept because the operator asked for bigger pulls
+only and the robot then drives as before while its beam catches more; raising
+the emplacing range by half would restore the old pattern but catch no more.
+Request 23 asks him. (3) Menus read "Popular, 33.75 tiles": TilesText keeps up
+to two decimals (it rounded to one, "33.8"). (4) The flee search
+(TractorBombFleeUtility) may visit Core's TractorBombFlee.SearchCells, derived
+from the longest flee (41.75 tiles plus the clearance, times 4.5 times the
+circle, about 25,800), where it was a fixed 12,000 sized for the sliders' 28
+tiles. Every radial loop stays under RimWorld's 79.8-tile pattern (the longest
+is the flee check, 41.75; implosions are normalised to the limit anyway). (5)
+The tour: TractorReach is 42 (31), so the yard's candidates move from 62 to 73
+tiles south of the base, keeping 43 from the base square (a tile spare, as
+before). The single tractor's robot is Nosy, not Prudent: from the barn's door
+it sees the party at most 45 tiles off, so a robot stopping 15 short plants
+within 30 tiles of the barn and the 33.75-tile pull tears the barn down
+(TractorLayoutTests prove the geometry; the verifier saw it, below). Nosy, it
+plants about 38 tiles from the barn, with the raiders inside its blast, so the
+"doom" beat plays. The stray moves from (0,6), 7.6 tiles from the plant, where
+two trial seeds downed it, to (-8,12), 21 tiles from it, inside the pull and
+well outside the blast; sent 30 tiles north, it leaves the pull within 18
+tiles and ends beyond the flee distance. The pull shots open to zoom 52 (45
+and 34). The twins stay Nosy, 14 tiles apart. Colonists are held clear of the
+yard grown by 42 tiles. (6) A new verifier fact, "the Tractor Barn stands
+after the pull", is read in the scene's own End, since the twins' set-up
+clears the yard before the verifier samples (the first final verifies read it
+there and failed all three runs with "destroyed"; fixed). (7) The smoke's
+Tractor Bomb stage grew from radius 32 to 40, and its staging moved with the
+pull (runners at 20 and 21 tiles of a 30.5 flee, the shooter and the outside
+steel at 28, Intimate's far item at 12); the old-save check also reads the new
+radii (the bomb's dialled 11 pulls 22.5, the robot's 19 33.75). Determinism:
+MAPHASH 807b81f05fe15c80 and STAGEHASH fe29e8884f2c2be5 on tour-04, both
+unchanged and the same in two processes (the yard's content is staged at the
+tractor scene's set-up, after READY, and the pads chosen are the same);
+tour-17 MAPHASH fbdfda1b460cb8e8, STAGEHASH 650b924f23c39898. Performance (the
+area is 2.25 times larger): the tractor scene's longest tick gap was 72 to 208
+ms over twelve runs, always on its last tick, at 87 to 281 ticks a second with
+two to four games sharing the machine; no stall like the 0.8 to 4.3 s seen in
+the trials, and the scene ran 12 to 40 s (66 to 69 s before, at 48 ticks a
+second). Its single pull now takes all 4 raiders and moves about 2,470 items
+on tour-04 (412 before; 26 fixtures ripped outside the yard, none before) and
+990 on tour-17 (187); each twin pull moves 1,080 to 1,300 items on tour-04
+(about 300), one ripping 49 to 52 fixtures. Sabotage (one build, five changes;
+.local/scratch/phase3000-finish/sabotage-18500.txt): S1 the single tractor
+Prudent, S2 old dialled pulls snapped against the new radii, S3 SearchCells
+back to 12,000, S4 TilesText to one decimal, S5 Dial-A-Yield's description
+back to 6, 15 and 22.5. Unit tests 18 failed, 757 passed, every new or changed
+test among them and nothing else; smoke 212 passed, 2 failed, exactly the
+Dial-A-Yield menus (S4) and older saves (S2); a tractor-and-twins verify on
+tour-04 with S1 alone, after the fix to (6), 18 passed, 1 failed: "the Tractor
+Barn stands after the pull (destroyed)". Not sabotaged: the smoke's moved
+staging (runner, shooter, outsider, far item), whose checks are unchanged and
+only their distances follow the pull. Restored with git checkout (content
+equal to the pre-sabotage files, line endings aside), rebuilt. Final gate (DLL
+01:34, 0 warnings, 0 errors, 0 Def problems): 775 unit and XML tests (was
+765); all-scene verifies on the final DLL: tour-04 twice, 19 passed and 0
+failed each (.local/tmp/p3k-18500-final2-tour04), tour-17 19 passed, 0 failed
+(p3k-18500-final2-tour17), every scene completed on both seeds, no colonist
+harmed but the grenade's volunteer. Full smoke: 214 passed, 0 failed twice
+(p3k-18500-smoke1, -final-smoke) on DLLs whose smoke paths are the final one's
+(fix (6) touches only the tour scene and the verifier); on the final DLL 212
+and 2, 209 and 5, 212 and 2, 212 and 2 (-final2 to -final5), every failure a
+known flake of docs/AI-KNOWN-ISSUES.txt: "an implosion drags everything within
+10 tiles" and its companion with the silver stack stuck at (0, 2) (three of
+the step's seven runs; no implosion code changed; the entry now counts them),
+and "the colonist sat in the squeezer" with its four companions ("can reach
+False"). One all-scene run of tour-04 before fix (6) had a colonist cut in the
+grenade scene (the known starting-hostiles flake; the grenade is unchanged).
+No game of this step is left running; the operator's data folder was not used,
+and no -KeepOpen or plain -Showcase run was made.
