@@ -96,8 +96,9 @@ sense runs.
 | 15000 | Raccoon Incident | Done |
 | 16000 | Named yield settings | Done |
 | 17000 | Operator's viewing | Done |
-| 18000 | Tourists, viewing feedback | Now |
-| 19000 | Merge into `trunk` | Planned |
+| 18000 | Showcase seeds, best of 32 | Now |
+| 19000 | Tourists, viewing feedback | Planned |
+| 20000 | Merge into `trunk` | Planned |
 
 Slice 11000 delivered the twin-bomb junkyard test and the multi-bomb
 physics: superposed pulls with random bias jitter, absolute durations (the
@@ -140,12 +141,18 @@ The operator watched it on 2026-10-14 and asked for slices 13000 to
 - **17000:** the operator watched again on 2026-10-14 and started a
   showcase from the main menu's Showcases button: "Pretty sweet. Needs
   work on the sequence, but the general capability definitely works."
-- **18000, tourists:** a small party of visitors as the tour's
+- **18000, showcase seeds:** the operator, 2026-10-14: "Showcases
+  should be able to specify the random number seed used for map
+  generation, to get repeatable results. Implement this, and try 32
+  variations of the demo scenario. Select the best one." A showcase
+  def names its seed; the tour is tried on 32 seeds and pinned to the
+  best.
+- **19000, tourists:** a small party of visitors as the tour's
   unfortunates, in place of colonists (the colonists are already held
   clear of every blast until it is over); deferred from the review step,
   with its questions in `docs/AI-requests-for-humans.txt` item 21. The
   operator's feedback from the viewing goes in with it.
-- **19000:** the merge into `trunk`.
+- **20000:** the merge into `trunk`.
 
 ### Decisions
 
