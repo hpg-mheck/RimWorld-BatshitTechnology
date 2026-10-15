@@ -36,9 +36,11 @@ namespace BatshitTechnology
         /// The SUMMARY's layout version, raised when fields change: 2 adds
         /// mapSeeds; 3 adds landmark, mutators, unpinnedLayouts,
         /// startReseeded, startState and settleRetries, and makes the
-        /// stampede's killedFirstVolley null when no volley left.
+        /// stampede's killedFirstVolley null when no volley left; 4 adds
+        /// cleared, unstagedHostiles, turnedHostile, screams and weather
+        /// (slice 19000a's clean stage).
         /// </summary>
-        private const int SummaryVersion = 3;
+        private const int SummaryVersion = 4;
 
         /// <summary>The cues the verifier takes a shot at.</summary>
         private static readonly HashSet<string> ShotCues =
@@ -402,6 +404,7 @@ namespace BatshitTechnology
                 summary.Add("tractor", Tractor(TourScript.Tractor, cues));
                 summary.Add("twins", Tractor(TourScript.Twins, cues));
                 summary.Add("narration", Narration());
+                AddCleanStageTo(summary);
                 summary.Add("storyteller", new JsonLine
                 {
                     { "held", StorytellerPartsHeld },

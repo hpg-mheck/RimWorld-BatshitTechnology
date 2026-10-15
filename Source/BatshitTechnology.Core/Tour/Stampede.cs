@@ -194,6 +194,43 @@ public static class Stampede
     }
 
     /// <summary>
+    /// Tiles the volleys' zone reaches north and south of the herd's band
+    /// and the base's square: at least a 256-bolt volley's footprint at
+    /// the demo grid's reach of about 76 tiles (scatter 2 + 0.25 x 76 =
+    /// 21 tiles, the explosive bolt's 3.9-tile blast, and a boomalope's
+    /// <see cref="BurstTiles"/>: 29.8).
+    /// </summary>
+    public const int VolleyZoneMargin = 30;
+
+    /// <summary>
+    /// Where the defence's and the stampede's volleys can land, and the
+    /// boomalopes burst: everything east of the base's square to the
+    /// map's east edge, from the herd's band and the base's square out
+    /// north and south by <see cref="VolleyZoneMargin"/>, clipped to the
+    /// map. The stage clears its trees (docs/SHOWCASE.md, "A Clean
+    /// Stage"), so no volley kills one.
+    /// </summary>
+    /// <param name="map">The map's cells.</param>
+    /// <param name="baseCentre">The demo base's centre.</param>
+    /// <param name="band">
+    /// The band the herd enters in; an empty band leaves the zone level
+    /// with the base's square.
+    /// </param>
+    /// <returns>
+    /// The zone; empty (not valid) when the base's square reaches the
+    /// map's east edge.
+    /// </returns>
+    public static Box VolleyZone(Box map, Cell baseCentre, Box band)
+    {
+        Box square = BaseSquare(baseCentre);
+        Box path = band.IsValid ? square.Union(band) : square;
+        int minX = Math.Max(map.MinX, square.MaxX + 1);
+        int minZ = Math.Max(map.MinZ, path.MinZ - VolleyZoneMargin);
+        int maxZ = Math.Min(map.MaxZ, path.MaxZ + VolleyZoneMargin);
+        return new Box(minX, minZ, map.MaxX, maxZ);
+    }
+
+    /// <summary>
     /// The open cells a herd needs to enter: enough to hold it at
     /// <see cref="AnimalsPerCell"/> a cell.
     /// </summary>

@@ -7,6 +7,8 @@
 // so the caption counts only the scenes that run.
 
 using System;
+using System.Linq;
+using BatshitTechnology.Core;
 using BatshitTechnology.Showcases;
 using Verse;
 
@@ -38,7 +40,7 @@ namespace BatshitTechnology
             EnableDevButtons();
             try
             {
-                Stage = Showcase.Build(map) ?? TourStage.Empty;
+                Stage = Showcase.Build(map, PlannedHerd()) ?? TourStage.Empty;
             }
             catch (Exception e)
             {
@@ -49,5 +51,14 @@ namespace BatshitTechnology
 
             base.Setup(map);
         }
+
+        /// <summary>
+        /// The stampede's herd as the def asks for it, held to Core's
+        /// bounds; the target herd when the def has no stampede.
+        /// </summary>
+        /// <returns>The herd's size.</returns>
+        private int PlannedHerd() =>
+            def?.scenes?.OfType<StampedeScene>().FirstOrDefault()?.HerdPlanned
+                ?? Stampede.TargetHerd;
     }
 }

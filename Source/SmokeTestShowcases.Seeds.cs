@@ -557,7 +557,8 @@ namespace BatshitTechnology
         /// <summary>Whether a cue is one of the API's record cues.</summary>
         /// <param name="cue">The cue, without the prefix.</param>
         /// <returns>
-        /// True for SEED, MAPSEED, MAPHASH, STAGEHASH and STORYTELLER.
+        /// True for SEED, MAPSEED, MAPHASH, STAGEHASH, STORYTELLER and
+        /// WEATHER.
         /// </returns>
         private static bool IsRecord(string cue) =>
             ShowcaseLog.RecordCues.Contains(cue.Split(' ')[0]);

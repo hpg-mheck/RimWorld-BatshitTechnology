@@ -91,12 +91,15 @@
     <Compile Include="SmokeTest.TractorBombTwins.cs" />
     <Compile Include="SmokeTestShowcases.cs" />
     <Compile Include="SmokeTestShowcases.Seeds.cs" />
+    <Compile Include="SmokeTestShowcases.Weather.cs" />
     <Compile Include="SmokeTestTour.cs" />
+    <Compile Include="SmokeTestTour.CleanStage.cs" />
     <Compile Include="SmokeTestTour.Raccoon.cs" />
     <Compile Include="SmokeTestTour.Stampede.cs" />
     <Compile Include="SmokeTestTour.Summary.cs" />
     <Compile Include="Tour\BatshitTourDirector.cs" />
     <Compile Include="Tour\RaccoonScene.cs" />
+    <Compile Include="Tour\StageClearing.cs" />
     <Compile Include="Tour\StampedeScene.cs" />
     <Compile Include="Tour\TourScenes.cs" />
     <Compile Include="Tour\TourStage.cs" />

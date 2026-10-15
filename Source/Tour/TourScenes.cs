@@ -77,6 +77,14 @@ namespace BatshitTechnology
         protected virtual string WhyUnavailable => null;
 
         /// <summary>
+        /// Gets the hostile pawns this run staged (a herd, a raccoon, a
+        /// party of raiders): the only hostiles the tour verifier lets
+        /// appear after READY. None by default.
+        /// </summary>
+        internal virtual IEnumerable<Pawn> StagedHostiles =>
+            Enumerable.Empty<Pawn>();
+
+        /// <summary>
         /// Gets the scene's own clock: ticks since its intro ended,
         /// negative during the intro, and 0 before the run begins. Every
         /// beat and action is timed on it, so the intro shifts them all.

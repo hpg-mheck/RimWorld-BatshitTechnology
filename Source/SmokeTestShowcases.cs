@@ -305,6 +305,12 @@ namespace BatshitTechnology
         /// <summary>The second test run, stopped during the frame checks.</summary>
         private ShowcaseDirector stopRun;
 
+        /// <summary>
+        /// The smoke game's own weather before a held-weather test, put
+        /// back after it.
+        /// </summary>
+        private (WeatherDef Current, WeatherDef Last, int Age) smokeWeather;
+
         /// <summary>The save folder's files before the showcase checks.</summary>
         private Dictionary<string, string> savesBefore;
 
@@ -796,6 +802,7 @@ namespace BatshitTechnology
         {
             ShowcaseDef def = MakeTestShowcase(DirectorShowcase, "smoke director", pack, 900);
             def.workerClass = typeof(ShowcaseDirector);
+            def.holdWeather = WeatherDefOf.Clear;
             var opening = new ShowcaseScene
             {
                 key = "opening",
@@ -1033,9 +1040,11 @@ namespace BatshitTechnology
             camera.SetRootSize(45f);
             Find.Selector.ClearSelection();
             (List<StorytellerComp> smokeParts, StorytellerComp lent) = LendStorytellerPart();
+            WeatherDef fog = SetSmokeWeather(map, "Fog");
             showcaseSession.AdoptForTest(def, map);
             bool quietWhileRunning = showcaseSession.StorytellerQuiet
                 && Find.Storyteller.storytellerComps.Count == 0;
+            string heldAtStart = HeldWeatherNote(map);
             string stageHash = showcaseSession.StageHash;
             bool reseeded = showcaseSession.Reseeded;
             var director = showcaseSession.Worker as ShowcaseDirector;
@@ -1046,10 +1055,12 @@ namespace BatshitTechnology
                     + $"running {showcaseSession.Running}");
                 showcaseSession.ReleaseForTest();
                 PutBackStoryteller(smokeParts);
+                PutBackSmokeWeather(map);
                 return;
             }
 
             Tick(1);
+            CheckWeatherHeldAtStart(map, fog, heldAtStart);
             Check("the director frames a scene's cut shot at its zoom",
                 director.CurrentScene?.key == "opening"
                     && Mathf.Abs(camera.RootSize - CutShotZoom) < 0.01f,
@@ -1069,12 +1080,14 @@ namespace BatshitTechnology
             Tick(5);
             quietWhileRunning &= showcaseSession.StorytellerQuiet
                 && Find.Storyteller.storytellerComps.Count == 0;
+            bool lentWeatherStays = LendWeatherToScene(map, director.CurrentScene);
             showcaseSession.Skip();
             Check("Skip ends the running scene as skipped and starts the next",
                 director.CurrentScene?.key == "timeout"
                     && director.Endings.SequenceEqual(
                         new[] { SceneEnd.Completed, SceneEnd.Skipped }),
                 $"scene {director.CurrentScene?.key}; endings {Endings(director)}");
+            CheckLentWeatherReturns(map, lentWeatherStays);
 
             int timeoutStart = Find.TickManager.TicksGame;
             TickUntil(() => director.CurrentScene?.key != "timeout", 200);
@@ -1127,8 +1140,10 @@ namespace BatshitTechnology
                     + "selection and the narration overlay all worked)",
                 warnings.Count == 0, string.Join(" | ", warnings));
             CheckRecordCues(mark, lent, quietWhileRunning, stageHash, reseeded);
+            CheckWeatherGivenBack(map, fog, "finishes");
             showcaseSession.ReleaseForTest();
             PutBackStoryteller(smokeParts);
+            PutBackSmokeWeather(map);
         }
 
         /// <summary>
@@ -1404,6 +1419,7 @@ namespace BatshitTechnology
         /// <param name="map">The map.</param>
         private void BeginStopRun(Map map)
         {
+            SetSmokeWeather(map, "Fog");
             showcaseSession.AdoptForTest(ShowcaseLibrary.Named(DirectorShowcase), map);
             stopRun = showcaseSession.Worker as ShowcaseDirector;
             Tick(2);
@@ -2136,6 +2152,10 @@ namespace BatshitTechnology
                     + $"{(stopRun == null ? "none" : Endings(stopRun))}; cues "
                     + $"{string.Join(" | ", cues)}; lines {string.Join(" | ", lines)}");
             CheckStopRestoresStoryteller(mark);
+            Map stopMap = stopRun?.Map ?? Find.CurrentMap;
+            CheckWeatherGivenBack(
+                stopMap, DefDatabase<WeatherDef>.GetNamedSilentFail("Fog"), "is stopped");
+            PutBackSmokeWeather(stopMap);
 
             NarrationOverlay overlay = showcaseSession.Narration;
             Check("Stop clears the narration overlay at once: the stopped "

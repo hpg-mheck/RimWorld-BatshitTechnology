@@ -318,7 +318,8 @@ public sealed class ShowcaseXmlTests
     {
         "defName", "label", "description", "summary", "previewTexPath",
         "estimatedMinutes", "order", "requiredMods", "compatibility",
-        "mapSize", "biome", "seed", "workerClass", "scenes", "narration",
+        "mapSize", "biome", "seed", "holdWeather", "workerClass", "scenes",
+        "narration",
     };
 
     /// <summary>
@@ -346,6 +347,23 @@ public sealed class ShowcaseXmlTests
             Assert.True(ShowcaseSeed.IsWellFormed(seed.Value.Trim()),
                 $"{name}: seed '{seed.Value}': {ShowcaseSeed.WhyMalformed(seed.Value.Trim())}");
         }
+    }
+
+    /// <summary>
+    /// The def's <c>holdWeather</c> field exists in the source as a
+    /// WeatherDef, and the directed tour holds the weather clear
+    /// (slice 19000a: rain and fog greyed out its middle scenes).
+    /// </summary>
+    [Fact(DisplayName = "BT_Showcase holds the weather clear")]
+    public void BT_Showcase_should_hold_the_weather_clear()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FixturesDirectory, "Source", "Showcases", "ShowcaseDef.cs"));
+        Assert.Matches(new Regex(@"public WeatherDef holdWeather;"), source);
+        XElement def = Assert.Single(
+            ShowcaseDefs(), d => d.Element("defName")?.Value == "BT_Showcase");
+
+        Assert.Equal("Clear", def.Element("holdWeather")?.Value);
     }
 
     /// <summary>

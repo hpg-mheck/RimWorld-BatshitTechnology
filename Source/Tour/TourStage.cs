@@ -2,8 +2,9 @@
 // What Showcase.Build put on the map for the tour's scenes
 // (docs/SHOWCASE.md, "The Directed Tour"): the demo base's devices, the
 // Ballista, the self-destruct pads, the grenade's cast, AnyRim and the
-// tractor yard. The director keeps one per run, so nothing here is
-// static and no pawn outlives its game through it.
+// tractor yard, and what the stage cleared from the map. The director
+// keeps one per run, so nothing here is static and no pawn outlives its
+// game through it.
 
 using System.Collections.Generic;
 using BatshitTechnology.Core;
@@ -77,6 +78,20 @@ namespace BatshitTechnology
 
         /// <summary>Gets why there is no yard (or only one pad), if so.</summary>
         public string PlanNote { get; internal set; }
+
+        /// <summary>
+        /// Gets what the stage cleared from the map before READY: its own
+        /// hostiles, its anima trees, and the trees in the volleys' zone
+        /// (docs/SHOWCASE.md, "A Clean Stage").
+        /// </summary>
+        public StageClearance Clearance { get; internal set; }
+
+        /// <summary>
+        /// Gets where the defence's and the stampede's volleys can land
+        /// (Core's Stampede.VolleyZone), cleared of trees; null when the
+        /// map leaves no room east of the base.
+        /// </summary>
+        public CellRect? VolleyZone { get; internal set; }
 
         /// <summary>Gets a value indicating whether AnyRim stands.</summary>
         public bool HasAnyRim => AnyRimPlan != null && AnyRimAnchor.IsValid;

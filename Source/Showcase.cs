@@ -12,9 +12,13 @@
 // skipped it), then plans the tractor yard and the two self-destruct
 // pads together (Core's TourStagePlanner), puts a lone Random Replicator
 // and a lone Batshittium Reactor on the pads, and stages the grenade's
-// junk pile and cast. Nothing here runs on a timer: the scenes arm,
-// throw and tour. Log cue for capture tooling: [BT-SHOWCASE] ANYRIM (or
-// AnyRim skipped); the API logs READY once the stage is built.
+// junk pile and cast. Before the pads clear the fog, it removes the
+// map's own hostiles, which the clearing would wake; at the end it
+// removes the anima trees and the trees in the volleys' zone
+// (StageClearing; docs/SHOWCASE.md, "A Clean Stage"). Nothing here runs
+// on a timer: the scenes arm, throw and tour. Log cue for capture
+// tooling: [BT-SHOWCASE] ANYRIM (or AnyRim skipped); the API logs READY
+// once the stage is built.
 
 using System;
 using System.Collections.Generic;
@@ -33,11 +37,17 @@ namespace BatshitTechnology
         /// Builds the tour's stage around the map's centre: the demo base,
         /// AnyRim, the self-destruct pads and the grenade's junk pile. The
         /// Ballista is loaded but holds its fire, and nothing is armed or
-        /// thrown; the scenes do that.
+        /// thrown; the scenes do that. The map's own hostiles are removed
+        /// after AnyRim (whose site search steers clear of them, so the
+        /// town stands where it always did) and before the pads clear the
+        /// fog; the anima trees and the trees in the volleys' zone last.
         /// </summary>
         /// <param name="map">The showcase's fresh map.</param>
+        /// <param name="herd">
+        /// The stampede's herd, for the band its volleys' zone follows.
+        /// </param>
         /// <returns>What the tour's scenes have to work with.</returns>
-        internal static TourStage Build(Map map)
+        internal static TourStage Build(Map map, int herd = Stampede.TargetHerd)
         {
             // God mode, for the devices' DEV buttons, is lent by the
             // Showcase API in BatshitTourDirector.Setup, in dev mode only,
@@ -99,9 +109,16 @@ namespace BatshitTechnology
             // AnyRim goes up before the pads, which clear the fog and
             // must stay out of the town's reach.
             BuildAnyRim(map, center);
+            (int hives, int nests, int hostiles, int occupants) =
+                StageClearing.ClearMapHostiles(map);
             List<Thing> pads = BuildSelfDestructDemo(map, center);
             (Pawn grenadier, Pawn volunteer, IntVec3 grenadeTarget) =
                 BuildGrenadeDemo(map, center);
+            CellRect? volleyZone = VolleyZone(map, center, herd);
+            (int anima, int zoneTrees) = StageClearing.ClearTrees(map, volleyZone);
+            var clearance = new StageClearance(
+                hives, nests, hostiles, occupants, anima, zoneTrees);
+            Log.Message($"[BT-SHOWCASE] stage cleared: {clearance}");
             Find.CameraDriver.JumpToCurrentMapLoc(center);
             Find.TickManager.CurTimeSpeed = TimeSpeed.Normal;
 
@@ -129,7 +146,30 @@ namespace BatshitTechnology
                         .ClipInsideMap(map)
                     : (CellRect?)null,
                 PlanNote = StagePlan?.Note,
+                Clearance = clearance,
+                VolleyZone = volleyZone,
             };
+        }
+
+        /// <summary>
+        /// Where the defence's and the stampede's volleys can land: Core's
+        /// <see cref="Stampede.VolleyZone"/> around the band the herd
+        /// would enter in now (found as the stampede finds it, but without
+        /// its shuffle, so no random number is drawn).
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="center">The base's centre.</param>
+        /// <param name="herd">The stampede's herd.</param>
+        /// <returns>The zone, or null when it is empty.</returns>
+        private static CellRect? VolleyZone(Map map, IntVec3 center, int herd)
+        {
+            StampedeScene.BandCells(map, center, herd, out _, out Box band);
+            Box zone = Stampede.VolleyZone(
+                new Box(0, 0, map.Size.x - 1, map.Size.z - 1),
+                AnyRim.ToCell(center), band);
+            return zone.IsValid
+                ? CellRect.FromLimits(zone.MinX, zone.MinZ, zone.MaxX, zone.MaxZ)
+                : (CellRect?)null;
         }
 
         /// <summary>

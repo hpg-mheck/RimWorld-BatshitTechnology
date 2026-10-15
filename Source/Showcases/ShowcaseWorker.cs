@@ -29,14 +29,15 @@ namespace BatshitTechnology.Showcases
 
         /// <summary>
         /// The record cues: what a run was (its seed, whether its map's
-        /// seeds were pinned, its fingerprints, the storyteller's state),
-        /// rather than how it went. Tooling comparing a run's flow of cues
-        /// can leave them out.
+        /// seeds were pinned, its fingerprints, the storyteller's state,
+        /// the held weather), rather than how it went. Tooling comparing a
+        /// run's flow of cues can leave them out.
         /// </summary>
         public static readonly IReadOnlyCollection<string> RecordCues =
             new HashSet<string>
             {
                 "SEED", "MAPSEED", "MAPHASH", "STAGEHASH", "STORYTELLER",
+                "WEATHER",
             };
 
         /// <summary>

@@ -3,8 +3,9 @@
 // the colonists; the Ballista meets it with one 256-bolt volley, and at
 // most two more for stragglers (Core's Stampede holds the rules, which
 // the tour verifier also reads). Rain falls for the scene, so the
-// boomalopes' fires do not take the east; what still burns is put out
-// during the aftermath, and the weather is given back at the end. The
+// boomalopes' fires do not take the east (the scene borrows the weather
+// the showcase holds clear, and gives it back at its end); what still
+// burns is put out during the aftermath. The
 // colonists wait drafted inside the base. Whatever the ending, the
 // Ballista holds its fire again and no live boomalope outlasts the scene.
 
@@ -219,6 +220,9 @@ namespace BatshitTechnology
         /// </summary>
         internal IReadOnlyList<Pawn> Herd => herd ?? new List<Pawn>();
 
+        /// <summary>Gets the herd: the hostiles this run staged.</summary>
+        internal override IEnumerable<Pawn> StagedHostiles => Herd;
+
         /// <summary>Gets the herd size this run sends.</summary>
         internal int HerdPlanned => Stampede.HerdSize(herdSize);
 
@@ -306,8 +310,39 @@ namespace BatshitTechnology
         internal static List<IntVec3> EntryCells(
             Map map, IntVec3 baseCentre, int herd, out string note)
         {
+            List<IntVec3> cells = BandCells(map, baseCentre, herd, out note, out _);
+            if (cells.Count > 0)
+            {
+                cells.Shuffle();
+            }
+
+            return cells;
+        }
+
+        /// <summary>
+        /// The open cells of the first of Core's bands with enough
+        /// standable cells that reach the base, in the band's own order
+        /// (no random number is drawn), with the band; what
+        /// <see cref="EntryCells"/> shuffles, and where the stage clears
+        /// the volleys' zone around.
+        /// </summary>
+        /// <param name="map">The map.</param>
+        /// <param name="baseCentre">The demo base's centre.</param>
+        /// <param name="herd">The herd's size.</param>
+        /// <param name="note">
+        /// The band used, or the best band's standable cells and those of
+        /// them that reach the base, against the cells needed.
+        /// </param>
+        /// <param name="chosen">
+        /// The band used; empty (not valid) when no band has enough.
+        /// </param>
+        /// <returns>The cells; empty when no band has enough.</returns>
+        internal static List<IntVec3> BandCells(
+            Map map, IntVec3 baseCentre, int herd, out string note, out Box chosen)
+        {
             var cells = new List<IntVec3>();
             note = "no map";
+            chosen = new Box(0, 0, -1, -1);
             if (map == null || !baseCentre.IsValid)
             {
                 return cells;
@@ -334,7 +369,7 @@ namespace BatshitTechnology
                 if (cells.Count >= Stampede.CellsNeeded(herd))
                 {
                     note = $"band {band}";
-                    cells.Shuffle();
+                    chosen = band;
                     return cells;
                 }
 
@@ -353,7 +388,8 @@ namespace BatshitTechnology
         }
 
         /// <summary>
-        /// Starts the run: rain, the colonists drafted inside the base,
+        /// Starts the run: rain (the weather borrowed from the showcase),
+        /// the colonists drafted inside the base,
         /// the Ballista loaded with explosive bolts and holding its fire,
         /// and the herd's entry planned (it enters over the first ticks).
         /// </summary>
@@ -389,6 +425,7 @@ namespace BatshitTechnology
                 BallistaVolleyScene.HoldFire(ballista);
             }
 
+            GameComponent_ShowcaseSession.Current?.YieldWeather(this);
             StartRain();
             GatherColonists();
             Log.Message($"{ShowcaseLog.Prefix} stampede: herd {toSpawn} on "
@@ -451,7 +488,8 @@ namespace BatshitTechnology
         /// <summary>
         /// Cleans up however the scene ended: the Ballista holds its fire
         /// at its old count, no live boomalope stays, the fires are out,
-        /// the weather is given back and the colonists are undrafted.
+        /// the weather is given back (to the showcase, which holds it) and
+        /// the colonists are undrafted.
         /// </summary>
         /// <param name="ending">How it ended.</param>
         public override void End(SceneEnd ending)
@@ -477,6 +515,7 @@ namespace BatshitTechnology
 
             int fires = ExtinguishAll();
             StopRain();
+            GameComponent_ShowcaseSession.Current?.ReclaimWeather(this);
             foreach (Pawn p in drafted ?? new List<Pawn>())
             {
                 if (Alive(p) && p.drafter != null)

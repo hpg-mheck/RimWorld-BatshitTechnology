@@ -143,6 +143,7 @@ namespace BatshitTechnology
                     // did. Hostiles already on the map stay, and each
                     // scene's start notes them.
                     CheckShowcaseRecordsAtReady(session, director, now);
+                    CheckCleanStageAtReady(session, director);
                     Log.Message($"[BT-SMOKE] NOTE tour READY at tick {now}; "
                         + $"{director.Scenes.Count} scenes run, deadline tick "
                         + $"{tourWatch.DeadlineTick}; "
@@ -192,6 +193,7 @@ namespace BatshitTechnology
                 tourWatch.EndTick = now;
                 CheckTour(tourWatch);
                 CheckStorytellerGivenBack(session, tourWatch);
+                CheckWeatherGivenBack(session, tourWatch);
                 CheckMapSeedStayedClosed();
                 Finish();
             }
@@ -963,6 +965,7 @@ namespace BatshitTechnology
                 StorytellerPartsHeld =
                     GameComponent_ShowcaseSession.Current?.StorytellerCompsHeld ?? -1;
                 NoteReady();
+                NoteCleanStageAtReady();
             }
 
             /// <summary>Gets the tick the tour was READY.</summary>
@@ -1048,6 +1051,7 @@ namespace BatshitTechnology
                     }
 
                     NoteSceneBegins(current, now);
+                    NoteCleanStageSceneBegins();
 
                     showing = current;
                     Captions.Add(Director.Caption);
@@ -1070,6 +1074,8 @@ namespace BatshitTechnology
                 {
                     SampleHarm(current);
                 }
+
+                SampleCleanStage();
 
                 foreach (Implosion i in Running())
                 {
@@ -1155,8 +1161,10 @@ namespace BatshitTechnology
 
             /// <summary>
             /// The world facts at a scene's end: no bolt fired outside the
-            /// volley; pads gone and the aftermath idle; 16 bolts spent; one
-            /// more implosion; and the tractors' explosions (and superposed
+            /// volley; no colonist harmed; the clean stage's facts (no
+            /// unstaged hostile, no anima scream, the weather held); pads
+            /// gone and the aftermath idle; 16 bolts spent; one more
+            /// implosion; and the tractors' explosions (and superposed
             /// pulls for the twins).
             /// </summary>
             /// <param name="scene">The scene that ended.</param>
@@ -1191,6 +1199,8 @@ namespace BatshitTechnology
                     Log.Message($"[BT-SMOKE] NOTE {scene.key}: colonist harm "
                         + $"excused: {string.Join("; ", excused)}");
                 }
+
+                CleanStageFacts(scene);
 
                 switch (scene)
                 {

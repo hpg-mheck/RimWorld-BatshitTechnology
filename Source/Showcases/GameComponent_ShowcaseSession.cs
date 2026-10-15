@@ -27,7 +27,10 @@
 // unpause if the game refuses it), reseeds the global random state from
 // the launch's seed, and logs the stage's fingerprint (STAGEHASH) before
 // READY. The window is closed again, harmlessly, on every later way out
-// (set-up, Stop, FINISHED, a loaded game). Two
+// (set-up, Stop, FINISHED, a loaded game). A def's holdWeather is held
+// from the set-up until the showcase finishes or stops (a scene may
+// borrow the weather for its run), then the weather from before is given
+// back (docs/SHOWCASE-API.md, "The Held Weather"). Two
 // internal seams, AdoptForTest and ReleaseForTest, let the smoke runner
 // (Source/SmokeTestShowcases.cs) run test showcases in its own game.
 
@@ -148,6 +151,31 @@ namespace BatshitTechnology.Showcases
         /// when it does not: random incidents are off while it does.
         /// </summary>
         private List<StorytellerComp> heldStorytellerComps;
+
+        /// <summary>
+        /// The weather the showcase holds, or null when it holds none.
+        /// </summary>
+        private WeatherDef heldWeather;
+
+        /// <summary>The map whose weather is held, or null.</summary>
+        private Map heldWeatherMap;
+
+        /// <summary>
+        /// The weather as the hold began (current, last, and the current
+        /// one's age), given back when it ends.
+        /// </summary>
+        private (WeatherDef Current, WeatherDef Last, int Age) weatherBefore;
+
+        /// <summary>
+        /// Who has the weather to itself for now (a scene with weather of
+        /// its own), or null: the hold stands aside while one does.
+        /// </summary>
+        private object weatherLender;
+
+        /// <summary>
+        /// How many times the hold found another weather and replaced it.
+        /// </summary>
+        private int weatherRestarts;
 
         /// <summary>
         /// Whether the session paused the game while the map settles, and
@@ -338,6 +366,56 @@ namespace BatshitTechnology.Showcases
         public int StorytellerCompsHeld => heldStorytellerComps?.Count ?? -1;
 
         /// <summary>
+        /// Gets the weather the showcase holds, or null when it holds none
+        /// (no <c>holdWeather</c>, or the showcase has finished or
+        /// stopped).
+        /// </summary>
+        public WeatherDef HeldWeather => heldWeather;
+
+        /// <summary>
+        /// Gets a value indicating whether a scene has borrowed the
+        /// weather, so the hold stands aside.
+        /// </summary>
+        public bool WeatherLent => heldWeather != null && weatherLender != null;
+
+        /// <summary>
+        /// Gets how many times the hold found another weather and replaced
+        /// it (never while a scene has the weather).
+        /// </summary>
+        public int WeatherRestarts => weatherRestarts;
+
+        /// <summary>
+        /// Lends the weather to a scene that wants weather of its own (the
+        /// tour's stampede brings rain): the hold stands aside until the
+        /// same borrower gives it back with <see cref="ReclaimWeather"/>.
+        /// A scene that is no longer its director's current scene gives it
+        /// back by itself, so a scene that fails in its end cannot keep
+        /// it. Does nothing when no weather is held.
+        /// </summary>
+        /// <param name="borrower">The borrower, usually the scene.</param>
+        public void YieldWeather(object borrower)
+        {
+            if (heldWeather != null && borrower != null)
+            {
+                weatherLender = borrower;
+            }
+        }
+
+        /// <summary>
+        /// Takes the weather back from its borrower: from the next tick
+        /// the hold applies again, settling any transition the borrower
+        /// left. Does nothing for anyone else.
+        /// </summary>
+        /// <param name="borrower">The borrower that had it.</param>
+        public void ReclaimWeather(object borrower)
+        {
+            if (borrower != null && ReferenceEquals(weatherLender, borrower))
+            {
+                weatherLender = null;
+            }
+        }
+
+        /// <summary>
         /// Runs in Game.FinalizeInit, once the map is generated and before
         /// the rest of the game's start (the scenario, the history and
         /// every component's StartedNewGame), which draws on the global
@@ -500,6 +578,7 @@ namespace BatshitTechnology.Showcases
                 return;
             }
 
+            KeepWeather();
             bool finished;
             try
             {
@@ -521,6 +600,7 @@ namespace BatshitTechnology.Showcases
                 ShowcaseGodMode.Restore();
                 ShowcaseLog.Cue("FINISHED", def.defName);
                 RestoreStoryteller();
+                GiveBackWeather();
                 SayFarewellWhenQuiet();
             }
         }
@@ -634,6 +714,7 @@ namespace BatshitTechnology.Showcases
             ShowcaseGodMode.Restore();
             ShowcaseLog.Cue("STOPPED", def.defName);
             RestoreStoryteller();
+            GiveBackWeather();
             if (byViewer)
             {
                 Message("BT_Showcases_Stopped".Translate());
@@ -714,6 +795,8 @@ namespace BatshitTechnology.Showcases
             ShowcaseLauncher.ReleaseMapSeed("a smoke test's reset");
             ShowcaseGodMode.Restore();
             RestoreStoryteller();
+            GiveBackWeather();
+            weatherRestarts = 0;
             ReleaseSettleHold();
             settleHeld = false;
             settleReleaseRefused = 0;
@@ -748,7 +831,8 @@ namespace BatshitTechnology.Showcases
         /// tooling waits on before maximizing the window. Before the set
         /// up it lets the game run again (it was held paused while the map
         /// settled), quiets the storyteller if a test adopted the game,
-        /// and reseeds the global random state from the launch's seed, so
+        /// holds the def's weather if it names one, and reseeds the global
+        /// random state from the launch's seed, so
         /// the same seed stages the same things in the same places. A set
         /// up that throws is logged and ends the showcase; the game stays
         /// open, with its storyteller back.
@@ -761,6 +845,7 @@ namespace BatshitTechnology.Showcases
             ShowcaseLog.Cue("START", forced ? $"{def.defName} forced" : def.defName);
             ReleaseSettleHold();
             QuietStoryteller();
+            HoldWeather(map);
             reseeded = seed != null
                 && ShowcaseRandom.Reseed(seed.Derive(ShowcaseSeed.Stage));
             try
@@ -777,6 +862,7 @@ namespace BatshitTechnology.Showcases
                 Log.Error($"{ShowcaseLog.Prefix} {def.defName} could not set "
                     + $"up: {e}");
                 RestoreStoryteller();
+                GiveBackWeather();
                 return;
             }
 
@@ -912,6 +998,158 @@ namespace BatshitTechnology.Showcases
             heldStorytellerComps = null;
             ShowcaseLog.Cue("STORYTELLER",
                 $"restored ({Parts(teller?.storytellerComps?.Count ?? 0)})");
+        }
+
+        /// <summary>
+        /// Starts holding the def's weather, if it names one: notes the
+        /// weather as it is, makes the held weather both the current and
+        /// the last one at once, and logs a WEATHER cue. Does nothing
+        /// without a held weather or a map, or if a hold is already on.
+        /// Never throws: a failure is warned about and leaves the weather
+        /// to the map.
+        /// </summary>
+        /// <param name="map">The showcase's map.</param>
+        private void HoldWeather(Map map)
+        {
+            WeatherManager weather = map?.weatherManager;
+            if (def?.holdWeather == null || weather == null || heldWeather != null)
+            {
+                return;
+            }
+
+            try
+            {
+                weatherBefore = (weather.curWeather, weather.lastWeather,
+                    weather.curWeatherAge);
+                heldWeather = def.holdWeather;
+                heldWeatherMap = map;
+                weatherLender = null;
+                weatherRestarts = 0;
+                Apply(weather, WeatherHoldStep.Restart);
+                ShowcaseLog.Cue("WEATHER", $"held {heldWeather.defName} (was "
+                    + $"{weatherBefore.Current?.defName ?? "none"})");
+            }
+            catch (Exception e)
+            {
+                heldWeather = null;
+                heldWeatherMap = null;
+                Log.Warning($"{ShowcaseLog.Prefix} could not hold the weather: "
+                    + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// Keeps the held weather, once a tick while the showcase runs,
+        /// after the map's weather has ticked: unless a scene has borrowed
+        /// it, applies Core's <see cref="WeatherHold.Next"/>. A borrower
+        /// that is a scene no longer running gives the weather back first.
+        /// Never throws: a failure is warned about and ends the hold
+        /// without giving the old weather back.
+        /// </summary>
+        private void KeepWeather()
+        {
+            if (heldWeather == null)
+            {
+                return;
+            }
+
+            if (weatherLender is ShowcaseScene scene
+                && !ReferenceEquals((worker as ShowcaseDirector)?.CurrentScene, scene))
+            {
+                weatherLender = null;
+            }
+
+            WeatherManager weather = heldWeatherMap?.weatherManager;
+            if (weatherLender != null || weather == null)
+            {
+                return;
+            }
+
+            try
+            {
+                WeatherHoldStep step = WeatherHold.Next(
+                    heldWeather.defName, weather.curWeather?.defName,
+                    weather.lastWeather?.defName, weather.curWeatherAge);
+                if (step == WeatherHoldStep.Restart)
+                {
+                    weatherRestarts++;
+                }
+
+                Apply(weather, step);
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not keep the weather, "
+                    + $"and stopped holding it: {e.Message}");
+                heldWeather = null;
+                heldWeatherMap = null;
+                weatherLender = null;
+            }
+        }
+
+        /// <summary>
+        /// Applies one step of the hold to a map's weather: the held
+        /// weather as both the current and the last (with the sky's cached
+        /// blend reset), or as the last only, or the age set back to 0.
+        /// </summary>
+        /// <param name="weather">The map's weather.</param>
+        /// <param name="step">The step.</param>
+        private void Apply(WeatherManager weather, WeatherHoldStep step)
+        {
+            switch (step)
+            {
+                case WeatherHoldStep.Restart:
+                    weather.curWeather = heldWeather;
+                    weather.lastWeather = heldWeather;
+                    weather.curWeatherAge = 0;
+                    weather.ResetSkyTargetLerpCache();
+                    break;
+                case WeatherHoldStep.SettleLast:
+                    weather.lastWeather = heldWeather;
+                    weather.curWeatherAge = 0;
+                    weather.ResetSkyTargetLerpCache();
+                    break;
+                case WeatherHoldStep.ResetAge:
+                    weather.curWeatherAge = 0;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Ends the hold, if one is on, and gives back the weather from
+        /// before it (current, last and age), with a WEATHER cue; the
+        /// weather decider carries on from there. Never throws.
+        /// </summary>
+        private void GiveBackWeather()
+        {
+            if (heldWeather == null)
+            {
+                return;
+            }
+
+            WeatherManager weather = heldWeatherMap?.weatherManager;
+            heldWeather = null;
+            heldWeatherMap = null;
+            weatherLender = null;
+            try
+            {
+                if (weather != null && weatherBefore.Current != null
+                    && weatherBefore.Last != null)
+                {
+                    weather.curWeather = weatherBefore.Current;
+                    weather.lastWeather = weatherBefore.Last;
+                    weather.curWeatherAge = weatherBefore.Age;
+                    weather.ResetSkyTargetLerpCache();
+                }
+
+                ShowcaseLog.Cue("WEATHER", "given back ("
+                    + $"{weatherBefore.Current?.defName ?? "none"})");
+            }
+            catch (Exception e)
+            {
+                Log.Warning($"{ShowcaseLog.Prefix} could not give the weather "
+                    + $"back: {e.Message}");
+            }
         }
 
         /// <summary>

@@ -213,6 +213,12 @@ namespace BatshitTechnology
         [Unsaved]
         private List<Pawn> party;
 
+        /// <summary>
+        /// Gets the party of raiders: the hostiles this run staged.
+        /// </summary>
+        internal override IEnumerable<Pawn> StagedHostiles =>
+            party ?? Enumerable.Empty<Pawn>();
+
         /// <summary>The bomb, once emplaced.</summary>
         [Unsaved]
         private List<Building_TractorBomb> bombs;
@@ -487,6 +493,12 @@ namespace BatshitTechnology
         /// <summary>The raiders.</summary>
         [Unsaved]
         private List<Pawn> army;
+
+        /// <summary>
+        /// Gets the junkyard's raiders: the hostiles this run staged.
+        /// </summary>
+        internal override IEnumerable<Pawn> StagedHostiles =>
+            army ?? Enumerable.Empty<Pawn>();
 
         /// <summary>The robots.</summary>
         [Unsaved]

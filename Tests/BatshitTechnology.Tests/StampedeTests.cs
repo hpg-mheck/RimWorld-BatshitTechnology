@@ -18,6 +18,9 @@ public sealed class StampedeTests
     /// <summary>The demo base's centre on that map.</summary>
     private static readonly Cell Base = new(125, 125);
 
+    /// <summary>An empty band (not valid): no band was found.</summary>
+    private static readonly Box NoBand = new(0, 0, -1, -1);
+
     /// <summary>
     /// The first band is a dense front on the east edge, level with the
     /// base, kept off the edge, and holds the target herd at two a cell.
@@ -91,6 +94,63 @@ public sealed class StampedeTests
         // Near the north edge a slid band falls off the map and is left out.
         var high = new Cell(125, 240);
         Assert.All(Stampede.Bands(Map250, high), b => Assert.True(b.IsValid));
+    }
+
+    /// <summary>
+    /// The volleys' zone runs from the base's square to the east edge and
+    /// covers the herd's band, the base's row, the defence's target 60
+    /// tiles east, and a 256-bolt volley's footprint at the grid's reach
+    /// north and south of them; it stays on the map.
+    /// </summary>
+    [Fact(DisplayName = "The volley zone covers the band, the base's row and the footprint")]
+    public void VolleyZone_should_cover_the_band_the_row_and_the_footprint()
+    {
+        Box band = Stampede.Band(Map250, Base, 0);
+        Box square = Stampede.BaseSquare(Base);
+
+        Box zone = Stampede.VolleyZone(Map250, Base, band);
+
+        Assert.True(zone.IsValid);
+        Assert.Equal(square.MaxX + 1, zone.MinX);
+        Assert.Equal(249, zone.MaxX);
+        Assert.True(zone.Contains(band));
+        Assert.True(zone.Contains(new Cell(Base.X + 60, Base.Z)));
+        Assert.Equal(
+            Math.Min(band.MinZ, square.MinZ) - Stampede.VolleyZoneMargin,
+            zone.MinZ);
+        Assert.Equal(
+            Math.Max(band.MaxZ, square.MaxZ) + Stampede.VolleyZoneMargin,
+            zone.MaxZ);
+        double reach = 76;
+        double footprint = Stampede.Footprint(2 + (0.25 * reach), 3.9);
+        Assert.True(Stampede.VolleyZoneMargin >= footprint,
+            $"margin {Stampede.VolleyZoneMargin} under footprint {footprint}");
+    }
+
+    /// <summary>
+    /// A band slid north stretches the zone north; with no band the zone
+    /// is level with the base's square; and the zone is clipped to the
+    /// map, or empty when the base's square reaches the east edge.
+    /// </summary>
+    [Fact(DisplayName = "The volley zone follows a slid band and stays on the map")]
+    public void VolleyZone_should_follow_the_band_and_stay_on_the_map()
+    {
+        Box north = Stampede.Band(Map250, Base, 2, 70);
+        Box slid = Stampede.VolleyZone(Map250, Base, north);
+        Assert.Equal(249, slid.MaxZ);
+        Assert.True(slid.Contains(north));
+
+        Box level = Stampede.VolleyZone(Map250, Base, NoBand);
+        Box square = Stampede.BaseSquare(Base);
+        Assert.Equal(square.MinZ - Stampede.VolleyZoneMargin, level.MinZ);
+        Assert.Equal(square.MaxZ + Stampede.VolleyZoneMargin, level.MaxZ);
+
+        var low = new Cell(125, 10);
+        Box clipped = Stampede.VolleyZone(Map250, low, Stampede.Band(Map250, low, 0));
+        Assert.Equal(0, clipped.MinZ);
+
+        var east = new Cell(240, 125);
+        Assert.False(Stampede.VolleyZone(Map250, east, NoBand).IsValid);
     }
 
     /// <summary>

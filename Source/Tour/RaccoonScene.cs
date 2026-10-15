@@ -164,6 +164,12 @@ namespace BatshitTechnology
         /// </summary>
         internal Pawn Raccoon => raccoon;
 
+        /// <summary>
+        /// Gets the raccoon, once staged: the hostile this run staged.
+        /// </summary>
+        internal override IEnumerable<Pawn> StagedHostiles =>
+            raccoon == null ? Enumerable.Empty<Pawn>() : new[] { raccoon };
+
         /// <summary>Gets Ned, as found at set-up.</summary>
         internal Pawn Guard => ned;
 

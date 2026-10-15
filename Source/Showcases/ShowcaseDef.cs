@@ -81,6 +81,19 @@ namespace BatshitTechnology.Showcases
         public string seed;
 
         /// <summary>
+        /// The weather to hold from the showcase's start until it finishes
+        /// or stops, or null (the default) to leave the weather to the
+        /// map. The session keeps it as both the current and the last
+        /// weather, so no transition shows, and keeps its age under the
+        /// weather decider's shortest turn, so no other weather starts; a
+        /// scene that wants weather of its own borrows it for its run
+        /// (<see cref="GameComponent_ShowcaseSession.YieldWeather"/>). The
+        /// weather from before is given back at the end
+        /// (docs/SHOWCASE-API.md, "The Held Weather").
+        /// </summary>
+        public WeatherDef holdWeather;
+
+        /// <summary>
         /// The code that runs the showcase: a <see cref="ShowcaseWorker"/>
         /// subclass. The default, <see cref="ShowcaseDirector"/>, runs
         /// <see cref="scenes"/>.
