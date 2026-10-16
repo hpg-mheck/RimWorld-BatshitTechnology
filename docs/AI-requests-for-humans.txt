@@ -191,7 +191,7 @@ Matt "Breakpoint" Heck:
     takes acts on your notes; start it from the repository with
     ".local/audio-tools/venv/Scripts/python
     .local/scratch/sound5000/trial/reel/serve.py round2" and open
-    http://127.0.0.1:8765/. (2) Seven of the first reel's nine discos went
+    http://127.0.0.1:8766/. (2) Seven of the first reel's nine discos went
     unmarked: were they heard and passed over, or not reached? (3) The trial
     used Freesound's lossy previews; for the masters, will you sign in to
     freesound.org (a free account) and download the originals listed in
