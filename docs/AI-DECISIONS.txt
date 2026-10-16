@@ -2932,3 +2932,32 @@ docs/SOUND-SOURCES.md; the choice is requests item 25. The operator's
 resolving request 23 (Proximity stays) and deferring request 24 (the
 sequence). Nothing was installed, downloaded, bought or signed up for,
 and no personal detail was sent anywhere.
+2026-10-15 Claude: Sound pipeline slice 2000 opens: the operator's choice
+and licence test. Answering requests item 25, the operator chose Option B
+("B works") on one condition for every paid service: "anything we generate
+has a 'whatever, forever, irrevocably' license that lets us do whatever we
+want, lets the users and other stakeholders do whatever they want, and
+nobody gets billed for it again, no matter what, after we pay to generate
+it". The lead applies the same test to free sources. The audio,
+instruments and samples are to be dual-licensed CC0 1.0 or MIT, at the
+user's option, replacing slice 1000's CC0-only proposal. Rechecked against
+the test the same day: CC0 libraries, our code and free software used as
+tools pass; ACE-Step 1.5 (MIT) passes; Lyria through the Gemini API passes
+(no ownership claimed, no limit on what is done with the files, paid once;
+noted: Google "may generate the same or similar content for others" and
+we are "responsible ... for the use of that content by anyone you share it
+with"); Stable Audio 3 fails in one place, its Community License's ban on
+using "any output" to "create or improve any foundational generative AI
+model", with its acceptable-use policy reaching outputs. Slice 1000's
+summary had said the licence put no restriction on outputs; that was
+wrong, and the operator's answer to question 3 (accept the gate) came
+before the correction, so Stable Audio 3 is held back until the operator
+decides (request 26). Lyria in the first reel is request 27. Sample
+libraries are limited to CC0 (VSCO 2 Community Edition and VCSL, cloned
+under .local/audio-tools/libs/); Sonatina, Virtual Playing Orchestra and
+the General MIDI soundfonts are not used, since each carries a condition.
+Installs were approved ("thoroughly and with gusto. Grab whatever you
+need"): a Python 3.12 venv and the tools live under .local/audio-tools/.
+Four agents make candidates (tools and ACE-Step on Sonnet; the groove and
+orchestra composers and the effects agent on Opus) to the brief in
+.local/scratch/sound5000/trial/plan.md; the lead builds the blind reel.

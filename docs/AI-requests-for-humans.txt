@@ -147,24 +147,43 @@ Matt "Breakpoint" Heck:
     right now." The tour's sequence stays as slice 19000 left it; what
     "needs work on the sequence" means is to be taken up when the
     operator returns to the tour.)
-25. Sound and music sources (Phase 5000, slice 1000, 2026-10-15).
-    You asked for options for both effects and music within $50 for
-    services; they are in docs/SOUND-SOURCES.md. In short: (A) all
-    local, $0: effects from code synthesis, CC0 recordings and Stable
-    Audio 3 run on your GPU, music composed by Claude as code and
-    rendered with free synthesizers and sampled orchestras, with ACE-Step
-    1.5 and Stable Audio 3 as generated candidates; (B) the same, then up
-    to about $20 of hosted music (Google Lyria through the Gemini API,
-    the Stability API) only for pieces the free candidates lose in a
-    blind listening trial (recommended); (C) Suno Pro ($10) for the
-    disco only, driven by hand. ElevenLabs, Udio and the stock libraries
-    are ruled out by their terms. Questions: (1) Which option? (2) May
-    slice 2000 install a Python venv with PyTorch, Surge XT, the sample
-    libraries and the open models, and run the listening trial? (3) Will
-    you accept Stable Audio 3's Hugging Face gate and register for its
-    free commercial licence with your own account (it asks for name,
-    email and country)? (4) Which music do you want: the disco loop and
-    the sting only, or also a 1950s theme for the tour and a lounge loop
-    for the comedy showcase? (5) The audio under CC0, separate from the
-    code's MIT, with a one-line AI disclosure on the Workshop page and in
-    the README? (6) Would you record three raspberries on your phone?
+25. (Resolved 2026-10-15. (1) "B works. I'm open to paid commercial services,
+    as long as anything we generate has a 'whatever, forever, irrevocably'
+    license that lets us do whatever we want, lets the users and other
+    stakeholders do whatever they want, and nobody gets billed for it again,
+    no matter what, after we pay to generate it." (2) "Yes, thoroughly and
+    with gusto. Grab whatever you need." (3) "I will, but guide me to it and
+    through it." (4) "All of those, that's great." (5) "Yes, CC0 is the
+    closest thing to the spirit of the MIT license. Actually we will probably
+    dual-license all sound effects, songs, audio, instruments, and samples
+    under both CC0 and the MIT License; anyone may use either at their
+    option." (6) "Sure." Answer (3) came before Claude found the limit on
+    Stable Audio 3's outputs; see request 26.)
+26. Stable Audio 3 against your test (slice 2000, 2026-10-15). Its Community
+    License fails "lets us do whatever we want" in one place: "You will not
+    use the Stability AI Materials or Derivative Works, or any output or
+    results of the Stability AI Materials or Derivative Works, to create or
+    improve any foundational generative AI model." Its acceptable-use policy
+    also reaches outputs (among other things, AI audio must not be passed off
+    as made by a human; the disclosure covers that). Otherwise it passes: the
+    outputs are ours, they are not Derivative Works and so need not be deleted
+    if the licence ends, players are not parties to it, and there are no fees.
+    The licence ends if you or an affiliate earn over $1M a year, and
+    generating would then need Stability's enterprise licence; files already
+    made stay ours. Slice 1000's summary missed the clause on outputs.
+    Question: accept Stable Audio 3 with that string (Claude then guides you
+    through the gate and the registration), or leave it out (effects then come
+    from synthesis, CC0 recordings and your raspberries, and the music from
+    composition, ACE-Step and Lyria)?
+27. Lyria in the first listening reel (slice 2000, 2026-10-15). Google's
+    Gemini API terms pass your test: Google "won't claim ownership", nothing
+    in them restricts what we or players do with the files (their ban on using
+    the service to build competing models concerns the service), and each song
+    is paid once. Two notes: Google "may generate the same or similar content
+    for others", and "You're responsible for your use of generated content,
+    and for the use of that content by anyone you share it with." Question:
+    will you create a Gemini API key with billing (Lyria has no free tier) so
+    the first reel can include about 15 Lyria candidates (about $1.50, capped
+    at $5 by the script's own ledger)? The key goes in a file under
+    .local/secrets/ that you write yourself; it is never committed or shown in
+    a transcript.

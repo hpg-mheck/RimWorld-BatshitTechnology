@@ -35,7 +35,7 @@ on Matt "Breakpoint" Heck are in `docs/AI-requests-for-humans.txt`.
 | 2000 | AnyRim | `trunk` | Done |
 | 3000 | Tractor Bomb | `trunk` | Done |
 | 4000 | Showcase API | `trunk` | Done |
-| 5000 | Sound pipeline | `feature/audio` | **Now** (slice 1000) |
+| 5000 | Sound pipeline | `feature/audio` | **Now** (slice 2000) |
 | 6000 | Colony Bomb and Shelter | `feature/colony-bomb` | Planned |
 | 7000 | Mirror Mirror | `feature/mirror-mirror` | Planned |
 | 8000 | The Drag Show | `feature/drag-show` | Planned |
@@ -97,14 +97,26 @@ services, not for Claude's own use.
 
 | Slice | Work | State |
 |---|---|---|
-| 1000 | Research: sources for music and effects | Now |
+| 1000 | Research: sources for music and effects | Done |
+| 2000 | Listening trial | Now |
 
 Slice 1000's options are in `docs/SOUND-SOURCES.md` (2026-10-15):
 (A) all local, $0; (B) local first, then up to about $20 of hosted music
 for pieces the free candidates lose in a blind listening trial
-(recommended); (C) Suno Pro for the disco. The choice is item 25 of
-`docs/AI-requests-for-humans.txt`. The slices after 1000 are planned
-once the operator has chosen.
+(recommended); (C) Suno Pro for the disco. The operator chose B the same
+day (requests item 25), with a test for every source: a "whatever,
+forever, irrevocably" licence "that lets us do whatever we want, lets the
+users and other stakeholders do whatever they want, and nobody gets
+billed for it again". The mod's audio, instruments and samples are to be
+dual-licensed CC0 1.0 or MIT, at the user's option. All five pieces are
+wanted (disco, sting, tour theme, lounge loop, rimshot), and the
+operator will record the raspberries.
+
+Slice 2000 makes candidates from every source that passes the test
+(composed music, ACE-Step 1.5, synthesized effects, CC0 recordings; Lyria
+and Stable Audio 3 once requests 26 and 27 are answered) and plays them
+to the operator in a blind reel. The build slices are planned around the
+winners.
 
 ## Phase 3000, Tractor Bomb (Done)
 
