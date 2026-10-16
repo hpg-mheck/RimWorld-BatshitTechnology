@@ -2985,3 +2985,14 @@ disco bed, one of them the round-1 Keep as a blind control. The lengths
 pass SOUND-PIPELINE's 3 s per clip, which the build slices revisit. The
 trial used Freesound's lossy previews; the originals for the masters are
 listed in .local/inbox/freesound/WANTED.md (request 28).
+2026-10-16 Claude: Sound pipeline slice 2000, round 3 opens: Stable
+Audio 3 and Lyria after all. Offered the chance to close requests 26 and
+27 unused, the operator answered "Nah, I still want to try those." Stable
+Audio 3 is taken as accepted under its Community License, clause on
+outputs included; its ungated "-base" models (stable-audio-3-small-sfx-
+base, -small-music-base and -medium-base, the same licence, not gated by
+Stability) start the trial at once, and the gated models follow when the
+operator has accepted the gate and saved a Hugging Face token. Lyria waits
+for the operator's prepaid key; the script caps it at $5. Round 3's reel
+puts the new takes beside round 1's Keeps as blind anchors, so new
+sources are judged against the current best.

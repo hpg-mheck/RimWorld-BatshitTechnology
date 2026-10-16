@@ -159,43 +159,20 @@ Matt "Breakpoint" Heck:
     under both CC0 and the MIT License; anyone may use either at their
     option." (6) "Sure." Answer (3) came before Claude found the limit on
     Stable Audio 3's outputs; see request 26.)
-26. Stable Audio 3 against your test (slice 2000, 2026-10-15). Its Community
-    License fails "lets us do whatever we want" in one place: "You will not
-    use the Stability AI Materials or Derivative Works, or any output or
-    results of the Stability AI Materials or Derivative Works, to create or
-    improve any foundational generative AI model." Its acceptable-use policy
-    also reaches outputs (among other things, AI audio must not be passed off
-    as made by a human; the disclosure covers that). Otherwise it passes: the
-    outputs are ours, they are not Derivative Works and so need not be deleted
-    if the licence ends, players are not parties to it, and there are no fees.
-    The licence ends if you or an affiliate earn over $1M a year, and
-    generating would then need Stability's enterprise licence; files already
-    made stay ours. Slice 1000's summary missed the clause on outputs.
-    Question: accept Stable Audio 3 with that string (Claude then guides you
-    through the gate and the registration), or leave it out (effects then come
-    from synthesis, CC0 recordings and your raspberries, and the music from
-    composition, ACE-Step and Lyria)?
-27. Lyria in the first listening reel (slice 2000, 2026-10-15). Google's
-    Gemini API terms pass your test: Google "won't claim ownership", nothing
-    in them restricts what we or players do with the files (their ban on using
-    the service to build competing models concerns the service), and each song
-    is paid once. Two notes: Google "may generate the same or similar content
-    for others", and "You're responsible for your use of generated content,
-    and for the use of that content by anyone you share it with." Question:
-    will you create a Gemini API key with billing (Lyria has no free tier) so
-    the first reel can include about 15 Lyria candidates (about $1.50, capped
-    at $5 by the script's own ledger)? The key goes in a file under
-    .local/secrets/ that you write yourself; it is never committed or shown in
-    a transcript.
-28. Round 2 and the masters (slice 2000, 2026-10-16). (1) A second reel of 22
-    takes acts on your notes; start it from the repository with
+26. (Resolved 2026-10-16 with 27: "Nah, I still want to try those." The
+    operator accepts Stable Audio 3's Community License, its clause on outputs
+    included, for the trial; Claude guides the gate, the token and the free
+    registration. Its ungated "-base" models, under the same licence, start
+    the trial meanwhile.)
+27. (Resolved 2026-10-16 with 26: "Nah, I still want to try those." Lyria
+    joins the trial once the operator has created a prepaid Gemini API key in
+    .local/secrets/gemini-api-key.txt; the script's ledger caps it at $5.)
+28. Round 2 and the masters (slice 2000, 2026-10-16). Answered the same day:
+    (2) "That's odd, I'll double check" (the marks' times show the first two
+    discos marked, then the stings, so the other seven were probably not
+    reached); (3) "I'll get to it"; (4) "Nah, I still want to try those" (see
+    26 and 27); (5) "Noted." Open: (1) the round-2 reel at
+    http://127.0.0.1:8766/ (start it from the repository with
     ".local/audio-tools/venv/Scripts/python
-    .local/scratch/sound5000/trial/reel/serve.py round2" and open
-    http://127.0.0.1:8766/. (2) Seven of the first reel's nine discos went
-    unmarked: were they heard and passed over, or not reached? (3) The trial
-    used Freesound's lossy previews; for the masters, will you sign in to
-    freesound.org (a free account) and download the originals listed in
-    .local/inbox/freesound/WANTED.md into that folder? (4) Local sources won
-    every piece, so Claude recommends closing requests 26 (Stable Audio 3) and
-    27 (Lyria) unused, keeping the $50; agreed? (5) Raspberries are still
-    welcome in .local/inbox/raspberries/.
+    .local/scratch/sound5000/trial/reel/serve.py round2"), the seven discos,
+    and the Freesound originals listed in .local/inbox/freesound/WANTED.md.
