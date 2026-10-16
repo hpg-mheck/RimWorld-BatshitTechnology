@@ -187,3 +187,15 @@ Matt "Breakpoint" Heck:
     at $5 by the script's own ledger)? The key goes in a file under
     .local/secrets/ that you write yourself; it is never committed or shown in
     a transcript.
+28. Round 2 and the masters (slice 2000, 2026-10-16). (1) A second reel of 22
+    takes acts on your notes; start it from the repository with
+    ".local/audio-tools/venv/Scripts/python
+    .local/scratch/sound5000/trial/reel/serve.py round2" and open
+    http://127.0.0.1:8765/. (2) Seven of the first reel's nine discos went
+    unmarked: were they heard and passed over, or not reached? (3) The trial
+    used Freesound's lossy previews; for the masters, will you sign in to
+    freesound.org (a free account) and download the originals listed in
+    .local/inbox/freesound/WANTED.md into that folder? (4) Local sources won
+    every piece, so Claude recommends closing requests 26 (Stable Audio 3) and
+    27 (Lyria) unused, keeping the $50; agreed? (5) Raspberries are still
+    welcome in .local/inbox/raspberries/.

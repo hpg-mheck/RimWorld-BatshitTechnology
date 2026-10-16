@@ -278,6 +278,52 @@ clauses were reread that day:
   MIDI soundfonts (MIT or their own licences, each with a notice or
   other condition) are not used, since CC0 libraries cover the need.
 
+## The Listening Trial (2026-10-16)
+
+Slice 2000's first reel held 74 blind, loudness-matched takes: music
+composed in code (VSCO 2 CE and VCSL samples, Surge XT with patches built
+in code, our synthesis), ACE-Step 1.5 generations, ACE-Step disco beds
+with our theremin laid over them, effects synthesized in code, CC0
+recordings, and hybrids of the two. The operator marked 67 ("These are
+amazing!"); nothing was spent, and Lyria and Stable Audio 3 were not
+used.
+
+| Piece | Kept | Notes |
+|---|---|---|
+| Disco | ACE-Step bed, our theremin | 1 Keep, 1 Maybe, 7 unmarked |
+| Sting | Composed (brass-led) | Lengthen the close; ACE-Step "too upbeat" |
+| Theme | Composed, two readings | ACE-Step: two Maybe, one Reject |
+| Lounge | Composed, two readings | ACE-Step "too formal" |
+| Rimshot | Composed | Let the cymbals ring out |
+| Projector start | Synthesized | Run at speed, then fade over 2 s |
+| Projector run-out | CC0 and synthesized | Four Keeps; one "Perfect" |
+| Wind | CC0, two takes | Synthesis "too periodic" |
+| Boom | CC0, two, and a hybrid | Synthesis alone lacked bass |
+| Raspberry | CC0, two, and synthesized | The operator's own still welcome |
+| Implosion | Synthesized | |
+| Shimmer | CC0 (VCSL glasses) "BEST ONE" | Three more Keeps |
+| Locker | All five | "All of the locker sounds are amazing" |
+
+- **Local sources won.** Composed music took every piece but the disco,
+  where an ACE-Step bed under our theremin was kept. ACE-Step's own
+  takes earned at most a Maybe (one lounge "for pre-show"), its stings
+  read as "too upbeat", and its lounges as "too formal". Among effects,
+  recordings won where the world is organic (wind, booms, the run-out)
+  and synthesis where the sound is a machine or a gag (the projector's
+  start, the implosion, a raspberry), with hybrids holding their own.
+- **The paid services are not needed** for these pieces: the trial
+  spent nothing of the $50.
+- **Round 2** acts on the notes: the sting's close lengthened, the
+  projector's start run at speed and faded, the rimshots' cymbals left
+  to ring, a lounge given an answering muted trumpet, the implosion's
+  whistle buried further, a shimmer cleaned, two booms layered, and six
+  theremin hooks over the kept disco bed. Several now run past the
+  3 s per clip that SOUND-PIPELINE set to stay under the 300 KiB
+  streaming threshold, which the build slices must revisit.
+- **Freesound originals.** The trial used Freesound's public previews
+  (lossy, no login); the masters should be the originals, which need
+  the operator's free Freesound account.
+
 ## Sources
 
 Rechecked on 2026-10-15 (slices 1000 and 2000):

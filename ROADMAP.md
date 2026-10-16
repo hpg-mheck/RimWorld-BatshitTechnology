@@ -118,6 +118,13 @@ and Stable Audio 3 once requests 26 and 27 are answered) and plays them
 to the operator in a blind reel. The build slices are planned around the
 winners.
 
+The first reel's 74 takes were marked on 2026-10-16: local sources won
+every piece (composed music; synthesis, CC0 recordings and hybrids for
+the effects; an ACE-Step bed under our theremin for the disco), so
+nothing was spent. Round 2 (22 takes) acts on the operator's notes; the
+results are in `docs/SOUND-SOURCES.md`, "The Listening Trial", and the
+open questions are requests item 28.
+
 ## Phase 3000, Tractor Bomb (Done)
 
 Branch: `feature/tractor-bomb`, merged into `trunk` on 2026-10-15.

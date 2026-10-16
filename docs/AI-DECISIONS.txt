@@ -2961,3 +2961,27 @@ need"): a Python 3.12 venv and the tools live under .local/audio-tools/.
 Four agents make candidates (tools and ACE-Step on Sonnet; the groove and
 orchestra composers and the effects agent on Opus) to the brief in
 .local/scratch/sound5000/trial/plan.md; the lead builds the blind reel.
+2026-10-16 Claude: Sound pipeline slice 2000, the first reel's results
+and round 2. The operator marked 67 of the reel's 74 blind takes ("These
+are amazing!"; later, "all of the locker sounds are amazing"). Local
+sources won everything: composed music (VSCO 2 CE and VCSL samples, Surge
+XT with patches built in code) took the sting, theme, lounge and rimshot;
+the disco Keep is an ACE-Step bed with our theremin hook over it; ACE-Step
+alone earned at most a Maybe. CC0 recordings won the wind, booms, the
+run-out and the shimmer ("BEST ONE", VCSL's rubbed glasses); synthesis won
+the projector's start and the implosion and shares the raspberry and
+run-out; all five lockers are kept as one variant set. Nothing was spent,
+so the lead recommends closing requests 26 and 27 unused. The candidates
+were judged by measurement alone before the operator listened; an AudioSet
+classifier in its own venv steered the groove composer. Surge XT's factory
+patches and wavetables carry no clear licence, so only patches built from
+parameters in code are used. Round 2 (22 takes, reel/round2) acts on the
+notes by resuming the three composing agents: a longer sting close (4.3
+to 5.5 s), a projector start that runs at speed and fades over 2 s (6 s),
+rimshots whose cymbals ring out (6.5 s), a lounge with an answering
+muted trumpet, a buried implosion whistle, a cleaned shimmer (fixing a
+latent beat bug), two layered booms, and six hook seeds over the kept
+disco bed, one of them the round-1 Keep as a blind control. The lengths
+pass SOUND-PIPELINE's 3 s per clip, which the build slices revisit. The
+trial used Freesound's lossy previews; the originals for the masters are
+listed in .local/inbox/freesound/WANTED.md (request 28).
