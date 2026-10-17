@@ -168,11 +168,21 @@ Matt "Breakpoint" Heck:
     joins the trial once the operator has created a prepaid Gemini API key in
     .local/secrets/gemini-api-key.txt; the script's ledger caps it at $5.)
 28. Round 2 and the masters (slice 2000, 2026-10-16). Answered the same day:
-    (2) "That's odd, I'll double check" (the marks' times show the first two
-    discos marked, then the stings, so the other seven were probably not
-    reached); (3) "I'll get to it"; (4) "Nah, I still want to try those" (see
-    26 and 27); (5) "Noted." Open: (1) the round-2 reel at
+    (2) "That's odd, I'll double check": the seven discos are now marked,
+    three of them Keeps; (3) "I'll get to it"; (4) "Nah, I still want to try
+    those" (see 26 and 27); (5) "Noted." Open: (1) the round-2 reel at
     http://127.0.0.1:8766/ (start it from the repository with
     ".local/audio-tools/venv/Scripts/python
-    .local/scratch/sound5000/trial/reel/serve.py round2"), the seven discos,
-    and the Freesound originals listed in .local/inbox/freesound/WANTED.md.
+    .local/scratch/sound5000/trial/reel/serve.py round2") and the Freesound
+    originals listed in .local/inbox/freesound/WANTED.md.
+29. Matt "Breakpoint" Heck: round 3 (slice 2000, 2026-10-16). (1) Its reel, 55
+    blind takes from Stable Audio 3's ungated base models, is at
+    http://127.0.0.1:8767/ (start it with the command in 28, ending "round3"
+    instead). Each group includes one of your round-1 Keeps as an anchor under
+    a new label, and the discos lay our theremin hook over Stable Audio 3's
+    beds. (2) When you are ready, save a Hugging Face token (after accepting
+    the gate) in .local/secrets/hf-token.txt and a prepaid Gemini key in
+    .local/secrets/gemini-api-key.txt; the post-trained models and Lyria then
+    make a round 4 with the same anchors. (3) Round 1's shimmer "BEST ONE" has
+    its note but no mark, most likely from a second click on Keep, which
+    clears it; Claude counts it as a Keep and used it as the anchor.

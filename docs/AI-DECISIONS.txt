@@ -2996,3 +2996,22 @@ operator has accepted the gate and saved a Hugging Face token. Lyria waits
 for the operator's prepaid key; the script caps it at $5. Round 3's reel
 puts the new takes beside round 1's Keeps as blind anchors, so new
 sources are judged against the current best.
+2026-10-16 Claude: Sound pipeline slice 2000, round 3's first reel.
+Stable Audio 3 runs on the 8 GB card: the small base models take about
+four seconds for up to 90 s of audio; medium-base takes 25 to 100 s,
+because Windows has no FlashAttention, so its failing compiled attention
+is switched off for the library's own fallback. The base configs name
+the gated repo's text encoder, which the base repo also carries, so no
+token was needed. 43 takes were chosen by measurement alone; SA3 holds a
+stated tempo almost exactly but misses keys often, and its disco beds
+sit on one chord. The discos lay our theremin hook (seed 5, round 1's
+Keep) over three SA3 beds. The reel (reel/round3, port 8767, 55 takes)
+adds one round-1 Keep per group as an anchor, labelled afresh by salting
+the hashed path, so the operator hears new sources beside the best so
+far. Every SA3 manifest records the Community License, its clause on
+outputs, the Gemma Terms of Use for the text encoder, and the model,
+steps, guidance and seed. The operator's re-check of round 1's discos
+(request 28) kept the ACE-Step bed alone and two composed discos as
+well, and rejected two takes as "circus-meets-oompah-band". The
+post-trained SA3 models and Lyria will form a round 4 with the same
+anchors, once the operator has saved the token and key.

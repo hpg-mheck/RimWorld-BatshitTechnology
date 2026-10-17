@@ -285,12 +285,12 @@ composed in code (VSCO 2 CE and VCSL samples, Surge XT with patches built
 in code, our synthesis), ACE-Step 1.5 generations, ACE-Step disco beds
 with our theremin laid over them, effects synthesized in code, CC0
 recordings, and hybrids of the two. The operator marked 67 ("These are
-amazing!"); nothing was spent, and Lyria and Stable Audio 3 were not
-used.
+amazing!"), and later the seven discos at first unreached; nothing
+was spent, and Lyria and Stable Audio 3 were not used.
 
 | Piece | Kept | Notes |
 |---|---|---|
-| Disco | ACE-Step bed, our theremin | 1 Keep, 1 Maybe, 7 unmarked |
+| Disco | Composed, two; ACE-Step bed | The bed alone and under our theremin |
 | Sting | Composed (brass-led) | Lengthen the close; ACE-Step "too upbeat" |
 | Theme | Composed, two readings | ACE-Step: two Maybe, one Reject |
 | Lounge | Composed, two readings | ACE-Step "too formal" |
@@ -304,10 +304,11 @@ used.
 | Shimmer | CC0 (VCSL glasses) "BEST ONE" | Three more Keeps |
 | Locker | All five | "All of the locker sounds are amazing" |
 
-- **Local sources won.** Composed music took every piece but the disco,
-  where an ACE-Step bed under our theremin was kept. ACE-Step's own
-  takes earned at most a Maybe (one lounge "for pre-show"), its stings
-  read as "too upbeat", and its lounges as "too formal". Among effects,
+- **Local sources won.** Composed music took every piece. One ACE-Step
+  disco bed was kept, alone ("the breakdown definitely works") and under
+  our theremin; ACE-Step's other takes earned at most a Maybe (one
+  lounge "for pre-show"), two discos read as "circus-meets-oompah-band",
+  its stings as "too upbeat", and its lounges as "too formal". Among effects,
   recordings won where the world is organic (wind, booms, the run-out)
   and synthesis where the sound is a machine or a gag (the projector's
   start, the implosion, a raspberry), with hybrids holding their own.
@@ -323,6 +324,13 @@ used.
 - **Freesound originals.** The trial used Freesound's public previews
   (lossy, no login); the masters should be the originals, which need
   the operator's free Freesound account.
+- **Round 3** tries Stable Audio 3 after all (the operator: "Nah, I
+  still want to try those"). Its ungated base models, under the same
+  Community License, run on the 8 GB card and made 43 takes; the reel
+  puts one round-1 Keep per group beside them as a blind anchor. SA3
+  holds a stated tempo almost exactly but often misses the key. The
+  post-trained models and Lyria wait for the operator's token and key,
+  and will make a round 4 with the same anchors.
 
 ## Sources
 
