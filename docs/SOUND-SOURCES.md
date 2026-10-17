@@ -326,7 +326,7 @@ was spent, and Lyria and Stable Audio 3 were not used.
   the operator's free Freesound account.
 - **Round 3** tries Stable Audio 3 after all (the operator: "Nah, I
   still want to try those"). Its ungated base models, under the same
-  Community License, run on the 8 GB card and made 43 takes; the reel
+  Community License, run on the 8 GB card and made 42 takes; the reel
   puts one round-1 Keep per group beside them as a blind anchor. SA3
   holds a stated tempo almost exactly but often misses the key. The
   post-trained models and Lyria wait for the operator's token and key,
